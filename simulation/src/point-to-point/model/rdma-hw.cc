@@ -453,9 +453,18 @@ int RdmaHw::Receive(Ptr<Packet> p, CustomHeader &ch){
 }
 
 int RdmaHw::ReceiverCheckSeq(uint32_t seq, Ptr<RdmaRxQueuePair> q, uint32_t size){
+	// returns:
+	//   - 1: Generate ACK (success)
+	//   - 2: Generate NAK (failure, missing seqno)
+	//   - 3: Duplicate, already ACKed (failure, do nothing)
+	//   - 4: Error but NAK timer not yet elapsed (failure, do nothing)
+	//   - 5: Success, don't send ACK
 	uint32_t expected = q->ReceiverNextExpectedSeq;
 	if (seq == expected){
 		q->ReceiverNextExpectedSeq = expected + size;
+		if(m_ack_interval == 0) {
+			return 5; // ACK disabled
+		}
 		if (q->ReceiverNextExpectedSeq >= q->m_milestone_rx){
 			q->m_milestone_rx += m_ack_interval;
 			return 1; //Generate ACK
