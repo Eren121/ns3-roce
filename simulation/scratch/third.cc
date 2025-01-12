@@ -342,6 +342,7 @@ static void PrintOption(const char* key, T&& value)
 
 int main(int argc, char *argv[])
 {
+	uint32_t rng_seed = 50; // Keep default value before feature was added if not in config
 	clock_t begint, endt;
 	begint = clock();
 #ifndef PGO_TRAINING
@@ -649,6 +650,11 @@ int main(int argc, char *argv[])
 				conf >> pint_prob;
 				PrintOption("PINT_PROB", pint_prob);
 			}
+			else if (key.compare("RNG_SEED") == 0)
+			{
+				conf >> rng_seed;
+				PrintOption("RNG_SEED", rng_seed);
+			}
 			fflush(stdout);
 		}
 		conf.close();
@@ -737,10 +743,16 @@ int main(int argc, char *argv[])
 	// Explicitly create the channels required by the topology.
 	//
 
+	if(rng_seed == 0) {
+		FILE* urandom = fopen("/dev/urandom", "r");
+		fread(&rng_seed, sizeof(rng_seed), 1, urandom);
+		fclose(urandom);
+	}
+	std::cout << "Effective RNG seed: " << rng_seed << std::endl;
 	Ptr<RateErrorModel> rem = CreateObject<RateErrorModel>();
 	Ptr<UniformRandomVariable> uv = CreateObject<UniformRandomVariable>();
 	rem->SetRandomVariable(uv);
-	uv->SetStream(50);
+	uv->SetStream(rng_seed);
 	rem->SetAttribute("ErrorRate", DoubleValue(error_rate_per_link));
 	rem->SetAttribute("ErrorUnit", StringValue("ERROR_UNIT_PACKET"));
 
