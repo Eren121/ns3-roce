@@ -18,6 +18,7 @@
 #define PATH_TO_PGO_CONFIG "path_to_pgo_config"
 
 #include <iostream>
+#include <iomanip>
 #include <fstream>
 #include <unordered_map>
 #include <time.h> 
@@ -333,6 +334,12 @@ uint64_t get_nic_rate(NodeContainer &n){
 			return DynamicCast<QbbNetDevice>(n.Get(i)->GetDevice(1))->GetDataRate().GetBitRate();
 }
 
+template<typename T>
+static void PrintOption(const char* key, T&& value)
+{
+	std::cout << std::left << std::setw(35) << key << value << std::endl;
+}
+
 int main(int argc, char *argv[])
 {
 	clock_t begint, endt;
@@ -362,103 +369,91 @@ int main(int argc, char *argv[])
 				uint32_t v;
 				conf >> v;
 				enable_qcn = v;
-				if (enable_qcn)
-					std::cout << "ENABLE_QCN\t\t\t" << "Yes" << "\n";
-				else
-					std::cout << "ENABLE_QCN\t\t\t" << "No" << "\n";
+				PrintOption("ENABLE_QCN", enable_qcn ? "Yes" : "No");
 			}
 			else if (key.compare("USE_DYNAMIC_PFC_THRESHOLD") == 0)
 			{
 				uint32_t v;
 				conf >> v;
 				use_dynamic_pfc_threshold = v;
-				if (use_dynamic_pfc_threshold)
-					std::cout << "USE_DYNAMIC_PFC_THRESHOLD\t" << "Yes" << "\n";
-				else
-					std::cout << "USE_DYNAMIC_PFC_THRESHOLD\t" << "No" << "\n";
+				PrintOption("USE_DYNAMIC_PFC_THRESHOLD", enable_qcn ? "Yes" : "No");
 			}
 			else if (key.compare("CLAMP_TARGET_RATE") == 0)
 			{
 				uint32_t v;
 				conf >> v;
 				clamp_target_rate = v;
-				if (clamp_target_rate)
-					std::cout << "CLAMP_TARGET_RATE\t\t" << "Yes" << "\n";
-				else
-					std::cout << "CLAMP_TARGET_RATE\t\t" << "No" << "\n";
+				PrintOption("CLAMP_TARGET_RATE", clamp_target_rate ? "Yes" : "No");
 			}
 			else if (key.compare("PAUSE_TIME") == 0)
 			{
 				double v;
 				conf >> v;
 				pause_time = v;
-				std::cout << "PAUSE_TIME\t\t\t" << pause_time << "\n";
+				PrintOption("PAUSE_TIME", pause_time);
 			}
 			else if (key.compare("DATA_RATE") == 0)
 			{
 				std::string v;
 				conf >> v;
 				data_rate = v;
-				std::cout << "DATA_RATE\t\t\t" << data_rate << "\n";
+				PrintOption("DATA_RATE", data_rate);
 			}
 			else if (key.compare("LINK_DELAY") == 0)
 			{
 				std::string v;
 				conf >> v;
 				link_delay = v;
-				std::cout << "LINK_DELAY\t\t\t" << link_delay << "\n";
+				PrintOption("LINK_DELAY", link_delay);
 			}
 			else if (key.compare("PACKET_PAYLOAD_SIZE") == 0)
 			{
 				uint32_t v;
 				conf >> v;
 				packet_payload_size = v;
-				std::cout << "PACKET_PAYLOAD_SIZE\t\t" << packet_payload_size << "\n";
+				PrintOption("PACKET_PAYLOAD_SIZE", packet_payload_size);
 			}
 			else if (key.compare("L2_CHUNK_SIZE") == 0)
 			{
 				uint32_t v;
 				conf >> v;
 				l2_chunk_size = v;
-				std::cout << "L2_CHUNK_SIZE\t\t\t" << l2_chunk_size << "\n";
+				PrintOption("L2_CHUNK_SIZE", l2_chunk_size);
 			}
 			else if (key.compare("L2_ACK_INTERVAL") == 0)
 			{
 				uint32_t v;
 				conf >> v;
 				l2_ack_interval = v;
-				std::cout << "L2_ACK_INTERVAL\t\t\t" << l2_ack_interval << "\n";
+				PrintOption("L2_ACK_INTERVAL", l2_ack_interval);
 			}
 			else if (key.compare("L2_BACK_TO_ZERO") == 0)
 			{
 				uint32_t v;
 				conf >> v;
 				l2_back_to_zero = v;
-				if (l2_back_to_zero)
-					std::cout << "L2_BACK_TO_ZERO\t\t\t" << "Yes" << "\n";
-				else
-					std::cout << "L2_BACK_TO_ZERO\t\t\t" << "No" << "\n";
+				PrintOption("L2_BACK_TO_ZERO", l2_back_to_zero ? "Yes" : "No");
 			}
 			else if (key.compare("TOPOLOGY_FILE") == 0)
 			{
 				std::string v;
 				conf >> v;
 				topology_file = v;
-				std::cout << "TOPOLOGY_FILE\t\t\t" << topology_file << "\n";
+				PrintOption("TOPOLOGY_FILE", topology_file);
 			}
 			else if (key.compare("FLOW_FILE") == 0)
 			{
 				std::string v;
 				conf >> v;
 				flow_file = v;
-				std::cout << "FLOW_FILE\t\t\t" << flow_file << "\n";
+				PrintOption("FLOW_FILE", flow_file);
 			}
 			else if (key.compare("TRACE_FILE") == 0)
 			{
 				std::string v;
 				conf >> v;
 				trace_file = v;
-				std::cout << "TRACE_FILE\t\t\t" << trace_file << "\n";
+				PrintOption("TRACE_FILE", trace_file);
 			}
 			else if (key.compare("TRACE_OUTPUT_FILE") == 0)
 			{
@@ -469,187 +464,190 @@ int main(int argc, char *argv[])
 				{
 					trace_output_file = trace_output_file + std::string(argv[2]);
 				}
-				std::cout << "TRACE_OUTPUT_FILE\t\t" << trace_output_file << "\n";
+				PrintOption("TRACE_OUTPUT_FILE", trace_output_file);
 			}
 			else if (key.compare("SIMULATOR_STOP_TIME") == 0)
 			{
 				double v;
 				conf >> v;
 				simulator_stop_time = v;
-				std::cout << "SIMULATOR_STOP_TIME\t\t" << simulator_stop_time << "\n";
+				PrintOption("SIMULATOR_STOP_TIME", simulator_stop_time);
 			}
 			else if (key.compare("ALPHA_RESUME_INTERVAL") == 0)
 			{
 				double v;
 				conf >> v;
 				alpha_resume_interval = v;
-				std::cout << "ALPHA_RESUME_INTERVAL\t\t" << alpha_resume_interval << "\n";
+				PrintOption("ALPHA_RESUME_INTERVAL", alpha_resume_interval);
 			}
 			else if (key.compare("RP_TIMER") == 0)
 			{
 				double v;
 				conf >> v;
 				rp_timer = v;
-				std::cout << "RP_TIMER\t\t\t" << rp_timer << "\n";
+				PrintOption("RP_TIMER", rp_timer);
 			}
 			else if (key.compare("EWMA_GAIN") == 0)
 			{
 				double v;
 				conf >> v;
 				ewma_gain = v;
-				std::cout << "EWMA_GAIN\t\t\t" << ewma_gain << "\n";
+				PrintOption("EWMA_GAIN", ewma_gain);
 			}
 			else if (key.compare("FAST_RECOVERY_TIMES") == 0)
 			{
 				uint32_t v;
 				conf >> v;
 				fast_recovery_times = v;
-				std::cout << "FAST_RECOVERY_TIMES\t\t" << fast_recovery_times << "\n";
+				PrintOption("FAST_RECOVERY_TIMES", fast_recovery_times);
 			}
 			else if (key.compare("RATE_AI") == 0)
 			{
 				std::string v;
 				conf >> v;
 				rate_ai = v;
-				std::cout << "RATE_AI\t\t\t\t" << rate_ai << "\n";
+				PrintOption("RATE_AI", rate_ai);
 			}
 			else if (key.compare("RATE_HAI") == 0)
 			{
 				std::string v;
 				conf >> v;
 				rate_hai = v;
-				std::cout << "RATE_HAI\t\t\t" << rate_hai << "\n";
+				PrintOption("RATE_HAI", rate_hai);
 			}
 			else if (key.compare("ERROR_RATE_PER_LINK") == 0)
 			{
 				double v;
 				conf >> v;
 				error_rate_per_link = v;
-				std::cout << "ERROR_RATE_PER_LINK\t\t" << error_rate_per_link << "\n";
+				PrintOption("ERROR_RATE_PER_LINK", error_rate_per_link);
 			}
-			else if (key.compare("CC_MODE") == 0){
+			else if (key.compare("CC_MODE") == 0)
+			{
 				conf >> cc_mode;
-				std::cout << "CC_MODE\t\t" << cc_mode << '\n';
+				PrintOption("CC_MODE", cc_mode);
 			}else if (key.compare("RATE_DECREASE_INTERVAL") == 0){
 				double v;
 				conf >> v;
 				rate_decrease_interval = v;
-				std::cout << "RATE_DECREASE_INTERVAL\t\t" << rate_decrease_interval << "\n";
+				PrintOption("RATE_DECREASE_INTERVAL", rate_decrease_interval);
 			}else if (key.compare("MIN_RATE") == 0){
 				conf >> min_rate;
-				std::cout << "MIN_RATE\t\t" << min_rate << "\n";
+				PrintOption("MIN_RATE", min_rate);
 			}else if (key.compare("FCT_OUTPUT_FILE") == 0){
 				conf >> fct_output_file;
-				std::cout << "FCT_OUTPUT_FILE\t\t" << fct_output_file << '\n';
+				PrintOption("FCT_OUTPUT_FILE", fct_output_file);
 			}else if (key.compare("HAS_WIN") == 0){
 				conf >> has_win;
-				std::cout << "HAS_WIN\t\t" << has_win << "\n";
+				PrintOption("HAS_WIN", has_win);
 			}else if (key.compare("GLOBAL_T") == 0){
 				conf >> global_t;
-				std::cout << "GLOBAL_T\t\t" << global_t << '\n';
+				PrintOption("GLOBAL_T", global_t);
 			}else if (key.compare("MI_THRESH") == 0){
 				conf >> mi_thresh;
-				std::cout << "MI_THRESH\t\t" << mi_thresh << '\n';
+				PrintOption("MI_THRESH", mi_thresh);
 			}else if (key.compare("VAR_WIN") == 0){
 				uint32_t v;
 				conf >> v;
 				var_win = v;
-				std::cout << "VAR_WIN\t\t" << v << '\n';
+				PrintOption("VAR_WIN", v);
 			}else if (key.compare("FAST_REACT") == 0){
 				uint32_t v;
 				conf >> v;
 				fast_react = v;
-				std::cout << "FAST_REACT\t\t" << v << '\n';
+				PrintOption("FAST_REACT", v);
 			}else if (key.compare("U_TARGET") == 0){
 				conf >> u_target;
-				std::cout << "U_TARGET\t\t" << u_target << '\n';
+				PrintOption("U_TARGET", u_target);
 			}else if (key.compare("INT_MULTI") == 0){
 				conf >> int_multi;
-				std::cout << "INT_MULTI\t\t\t\t" << int_multi << '\n';
+				PrintOption("INT_MULTI", int_multi);
 			}else if (key.compare("RATE_BOUND") == 0){
 				uint32_t v;
 				conf >> v;
 				rate_bound = v;
-				std::cout << "RATE_BOUND\t\t" << rate_bound << '\n';
+				PrintOption("RATE_BOUND", rate_bound);
 			}else if (key.compare("ACK_HIGH_PRIO") == 0){
 				conf >> ack_high_prio;
-				std::cout << "ACK_HIGH_PRIO\t\t" << ack_high_prio << '\n';
+				PrintOption("ACK_HIGH_PRIO", ack_high_prio);
 			}else if (key.compare("DCTCP_RATE_AI") == 0){
 				conf >> dctcp_rate_ai;
-				std::cout << "DCTCP_RATE_AI\t\t\t\t" << dctcp_rate_ai << "\n";
+				PrintOption("DCTCP_RATE_AI", dctcp_rate_ai);
 			}else if (key.compare("PFC_OUTPUT_FILE") == 0){
 				conf >> pfc_output_file;
-				std::cout << "PFC_OUTPUT_FILE\t\t\t\t" << pfc_output_file << '\n';
+				PrintOption("PFC_OUTPUT_FILE", pfc_output_file);
 			}else if (key.compare("LINK_DOWN") == 0){
 				conf >> link_down_time >> link_down_A >> link_down_B;
-				std::cout << "LINK_DOWN\t\t\t\t" << link_down_time << ' '<< link_down_A << ' ' << link_down_B << '\n';
+				std::stringstream ss;
+				ss << link_down_time << ' '<< link_down_A << ' ' << link_down_B;
+				PrintOption("LINK_DOWN", ss.str());
 			}else if (key.compare("ENABLE_TRACE") == 0){
 				conf >> enable_trace;
-				std::cout << "ENABLE_TRACE\t\t\t\t" << enable_trace << '\n';
+				PrintOption("ENABLE_TRACE", enable_trace);
 			}else if (key.compare("KMAX_MAP") == 0){
 				int n_k ;
 				conf >> n_k;
-				std::cout << "KMAX_MAP\t\t\t\t";
+				std::stringstream ss;
 				for (int i = 0; i < n_k; i++){
 					uint64_t rate;
 					uint32_t k;
 					conf >> rate >> k;
 					rate2kmax[rate] = k;
-					std::cout << ' ' << rate << ' ' << k;
+					ss << rate << ' ' << k << ' ';
 				}
-				std::cout<<'\n';
+				PrintOption("KMAX_MAP", ss.str());
 			}else if (key.compare("KMIN_MAP") == 0){
 				int n_k ;
 				conf >> n_k;
-				std::cout << "KMIN_MAP\t\t\t\t";
+				std::stringstream ss;
 				for (int i = 0; i < n_k; i++){
 					uint64_t rate;
 					uint32_t k;
 					conf >> rate >> k;
 					rate2kmin[rate] = k;
-					std::cout << ' ' << rate << ' ' << k;
+					ss << rate << ' ' << k << ' ';
 				}
-				std::cout<<'\n';
+				PrintOption("KMIN_MAP", ss.str());
 			}else if (key.compare("PMAX_MAP") == 0){
 				int n_k ;
 				conf >> n_k;
-				std::cout << "PMAX_MAP\t\t\t\t";
+				std::stringstream ss;
 				for (int i = 0; i < n_k; i++){
 					uint64_t rate;
 					double p;
 					conf >> rate >> p;
 					rate2pmax[rate] = p;
-					std::cout << ' ' << rate << ' ' << p;
+					ss << rate << ' ' << p << ' ';
 				}
-				std::cout<<'\n';
+				PrintOption("PMAX_MAP", ss.str());
 			}else if (key.compare("BUFFER_SIZE") == 0){
 				conf >> buffer_size;
-				std::cout << "BUFFER_SIZE\t\t\t\t" << buffer_size << '\n';
+				PrintOption("BUFFER_SIZE", buffer_size);
 			}else if (key.compare("QLEN_MON_FILE") == 0){
 				conf >> qlen_mon_file;
-				std::cout << "QLEN_MON_FILE\t\t\t\t" << qlen_mon_file << '\n';
+				PrintOption("QLEN_MON_FILE", qlen_mon_file);
 			}else if (key.compare("QLEN_MON_START") == 0){
 				conf >> qlen_mon_start;
-				std::cout << "QLEN_MON_START\t\t\t\t" << qlen_mon_start << '\n';
+				PrintOption("QLEN_MON_START", qlen_mon_start);
 			}else if (key.compare("QLEN_MON_END") == 0){
 				conf >> qlen_mon_end;
-				std::cout << "QLEN_MON_END\t\t\t\t" << qlen_mon_end << '\n';
+				PrintOption("QLEN_MON_END", qlen_mon_end);
 			}else if (key.compare("MULTI_RATE") == 0){
 				int v;
 				conf >> v;
 				multi_rate = v;
-				std::cout << "MULTI_RATE\t\t\t\t" << multi_rate << '\n';
+				PrintOption("MULTI_RATE", multi_rate);
 			}else if (key.compare("SAMPLE_FEEDBACK") == 0){
 				int v;
 				conf >> v;
 				sample_feedback = v;
-				std::cout << "SAMPLE_FEEDBACK\t\t\t\t" << sample_feedback << '\n';
+				PrintOption("SAMPLE_FEEDBACK", sample_feedback);
 			}else if(key.compare("PINT_LOG_BASE") == 0){
 				conf >> pint_log_base;
-				std::cout << "PINT_LOG_BASE\t\t\t\t" << pint_log_base << '\n';
+				PrintOption("PINT_LOG_BASE", pint_log_base);
 			}else if (key.compare("PINT_PROB") == 0){
 				conf >> pint_prob;
-				std::cout << "PINT_PROB\t\t\t\t" << pint_prob << '\n';
+				PrintOption("PINT_PROB", pint_prob);
 			}
 			fflush(stdout);
 		}
