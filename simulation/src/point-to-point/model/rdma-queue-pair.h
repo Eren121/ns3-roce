@@ -26,7 +26,6 @@ public:
 	DataRate m_max_rate; // max rate
 	bool m_var_win; // variable window size
 	Time m_nextAvail;	//< Soonest time of next send
-	uint32_t wp; // current window of packets
 	uint32_t lastPktSize;
 	Callback<void> m_notifyAppFinish;
 
