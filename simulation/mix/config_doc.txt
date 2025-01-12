@@ -28,6 +28,7 @@ ERROR_RATE_PER_LINK 0.0000 {Error rate of each link}
 L2_CHUNK_SIZE 4000 {for DCQCN: chunk size}
 L2_ACK_INTERVAL 1 {number of packets between ACK generation, 1 means per packet}
 L2_BACK_TO_ZERO 0 {0: go-back-0, 1: go-back-N}
+NAK_INTERVAL 500.0 {minimum interval between NAKs, in microseconds}
 
 HAS_WIN 1 {0: no window, 1: has a window}
 GLOBAL_T 1 {0: different server pairs use their own RTT as T, 1: use the max base RTT as the global T}

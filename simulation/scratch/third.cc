@@ -46,6 +46,7 @@ NS_LOG_COMPONENT_DEFINE("GENERIC_SIMULATION");
 uint32_t cc_mode = 1;
 bool enable_qcn = true, use_dynamic_pfc_threshold = true;
 uint32_t packet_payload_size = 1000, l2_chunk_size = 0, l2_ack_interval = 0;
+double nak_interval = 500.0;
 double pause_time = 5, simulator_stop_time = 3.01;
 std::string data_rate, link_delay, topology_file, flow_file, trace_file, trace_output_file;
 std::string fct_output_file = "fct.txt";
@@ -427,6 +428,13 @@ int main(int argc, char *argv[])
 				conf >> v;
 				l2_ack_interval = v;
 				PrintOption("L2_ACK_INTERVAL", l2_ack_interval);
+			}
+			else if (key.compare("NAK_INTERVAL") == 0)
+			{
+				double v;
+				conf >> v;
+				nak_interval = v;
+				PrintOption("NAK_INTERVAL", nak_interval);
 			}
 			else if (key.compare("L2_BACK_TO_ZERO") == 0)
 			{
@@ -878,6 +886,7 @@ int main(int argc, char *argv[])
 			rdmaHw->SetAttribute("L2BackToZero", BooleanValue(l2_back_to_zero));
 			rdmaHw->SetAttribute("L2ChunkSize", UintegerValue(l2_chunk_size));
 			rdmaHw->SetAttribute("L2AckInterval", UintegerValue(l2_ack_interval));
+			rdmaHw->SetAttribute("NACK Generation Interval", DoubleValue(nak_interval));
 			rdmaHw->SetAttribute("CcMode", UintegerValue(cc_mode));
 			rdmaHw->SetAttribute("RateDecreaseInterval", DoubleValue(rate_decrease_interval));
 			rdmaHw->SetAttribute("MinRate", DataRateValue(DataRate(min_rate)));
