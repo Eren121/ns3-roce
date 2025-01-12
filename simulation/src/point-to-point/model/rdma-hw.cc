@@ -35,7 +35,7 @@ TypeId RdmaHw::GetTypeId (void)
 				MakeUintegerAccessor(&RdmaHw::m_cc_mode),
 				MakeUintegerChecker<uint32_t>())
 		.AddAttribute("NACK Generation Interval",
-				"The NACK Generation interval",
+				"The NACK Generation interval in microseconds.",
 				DoubleValue(500.0),
 				MakeDoubleAccessor(&RdmaHw::m_nack_interval),
 				MakeDoubleChecker<double>())
@@ -393,6 +393,7 @@ int RdmaHw::ReceiveAck(Ptr<Packet> p, CustomHeader &ch){
 	uint16_t port = ch.ack.dport;
 	uint32_t seq = ch.ack.seq;
 	uint8_t cnp = (ch.ack.flags >> qbbHeader::FLAG_CNP) & 1;
+	const bool nack = (ch.l3Prot == 0xFD);
 	int i;
 	Ptr<RdmaQueuePair> qp = GetQp(ch.sip, port, qIndex);
 	if (qp == NULL){
@@ -402,7 +403,7 @@ int RdmaHw::ReceiveAck(Ptr<Packet> p, CustomHeader &ch){
 
 	uint32_t nic_idx = GetNicIdxOfQp(qp);
 	Ptr<QbbNetDevice> dev = m_nic[nic_idx].dev;
-	if (m_ack_interval == 0)
+	if (m_ack_interval == 0 && !nack)
 		std::cout << "ERROR: shouldn't receive ack\n";
 	else {
 		if (!m_backto0){
@@ -415,7 +416,7 @@ int RdmaHw::ReceiveAck(Ptr<Packet> p, CustomHeader &ch){
 			QpComplete(qp);
 		}
 	}
-	if (ch.l3Prot == 0xFD) // NACK
+	if (nack) // NACK
 		RecoverQueue(qp);
 
 	// handle cnp
