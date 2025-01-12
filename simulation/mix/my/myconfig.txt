@@ -56,3 +56,5 @@ BUFFER_SIZE                     32
 QLEN_MON_FILE                   mix/my/myqlen.txt
 QLEN_MON_START                  2000000000
 QLEN_MON_END                    2010000000
+
+RNG_SEED                        0

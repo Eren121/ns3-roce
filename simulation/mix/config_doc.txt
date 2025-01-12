@@ -56,3 +56,5 @@ BUFFER_SIZE 32 {buffer size per switch}
 QLEN_MON_FILE mix/qlen.txt {output file: result of qlen of each port}
 QLEN_MON_START 2000000000 {start time of dumping qlen}
 QLEN_MON_END 2010000000 {end time of dumping qlen}
+
+RNG_SEED 500 {seed for random events. Set to zero to use a random seed.}
