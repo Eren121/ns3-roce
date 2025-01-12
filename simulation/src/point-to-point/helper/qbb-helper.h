@@ -153,6 +153,7 @@ public:
   static void EnqueueDetailCallback(FILE* file, Ptr<QbbNetDevice>, Ptr<const Packet> p, uint32_t qidx);
   static void DequeueDetailCallback(FILE* file, Ptr<QbbNetDevice>, Ptr<const Packet> p, uint32_t qidx);
   static void DropDetailCallback(FILE* file, Ptr<QbbNetDevice>, Ptr<const Packet> p, uint32_t qidx);
+  static void PhyRxDropDetailCallback(FILE* file, Ptr<QbbNetDevice>, Ptr<const Packet> p);
   static void QpDequeueCallback(FILE *file, Ptr<QbbNetDevice>, Ptr<const Packet>, Ptr<RdmaQueuePair>);
 
   void EnableTracingDevice(FILE *file, Ptr<QbbNetDevice>);

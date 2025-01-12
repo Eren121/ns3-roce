@@ -388,6 +388,11 @@ void QbbHelper::DropDetailCallback(FILE* file, Ptr<QbbNetDevice> dev, Ptr<const 
 	PacketEventCallback(file, dev, p, qidx, Drop, true);
 }
 
+void QbbHelper::PhyRxDropDetailCallback(FILE* file, Ptr<QbbNetDevice> dev, Ptr<const Packet> p){
+	// Packet is dropped in the link, we set the queue ID to 0 but no queue is involved.
+  PacketEventCallback(file, dev, p, 0, Drop, true);
+}
+
 void QbbHelper::QpDequeueCallback(FILE *file, Ptr<QbbNetDevice> dev, Ptr<const Packet> p, Ptr<RdmaQueuePair> qp){
 	TraceFormat tr;
 	GetTraceFromPacket(tr, dev, p, qp->m_pg, Dequ, true);
@@ -407,6 +412,7 @@ void QbbHelper::EnableTracingDevice(FILE *file, Ptr<QbbNetDevice> nd){
 	nd->TraceConnectWithoutContext("QbbEnqueue", MakeBoundCallback (&QbbHelper::EnqueueDetailCallback, file, nd));
 	nd->TraceConnectWithoutContext("QbbDequeue", MakeBoundCallback (&QbbHelper::DequeueDetailCallback, file, nd));
 	nd->TraceConnectWithoutContext("QbbDrop", MakeBoundCallback (&QbbHelper::DropDetailCallback, file, nd));
+	nd->TraceConnectWithoutContext("PhyRxDrop", MakeBoundCallback(&QbbHelper::PhyRxDropDetailCallback, file, nd));
 	nd->TraceConnectWithoutContext("RdmaQpDequeue", MakeBoundCallback (&QbbHelper::QpDequeueCallback, file, nd));
 	#endif
 	//nd->GetQueue()->TraceConnectWithoutContext("BeqEnqueue", MakeBoundCallback (&QbbHelper::EnqueueDetailCallback, file, nd));
