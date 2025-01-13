@@ -8,6 +8,7 @@
 #include "ns3/double.h"
 #include "ns3/data-rate.h"
 #include "ns3/pointer.h"
+#include "ns3/rdma-queue-pair.h"
 #include "rdma-hw.h"
 #include "ppp-header.h"
 #include "qbb-header.h"
@@ -305,9 +306,21 @@ int RdmaHw::ReceiveUdp(Ptr<Packet> p, CustomHeader &ch){
 	uint8_t ecnbits = ch.GetIpv4EcnBits();
 
 	uint32_t payload_size = p->GetSize() - ch.GetSerializedSize();
+	
+	RdmaBTH bth;
+	if(!p->PeekPacketTag(bth)) {
+		std::cout << "ERROR: Cannot find BTH tag" << std::endl;
+	}
 
 	// TODO find corresponding rx queue pair
-	Ptr<RdmaRxQueuePair> rxQp = GetRxQp(ch.dip, ch.sip, ch.udp.dport, ch.udp.sport, ch.udp.pg, true);
+	Ptr<RdmaRxQueuePair> rxQp;
+	if(bth.GetReliable()){
+		rxQp = GetRxQp(ch.dip, ch.sip, ch.udp.dport, ch.udp.sport, ch.udp.pg, true);
+	}
+	else {
+		// Each NIC has only one UD QP per <IP, port> to simplify
+		rxQp = GetRxQp(ch.dip, 0, ch.udp.dport, 0, ch.udp.pg, true);	
+	}
 	if (ecnbits != 0){
 		rxQp->m_ecn_source.ecnbits |= ecnbits;
 		rxQp->m_ecn_source.qfb++;
@@ -400,6 +413,15 @@ int RdmaHw::ReceiveAck(Ptr<Packet> p, CustomHeader &ch){
 	uint8_t cnp = (ch.ack.flags >> qbbHeader::FLAG_CNP) & 1;
 	const bool nack = (ch.l3Prot == 0xFD);
 	int i;
+
+	RdmaBTH bth;
+	if(p->PeekPacketTag(bth)) {
+		if(!bth.GetReliable()) {
+			std::cout << "ERROR: UD RQ should not receive ACK/NACK" << std::endl;
+			return 0;
+		}
+	}
+
 	Ptr<RdmaQueuePair> qp = GetQp(ch.sip, port, qIndex);
 	if (qp == NULL){
 		std::cout << "ERROR: " << "node:" << m_node->GetId() << ' ' << (ch.l3Prot == 0xFC ? "ACK" : "NACK") << " NIC cannot find the flow\n";
@@ -446,6 +468,7 @@ int RdmaHw::ReceiveAck(Ptr<Packet> p, CustomHeader &ch){
 }
 
 int RdmaHw::Receive(Ptr<Packet> p, CustomHeader &ch){
+	
 	if (ch.l3Prot == 0x11){ // UDP
 		ReceiveUdp(p, ch);
 	}else if (ch.l3Prot == 0xFF){ // CNP
@@ -465,6 +488,10 @@ int RdmaHw::ReceiverCheckSeq(uint32_t seq, Ptr<RdmaRxQueuePair> q, uint32_t size
 	//   - 3: Duplicate, already ACKed (failure, do nothing)
 	//   - 4: Error but NAK timer not yet elapsed (failure, do nothing)
 	//   - 5: Success, don't send ACK
+	if(!q->IsReliable()) {
+		return 5;
+	}
+
 	uint32_t expected = q->ReceiverNextExpectedSeq;
 	if (seq == expected){
 		q->ReceiverNextExpectedSeq = expected + size;
@@ -481,6 +508,7 @@ int RdmaHw::ReceiverCheckSeq(uint32_t seq, Ptr<RdmaRxQueuePair> q, uint32_t size
 		}
 	} else if (seq > expected) {
 		// Generate NACK
+		// Only if timer elapsed, or if last NAK was of a different PSN.
 		if (Simulator::Now() >= q->m_nackTimer || q->m_lastNACK != expected){
 			q->m_nackTimer = Simulator::Now() + MicroSeconds(m_nack_interval);
 			q->m_lastNACK = expected;
@@ -595,6 +623,15 @@ Ptr<Packet> RdmaHw::GetNxtPacket(Ptr<RdmaQueuePair> qp){
 	// update state
 	qp->snd_nxt += payload_size;
 	qp->m_ipid++;
+
+	// raf Add BTH
+	RdmaBTH bth;
+	bth.SetReliable(qp->m_reliable);
+	if(!qp->m_reliable) {
+		bth.SetRxQpKey(RdmaHw::GetRxQpKey(qp->dip.Get(), qp->dport, qp->m_pg));
+	}
+
+	p->AddPacketTag(bth);
 
 	// return
 	return p;

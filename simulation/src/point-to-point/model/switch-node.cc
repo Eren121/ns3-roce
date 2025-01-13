@@ -125,14 +125,18 @@ void SwitchNode::SendToDev(Ptr<Packet>p, CustomHeader &ch){
 				m_mmu->UpdateIngressAdmission(inDev, qIndex, p->GetSize());
 				m_mmu->UpdateEgressAdmission(idx, qIndex, p->GetSize());
 			}else{
+				// raf todo add trace
 				return; // Drop
 			}
 			CheckAndSendPfc(inDev, qIndex);
 		}
 		m_bytes[inDev][idx][qIndex] += p->GetSize();
 		m_devices[idx]->SwitchSend(qIndex, p, ch);
-	}else
+	}else {
+		// raf todo add trace
+		std::cerr << "error: Cannot find output device for packet" << std::endl;
 		return; // Drop
+	}
 }
 
 uint32_t SwitchNode::EcmpHash(const uint8_t* key, size_t len, uint32_t seed) {
@@ -197,6 +201,7 @@ void SwitchNode::SwitchNotifyDequeue(uint32_t ifIndex, uint32_t qIndex, Ptr<Pack
 	p->PeekPacketTag(t);
 	if (qIndex != 0){
 		uint32_t inDev = t.GetFlowId();
+		NS_ASSERT(inDev == ifIndex);
 		m_mmu->RemoveFromIngressAdmission(inDev, qIndex, p->GetSize());
 		m_mmu->RemoveFromEgressAdmission(ifIndex, qIndex, p->GetSize());
 		m_bytes[inDev][ifIndex][qIndex] -= p->GetSize();

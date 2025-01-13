@@ -37,6 +37,7 @@ RdmaQueuePair::RdmaQueuePair(uint16_t pg, Ipv4Address _sip, Ipv4Address _dip, ui
 	m_var_win = false;
 	m_rate = 0;
 	m_nextAvail = Time(0);
+	m_reliable = true;
 	mlx.m_alpha = 1;
 	mlx.m_alpha_cnp_arrived = false;
 	mlx.m_first_cnp = true;
@@ -188,6 +189,11 @@ uint32_t RdmaRxQueuePair::GetHash(void){
 	buf.sport = sport;
 	buf.dport = dport;
 	return Hash32(buf.c, 12);
+}
+
+bool RdmaRxQueuePair::IsReliable() const
+{
+	return sip != 0 || sport != 0;
 }
 
 /*********************

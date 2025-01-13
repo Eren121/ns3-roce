@@ -28,6 +28,7 @@ public:
 	Time m_nextAvail;	//< Soonest time of next send
 	uint32_t lastPktSize;
 	Callback<void> m_notifyAppFinish;
+	bool m_reliable;
 
 	/******************************
 	 * runtime states
@@ -123,6 +124,7 @@ public:
 	static TypeId GetTypeId (void);
 	RdmaRxQueuePair();
 	uint32_t GetHash(void);
+	bool IsReliable() const;
 };
 
 class RdmaQueuePairGroup : public Object {
@@ -159,13 +161,12 @@ public:
 	void SetRxQpKey(uint64_t key);
 
 private:
-	// true: RC, false: UD.
-	bool m_reliable;
 	// Only used for UD.
 	// Key of the RQ QP.
 	// This should be the same as remote's `GetRxQp()`, and the RQ is stored in `RdmaHw::m_rxQpMap`.
 	// `Q_Key` field of the BTH.
-	uint64_t m_rxQpKey;
+	uint64_t m_rxQpKey{0};
+	bool m_reliable{true};
 };
 
 }
