@@ -140,6 +140,28 @@ public:
 	void Clear(void);
 };
 
+// Minimal Base Transport Header (BTH).
+// Stores necessary informations for the BTH.
+// We don't add a field to `CustomHeader` to avoid modify the size of the packet.
+class RdmaBTH : public Tag
+{
+public:
+	static TypeId GetTypeId();
+  	TypeId GetInstanceTypeId() const override;
+  	void Print(std::ostream &os) const override;
+  	uint32_t GetSerializedSize() const override;
+  	void Serialize(TagBuffer start) const override;
+  	void Deserialize(TagBuffer start) override;
+
+	// true: RC, false: UD.
+	bool m_reliable;
+	// Only used for UD.
+	// Key of the RQ QP.
+	// This should be the same as remote's `GetRxQp()`, and the RQ is stored in `RdmaHw::m_rxQpMap`.
+	// `Q_Key` field of the BTH.
+	uint64_t m_rxQpKey;
+};
+
 }
 
 #endif /* RDMA_QUEUE_PAIR_H */
