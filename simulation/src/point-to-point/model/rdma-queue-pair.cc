@@ -260,7 +260,8 @@ void RdmaBTH::Print(std::ostream &os) const
 
 uint32_t RdmaBTH::GetSerializedSize() const
 {
-	return 5;
+	// bool + uint64_t
+	return 9;
 }
 
 void RdmaBTH::Serialize(TagBuffer start) const
