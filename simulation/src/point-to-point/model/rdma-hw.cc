@@ -213,6 +213,11 @@ uint32_t RdmaHw::GetNicIdxOfQp(Ptr<RdmaQueuePair> qp){
 uint64_t RdmaHw::GetQpKey(uint32_t dip, uint16_t sport, uint16_t pg){
 	return ((uint64_t)dip << 32) | ((uint64_t)sport << 16) | (uint64_t)pg;
 }
+
+uint64_t RdmaHw::GetRxQpKey(uint32_t dip, uint16_t dport, uint16_t pg){
+	return ((uint64_t)dip << 32) | ((uint64_t)pg << 16) | (uint64_t)dport;
+}
+
 Ptr<RdmaQueuePair> RdmaHw::GetQp(uint32_t dip, uint16_t sport, uint16_t pg){
 	uint64_t key = GetQpKey(dip, sport, pg);
 	auto it = m_qpMap.find(key);
@@ -264,7 +269,7 @@ void RdmaHw::DeleteQueuePair(Ptr<RdmaQueuePair> qp){
 }
 
 Ptr<RdmaRxQueuePair> RdmaHw::GetRxQp(uint32_t sip, uint32_t dip, uint16_t sport, uint16_t dport, uint16_t pg, bool create){
-	uint64_t key = ((uint64_t)dip << 32) | ((uint64_t)pg << 16) | (uint64_t)dport;
+	uint64_t key = GetRxQpKey(dip, dport, pg);
 	auto it = m_rxQpMap.find(key);
 	if (it != m_rxQpMap.end())
 		return it->second;
