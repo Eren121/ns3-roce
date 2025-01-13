@@ -70,6 +70,7 @@ private:
   virtual void StopApplication (void);
 
   uint64_t m_size;
+  bool m_reliable; // UD or RC
   uint16_t m_pg;
 
   Ipv4Address m_sip, m_dip;

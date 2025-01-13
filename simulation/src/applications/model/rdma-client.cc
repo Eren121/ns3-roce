@@ -28,6 +28,7 @@
 #include "ns3/socket-factory.h"
 #include "ns3/packet.h"
 #include "ns3/uinteger.h"
+#include "ns3/boolean.h"
 #include "ns3/random-variable.h"
 #include "ns3/qbb-net-device.h"
 #include "ns3/ipv4-end-point.h"
@@ -53,6 +54,11 @@ RdmaClient::GetTypeId (void)
                    UintegerValue (10000),
                    MakeUintegerAccessor (&RdmaClient::m_size),
                    MakeUintegerChecker<uint64_t> ())
+    .AddAttribute ("Reliable",
+				           "If false, use Unreliable Datagram (UD)",
+				           BooleanValue(true),
+				           MakeBooleanAccessor(&RdmaClient::m_reliable),
+				           MakeBooleanChecker())
     .AddAttribute ("SourceIP",
                    "Source IP",
                    Ipv4AddressValue ("0.0.0.0"),
@@ -138,7 +144,7 @@ void RdmaClient::StartApplication (void)
   // get RDMA driver and add up queue pair
   Ptr<Node> node = GetNode();
   Ptr<RdmaDriver> rdma = node->GetObject<RdmaDriver>();
-  rdma->AddQueuePair(m_size, m_pg, m_sip, m_dip, m_sport, m_dport, m_win, m_baseRtt, MakeCallback(&RdmaClient::Finish, this));
+  rdma->AddQueuePair(m_size, m_reliable, m_pg, m_sip, m_dip, m_sport, m_dport, m_win, m_baseRtt, MakeCallback(&RdmaClient::Finish, this));
 }
 
 void RdmaClient::StopApplication ()

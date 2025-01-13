@@ -226,9 +226,10 @@ Ptr<RdmaQueuePair> RdmaHw::GetQp(uint32_t dip, uint16_t sport, uint16_t pg){
 		return it->second;
 	return NULL;
 }
-void RdmaHw::AddQueuePair(uint64_t size, uint16_t pg, Ipv4Address sip, Ipv4Address dip, uint16_t sport, uint16_t dport, uint32_t win, uint64_t baseRtt, Callback<void> notifyAppFinish){
+void RdmaHw::AddQueuePair(uint64_t size, bool reliable, uint16_t pg, Ipv4Address sip, Ipv4Address dip, uint16_t sport, uint16_t dport, uint32_t win, uint64_t baseRtt, Callback<void> notifyAppFinish){
 	// create qp
 	Ptr<RdmaQueuePair> qp = CreateObject<RdmaQueuePair>(pg, sip, dip, sport, dport);
+	qp->m_reliable = reliable;
 	qp->SetSize(size);
 	qp->SetWin(win);
 	qp->SetBaseRtt(baseRtt);
