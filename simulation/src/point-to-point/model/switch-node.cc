@@ -131,8 +131,10 @@ void SwitchNode::SendToDev(Ptr<Packet>p, CustomHeader &ch){
 		}
 		m_bytes[inDev][idx][qIndex] += p->GetSize();
 		m_devices[idx]->SwitchSend(qIndex, p, ch);
-	}else
+	}else {
+		std::cerr << "ERROR: Cannot find output device for packet" << std::endl;
 		return; // Drop
+	}
 }
 
 uint32_t SwitchNode::EcmpHash(const uint8_t* key, size_t len, uint32_t seed) {
