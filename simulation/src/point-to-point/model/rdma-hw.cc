@@ -11,6 +11,7 @@
 #include "rdma-hw.h"
 #include "ppp-header.h"
 #include "qbb-header.h"
+#include "rdma-bth.h"
 #include "cn-header.h"
 
 namespace ns3{
@@ -307,7 +308,21 @@ int RdmaHw::ReceiveUdp(Ptr<Packet> p, CustomHeader &ch){
 	uint32_t payload_size = p->GetSize() - ch.GetSerializedSize();
 
 	// TODO find corresponding rx queue pair
-	Ptr<RdmaRxQueuePair> rxQp = GetRxQp(ch.dip, ch.sip, ch.udp.dport, ch.udp.sport, ch.udp.pg, true);
+	Ptr<RdmaRxQueuePair> rxQp;
+	RdmaBTH bth;
+	bool reliable = true;
+	if(p->PeekPacketTag(bth)) {
+		reliable = bth.GetReliable();
+	}
+	else {
+		std::cout << "WARNING: BTH tag not present in received UDP packet" << std::endl;
+	}
+	if(reliable) {
+		rxQp = GetRxQp(ch.dip, ch.sip, ch.udp.dport, ch.udp.sport, ch.udp.pg, true);
+	}
+	else {
+		rxQp = GetRxQp(ch.dip, 0, ch.udp.dport, 0, ch.udp.pg, true);
+	}
 	if (ecnbits != 0){
 		rxQp->m_ecn_source.ecnbits |= ecnbits;
 		rxQp->m_ecn_source.qfb++;
@@ -316,6 +331,11 @@ int RdmaHw::ReceiveUdp(Ptr<Packet> p, CustomHeader &ch){
 
 	// raf comment to fix ACK interval
 	// rxQp->m_milestone_rx = m_ack_interval;
+
+	// Don't check sequence for UD
+	if(!reliable) {
+		return 0;
+	}
 
 	int x = ReceiverCheckSeq(ch.udp.seq, rxQp, payload_size);
 	if (x == 1 || x == 2){ //generate ACK or NACK
@@ -394,6 +414,18 @@ int RdmaHw::ReceiveCnp(Ptr<Packet> p, CustomHeader &ch){
 }
 
 int RdmaHw::ReceiveAck(Ptr<Packet> p, CustomHeader &ch){
+
+	RdmaBTH bth;
+	bool reliable = true; // If BTH is not present assume reliable
+	if(p->PeekPacketTag(bth)) {
+		reliable = bth.GetReliable();
+	}
+
+	if(!reliable) {
+		std::cout << "ERROR: Unreliable QP should not generate ACK/NACK" << std::endl;
+		return 0;
+	}
+
 	uint16_t qIndex = ch.ack.pg;
 	uint16_t port = ch.ack.dport;
 	uint32_t seq = ch.ack.seq;
@@ -591,7 +623,10 @@ Ptr<Packet> RdmaHw::GetNxtPacket(Ptr<RdmaQueuePair> qp){
 	PppHeader ppp;
 	ppp.SetProtocol (0x0021); // EtherToPpp(0x800), see point-to-point-net-device.cc
 	p->AddHeader (ppp);
-
+	// add bth
+	RdmaBTH bth;
+	bth.SetReliable(true);
+	p->AddPacketTag(bth);
 	// update state
 	qp->snd_nxt += payload_size;
 	qp->m_ipid++;
