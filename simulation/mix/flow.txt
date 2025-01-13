@@ -261,4 +261,7 @@ src0 dst0 3 dst_port0 size0 start_time0
 src1 dst1 3 dst_port1 size1 start_time1
 ...
 
+A line can also start with "UD/RC" to specify which type of connection to use.
+If not present, it's by default "RC".
+
 Please order the flows in ascending start_time!

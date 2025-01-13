@@ -121,6 +121,7 @@ std::vector<Ipv4Address> serverAddress;
 std::unordered_map<uint32_t, unordered_map<uint32_t, uint16_t> > portNumder;
 
 struct FlowInput{
+	bool reliable;
 	uint32_t src, dst, pg, maxPacketCount, port, dport;
 	double start_time;
 	uint32_t idx;
@@ -130,7 +131,24 @@ uint32_t flow_num;
 
 void ReadFlowInput(){
 	if (flow_input.idx < flow_num){
-		flowf >> flow_input.src >> flow_input.dst >> flow_input.pg >> flow_input.dport >> flow_input.maxPacketCount >> flow_input.start_time;
+
+		std::string first_word;
+		flowf >> first_word;
+		if(first_word == "RC") {
+			flow_input.reliable = true;
+			flowf >> flow_input.src;
+		}
+		else if(first_word == "UD") {
+			flow_input.reliable = false;
+			flowf >> flow_input.src;
+		}
+		else {
+			flow_input.reliable = true;
+			// UC/UD not present
+			std::istringstream ss(first_word);
+			ss >> flow_input.src;
+		}
+		flowf >> flow_input.dst >> flow_input.pg >> flow_input.dport >> flow_input.maxPacketCount >> flow_input.start_time;
 		NS_ASSERT(n.Get(flow_input.src)->GetNodeType() == 0 && n.Get(flow_input.dst)->GetNodeType() == 0);
 	}
 }
@@ -138,6 +156,7 @@ void ScheduleFlowInputs(){
 	while (flow_input.idx < flow_num && Seconds(flow_input.start_time) == Simulator::Now()){
 		uint32_t port = portNumder[flow_input.src][flow_input.dst]++; // get a new port number 
 		RdmaClientHelper clientHelper(flow_input.pg, serverAddress[flow_input.src], serverAddress[flow_input.dst], port, flow_input.dport, flow_input.maxPacketCount, has_win?(global_t==1?maxBdp:pairBdp[n.Get(flow_input.src)][n.Get(flow_input.dst)]):0, global_t==1?maxRtt:pairRtt[flow_input.src][flow_input.dst]);
+		clientHelper.SetAttribute("Reliable", BooleanValue(flow_input.reliable));
 		ApplicationContainer appCon = clientHelper.Install(n.Get(flow_input.src));
 		appCon.Start(Time(0));
 
