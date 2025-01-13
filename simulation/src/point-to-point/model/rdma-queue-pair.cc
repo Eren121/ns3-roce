@@ -275,4 +275,25 @@ void RdmaBTH::Deserialize(TagBuffer start)
 	m_rxQpKey = start.ReadU64();
 }
 
+bool RdmaBTH::GetReliable() const
+{
+	return m_reliable;
+}
+
+void RdmaBTH::SetReliable(bool reliable)
+{
+	m_reliable = reliable;
+}
+
+uint64_t RdmaBTH::GetRxQpKey() const
+{
+	return m_rxQpKey;
+}
+
+void RdmaBTH::SetRxQpKey(uint64_t key)
+{
+	m_rxQpKey = key;
+}
+	
+
 }

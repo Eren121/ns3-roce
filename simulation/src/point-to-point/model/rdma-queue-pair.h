@@ -153,6 +153,12 @@ public:
   	void Serialize(TagBuffer start) const override;
   	void Deserialize(TagBuffer start) override;
 
+	bool GetReliable() const;
+	void SetReliable(bool reliable);
+	uint64_t GetRxQpKey() const;
+	void SetRxQpKey(uint64_t key);
+
+private:
 	// true: RC, false: UD.
 	bool m_reliable;
 	// Only used for UD.
