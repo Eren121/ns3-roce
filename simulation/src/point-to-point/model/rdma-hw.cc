@@ -625,7 +625,7 @@ Ptr<Packet> RdmaHw::GetNxtPacket(Ptr<RdmaQueuePair> qp){
 	p->AddHeader (ppp);
 	// add bth
 	RdmaBTH bth;
-	bth.SetReliable(true);
+	bth.SetReliable(qp->m_reliable);
 	p->AddPacketTag(bth);
 	// update state
 	qp->snd_nxt += payload_size;

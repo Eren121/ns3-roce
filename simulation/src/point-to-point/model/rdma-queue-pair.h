@@ -21,6 +21,7 @@ public:
 	uint64_t snd_nxt, snd_una; // next seq to send, the highest unacked seq
 	uint16_t m_pg;
 	uint16_t m_ipid;
+	bool m_reliable;
 	uint32_t m_win; // bound of on-the-fly packets
 	uint64_t m_baseRtt; // base RTT of this qp
 	DataRate m_max_rate; // max rate
