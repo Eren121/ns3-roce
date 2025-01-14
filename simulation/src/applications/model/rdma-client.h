@@ -56,6 +56,8 @@ public:
    * \brief Set the destination where to send the data.
    * \param ip   Destination IP address.
    * \param port Destination port.
+   * 
+   * Works only if called before the application starts.
    */
   void SetRemote(Ipv4Address ip, uint16_t port);
   
@@ -63,6 +65,8 @@ public:
    * \brief Set the source from where to send the data.
    * \param ip   Local IP address. It should belong to the node that runs the application.
    * \param port Local port.
+   * 
+   * Works only if called before the application starts.
    */
   void SetLocal(Ipv4Address ip, uint16_t port);
 
