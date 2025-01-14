@@ -47,26 +47,24 @@ class Packet;
 class RdmaClient : public Application
 {
 public:
-  static TypeId
-  GetTypeId (void);
+  static TypeId GetTypeId();
 
-  RdmaClient ();
-
-  virtual ~RdmaClient ();
+  RdmaClient();
+  virtual ~RdmaClient();
 
   /**
    * \brief Set the destination where to send the data.
    * \param ip   Destination IP address.
    * \param port Destination port.
    */
-  void SetRemote (Ipv4Address ip, uint16_t port);
+  void SetRemote(Ipv4Address ip, uint16_t port);
   
   /**
    * \brief Set the source from where to send the data.
    * \param ip   Local IP address. It should belong to the node that runs the application.
    * \param port Local port.
    */
-  void SetLocal (Ipv4Address ip, uint16_t port);
+  void SetLocal(Ipv4Address ip, uint16_t port);
 
   /**
    * \brief Set the priority group of the QP.
@@ -74,7 +72,7 @@ public:
    * 
    * Works only if called before the application starts.
    */
-  void SetPG (uint16_t pg);
+  void SetPG(uint16_t pg);
   
   /**
    * \brief Set the count of bytes to RDMA Write.
@@ -85,7 +83,7 @@ public:
   void SetSize(uint64_t size);
 
 protected:
-  virtual void DoDispose (void);
+  virtual void DoDispose();
 
   /**
    * \brief Callback called when the flow has been completed.
@@ -93,9 +91,8 @@ protected:
   void Finish();
 
 private:
-
-  virtual void StartApplication (void);
-  virtual void StopApplication (void);
+  virtual void StartApplication();
+  virtual void StopApplication();
 
   uint64_t m_size;            //!< Count of bytes to write.
   bool m_reliable;            //!< `true` for RC, `false` for UD.

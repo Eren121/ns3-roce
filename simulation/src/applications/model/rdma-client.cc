@@ -44,7 +44,7 @@ NS_LOG_COMPONENT_DEFINE ("RdmaClient");
 NS_OBJECT_ENSURE_REGISTERED (RdmaClient);
 
 TypeId
-RdmaClient::GetTypeId (void)
+RdmaClient::GetTypeId()
 {
   static TypeId tid = TypeId ("ns3::RdmaClient")
     .SetParent<Application> ()
@@ -97,59 +97,61 @@ RdmaClient::GetTypeId (void)
   return tid;
 }
 
-RdmaClient::RdmaClient ()
+RdmaClient::RdmaClient()
 {
-  NS_LOG_FUNCTION_NOARGS ();
+  NS_LOG_FUNCTION_NOARGS();
 }
 
-RdmaClient::~RdmaClient ()
+RdmaClient::~RdmaClient()
 {
-  NS_LOG_FUNCTION_NOARGS ();
+  NS_LOG_FUNCTION_NOARGS();
 }
 
-void RdmaClient::SetRemote (Ipv4Address ip, uint16_t port)
+void RdmaClient::SetRemote(Ipv4Address ip, uint16_t port)
 {
   m_dip = ip;
   m_dport = port;
 }
 
-void RdmaClient::SetLocal (Ipv4Address ip, uint16_t port)
+void RdmaClient::SetLocal(Ipv4Address ip, uint16_t port)
 {
   m_sip = ip;
   m_sport = port;
 }
 
-void RdmaClient::SetPG (uint16_t pg)
+void RdmaClient::SetPG(uint16_t pg)
 {
 	m_pg = pg;
 }
 
-void RdmaClient::SetSize(uint64_t size){
+void RdmaClient::SetSize(uint64_t size)
+{
 	m_size = size;
 }
 
-void RdmaClient::Finish(){
+void RdmaClient::Finish()
+{
 	m_node->DeleteApplication(this);
 }
 
-void RdmaClient::DoDispose (void)
+void RdmaClient::DoDispose()
 {
-  NS_LOG_FUNCTION_NOARGS ();
-  Application::DoDispose ();
+  NS_LOG_FUNCTION_NOARGS();
+  Application::DoDispose();
 }
 
-void RdmaClient::StartApplication (void)
+void RdmaClient::StartApplication()
 {
-  NS_LOG_FUNCTION_NOARGS ();
+  NS_LOG_FUNCTION_NOARGS();
   // get RDMA driver and add up queue pair
   Ptr<Node> node = GetNode();
   Ptr<RdmaDriver> rdma = node->GetObject<RdmaDriver>();
   rdma->AddQueuePair(m_size, m_reliable, m_pg, m_sip, m_dip, m_sport, m_dport, m_win, m_baseRtt, MakeCallback(&RdmaClient::Finish, this));
 }
 
-void RdmaClient::StopApplication ()
+void RdmaClient::StopApplication()
 {
-  NS_LOG_FUNCTION_NOARGS ();
+  NS_LOG_FUNCTION_NOARGS();
   // TODO stop the queue pair
 }
 
