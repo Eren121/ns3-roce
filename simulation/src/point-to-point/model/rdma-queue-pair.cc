@@ -152,6 +152,9 @@ uint64_t RdmaQueuePair::HpGetCurWin(){
 }
 
 bool RdmaQueuePair::IsFinished(){
+	if(!m_reliable) {
+		return snd_nxt >= m_size;
+	}
 	return snd_una >= m_size;
 }
 
