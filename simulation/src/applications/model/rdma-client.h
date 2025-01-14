@@ -84,13 +84,13 @@ public:
    */
   void SetSize(uint64_t size);
 
+protected:
+  virtual void DoDispose (void);
+
   /**
    * \brief Callback called when the flow has been completed.
    */
   void Finish();
-
-protected:
-  virtual void DoDispose (void);
 
 private:
 
