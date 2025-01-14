@@ -8,8 +8,11 @@ build_image:
 	docker build -t $(TAG) .
 
 # Configure waf
-configure:
-	$(DOCKER_RUN) python waf configure
+configure_debug:
+	$(DOCKER_RUN) python waf configure -d debug
+
+configure_release:
+	$(DOCKER_RUN) python waf configure -d release
 
 # Build waf
 build:
