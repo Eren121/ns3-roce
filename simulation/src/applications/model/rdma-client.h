@@ -83,7 +83,7 @@ public:
   void SetSize(uint64_t size);
 
 protected:
-  virtual void DoDispose();
+  void DoDispose() override;
 
   /**
    * \brief Callback called when the flow has been completed.
@@ -91,8 +91,8 @@ protected:
   void Finish();
 
 private:
-  virtual void StartApplication();
-  virtual void StopApplication();
+  void StartApplication() override;
+  void StopApplication() override;
 
   uint64_t m_size;            //!< Count of bytes to write.
   bool m_reliable;            //!< `true` for RC, `false` for UD.
