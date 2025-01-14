@@ -1,7 +1,7 @@
 TAG = hpcc
 DOCKER_USER = -u $(shell id -u):$(shell id -g) # Avoid creating files as root
 DOCKER_MOUNT = --mount type=bind,src=.,dst=/app
-DOCKER_RUN = docker run --rm $(DOCKER_MOUNT) $(DOCKER_USER) -w /app/simulation $(TAG)
+DOCKER_RUN = docker run --rm $(DOCKER_MOUNT) $(DOCKER_USER) -w /app/simulation -e NS_LOG=$(NS_LOG) $(TAG)
 .PHONY: build_image configure build run build_trace
 
 build_image:
