@@ -36,9 +36,13 @@ class Packet;
 
 /**
  * \ingroup rdmaclientserver
- * \class rdmaClient
- * \brief A RDMA client.
- *
+ * \class RdmaClient
+ * \brief An RDMA client.
+ * 
+ * An RDMA client sends a flow of data to another QP which simulates an RDMA Write operation.
+ * For RC QP, the application stops when all data is acknowledged.
+ * For UD QP, the application stops when all data is sent.
+ * See the format of `flow.txt` which defines the flow of the client.
  */
 class RdmaClient : public Application
 {
@@ -51,14 +55,38 @@ public:
   virtual ~RdmaClient ();
 
   /**
-   * \brief set the remote address and port
-   * \param ip remote IP address
-   * \param port remote port
+   * \brief Set the destination where to send the data.
+   * \param ip   Destination IP address.
+   * \param port Destination port.
    */
   void SetRemote (Ipv4Address ip, uint16_t port);
+  
+  /**
+   * \brief Set the source from where to send the data.
+   * \param ip   Local IP address. It should belong to the node that runs the application.
+   * \param port Local port.
+   */
   void SetLocal (Ipv4Address ip, uint16_t port);
+
+  /**
+   * \brief Set the priority group of the QP.
+   * \param pg New priority group.
+   * 
+   * Works only if called before the application starts.
+   */
   void SetPG (uint16_t pg);
+  
+  /**
+   * \brief Set the count of bytes to RDMA Write.
+   * \param size New count of bytes to write.
+   * 
+   * Works only if called before the application starts.
+   */
   void SetSize(uint64_t size);
+
+  /**
+   * \brief Callback called when the flow has been completed.
+   */
   void Finish();
 
 protected:
@@ -69,14 +97,13 @@ private:
   virtual void StartApplication (void);
   virtual void StopApplication (void);
 
-  uint64_t m_size;
-  bool m_reliable; // UD or RC
-  uint16_t m_pg;
-
+  uint64_t m_size;            //!< Count of bytes to write.
+  bool m_reliable;            //!< `true` for RC, `false` for UD.
+  uint16_t m_pg;              //!< Priority group.
   Ipv4Address m_sip, m_dip;
   uint16_t m_sport, m_dport;
-  uint32_t m_win; // bound of on-the-fly packets
-  uint64_t m_baseRtt; // base Rtt
+  uint32_t m_win;             //<! Bound of on-the-fly packets.
+  uint64_t m_baseRtt;         //<! Base Rtt.
 };
 
 } // namespace ns3
