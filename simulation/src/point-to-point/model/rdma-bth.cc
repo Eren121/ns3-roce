@@ -13,6 +13,11 @@ TypeId RdmaBTH::GetTypeId()
 				BooleanValue(true),
 				MakeBooleanAccessor(&RdmaBTH::m_reliable),
 				MakeBooleanChecker())
+		.AddAttribute("AckReq",
+				"Whether to request for an ACK.",
+				BooleanValue(false),
+				MakeBooleanAccessor(&RdmaBTH::m_ack_req),
+				MakeBooleanChecker())
 		;
 	return tid;
 }
@@ -29,18 +34,19 @@ void RdmaBTH::Print(std::ostream &os) const
 
 uint32_t RdmaBTH::GetSerializedSize() const
 {
-	// bool + uint64_t
-	return 1;
+	return 2;
 }
 
 void RdmaBTH::Serialize(TagBuffer start) const
 {
 	start.WriteU8(m_reliable);
+	start.WriteU8(m_ack_req);
 }
 
 void RdmaBTH::Deserialize(TagBuffer start)
 {
 	m_reliable = start.ReadU8();
+	m_ack_req = start.ReadU8();
 }
 
 bool RdmaBTH::GetReliable() const
@@ -52,5 +58,15 @@ void RdmaBTH::SetReliable(bool reliable)
 {
 	m_reliable = reliable;
 }	
+
+bool RdmaBTH::GetAckReq() const
+{
+	return m_ack_req;
+}
+
+void RdmaBTH::SetAckReq(bool ack_req)
+{
+	m_ack_req = ack_req;
+}
 
 }

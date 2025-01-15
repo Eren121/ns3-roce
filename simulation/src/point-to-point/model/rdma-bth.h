@@ -21,10 +21,13 @@ public:
 
 	bool GetReliable() const;
 	void SetReliable(bool reliable);
+	bool GetAckReq() const;
+	void SetAckReq(bool ack_req);
 
 private:
 	// true: RC, false: UD.
-	bool m_reliable;
+	bool m_reliable{true};
+	bool m_ack_req{false}; //<! When true, the sender requests explicitly an ACK.
 };
 
 }
