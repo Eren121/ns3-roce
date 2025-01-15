@@ -330,9 +330,6 @@ int RdmaHw::ReceiveUdp(Ptr<Packet> p, CustomHeader &ch){
 	}
 	rxQp->m_ecn_source.total++;
 
-	// raf comment to fix ACK interval
-	// rxQp->m_milestone_rx = m_ack_interval;
-
 	// Don't check sequence for UD
 	if(!reliable) {
 		return 0;

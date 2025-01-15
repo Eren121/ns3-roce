@@ -117,7 +117,6 @@ public:
 	uint16_t m_ipid;
 	uint32_t ReceiverNextExpectedSeq;
 	Time m_nackTimer;
-	int32_t m_milestone_rx;
 	uint32_t m_lastNACK;
 	EventId QcnTimerEvent; // if destroy this rxQp, remember to cancel this timer
 
