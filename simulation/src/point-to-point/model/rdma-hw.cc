@@ -490,6 +490,13 @@ int RdmaHw::Receive(Ptr<Packet> p, CustomHeader &ch){
 	return 0;
 }
 
+/**
+ * \return true If the interval between the two values spans on more than one chunk.
+ */
+static bool CrossBoundary(uint64_t chunksize, uint64_t oldval, uint64_t newval) {
+	return (oldval / chunksize) != (newval / chunksize);
+}
+
 bool RdmaHw::SenderShouldReqAck(Ptr<RdmaQueuePair> qp, uint64_t payload_size) {
 	// This is a change from the original project.
 	// Previously, it was to the discretion of the receiver to choose when to send back ACKs.
@@ -509,12 +516,11 @@ bool RdmaHw::SenderShouldReqAck(Ptr<RdmaQueuePair> qp, uint64_t payload_size) {
 		return true;
 	}
 
-	// IMPORTANT: only supports chunk size and ACK interval multiple of the payload size (TODO)
 	// Care of Arithmetic Exception (% by zero).
-	if(m_chunk != 0 && (psn + payload_size) % m_chunk == 0) {
+	if(m_chunk != 0 && CrossBoundary(m_chunk, psn, psn + payload_size)) {
 		return true; // End of chunk
 	}
-	if(m_ack_interval != 0 && (psn + payload_size) % m_ack_interval == 0) {
+	if(m_ack_interval != 0 && CrossBoundary(m_ack_interval, psn, psn + payload_size)) {
 		return true; // Milestone reached
 	}
 
