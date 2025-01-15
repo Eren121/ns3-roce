@@ -689,7 +689,7 @@ int main(int argc, char *argv[])
 			}
 			fflush(stdout);
 		
-			if(!conf) {
+			if(!conf.eof() && !conf) {
 				std::cerr << "ERROR: parsing config file failed " << argv[1] << std::endl;
 				std::exit(1);
 			}
