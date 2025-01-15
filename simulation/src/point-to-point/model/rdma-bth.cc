@@ -9,7 +9,7 @@ TypeId RdmaBTH::GetTypeId()
 	static TypeId tid = TypeId("ns3::RdmaBTH")
 		.SetParent<Object>()
 		.AddAttribute("Reliable",
-				"Wether the RQ destination is UD or RC",
+				"Whether the RQ destination is UD or RC",
 				BooleanValue(true),
 				MakeBooleanAccessor(&RdmaBTH::m_reliable),
 				MakeBooleanChecker())
