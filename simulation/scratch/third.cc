@@ -378,6 +378,11 @@ int main(int argc, char *argv[])
 #else
 		conf.open(PATH_TO_PGO_CONFIG);
 #endif
+		if(!conf) {
+			std::cerr << "ERROR: cannot open config file " << argv[1] << std::endl;
+			std::exit(1);
+		}
+
 		while (!conf.eof())
 		{
 			std::string key;
@@ -683,6 +688,12 @@ int main(int argc, char *argv[])
 				PrintOption("RNG_SEED", rng_seed);
 			}
 			fflush(stdout);
+		
+			if(!conf) {
+				std::cerr << "ERROR: parsing config file failed " << argv[1] << std::endl;
+				std::exit(1);
+			}
+			
 		}
 		conf.close();
 	}
