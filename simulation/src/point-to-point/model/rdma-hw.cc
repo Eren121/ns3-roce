@@ -339,6 +339,11 @@ int RdmaHw::ReceiveUdp(Ptr<Packet> p, CustomHeader &ch){
 	}
 
 	int x = ReceiverCheckSeq(ch.udp.seq, rxQp, payload_size);
+	
+	if(x != 2 && bth.GetAckReq()) {
+		x = 1; // If no NAK, force an ACK
+	}
+
 	if (x == 1 || x == 2){ //generate ACK or NACK
 		qbbHeader seqh;
 		seqh.SetSeq(rxQp->ReceiverNextExpectedSeq);
@@ -441,19 +446,16 @@ int RdmaHw::ReceiveAck(Ptr<Packet> p, CustomHeader &ch){
 
 	uint32_t nic_idx = GetNicIdxOfQp(qp);
 	Ptr<QbbNetDevice> dev = m_nic[nic_idx].dev;
-	if (m_ack_interval == 0 && !nack)
-		std::cout << "ERROR: shouldn't receive ack\n";
-	else {
-		if (!m_backto0){
-			qp->Acknowledge(seq);
-		}else {
-			uint32_t goback_seq = seq / m_chunk * m_chunk;
-			qp->Acknowledge(goback_seq);
-		}
-		if (qp->IsFinished()){
-			QpComplete(qp);
-		}
+	if (!m_backto0){
+		qp->Acknowledge(seq);
+	}else {
+		uint32_t goback_seq = seq / m_chunk * m_chunk;
+		qp->Acknowledge(goback_seq);
 	}
+	if (qp->IsFinished()){
+		QpComplete(qp);
+	}
+	
 	if (nack) // NACK
 		RecoverQueue(qp);
 
@@ -491,6 +493,37 @@ int RdmaHw::Receive(Ptr<Packet> p, CustomHeader &ch){
 	return 0;
 }
 
+bool RdmaHw::SenderShouldReqAck(Ptr<RdmaQueuePair> qp, uint64_t payload_size) {
+	// This is a change from the original project.
+	// Previously, it was to the discretion of the receiver to choose when to send back ACKs.
+	// Now, the sender can request for an ACK.
+	// If the packet ReqAck bit is set, the receiver should to send back an ACK on success.
+	// If the packet ReqAck bit is not set, it's to the discretion of the receiver to generate an ACK on success.
+	// The logic is similar to the original `ReceiverCheckSeq()`, but with the following changes:
+	//   - The last packet always generates an ACK. Previously, the QP would not properly shutdown if the last packet PSN was not multiple of the ACK interval.
+	//   - Even if ACK is disabled, chunks are always ACKed (`m_chunk` and `m_ack_interval` are independant).
+	if(!qp->m_reliable) {
+		return false; // Never ask for an ACK with UD.
+	}
+
+	const uint64_t psn = qp->snd_nxt;
+	const bool last_data_packet = (payload_size >= qp->GetBytesLeft());
+	if(last_data_packet) {
+		return true;
+	}
+
+	// IMPORTANT: only supports chunk size and ACK interval multiple of the payload size (TODO)
+	// Care of Arithmetic Exception (% by zero).
+	if(m_chunk != 0 && (psn + payload_size) % m_chunk == 0) {
+		return true; // End of chunk
+	}
+	if(m_ack_interval != 0 && (psn + payload_size) % m_ack_interval == 0) {
+		return true; // Milestone reached
+	}
+
+	return false;
+}
+
 int RdmaHw::ReceiverCheckSeq(uint32_t seq, Ptr<RdmaRxQueuePair> q, uint32_t size){
 	// returns:
 	//   - 1: Generate ACK (success)
@@ -501,17 +534,7 @@ int RdmaHw::ReceiverCheckSeq(uint32_t seq, Ptr<RdmaRxQueuePair> q, uint32_t size
 	uint32_t expected = q->ReceiverNextExpectedSeq;
 	if (seq == expected){
 		q->ReceiverNextExpectedSeq = expected + size;
-		if(m_ack_interval == 0) {
-			return 5; // ACK disabled
-		}
-		if (q->ReceiverNextExpectedSeq >= q->m_milestone_rx){
-			q->m_milestone_rx += m_ack_interval;
-			return 1; //Generate ACK
-		}else if (q->ReceiverNextExpectedSeq % m_chunk == 0){
-			return 1;
-		}else {
-			return 5;
-		}
+		return 5;
 	} else if (seq > expected) {
 		// Generate NACK
 		if (Simulator::Now() >= q->m_nackTimer || q->m_lastNACK != expected){
@@ -627,6 +650,7 @@ Ptr<Packet> RdmaHw::GetNxtPacket(Ptr<RdmaQueuePair> qp){
 	// add bth
 	RdmaBTH bth;
 	bth.SetReliable(qp->m_reliable);
+	bth.SetAckReq(SenderShouldReqAck(qp, payload_size));
 	p->AddPacketTag(bth);
 	// update state
 	qp->snd_nxt += payload_size;
