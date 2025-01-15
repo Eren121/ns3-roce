@@ -41,7 +41,7 @@ TypeId RdmaHw::GetTypeId (void)
 				MakeDoubleAccessor(&RdmaHw::m_nack_interval),
 				MakeDoubleChecker<double>())
 		.AddAttribute("L2ChunkSize",
-				"Layer 2 chunk size. Disable chunk mode if equals to 0.",
+				"Layer 2 chunk size for Go-Back-0. Disable chunk mode if equals to 0.",
 				UintegerValue(0),
 				MakeUintegerAccessor(&RdmaHw::m_chunk),
 				MakeUintegerChecker<uint32_t>())
