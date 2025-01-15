@@ -22,6 +22,7 @@ build:
 	$(DOCKER_RUN) python waf build
 
 # Run HPCC
+# Working directory inside the Docker container is "$GIT_ROOT/simulation".
 run:
 	$(DOCKER_RUN) python waf --run 'scratch/third $(config)'
 
