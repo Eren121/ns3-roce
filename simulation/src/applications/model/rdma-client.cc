@@ -29,6 +29,7 @@
 #include "ns3/packet.h"
 #include "ns3/uinteger.h"
 #include "ns3/boolean.h"
+#include "ns3/callback.h"
 #include "ns3/random-variable.h"
 #include "ns3/qbb-net-device.h"
 #include "ns3/ipv4-end-point.h"
@@ -93,7 +94,12 @@ RdmaClient::GetTypeId()
                    UintegerValue (0),
                    MakeUintegerAccessor (&RdmaClient::m_baseRtt),
                    MakeUintegerChecker<uint64_t> ())
-  ;
+    .AddAttribute("OnFlowFinished",
+                  "Callback when the flow finishes",
+                  CallbackValue(),
+                  MakeCallbackAccessor(&RdmaClient::m_onFlowFinished),
+                  MakeCallbackChecker())
+    ;
   return tid;
 }
 
@@ -131,6 +137,9 @@ void RdmaClient::SetSize(uint64_t size)
 
 void RdmaClient::Finish()
 {
+  if(!m_onFlowFinished.IsNull()) {
+    m_onFlowFinished(*this);
+  }
 	m_node->DeleteApplication(this);
 }
 

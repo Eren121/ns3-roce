@@ -105,6 +105,7 @@ private:
   uint16_t m_sport, m_dport;
   uint32_t m_win;             //<! Bound of on-the-fly packets.
   uint64_t m_baseRtt;         //<! Base Rtt.
+  Callback<void, RdmaClient&> m_onFlowFinished; //< Callback when flow finished.
 };
 
 } // namespace ns3
