@@ -21,6 +21,10 @@ configure_release:
 build:
 	$(DOCKER_RUN) python2 waf build
 
+# Clean all build files + generated binaries
+distclean:
+	$(DOCKER_RUN) python2 waf distclean
+
 # Run HPCC
 # Working directory inside the Docker container is "$GIT_ROOT/simulation".
 run:
@@ -28,6 +32,10 @@ run:
 
 run_gdb:
 	$(DOCKER_RUN) python2 waf --run 'scratch/third' --command-template="gdb -ex run --args %s $(config)"
+
+run_bash: DOCKER_USER=
+run_bash:
+	$(DOCKER_RUN) /bin/bash
 
 # Build trace reader
 build_trace: 
