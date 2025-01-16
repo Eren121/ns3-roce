@@ -26,6 +26,7 @@
 #include <stdint.h>
 #include <map>
 #include <algorithm>
+#include <vector>
 
 namespace ns3 {
 
@@ -398,7 +399,7 @@ private:
   char const *m_name;
 };
 
-class ParameterLogger : public std::ostream
+class ParameterLogger
 {
   int m_itemNumber;
   std::ostream &m_os;
@@ -419,6 +420,16 @@ public:
       }
     m_itemNumber++;
     return *this;
+  }
+  
+  template <typename T>
+  ParameterLogger& operator<< (const std::vector<T>& vector)
+  {
+      for (const auto& i : vector)
+      {
+          *this << i;
+      }
+      return *this;
   }
 };
 

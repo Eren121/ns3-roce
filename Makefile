@@ -12,22 +12,22 @@ build_image:
 
 # Configure waf
 configure_debug:
-	$(DOCKER_RUN) python waf configure -d debug
+	$(DOCKER_RUN) python2 waf configure -d debug
 
 configure_release:
-	$(DOCKER_RUN) python waf configure -d release
+	$(DOCKER_RUN) python2 waf configure -d release
 
 # Build waf
 build:
-	$(DOCKER_RUN) python waf build
+	$(DOCKER_RUN) python2 waf build
 
 # Run HPCC
 # Working directory inside the Docker container is "$GIT_ROOT/simulation".
 run:
-	$(DOCKER_RUN) python waf --run 'scratch/third $(config)'
+	$(DOCKER_RUN) python2 waf --run 'scratch/third $(config)'
 
 run_gdb:
-	$(DOCKER_RUN) python waf --run 'scratch/third' --command-template="gdb -ex run --args %s $(config)"
+	$(DOCKER_RUN) python2 waf --run 'scratch/third' --command-template="gdb -ex run --args %s $(config)"
 
 # Build trace reader
 build_trace: 
