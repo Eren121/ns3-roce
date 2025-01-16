@@ -733,8 +733,14 @@ int main(int argc, char *argv[])
 	//SeedManager::SetSeed(time(NULL));
 
 	topof.open(topology_file.c_str());
+	NS_ABORT_MSG_IF(!topof, "Cannot open input topology file");
+	
 	flowf.open(flow_file.c_str());
+	NS_ABORT_MSG_IF(!flowf, "Cannot open input flow file");
+	
 	tracef.open(trace_file.c_str());
+	NS_ABORT_MSG_IF(!tracef, "Cannot open input trace file");
+
 	uint32_t node_num, switch_num, link_num, trace_num;
 	topof >> node_num >> switch_num >> link_num;
 	flowf >> flow_num;
@@ -783,6 +789,7 @@ int main(int argc, char *argv[])
 
 	if(rng_seed == 0) {
 		FILE* urandom = fopen("/dev/urandom", "r");
+		NS_ABORT_MSG_IF(!urandom, "Cannot open /dev/urandom");
 		fread(&rng_seed, sizeof(rng_seed), 1, urandom);
 		fclose(urandom);
 	}
@@ -1005,6 +1012,7 @@ int main(int argc, char *argv[])
 	}
 
 	FILE *trace_output = fopen(trace_output_file.c_str(), "w");
+	NS_ABORT_MSG_IF(!trace_output, "Cannot open output trace file");
 	if (enable_trace)
 		qbb.EnableTracing(trace_output, trace_nodes);
 
