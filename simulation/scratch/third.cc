@@ -790,8 +790,10 @@ int main(int argc, char *argv[])
 	if(rng_seed == 0) {
 		FILE* urandom = fopen("/dev/urandom", "r");
 		NS_ABORT_MSG_IF(!urandom, "Cannot open /dev/urandom");
-		fread(&rng_seed, sizeof(rng_seed), 1, urandom);
-		fclose(urandom);
+		NS_ABORT_IF(fread(&rng_seed, sizeof(rng_seed), 1, urandom) != sizeof(rng_seed));
+		if(!fclose(urandom)) {
+			std::cerr << "ERROR: Closing /dev/urandom failed" << std::endl;
+		}
 	}
 	std::cout << "Effective RNG seed: " << rng_seed << std::endl;
 	Ptr<RateErrorModel> rem = CreateObject<RateErrorModel>();
