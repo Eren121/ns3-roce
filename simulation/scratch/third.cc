@@ -861,8 +861,8 @@ int main(int argc, char *argv[])
 		nbr2if[dnode][snode].bw = DynamicCast<QbbNetDevice>(d.Get(1))->GetDataRate().GetBitRate();
 
 		// This is just to set up the connectivity between nodes. The IP addresses are useless
-		char ipstring[16];
-		sprintf(ipstring, "10.%d.%d.0", i / 254 + 1, i % 254 + 1);
+		char ipstring[32];
+		snprintf(ipstring, sizeof(ipstring), "10.%d.%d.0", i / 254 + 1, i % 254 + 1);
 		ipv4.SetBase(ipstring, "255.255.255.0");
 		ipv4.Assign(d);
 
