@@ -31,6 +31,7 @@
 #include "ns3/pause-header.h"
 #include "ns3/drop-tail-queue.h"
 #include "ns3/assert.h"
+#include "ns3/abort.h"
 #include "ns3/ipv4.h"
 #include "ns3/ipv4-header.h"
 #include "ns3/simulator.h"
@@ -46,7 +47,8 @@
 #include "ns3/seq-ts-header.h"
 #include "ns3/pointer.h"
 #include "ns3/custom-header.h"
-
+#include "ns3/assert.h"
+#include "ns3/switch-node.h"
 #include <iostream>
 
 NS_LOG_COMPONENT_DEFINE("QbbNetDevice");
@@ -528,5 +530,42 @@ namespace ns3 {
 			Time delta = t < Simulator::Now() ? Time(0) : t - Simulator::Now();
 			m_nextSend = Simulator::Schedule(delta, &QbbNetDevice::DequeueAndTransmit, this);
 		}
+	}
+
+	void QbbNetDevice::OnPeerJoinGroup(uint32_t group)
+	{
+		Ptr<SwitchNode> sw = DynamicCast<SwitchNode>(GetNode());
+		if(sw) {
+			sw->OnPeerJoinGroup(m_ifIndex, group);
+		}
+	}
+
+	void QbbNetDevice::AddGroup(uint32_t group)
+	{
+		if(m_groups.count(group) > 0) {
+			return; // No need to explore the network graph again.
+		}
+		m_groups.insert(group);
+		
+		// Notify peer of the channel
+		Ptr<NetDevice> peer;
+		{
+			Ptr<NetDevice> n[2] = { m_channel->GetDevice(0), m_channel->GetDevice(1) };
+			if(n[0] == this) {
+				peer = DynamicCast<QbbNetDevice>(n[1]);
+			}
+			else {
+				peer = DynamicCast<QbbNetDevice>(n[0]);
+			}
+		}
+		if(!peer) {
+			return;
+		}
+
+		Ptr<QbbNetDevice> peer_qbb = DynamicCast<QbbNetDevice>(peer);
+		if(!peer_qbb) {
+			return;
+		}
+		peer_qbb->OnPeerJoinGroup(group); // If the uplink is NIC, the early return will stop and avoid infinite loop.
 	}
 } // namespace ns3

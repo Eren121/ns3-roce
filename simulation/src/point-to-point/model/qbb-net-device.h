@@ -30,7 +30,7 @@
 #include "ns3/udp-header.h"
 #include "ns3/rdma-queue-pair.h"
 #include <vector>
-#include<map>
+#include <unordered_set>
 #include <ns3/rdma.h>
 
 namespace ns3 {
@@ -127,6 +127,13 @@ public:
 
 	void SendPfc(uint32_t qIndex, uint32_t type); // type: 0 = pause, 1 = resume
 
+  /**
+   * Add the node to the multicast group.
+   * This means the NIC can send packet to this multicast group.
+   */
+  void AddGroup(uint32_t group);
+  void OnPeerJoinGroup(uint32_t group);
+
 	TracedCallback<Ptr<const Packet>, uint32_t> m_traceEnqueue;
 	TracedCallback<Ptr<const Packet>, uint32_t> m_traceDequeue;
 	TracedCallback<Ptr<const Packet>, uint32_t> m_traceDrop;
@@ -182,6 +189,15 @@ protected:
   };
 
   std::vector<ECNAccount> *m_ecn_source;
+
+  // Multicast
+
+  /**
+   * @brief Multicast groups the NIC belongs to (= can send packet to this group).
+   * 
+   * Used for server NICs only.
+   */
+  std::unordered_set<uint32_t> m_groups;
 
 public:
 	Ptr<RdmaEgressQueue> m_rdmaEQ;

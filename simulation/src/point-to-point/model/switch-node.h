@@ -12,10 +12,41 @@ namespace ns3 {
 class Packet;
 
 class SwitchNode : public Node{
-	static const uint32_t pCnt = 257;	// Number of ports used
-	static const uint32_t qCnt = 8;	// Number of queues/priorities used
+private:
+	/**
+	 *  @brief Number of ports on the switch.
+	 */
+	static const uint32_t pCnt = 257;
+
+	/**
+	 * @brief Number of priority queues (per port).
+	 */
+	static const uint32_t qCnt = 8;
+
+	/**
+	 * @brief Random seed to compute the output port for ECMP (multi-path routing).
+	 * 
+	 * Where written:
+	 * - Initialized in the constructor to the node ID.
+	 * - Can be changed in `SetEcmpSeed()`.
+	 */
 	uint32_t m_ecmpSeed;
-	std::unordered_map<uint32_t, std::vector<int> > m_rtTable; // map from ip address (u32) to possible ECMP port (index of dev)
+
+	/**
+	 * @brief Map from IP address (u32) to possible ECMP port (index of dev).
+	 * 
+	 * When a packet should be forwarded, the destination IP may be reachable via multiple ports (ECMP).
+	 * The final port chosen depends on the tuple (sip, sport, dip, dport) (See `GetOutDev()`).
+	 * The final port chosen is constant for each tuple to ensure an unique path and in-order reception.
+	 */
+	std::unordered_map<uint32_t, std::vector<int> > m_rtTable;
+
+	/**
+	 * @brief Map from multicast group to output ports.
+	 * 
+	 * Does **NOT** support ECMP for now.
+	 */
+	std::unordered_map<uint32_t, std::set<int>> m_ogroups;
 
 	// monitor of PFC
 	uint32_t m_bytes[pCnt][pCnt][qCnt]; // m_bytes[inDev][outDev][qidx] is the bytes from inDev enqueued for outDev at qidx
@@ -49,6 +80,8 @@ public:
 	void ClearTable();
 	bool SwitchReceiveFromDevice(Ptr<NetDevice> device, Ptr<Packet> packet, CustomHeader &ch);
 	void SwitchNotifyDequeue(uint32_t ifIndex, uint32_t qIndex, Ptr<Packet> p);
+
+	void OnPeerJoinGroup(uint32_t ifIndex, uint32_t group);
 
 	// for approximate calc in PINT
 	int logres_shift(int b, int l);

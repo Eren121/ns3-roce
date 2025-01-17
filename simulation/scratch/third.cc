@@ -22,6 +22,7 @@
 #include <fstream>
 #include <unordered_map>
 #include <time.h> 
+#include <charconv>
 #include "ns3/core-module.h"
 #include "ns3/qbb-helper.h"
 #include "ns3/point-to-point-helper.h"
@@ -37,6 +38,7 @@
 #include <ns3/rdma-driver.h>
 #include <ns3/switch-node.h>
 #include <ns3/sim-setting.h>
+#include <ns3/toml.h>
 
 using namespace ns3;
 using namespace std;
@@ -48,7 +50,7 @@ bool enable_qcn = true, use_dynamic_pfc_threshold = true;
 uint32_t packet_payload_size = 1000, l2_chunk_size = 0, l2_ack_interval = 0;
 double nak_interval = 500.0;
 double pause_time = 5, simulator_stop_time = 3.01;
-std::string data_rate, link_delay, topology_file, flow_file, trace_file, trace_output_file;
+std::string data_rate, link_delay, topology_file, flow_file, groups_file, trace_file, trace_output_file;
 std::string fct_output_file = "fct.txt";
 std::string pfc_output_file = "pfc.txt";
 
@@ -128,6 +130,92 @@ struct FlowInput{
 };
 FlowInput flow_input = {0};
 uint32_t flow_num;
+
+
+
+/**
+ * Key: Node ID.
+ * Value: List of multicast groups this node belongs to.
+ */
+using MulticastGroupsConfig = std::unordered_map<uint32_t, std::set<uint32_t>>;
+
+/**
+ * Populate each node's table for the multicast groups.
+ * Use current nodes, and if a node is added/removed later, the state is not updated.
+ */
+void PopulateMulticastGroups(const MulticastGroupsConfig& config)
+{
+	for(auto it = n.Begin(); it != n.End(); it++) {
+		Ptr<Node> node = *it;
+		
+		if (node->GetNodeType() != 0) {
+			continue; // Populate only servers, not switchs.
+		}
+		
+		Ptr<QbbNetDevice> qbb = DynamicCast<QbbNetDevice>(node->GetDevice(1));
+		if(!qbb) {
+			continue;
+		}
+
+		// Assumes servers have only one NIC
+		const int node_id = qbb->GetNode()->GetId();
+		if(config.count(node_id) > 0) {
+			for(uint32_t group : config.at(node_id)) {
+				qbb->AddGroup(group);
+			}
+		}
+	}
+}
+
+/**
+ * Parse the multicast groups file.
+ */
+MulticastGroupsConfig ParseMulticastGroupsConfig(const std::string& path)
+{
+	toml::table root;
+	try {
+		root = toml::parse_file(path);
+	}
+	catch(const toml::parse_error& error) {
+		std::cerr << "ERROR: Cannot parse multicast groups config file " << path << ": " << error << std::endl;
+		std::exit(1);
+	}
+
+	const std::string GROUPS_KEY = "groups";
+	const std::string ID_KEY = "group";
+	const std::string NODES_KEY = "nodes";
+
+	if(!root.contains(GROUPS_KEY)) {
+		std::cout << "No multicast groups defined" << std::endl;
+		return {};
+	}
+
+	MulticastGroupsConfig ret;
+	const toml::array* groups = root.at(GROUPS_KEY).as_array();
+	NS_ABORT_IF(!groups);
+	for(const toml::node& cur_node : *groups) {
+		const toml::table* group = cur_node.as_table();
+		NS_ABORT_IF(!group);
+		const uint32_t group_id = group->at(ID_KEY).value<uint32_t>().value();
+		if(ret.count(group_id) != 0) {
+			NS_ABORT_MSG("Duplicate group ID in the multicast group file");
+		}
+		auto& config_nodes = ret[group_id];
+		
+		const toml::array* nodes = group->at(NODES_KEY).as_array();
+		NS_ABORT_IF(!nodes);
+		for(const toml::node& cur_val : *nodes) {
+			const uint32_t node_id = cur_val.value<uint32_t>().value();
+			if(config_nodes.count(node_id) > 0) {
+				NS_ABORT_MSG("Duplicate node ID for a group in the multicast group file");
+			}
+			config_nodes.emplace(node_id);
+		}
+	}
+
+	return ret;
+}
+
 
 void ReadFlowInput(){
 	if (flow_input.idx < flow_num){
@@ -352,6 +440,7 @@ uint64_t get_nic_rate(NodeContainer &n){
 	for (uint32_t i = 0; i < n.GetN(); i++)
 		if (n.Get(i)->GetNodeType() == 0)
 			return DynamicCast<QbbNetDevice>(n.Get(i)->GetDevice(1))->GetDataRate().GetBitRate();
+	NS_ABORT_MSG("Cannot find NIC");
 }
 
 template<typename T>
@@ -487,6 +576,13 @@ int main(int argc, char *argv[])
 				conf >> v;
 				trace_file = v;
 				PrintOption("TRACE_FILE", trace_file);
+			}
+			else if(key.compare("GROUPS_FILE") == 0)
+			{
+				std::string v;
+				conf >> v;
+				groups_file = v;
+				PrintOption("GROUPS_FILE", groups_file);
 			}
 			else if (key.compare("TRACE_OUTPUT_FILE") == 0)
 			{
@@ -1034,6 +1130,11 @@ int main(int argc, char *argv[])
 	}
 
 	Ipv4GlobalRoutingHelper::PopulateRoutingTables();
+
+	{
+		MulticastGroupsConfig groups = ParseMulticastGroupsConfig(groups_file);
+		PopulateMulticastGroups(groups);
+	}
 
 	NS_LOG_INFO("Create Applications.");
 

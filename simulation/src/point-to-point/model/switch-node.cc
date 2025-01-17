@@ -88,6 +88,25 @@ int SwitchNode::GetOutDev(Ptr<const Packet> p, CustomHeader &ch){
 	return nexthops[idx];
 }
 
+void SwitchNode::OnPeerJoinGroup(uint32_t ifIndex, uint32_t group)
+{
+	auto& odevs = m_ogroups[group];
+	const bool notifyOthers = (odevs.size() == 0);
+	odevs.emplace(ifIndex);
+
+	if(!notifyOthers) {
+		return;
+	}
+	
+	Ptr<QbbNetDevice> iface = DynamicCast<QbbNetDevice>(GetDevice(ifIndex));
+	for(int i = 0; i < GetNDevices(); i++) {
+		Ptr<QbbNetDevice> dev = DynamicCast<QbbNetDevice>(GetDevice(i));
+		if(dev && dev != iface) { // First port can be null - maybe it is internal switch port 
+			dev->AddGroup(group);
+		}
+	}
+}
+
 void SwitchNode::CheckAndSendPfc(uint32_t inDev, uint32_t qIndex){
 	Ptr<QbbNetDevice> device = DynamicCast<QbbNetDevice>(m_devices[inDev]);
 	if (m_mmu->CheckShouldPause(inDev, qIndex)){

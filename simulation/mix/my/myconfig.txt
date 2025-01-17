@@ -5,8 +5,9 @@ PACKET_PAYLOAD_SIZE             1000
 
 TOPOLOGY_FILE                   mix/my/mytopology.txt
 FLOW_FILE                       mix/my/myflow.txt
-TRACE_FILE                      mix/my/mytrace.txt
-TRACE_OUTPUT_FILE               mix/my/out/mix.tr
+GROUPS_FILE                     mix/my/groups.toml
+TRACE_FILE                      mix/my/trace.txt
+TRACE_OUTPUT_FILE               mix/my/out/trace.tr
 FCT_OUTPUT_FILE                 mix/my/out/fct.txt
 PFC_OUTPUT_FILE                 mix/my/out/pfc.txt
 
