@@ -193,7 +193,7 @@ std::unordered_map<uint32_t, std::unordered_map<uint32_t, uint16_t> > portNumder
 
 struct FlowInput{
 	bool reliable;
-	uint32_t src, dst, pg, maxPacketCount, port, dport;
+	uint32_t src, dst, pg, maxPacketCount, dport;
 	double start_time;
 	uint32_t idx;
 };
