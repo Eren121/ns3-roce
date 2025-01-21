@@ -250,8 +250,6 @@ SimConfig simConfig;
 FlowsConfig flowsConfig;
 NodeContainer n;
 
-uint64_t nic_rate;
-
 uint64_t maxRtt, maxBdp;
 
 struct Interface{
@@ -755,7 +753,7 @@ int main(int argc, char *argv[])
 		DynamicCast<QbbNetDevice>(d.Get(1))->TraceConnectWithoutContext("QbbPfc", MakeBoundCallback (&get_pfc, pfc_file, DynamicCast<QbbNetDevice>(d.Get(1))));
 	}
 
-	nic_rate = get_nic_rate(n);
+	const uint64_t nic_rate = get_nic_rate(n);
 
 	// config switch
 	for (uint32_t i = 0; i < node_num; i++){
