@@ -341,9 +341,32 @@ private:
 
 void RunFlow(ScheduledFlow flow)
 {
-	const uint32_t src_port = portNumder[flow.src][flow.dst]++; // get a new port number 
-	RdmaClientHelper clientHelper(flow.priority, serverAddress[flow.src], serverAddress[flow.dst], src_port, flow.dst_port, flow.size,
-		simConfig.has_win?(simConfig.global_t==1?maxBdp:pairBdp[n.Get(flow.src)][n.Get(flow.dst)]):0, simConfig.global_t==1?maxRtt:pairRtt[flow.src][flow.dst]);
+	const uint32_t src_port = portNumder[flow.src][flow.dst]++; // get a new port number
+	const Ipv4Address sip = serverAddress[flow.src];
+	const Ipv4Address dip = serverAddress[flow.dst];
+	uint32_t win;
+	uint64_t baseRtt;
+
+	if(simConfig.global_t == 1) {
+		baseRtt = maxRtt;
+	}
+	else {
+		baseRtt = pairRtt[flow.src][flow.dst];
+	}
+
+	if(simConfig.has_win) {
+		if(simConfig.global_t == 1) {
+			win = maxBdp;
+		}
+		else {
+			win = pairBdp[n.Get(flow.src)][n.Get(flow.dst)];
+		}
+	}
+	else {
+		win = 0;
+	}
+
+	RdmaClientHelper clientHelper(flow.priority, sip, dip, src_port, flow.dst_port, flow.size, win, baseRtt);
 	clientHelper.SetAttribute("Reliable", BooleanValue(flow.reliable));
 	ApplicationContainer appCon = clientHelper.Install(n.Get(flow.src));
 	appCon.Start(Time(0));
