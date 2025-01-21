@@ -38,7 +38,6 @@
 #include <ns3/json.h>
 
 using namespace ns3;
-using namespace std;
 using json = nlohmann::json;
 
 NS_LOG_COMPONENT_DEFINE("GENERIC_SIMULATION");
@@ -178,19 +177,19 @@ struct Interface{
 
 	Interface() : idx(0), up(false){}
 };
-map<Ptr<Node>, map<Ptr<Node>, Interface> > nbr2if;
+std::map<Ptr<Node>, std::map<Ptr<Node>, Interface> > nbr2if;
 // Mapping destination to next hop for each node: <node, <dest, <nexthop0, ...> > >
-map<Ptr<Node>, map<Ptr<Node>, vector<Ptr<Node> > > > nextHop;
-map<Ptr<Node>, map<Ptr<Node>, uint64_t> > pairDelay;
-map<Ptr<Node>, map<Ptr<Node>, uint64_t> > pairTxDelay;
-map<uint32_t, map<uint32_t, uint64_t> > pairBw;
-map<Ptr<Node>, map<Ptr<Node>, uint64_t> > pairBdp;
-map<uint32_t, map<uint32_t, uint64_t> > pairRtt;
+std::map<Ptr<Node>, std::map<Ptr<Node>, std::vector<Ptr<Node> > > > nextHop;
+std::map<Ptr<Node>, std::map<Ptr<Node>, uint64_t> > pairDelay;
+std::map<Ptr<Node>, std::map<Ptr<Node>, uint64_t> > pairTxDelay;
+std::map<uint32_t, std::map<uint32_t, uint64_t> > pairBw;
+std::map<Ptr<Node>, std::map<Ptr<Node>, uint64_t> > pairBdp;
+std::map<uint32_t, std::map<uint32_t, uint64_t> > pairRtt;
 
 std::vector<Ipv4Address> serverAddress;
 
 // maintain port number for each host pair
-std::unordered_map<uint32_t, unordered_map<uint32_t, uint16_t> > portNumder;
+std::unordered_map<uint32_t, std::unordered_map<uint32_t, uint16_t> > portNumder;
 
 struct FlowInput{
 	bool reliable;
@@ -338,7 +337,7 @@ void get_pfc(FILE* fout, Ptr<QbbNetDevice> dev, uint32_t type){
 }
 
 struct QlenDistribution{
-	vector<uint32_t> cnt; // cnt[i] is the number of times that the queue len is i KB
+	std::vector<uint32_t> cnt; // cnt[i] is the number of times that the queue len is i KB
 
 	void add(uint32_t qlen){
 		uint32_t kb = qlen / 1000;
@@ -347,7 +346,7 @@ struct QlenDistribution{
 		cnt[kb]++;
 	}
 };
-map<uint32_t, map<uint32_t, QlenDistribution> > queue_result;
+std::map<uint32_t, std::map<uint32_t, QlenDistribution> > queue_result;
 void monitor_buffer(FILE* qlen_output, const SimConfig* simConfig, NodeContainer *n){
 	for (uint32_t i = 0; i < n->GetN(); i++){
 		if (n->Get(i)->GetNodeType() == 1){ // is switch
@@ -380,12 +379,12 @@ void monitor_buffer(FILE* qlen_output, const SimConfig* simConfig, NodeContainer
 
 void CalculateRoute(Ptr<Node> host){
 	// queue for the BFS.
-	vector<Ptr<Node> > q;
+	std::vector<Ptr<Node> > q;
 	// Distance from the host to each node.
-	map<Ptr<Node>, int> dis;
-	map<Ptr<Node>, uint64_t> delay;
-	map<Ptr<Node>, uint64_t> txDelay;
-	map<Ptr<Node>, uint64_t> bw;
+	std::map<Ptr<Node>, int> dis;
+	std::map<Ptr<Node>, uint64_t> delay;
+	std::map<Ptr<Node>, uint64_t> txDelay;
+	std::map<Ptr<Node>, uint64_t> bw;
 	// init BFS.
 	q.push_back(host);
 	dis[host] = 0;
@@ -444,7 +443,7 @@ void SetRoutingEntries(){
 			// The IP address of the dst.
 			Ipv4Address dstAddr = dst->GetObject<Ipv4>()->GetAddress(1, 0).GetLocal();
 			// The next hops towards the dst.
-			vector<Ptr<Node> > nexts = j->second;
+			std::vector<Ptr<Node> > nexts = j->second;
 			for (int k = 0; k < (int)nexts.size(); k++){
 				Ptr<Node> next = nexts[k];
 				uint32_t interface = nbr2if[node][next].idx;
