@@ -341,7 +341,8 @@ private:
 
 void RunFlow(ScheduledFlow flow)
 {
-	const uint32_t src_port = portNumder[flow.src][flow.dst]++; // get a new port number
+	constexpr uint32_t first_src_port = 10000; // each host pair use port number from 10000
+	const uint32_t src_port = first_src_port + (portNumder[flow.src][flow.dst]++); // get a new port number
 	const Ipv4Address sip = serverAddress[flow.src];
 	const Ipv4Address dip = serverAddress[flow.dst];
 	uint32_t win;
@@ -924,15 +925,6 @@ int main(int argc, char *argv[])
 	NS_LOG_INFO("Create Applications.");
 
 	Time interPacketInterval = Seconds(0.0000005 / 2);
-
-	// maintain port number for each host
-	for (uint32_t i = 0; i < node_num; i++){
-		if (n.Get(i)->GetNodeType() == 0)
-			for (uint32_t j = 0; j < node_num; j++){
-				if (n.Get(j)->GetNodeType() == 0)
-					portNumder[i][j] = 10000; // each host pair use port number from 10000
-			}
-	}
 
 	ScheduleFlowInputs();
 
