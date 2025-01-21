@@ -133,8 +133,6 @@ struct SimConfig
 
 	uint32_t rng_seed = 50; // Keep default value before feature was added if not in config
 
-	void ScheduleFlowInputs() const;
-
 	template<typename T>
 	static T find_in_map(const std::vector<BandwidthToECNThreshold<T>>& map, uint64_t bps)
 	{
@@ -156,13 +154,100 @@ struct SimConfig
 		kmax_map, kmin_map, pmax_map, buffer_size, qlen_mon_file, qlen_mon_start, qlen_mon_end, rng_seed);
 };
 
+
+struct ScheduledFlow {
+	uint32_t src;
+	uint32_t dst;
+	uint16_t dst_port;
+	uint64_t size;
+	double start_time;
+	uint32_t priority;
+	bool reliable;
+	NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(ScheduledFlow, src, dst, dst_port, size, start_time, priority, reliable);
+};
+
+class FlowsConfig
+{
+private:
+	using FlowsMap = std::multimap<double, ScheduledFlow>;
+
+public:
+	struct Json
+	{
+		std::vector<ScheduledFlow> flows;
+		NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(Json, flows);
+	};
+
+	FlowsConfig(const FlowsConfig&) = delete;
+	FlowsConfig& operator=(const FlowsConfig&) = delete;
+	
+	FlowsConfig(FlowsConfig&& other)
+	{
+		*this = std::move(other);
+	}
+	
+	FlowsConfig& operator=(FlowsConfig&& other)
+	{
+		// Swapping a map, iterator is invalidated only if iterator is end
+		if(other.Finished())
+		{
+			std::swap(m_flows, other.m_flows);
+			m_it = m_flows.end();
+		}
+		else
+		{
+			std::swap(m_flows, other.m_flows);
+			std::swap(m_it, other.m_it);
+		}
+
+		return *this;
+	}
+	
+	FlowsConfig() = default;
+
+	FlowsConfig(const Json& j) {
+		for(const ScheduledFlow& flow : j.flows) {
+			AddFlow(flow);
+		}
+		m_it = m_flows.begin();
+	}
+	
+	/**
+	 * @brief Get the next flow in ascending time.
+	 */
+	bool GetNextFlow(ScheduledFlow& flow)
+	{
+		if(Finished()) {
+			return false;
+		}
+
+		flow = m_it->second;
+		m_it++;
+		return true;
+	}
+
+	bool Finished() const
+	{
+		return m_it == m_flows.end();
+	}
+
+private:
+	void AddFlow(const ScheduledFlow& flow) {
+		m_flows.emplace(flow.start_time, flow);
+	}
+	
+private:
+	FlowsMap m_flows;
+	FlowsMap::const_iterator m_it = m_flows.end();
+};
+
 SimConfig simConfig;
 
 /************************************************
  * Runtime varibles
  ***********************************************/
-std::ifstream topof, flowf, tracef;
 
+FlowsConfig flowsConfig;
 NodeContainer n;
 
 uint64_t nic_rate;
@@ -190,15 +275,6 @@ std::vector<Ipv4Address> serverAddress;
 
 // maintain port number for each host pair
 std::unordered_map<uint32_t, std::unordered_map<uint32_t, uint16_t> > portNumder;
-
-struct FlowInput{
-	bool reliable;
-	uint32_t src, dst, pg, maxPacketCount, dport;
-	double start_time;
-	uint32_t idx;
-};
-FlowInput flow_input = {0};
-uint32_t flow_num;
 
 struct MCastConfig
 {
@@ -263,49 +339,25 @@ private:
 	std::unordered_map<uint32_t, Group> m_groups;
 };
 
-void ReadFlowInput(){
-	if (flow_input.idx < flow_num){
-
-		std::string first_word;
-		flowf >> first_word;
-		if(first_word == "RC") {
-			flow_input.reliable = true;
-			flowf >> flow_input.src;
-		}
-		else if(first_word == "UD") {
-			flow_input.reliable = false;
-			flowf >> flow_input.src;
-		}
-		else {
-			flow_input.reliable = true;
-			// UC/UD not present
-			std::istringstream ss(first_word);
-			ss >> flow_input.src;
-		}
-		flowf >> flow_input.dst >> flow_input.pg >> flow_input.dport >> flow_input.maxPacketCount >> flow_input.start_time;
-		NS_ASSERT(n.Get(flow_input.src)->GetNodeType() == 0 && n.Get(flow_input.dst)->GetNodeType() == 0);
-	}
+void RunFlow(ScheduledFlow flow)
+{
+	const uint32_t src_port = portNumder[flow.src][flow.dst]++; // get a new port number 
+	RdmaClientHelper clientHelper(flow.priority, serverAddress[flow.src], serverAddress[flow.dst], src_port, flow.dst_port, flow.size,
+		simConfig.has_win?(simConfig.global_t==1?maxBdp:pairBdp[n.Get(flow.src)][n.Get(flow.dst)]):0, simConfig.global_t==1?maxRtt:pairRtt[flow.src][flow.dst]);
+	clientHelper.SetAttribute("Reliable", BooleanValue(flow.reliable));
+	ApplicationContainer appCon = clientHelper.Install(n.Get(flow.src));
+	appCon.Start(Time(0));
+	std::cout << "Running flow " << Simulator::Now() << json(flow) << std::endl;
 }
 
-void SimConfig::ScheduleFlowInputs() const
+void ScheduleFlowInputs()
 {
-	while (flow_input.idx < flow_num && Seconds(flow_input.start_time) == Simulator::Now()) {
-		uint32_t port = portNumder[flow_input.src][flow_input.dst]++; // get a new port number 
-		RdmaClientHelper clientHelper(flow_input.pg, serverAddress[flow_input.src], serverAddress[flow_input.dst], port, flow_input.dport, flow_input.maxPacketCount, has_win?(global_t==1?maxBdp:pairBdp[n.Get(flow_input.src)][n.Get(flow_input.dst)]):0, global_t==1?maxRtt:pairRtt[flow_input.src][flow_input.dst]);
-		clientHelper.SetAttribute("Reliable", BooleanValue(flow_input.reliable));
-		ApplicationContainer appCon = clientHelper.Install(n.Get(flow_input.src));
-		appCon.Start(Time(0));
-
-		// get the next flow input
-		flow_input.idx++;
-		ReadFlowInput();
-	}
-
-	// schedule the next time to run this function
-	if (flow_input.idx < flow_num){
-		Simulator::Schedule(Seconds(flow_input.start_time)-Simulator::Now(), &SimConfig::ScheduleFlowInputs, this);
-	}else { // no more flows, close the file
-		flowf.close();
+	ScheduledFlow flow;
+	while(flowsConfig.GetNextFlow(flow)) {
+		
+		const Time when = Seconds(flow.start_time) - Simulator::Now();
+		NS_ABORT_UNLESS(n.Get(flow.src)->GetNodeType() == 0 && n.Get(flow.dst)->GetNodeType() == 0);
+		Simulator::Schedule(when, RunFlow, flow);
 	}
 }
 
@@ -534,18 +586,22 @@ int main(int argc, char *argv[])
 
 	//SeedManager::SetSeed(time(NULL));
 
+	std::ifstream topof, tracef;
+
 	topof.open(simConfig.topology_file.c_str());
 	NS_ABORT_MSG_IF(!topof, "Cannot open input topology file");
 	
-	flowf.open(simConfig.flow_file.c_str());
-	NS_ABORT_MSG_IF(!flowf, "Cannot open input flow file");
+	{
+		const json j = json::parse(std::ifstream(simConfig.flow_file));
+		flowsConfig = FlowsConfig::Json(j);
+		flowsConfig.Finished();
+	}
 	
 	tracef.open(simConfig.trace_file.c_str());
 	NS_ABORT_MSG_IF(!tracef, "Cannot open input trace file");
 
 	uint32_t node_num, switch_num, link_num, trace_num;
 	topof >> node_num >> switch_num >> link_num;
-	flowf >> flow_num;
 	tracef >> trace_num;
 
 
@@ -855,11 +911,7 @@ int main(int argc, char *argv[])
 			}
 	}
 
-	flow_input.idx = 0;
-	if (flow_num > 0){
-		ReadFlowInput();
-		Simulator::Schedule(Seconds(flow_input.start_time)-Simulator::Now(), &SimConfig::ScheduleFlowInputs, &simConfig);
-	}
+	ScheduleFlowInputs();
 
 	topof.close();
 	tracef.close();
