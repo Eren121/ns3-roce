@@ -5,7 +5,7 @@ DOCKER_RUN = docker run --rm -it $(DOCKER_MOUNT) $(DOCKER_USER) -w /app/simulati
 .PHONY: build_image configure build run build_trace
 
 # config file from inside the container path when running ns-3
-config ?= mix/my/myconfig.txt
+config ?= mix/my/myconfig.json
 
 build_image:
 	docker build -t $(TAG) .

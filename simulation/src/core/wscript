@@ -251,8 +251,7 @@ def build(bld):
         'model/hash-function.h',
         'model/hash-murmur3.h',
         'model/hash-fnv.h',
-        'model/hash.h',
-        'model/toml.h'
+        'model/hash.h'
         ]
 
     if sys.platform == 'win32':

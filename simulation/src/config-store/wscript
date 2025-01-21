@@ -54,6 +54,7 @@ def build(bld):
     headers.source = [
         'model/file-config.h',
         'model/config-store.h',
+        'model/json.h'
         ]
 
     if bld.env['ENABLE_GTK2']:

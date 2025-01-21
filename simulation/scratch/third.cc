@@ -14,9 +14,6 @@
 * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-#undef PGO_TRAINING
-#define PATH_TO_PGO_CONFIG "path_to_pgo_config"
-
 #include <iostream>
 #include <iomanip>
 #include <fstream>
@@ -38,56 +35,129 @@
 #include <ns3/rdma-driver.h>
 #include <ns3/switch-node.h>
 #include <ns3/sim-setting.h>
-#include <ns3/toml.h>
+#include <ns3/json.h>
 
 using namespace ns3;
 using namespace std;
+using json = nlohmann::json;
 
 NS_LOG_COMPONENT_DEFINE("GENERIC_SIMULATION");
 
-uint32_t cc_mode = 1;
-bool enable_qcn = true, use_dynamic_pfc_threshold = true;
-uint32_t packet_payload_size = 1000, l2_chunk_size = 0, l2_ack_interval = 0;
-double nak_interval = 500.0;
-double pause_time = 5, simulator_stop_time = 3.01;
-std::string data_rate, link_delay, topology_file, flow_file, groups_file, trace_file, trace_output_file;
-std::string fct_output_file = "fct.txt";
-std::string pfc_output_file = "pfc.txt";
+template<typename T>
+void WarnInvalidKeys(const json& object)
+{
+	const json object_default = T();
 
-double alpha_resume_interval = 55, rp_timer, ewma_gain = 1 / 16;
-double rate_decrease_interval = 4;
-uint32_t fast_recovery_times = 5;
-std::string rate_ai, rate_hai, min_rate = "100Mb/s";
-std::string dctcp_rate_ai = "1000Mb/s";
+	// Do not search recursively
 
-bool clamp_target_rate = false, l2_back_to_zero = false;
-double error_rate_per_link = 0.0;
-uint32_t has_win = 1;
-uint32_t global_t = 1;
-uint32_t mi_thresh = 5;
-bool var_win = false, fast_react = true;
-bool multi_rate = true;
-bool sample_feedback = false;
-double pint_log_base = 1.05;
-double pint_prob = 1.0;
-double u_target = 0.95;
-uint32_t int_multi = 1;
-bool rate_bound = true;
+	for(const auto& [key, val] : object_default.items()) {
+		if(!object.contains(key)) {
+			std::cerr << "WARNING: Missing json key " << key << std::endl;
+		}
+	}
+	
+	for(const auto& [key, val] : object.items()) {
+		if(!object_default.contains(key)) {
+			std::cerr << "WARNING: Unknown json key " << key << std::endl;
+		}
+	}
+}
 
-uint32_t ack_high_prio = 0;
-uint64_t link_down_time = 0;
-uint32_t link_down_A = 0, link_down_B = 0;
+/**
+ * @brief Parameters for the configuration.
+ */
+struct SimConfig
+{
+	SimConfig() = default;
+	SimConfig(const SimConfig&) = delete;
+	SimConfig(SimConfig&&) = default;
+	SimConfig& operator=(const SimConfig&) = delete;
+	SimConfig& operator=(SimConfig&&) = default;
 
-uint32_t enable_trace = 1;
+	uint32_t cc_mode = 1;
+	bool enable_qcn = true, use_dynamic_pfc_threshold = true;
+	uint32_t packet_payload_size = 1000, l2_chunk_size = 0, l2_ack_interval = 0;
+	double nak_interval = 500.0;
+	double pause_time = 5, simulator_stop_time = 3.01;
+	std::string topology_file, flow_file, groups_file, trace_file, trace_output_file;
+	std::string fct_output_file = "fct.txt";
+	std::string pfc_output_file = "pfc.txt";
 
-uint32_t buffer_size = 16;
+	double alpha_resume_interval = 55, rp_timer, ewma_gain = 1 / 16;
+	double rate_decrease_interval = 4;
+	uint32_t fast_recovery_times = 5;
+	std::string rate_ai, rate_hai, min_rate = "100Mb/s";
+	std::string dctcp_rate_ai = "1000Mb/s";
 
-uint32_t qlen_dump_interval = 100000000, qlen_mon_interval = 100;
-uint64_t qlen_mon_start = 2000000000, qlen_mon_end = 2100000000;
-string qlen_mon_file;
+	bool clamp_target_rate = false, l2_back_to_zero = false;
+	double error_rate_per_link = 0.0;
+	uint32_t has_win = 1;
+	uint32_t global_t = 1;
+	uint32_t mi_thresh = 5;
+	bool var_win = false, fast_react = true;
+	bool multi_rate = true;
+	bool sample_feedback = false;
+	double pint_log_base = 1.05;
+	double pint_prob = 1.0;
+	double u_target = 0.95;
+	uint32_t int_multi = 1;
+	bool rate_bound = true;
 
-unordered_map<uint64_t, uint32_t> rate2kmax, rate2kmin;
-unordered_map<uint64_t, double> rate2pmax;
+	uint32_t ack_high_prio = 0;
+
+	struct LinkDown {
+		uint32_t src = 0;
+		uint32_t dst = 0;
+		uint64_t time = 0;
+
+		NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(LinkDown, src, dst, time);
+	};
+
+	LinkDown link_down;
+	uint32_t enable_trace = 1;
+	uint32_t buffer_size = 16;
+	uint32_t qlen_dump_interval = 100000000, qlen_mon_interval = 100;
+	uint64_t qlen_mon_start = 2000000000, qlen_mon_end = 2100000000;
+	std::string qlen_mon_file;
+
+	template<typename T>
+	struct BandwidthToECNThreshold
+	{
+		uint64_t bandwidth = 0; // Bps
+		T ecn_threshold = T(0);
+
+		NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(BandwidthToECNThreshold, bandwidth, ecn_threshold);
+	};
+
+	std::vector<BandwidthToECNThreshold<uint32_t>> kmax_map, kmin_map;
+	std::vector<BandwidthToECNThreshold<double>> pmax_map;
+
+	uint32_t rng_seed = 50; // Keep default value before feature was added if not in config
+
+	void ScheduleFlowInputs() const;
+
+	template<typename T>
+	static T find_in_map(const std::vector<BandwidthToECNThreshold<T>>& map, uint64_t bps)
+	{
+		for(auto& entry : map) {
+			if(entry.bandwidth == bps) {
+				return entry.ecn_threshold;
+			}
+		}
+		throw std::runtime_error("Cannot find in map");
+	}
+
+	NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(SimConfig,
+		enable_qcn, use_dynamic_pfc_threshold, packet_payload_size,
+		topology_file, flow_file, groups_file, trace_file, trace_output_file, fct_output_file, pfc_output_file,
+		simulator_stop_time, cc_mode, alpha_resume_interval, rate_decrease_interval, clamp_target_rate,
+		rp_timer, ewma_gain, fast_recovery_times, rate_ai, rate_hai, min_rate, dctcp_rate_ai, error_rate_per_link,
+		l2_chunk_size, l2_ack_interval, l2_back_to_zero, nak_interval, has_win, global_t, var_win, fast_react,
+		u_target, mi_thresh, int_multi, multi_rate, sample_feedback, pint_log_base, pint_prob, rate_bound, ack_high_prio, link_down, enable_trace,
+		kmax_map, kmin_map, pmax_map, buffer_size, qlen_mon_file, qlen_mon_start, qlen_mon_end, rng_seed);
+};
+
+SimConfig simConfig;
 
 /************************************************
  * Runtime varibles
@@ -131,91 +201,68 @@ struct FlowInput{
 FlowInput flow_input = {0};
 uint32_t flow_num;
 
-
-
-/**
- * Key: Node ID.
- * Value: List of multicast groups this node belongs to.
- */
-using MulticastGroupsConfig = std::unordered_map<uint32_t, std::set<uint32_t>>;
-
-/**
- * Populate each node's table for the multicast groups.
- * Use current nodes, and if a node is added/removed later, the state is not updated.
- */
-void PopulateMulticastGroups(const MulticastGroupsConfig& config)
+struct MCastConfig
 {
-	for(auto it = n.Begin(); it != n.End(); it++) {
-		Ptr<Node> node = *it;
-		
-		if (node->GetNodeType() != 0) {
-			continue; // Populate only servers, not switchs.
-		}
-		
-		Ptr<QbbNetDevice> qbb = DynamicCast<QbbNetDevice>(node->GetDevice(1));
-		if(!qbb) {
-			continue;
-		}
+	MCastConfig() = default;
+	MCastConfig(const MCastConfig&) = delete;
+	MCastConfig(MCastConfig&&) = default;
+	MCastConfig& operator=(const MCastConfig&) = delete;
+	MCastConfig& operator=(MCastConfig&&) = default;
+	
+	struct Group
+	{
+		uint32_t id;
+		std::set<uint32_t> nodes;
+		NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(Group, id, nodes);
+	};
+	std::vector<Group> groups;
+	NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(MCastConfig, groups);
 
-		// Assumes servers have only one NIC
-		const int node_id = qbb->GetNode()->GetId();
-		if(config.count(node_id) > 0) {
-			for(uint32_t group : config.at(node_id)) {
-				qbb->AddGroup(group);
+	void ParseFromFile(const std::string& path)
+	{
+		std::ifstream file(path);
+		json j = json::parse(file);
+		WarnInvalidKeys<MCastConfig>(j);
+		*this = j;
+	}
+};
+
+class MCastNetwork {
+private:
+	using Group = std::set<uint32_t>;
+
+public:
+	MCastNetwork() = default;
+	MCastNetwork(const MCastNetwork&) = delete;
+	MCastNetwork& operator=(const MCastNetwork&) = delete;
+
+	explicit MCastNetwork(const MCastConfig& config)
+	{
+		for(const MCastConfig::Group& group : config.groups) {
+			for(uint32_t node_id : group.nodes) {
+				AddToGroup(group.id, node_id);
 			}
 		}
 	}
-}
 
-/**
- * Parse the multicast groups file.
- */
-MulticastGroupsConfig ParseMulticastGroupsConfig(const std::string& path)
-{
-	toml::table root;
-	try {
-		root = toml::parse_file(path);
-	}
-	catch(const toml::parse_error& error) {
-		std::cerr << "ERROR: Cannot parse multicast groups config file " << path << ": " << error << std::endl;
-		std::exit(1);
+	void AddToGroup(uint32_t group_id, uint32_t node_id)
+	{
+		m_groups[group_id].insert(node_id);
 	}
 
-	const std::string GROUPS_KEY = "groups";
-	const std::string ID_KEY = "group";
-	const std::string NODES_KEY = "nodes";
-
-	if(!root.contains(GROUPS_KEY)) {
-		std::cout << "No multicast groups defined" << std::endl;
-		return {};
-	}
-
-	MulticastGroupsConfig ret;
-	const toml::array* groups = root.at(GROUPS_KEY).as_array();
-	NS_ABORT_IF(!groups);
-	for(const toml::node& cur_node : *groups) {
-		const toml::table* group = cur_node.as_table();
-		NS_ABORT_IF(!group);
-		const uint32_t group_id = group->at(ID_KEY).value<uint32_t>().value();
-		if(ret.count(group_id) != 0) {
-			NS_ABORT_MSG("Duplicate group ID in the multicast group file");
+	bool BelongsToGroup(uint32_t group_id, uint32_t node_id) const
+	{
+		auto it = m_groups.find(group_id);
+		if(it == m_groups.end()) {
+			return false;
 		}
-		auto& config_nodes = ret[group_id];
-		
-		const toml::array* nodes = group->at(NODES_KEY).as_array();
-		NS_ABORT_IF(!nodes);
-		for(const toml::node& cur_val : *nodes) {
-			const uint32_t node_id = cur_val.value<uint32_t>().value();
-			if(config_nodes.count(node_id) > 0) {
-				NS_ABORT_MSG("Duplicate node ID for a group in the multicast group file");
-			}
-			config_nodes.emplace(node_id);
-		}
+		const Group& group = it->second;
+		return group.count(node_id) > 0;
 	}
 
-	return ret;
-}
-
+private:
+	std::unordered_map<uint32_t, Group> m_groups;
+};
 
 void ReadFlowInput(){
 	if (flow_input.idx < flow_num){
@@ -240,8 +287,10 @@ void ReadFlowInput(){
 		NS_ASSERT(n.Get(flow_input.src)->GetNodeType() == 0 && n.Get(flow_input.dst)->GetNodeType() == 0);
 	}
 }
-void ScheduleFlowInputs(){
-	while (flow_input.idx < flow_num && Seconds(flow_input.start_time) == Simulator::Now()){
+
+void SimConfig::ScheduleFlowInputs() const
+{
+	while (flow_input.idx < flow_num && Seconds(flow_input.start_time) == Simulator::Now()) {
 		uint32_t port = portNumder[flow_input.src][flow_input.dst]++; // get a new port number 
 		RdmaClientHelper clientHelper(flow_input.pg, serverAddress[flow_input.src], serverAddress[flow_input.dst], port, flow_input.dport, flow_input.maxPacketCount, has_win?(global_t==1?maxBdp:pairBdp[n.Get(flow_input.src)][n.Get(flow_input.dst)]):0, global_t==1?maxRtt:pairRtt[flow_input.src][flow_input.dst]);
 		clientHelper.SetAttribute("Reliable", BooleanValue(flow_input.reliable));
@@ -255,7 +304,7 @@ void ScheduleFlowInputs(){
 
 	// schedule the next time to run this function
 	if (flow_input.idx < flow_num){
-		Simulator::Schedule(Seconds(flow_input.start_time)-Simulator::Now(), ScheduleFlowInputs);
+		Simulator::Schedule(Seconds(flow_input.start_time)-Simulator::Now(), &SimConfig::ScheduleFlowInputs, this);
 	}else { // no more flows, close the file
 		flowf.close();
 	}
@@ -269,10 +318,10 @@ uint32_t ip_to_node_id(Ipv4Address ip){
 	return (ip.Get() >> 8) & 0xffff;
 }
 
-void qp_finish(FILE* fout, Ptr<RdmaQueuePair> q){
+void qp_finish(FILE* fout, const SimConfig* simConfig, Ptr<RdmaQueuePair> q){
 	uint32_t sid = ip_to_node_id(q->sip), did = ip_to_node_id(q->dip);
 	uint64_t base_rtt = pairRtt[sid][did], b = pairBw[sid][did];
-	uint32_t total_bytes = q->m_size + ((q->m_size-1) / packet_payload_size + 1) * (CustomHeader::GetStaticWholeHeaderSize() - IntHeader::GetStaticSize()); // translate to the minimum bytes required (with header but no INT)
+	uint32_t total_bytes = q->m_size + ((q->m_size-1) / simConfig->packet_payload_size + 1) * (CustomHeader::GetStaticWholeHeaderSize() - IntHeader::GetStaticSize()); // translate to the minimum bytes required (with header but no INT)
 	uint64_t standalone_fct = base_rtt + total_bytes * 8000000000lu / b;
 	// sip, dip, sport, dport, size (B), start_time, fct (ns), standalone_fct (ns)
 	fprintf(fout, "%08x %08x %u %u %lu %lu %lu %lu\n", q->sip.Get(), q->dip.Get(), q->sport, q->dport, q->m_size, q->startTime.GetTimeStep(), (Simulator::Now() - q->startTime).GetTimeStep(), standalone_fct);
@@ -299,7 +348,7 @@ struct QlenDistribution{
 	}
 };
 map<uint32_t, map<uint32_t, QlenDistribution> > queue_result;
-void monitor_buffer(FILE* qlen_output, NodeContainer *n){
+void monitor_buffer(FILE* qlen_output, const SimConfig* simConfig, NodeContainer *n){
 	for (uint32_t i = 0; i < n->GetN(); i++){
 		if (n->Get(i)->GetNodeType() == 1){ // is switch
 			Ptr<SwitchNode> sw = DynamicCast<SwitchNode>(n->Get(i));
@@ -313,7 +362,7 @@ void monitor_buffer(FILE* qlen_output, NodeContainer *n){
 			}
 		}
 	}
-	if (Simulator::Now().GetTimeStep() % qlen_dump_interval == 0){
+	if (Simulator::Now().GetTimeStep() % simConfig->qlen_dump_interval == 0){
 		fprintf(qlen_output, "time: %lu\n", Simulator::Now().GetTimeStep());
 		for (auto &it0 : queue_result)
 			for (auto &it1 : it0.second){
@@ -325,8 +374,8 @@ void monitor_buffer(FILE* qlen_output, NodeContainer *n){
 			}
 		fflush(qlen_output);
 	}
-	if (Simulator::Now().GetTimeStep() < qlen_mon_end)
-		Simulator::Schedule(NanoSeconds(qlen_mon_interval), &monitor_buffer, qlen_output, n);
+	if (Simulator::Now().GetTimeStep() < simConfig->qlen_mon_end)
+		Simulator::Schedule(NanoSeconds(simConfig->qlen_mon_interval), &monitor_buffer, qlen_output, simConfig, n);
 }
 
 void CalculateRoute(Ptr<Node> host){
@@ -356,7 +405,7 @@ void CalculateRoute(Ptr<Node> host){
 			if (dis.find(next) == dis.end()){
 				dis[next] = d + 1;
 				delay[next] = delay[now] + it->second.delay;
-				txDelay[next] = txDelay[now] + packet_payload_size * 1000000000lu * 8 / it->second.bw;
+				txDelay[next] = txDelay[now] + simConfig.packet_payload_size * 1000000000lu * 8 / it->second.bw;
 				bw[next] = std::min(bw[now], it->second.bw);
 				// we only enqueue switch, because we do not want packets to go through host as middle point
 				if (next->GetNodeType() == 1)
@@ -443,398 +492,56 @@ uint64_t get_nic_rate(NodeContainer &n){
 	NS_ABORT_MSG("Cannot find NIC");
 }
 
-template<typename T>
-static void PrintOption(const char* key, T&& value)
-{
-	std::cout << std::left << std::setw(35) << key << value << std::endl;
-}
-
 int main(int argc, char *argv[])
 {
-	uint32_t rng_seed = 50; // Keep default value before feature was added if not in config
-	clock_t begint, endt;
-	begint = clock();
-#ifndef PGO_TRAINING
-	if (argc > 1)
-#else
-	if (true)
-#endif
-	{
-		//Read the configuration file
-		std::ifstream conf;
-#ifndef PGO_TRAINING
-		conf.open(argv[1]);
-#else
-		conf.open(PATH_TO_PGO_CONFIG);
-#endif
-		if(!conf) {
-			std::cerr << "ERROR: cannot open config file " << argv[1] << std::endl;
-			std::exit(1);
-		}
+	const clock_t begint = clock();
+	clock_t endt;
 
-		while (!conf.eof())
-		{
-			std::string key;
-			conf >> key;
-
-			//std::cout << conf.cur << "\n";
-
-			if (key.compare("ENABLE_QCN") == 0)
-			{
-				uint32_t v;
-				conf >> v;
-				enable_qcn = v;
-				PrintOption("ENABLE_QCN", enable_qcn ? "Yes" : "No");
-			}
-			else if (key.compare("USE_DYNAMIC_PFC_THRESHOLD") == 0)
-			{
-				uint32_t v;
-				conf >> v;
-				use_dynamic_pfc_threshold = v;
-				PrintOption("USE_DYNAMIC_PFC_THRESHOLD", enable_qcn ? "Yes" : "No");
-			}
-			else if (key.compare("CLAMP_TARGET_RATE") == 0)
-			{
-				uint32_t v;
-				conf >> v;
-				clamp_target_rate = v;
-				PrintOption("CLAMP_TARGET_RATE", clamp_target_rate ? "Yes" : "No");
-			}
-			else if (key.compare("PAUSE_TIME") == 0)
-			{
-				double v;
-				conf >> v;
-				pause_time = v;
-				PrintOption("PAUSE_TIME", pause_time);
-			}
-			else if (key.compare("DATA_RATE") == 0)
-			{
-				std::string v;
-				conf >> v;
-				data_rate = v;
-				PrintOption("DATA_RATE", data_rate);
-			}
-			else if (key.compare("LINK_DELAY") == 0)
-			{
-				std::string v;
-				conf >> v;
-				link_delay = v;
-				PrintOption("LINK_DELAY", link_delay);
-			}
-			else if (key.compare("PACKET_PAYLOAD_SIZE") == 0)
-			{
-				uint32_t v;
-				conf >> v;
-				packet_payload_size = v;
-				PrintOption("PACKET_PAYLOAD_SIZE", packet_payload_size);
-			}
-			else if (key.compare("L2_CHUNK_SIZE") == 0)
-			{
-				uint32_t v;
-				conf >> v;
-				l2_chunk_size = v;
-				PrintOption("L2_CHUNK_SIZE", l2_chunk_size);
-			}
-			else if (key.compare("L2_ACK_INTERVAL") == 0)
-			{
-				uint32_t v;
-				conf >> v;
-				l2_ack_interval = v;
-				PrintOption("L2_ACK_INTERVAL", l2_ack_interval);
-			}
-			else if (key.compare("NAK_INTERVAL") == 0)
-			{
-				double v;
-				conf >> v;
-				nak_interval = v;
-				PrintOption("NAK_INTERVAL", nak_interval);
-			}
-			else if (key.compare("L2_BACK_TO_ZERO") == 0)
-			{
-				uint32_t v;
-				conf >> v;
-				l2_back_to_zero = v;
-				PrintOption("L2_BACK_TO_ZERO", l2_back_to_zero ? "Yes" : "No");
-			}
-			else if (key.compare("TOPOLOGY_FILE") == 0)
-			{
-				std::string v;
-				conf >> v;
-				topology_file = v;
-				PrintOption("TOPOLOGY_FILE", topology_file);
-			}
-			else if (key.compare("FLOW_FILE") == 0)
-			{
-				std::string v;
-				conf >> v;
-				flow_file = v;
-				PrintOption("FLOW_FILE", flow_file);
-			}
-			else if (key.compare("TRACE_FILE") == 0)
-			{
-				std::string v;
-				conf >> v;
-				trace_file = v;
-				PrintOption("TRACE_FILE", trace_file);
-			}
-			else if(key.compare("GROUPS_FILE") == 0)
-			{
-				std::string v;
-				conf >> v;
-				groups_file = v;
-				PrintOption("GROUPS_FILE", groups_file);
-			}
-			else if (key.compare("TRACE_OUTPUT_FILE") == 0)
-			{
-				std::string v;
-				conf >> v;
-				trace_output_file = v;
-				if (argc > 2)
-				{
-					trace_output_file = trace_output_file + std::string(argv[2]);
-				}
-				PrintOption("TRACE_OUTPUT_FILE", trace_output_file);
-			}
-			else if (key.compare("SIMULATOR_STOP_TIME") == 0)
-			{
-				double v;
-				conf >> v;
-				simulator_stop_time = v;
-				PrintOption("SIMULATOR_STOP_TIME", simulator_stop_time);
-			}
-			else if (key.compare("ALPHA_RESUME_INTERVAL") == 0)
-			{
-				double v;
-				conf >> v;
-				alpha_resume_interval = v;
-				PrintOption("ALPHA_RESUME_INTERVAL", alpha_resume_interval);
-			}
-			else if (key.compare("RP_TIMER") == 0)
-			{
-				double v;
-				conf >> v;
-				rp_timer = v;
-				PrintOption("RP_TIMER", rp_timer);
-			}
-			else if (key.compare("EWMA_GAIN") == 0)
-			{
-				double v;
-				conf >> v;
-				ewma_gain = v;
-				PrintOption("EWMA_GAIN", ewma_gain);
-			}
-			else if (key.compare("FAST_RECOVERY_TIMES") == 0)
-			{
-				uint32_t v;
-				conf >> v;
-				fast_recovery_times = v;
-				PrintOption("FAST_RECOVERY_TIMES", fast_recovery_times);
-			}
-			else if (key.compare("RATE_AI") == 0)
-			{
-				std::string v;
-				conf >> v;
-				rate_ai = v;
-				PrintOption("RATE_AI", rate_ai);
-			}
-			else if (key.compare("RATE_HAI") == 0)
-			{
-				std::string v;
-				conf >> v;
-				rate_hai = v;
-				PrintOption("RATE_HAI", rate_hai);
-			}
-			else if (key.compare("ERROR_RATE_PER_LINK") == 0)
-			{
-				double v;
-				conf >> v;
-				error_rate_per_link = v;
-				PrintOption("ERROR_RATE_PER_LINK", error_rate_per_link);
-			}
-			else if (key.compare("CC_MODE") == 0)
-			{
-				conf >> cc_mode;
-				PrintOption("CC_MODE", cc_mode);
-			}else if (key.compare("RATE_DECREASE_INTERVAL") == 0){
-				double v;
-				conf >> v;
-				rate_decrease_interval = v;
-				PrintOption("RATE_DECREASE_INTERVAL", rate_decrease_interval);
-			}else if (key.compare("MIN_RATE") == 0){
-				conf >> min_rate;
-				PrintOption("MIN_RATE", min_rate);
-			}else if (key.compare("FCT_OUTPUT_FILE") == 0){
-				conf >> fct_output_file;
-				PrintOption("FCT_OUTPUT_FILE", fct_output_file);
-			}else if (key.compare("HAS_WIN") == 0){
-				conf >> has_win;
-				PrintOption("HAS_WIN", has_win);
-			}else if (key.compare("GLOBAL_T") == 0){
-				conf >> global_t;
-				PrintOption("GLOBAL_T", global_t);
-			}else if (key.compare("MI_THRESH") == 0){
-				conf >> mi_thresh;
-				PrintOption("MI_THRESH", mi_thresh);
-			}else if (key.compare("VAR_WIN") == 0){
-				uint32_t v;
-				conf >> v;
-				var_win = v;
-				PrintOption("VAR_WIN", v);
-			}else if (key.compare("FAST_REACT") == 0){
-				uint32_t v;
-				conf >> v;
-				fast_react = v;
-				PrintOption("FAST_REACT", v);
-			}else if (key.compare("U_TARGET") == 0){
-				conf >> u_target;
-				PrintOption("U_TARGET", u_target);
-			}else if (key.compare("INT_MULTI") == 0){
-				conf >> int_multi;
-				PrintOption("INT_MULTI", int_multi);
-			}else if (key.compare("RATE_BOUND") == 0){
-				uint32_t v;
-				conf >> v;
-				rate_bound = v;
-				PrintOption("RATE_BOUND", rate_bound);
-			}else if (key.compare("ACK_HIGH_PRIO") == 0){
-				conf >> ack_high_prio;
-				PrintOption("ACK_HIGH_PRIO", ack_high_prio);
-			}else if (key.compare("DCTCP_RATE_AI") == 0){
-				conf >> dctcp_rate_ai;
-				PrintOption("DCTCP_RATE_AI", dctcp_rate_ai);
-			}else if (key.compare("PFC_OUTPUT_FILE") == 0){
-				conf >> pfc_output_file;
-				PrintOption("PFC_OUTPUT_FILE", pfc_output_file);
-			}else if (key.compare("LINK_DOWN") == 0){
-				conf >> link_down_time >> link_down_A >> link_down_B;
-				std::stringstream ss;
-				ss << link_down_time << ' '<< link_down_A << ' ' << link_down_B;
-				PrintOption("LINK_DOWN", ss.str());
-			}else if (key.compare("ENABLE_TRACE") == 0){
-				conf >> enable_trace;
-				PrintOption("ENABLE_TRACE", enable_trace);
-			}else if (key.compare("KMAX_MAP") == 0){
-				int n_k ;
-				conf >> n_k;
-				std::stringstream ss;
-				for (int i = 0; i < n_k; i++){
-					uint64_t rate;
-					uint32_t k;
-					conf >> rate >> k;
-					rate2kmax[rate] = k;
-					ss << rate << ' ' << k << ' ';
-				}
-				PrintOption("KMAX_MAP", ss.str());
-			}else if (key.compare("KMIN_MAP") == 0){
-				int n_k ;
-				conf >> n_k;
-				std::stringstream ss;
-				for (int i = 0; i < n_k; i++){
-					uint64_t rate;
-					uint32_t k;
-					conf >> rate >> k;
-					rate2kmin[rate] = k;
-					ss << rate << ' ' << k << ' ';
-				}
-				PrintOption("KMIN_MAP", ss.str());
-			}else if (key.compare("PMAX_MAP") == 0){
-				int n_k ;
-				conf >> n_k;
-				std::stringstream ss;
-				for (int i = 0; i < n_k; i++){
-					uint64_t rate;
-					double p;
-					conf >> rate >> p;
-					rate2pmax[rate] = p;
-					ss << rate << ' ' << p << ' ';
-				}
-				PrintOption("PMAX_MAP", ss.str());
-			}else if (key.compare("BUFFER_SIZE") == 0){
-				conf >> buffer_size;
-				PrintOption("BUFFER_SIZE", buffer_size);
-			}else if (key.compare("QLEN_MON_FILE") == 0){
-				conf >> qlen_mon_file;
-				PrintOption("QLEN_MON_FILE", qlen_mon_file);
-			}else if (key.compare("QLEN_MON_START") == 0){
-				conf >> qlen_mon_start;
-				PrintOption("QLEN_MON_START", qlen_mon_start);
-			}else if (key.compare("QLEN_MON_END") == 0){
-				conf >> qlen_mon_end;
-				PrintOption("QLEN_MON_END", qlen_mon_end);
-			}else if (key.compare("MULTI_RATE") == 0){
-				int v;
-				conf >> v;
-				multi_rate = v;
-				PrintOption("MULTI_RATE", multi_rate);
-			}else if (key.compare("SAMPLE_FEEDBACK") == 0){
-				int v;
-				conf >> v;
-				sample_feedback = v;
-				PrintOption("SAMPLE_FEEDBACK", sample_feedback);
-			}else if(key.compare("PINT_LOG_BASE") == 0){
-				conf >> pint_log_base;
-				PrintOption("PINT_LOG_BASE", pint_log_base);
-			}else if (key.compare("PINT_PROB") == 0){
-				conf >> pint_prob;
-				PrintOption("PINT_PROB", pint_prob);
-			}
-			else if (key.compare("RNG_SEED") == 0)
-			{
-				conf >> rng_seed;
-				PrintOption("RNG_SEED", rng_seed);
-			}
-			fflush(stdout);
-		
-			if(!conf.eof() && !conf) {
-				std::cerr << "ERROR: parsing config file failed " << argv[1] << std::endl;
-				std::exit(1);
-			}
-			
-		}
-		conf.close();
-	}
-	else
-	{
-		std::cout << "Error: require a config file\n";
-		fflush(stdout);
+	if(argc < 2) {
+		std::cout << "Error: require a config file" << std::endl;
 		return 1;
 	}
 
 
-	bool dynamicth = use_dynamic_pfc_threshold;
+	{
+		const json j = json::parse(std::ifstream(argv[1]));
+		from_json(j, simConfig);
+		std::cout << "Config: " << json(simConfig).dump(4) << std::endl;
+		WarnInvalidKeys<SimConfig>(j);
+	}
 
-	Config::SetDefault("ns3::QbbNetDevice::PauseTime", UintegerValue(pause_time));
-	Config::SetDefault("ns3::QbbNetDevice::QcnEnabled", BooleanValue(enable_qcn));
-	Config::SetDefault("ns3::QbbNetDevice::DynamicThreshold", BooleanValue(dynamicth));
+	Config::SetDefault("ns3::QbbNetDevice::PauseTime", UintegerValue(simConfig.pause_time));
+	Config::SetDefault("ns3::QbbNetDevice::QcnEnabled", BooleanValue(simConfig.enable_qcn));
+	Config::SetDefault("ns3::QbbNetDevice::DynamicThreshold", BooleanValue(simConfig.use_dynamic_pfc_threshold));
 
 	// set int_multi
-	IntHop::multi = int_multi;
+	IntHop::multi = simConfig.int_multi;
 	// IntHeader::mode
-	if (cc_mode == 7) // timely, use ts
+	if (simConfig.cc_mode == 7) // timely, use ts
 		IntHeader::mode = IntHeader::TS;
-	else if (cc_mode == 3) // hpcc, use int
+	else if (simConfig.cc_mode == 3) // hpcc, use int
 		IntHeader::mode = IntHeader::NORMAL;
-	else if (cc_mode == 10) // hpcc-pint
+	else if (simConfig.cc_mode == 10) // hpcc-pint
 		IntHeader::mode = IntHeader::PINT;
 	else // others, no extra header
 		IntHeader::mode = IntHeader::NONE;
 
 	// Set Pint
-	if (cc_mode == 10){
-		Pint::set_log_base(pint_log_base);
+	if (simConfig.cc_mode == 10){
+		Pint::set_log_base(simConfig.pint_log_base);
 		IntHeader::pint_bytes = Pint::get_n_bytes();
 		printf("PINT bits: %d bytes: %d\n", Pint::get_n_bits(), Pint::get_n_bytes());
 	}
 
 	//SeedManager::SetSeed(time(NULL));
 
-	topof.open(topology_file.c_str());
+	topof.open(simConfig.topology_file.c_str());
 	NS_ABORT_MSG_IF(!topof, "Cannot open input topology file");
 	
-	flowf.open(flow_file.c_str());
+	flowf.open(simConfig.flow_file.c_str());
 	NS_ABORT_MSG_IF(!flowf, "Cannot open input flow file");
 	
-	tracef.open(trace_file.c_str());
+	tracef.open(simConfig.trace_file.c_str());
 	NS_ABORT_MSG_IF(!tracef, "Cannot open input trace file");
 
 	uint32_t node_num, switch_num, link_num, trace_num;
@@ -857,7 +564,7 @@ int main(int argc, char *argv[])
 		else{
 			Ptr<SwitchNode> sw = CreateObject<SwitchNode>();
 			n.Add(sw);
-			sw->SetAttribute("EcnEnabled", BooleanValue(enable_qcn));
+			sw->SetAttribute("EcnEnabled", BooleanValue(simConfig.enable_qcn));
 		}
 	}
 
@@ -883,23 +590,23 @@ int main(int argc, char *argv[])
 	// Explicitly create the channels required by the topology.
 	//
 
-	if(rng_seed == 0) {
+	if(simConfig.rng_seed == 0) {
 		FILE* urandom = fopen("/dev/urandom", "r");
 		NS_ABORT_MSG_IF(!urandom, "Cannot open /dev/urandom");
-		NS_ABORT_IF(fread(&rng_seed, sizeof(rng_seed), 1, urandom) != sizeof(rng_seed));
+		NS_ABORT_IF(fread(&simConfig.rng_seed, sizeof(simConfig.rng_seed), 1, urandom) != sizeof(simConfig.rng_seed));
 		if(!fclose(urandom)) {
 			std::cerr << "ERROR: Closing /dev/urandom failed" << std::endl;
 		}
 	}
-	std::cout << "Effective RNG seed: " << rng_seed << std::endl;
+	std::cout << "Effective RNG seed: " << simConfig.rng_seed << std::endl;
 	Ptr<RateErrorModel> rem = CreateObject<RateErrorModel>();
 	Ptr<UniformRandomVariable> uv = CreateObject<UniformRandomVariable>();
 	rem->SetRandomVariable(uv);
-	uv->SetStream(rng_seed);
-	rem->SetAttribute("ErrorRate", DoubleValue(error_rate_per_link));
+	uv->SetStream(simConfig.rng_seed);
+	rem->SetAttribute("ErrorRate", DoubleValue(simConfig.error_rate_per_link));
 	rem->SetAttribute("ErrorUnit", StringValue("ERROR_UNIT_PACKET"));
 
-	FILE *pfc_file = fopen(pfc_output_file.c_str(), "w");
+	FILE *pfc_file = fopen(simConfig.pfc_output_file.c_str(), "w");
 
 	QbbHelper qbb;
 	Ipv4AddressHelper ipv4;
@@ -980,10 +687,9 @@ int main(int argc, char *argv[])
 				Ptr<QbbNetDevice> dev = DynamicCast<QbbNetDevice>(sw->GetDevice(j));
 				// set ecn
 				uint64_t rate = dev->GetDataRate().GetBitRate();
-				NS_ASSERT_MSG(rate2kmin.find(rate) != rate2kmin.end(), "must set kmin for each link speed");
-				NS_ASSERT_MSG(rate2kmax.find(rate) != rate2kmax.end(), "must set kmax for each link speed");
-				NS_ASSERT_MSG(rate2pmax.find(rate) != rate2pmax.end(), "must set pmax for each link speed");
-				sw->m_mmu->ConfigEcn(j, rate2kmin[rate], rate2kmax[rate], rate2pmax[rate]);
+				sw->m_mmu->ConfigEcn(j, SimConfig::find_in_map(simConfig.kmin_map, rate),
+										SimConfig::find_in_map(simConfig.kmax_map, rate),
+										SimConfig::find_in_map(simConfig.pmax_map, rate));
 				// set pfc
 				uint64_t delay = DynamicCast<QbbChannel>(dev->GetChannel())->GetDelay().GetTimeStep();
 				uint32_t headroom = rate * delay / 8 / 1000000000 * 3;
@@ -997,13 +703,13 @@ int main(int argc, char *argv[])
 				}
 			}
 			sw->m_mmu->ConfigNPort(sw->GetNDevices()-1);
-			sw->m_mmu->ConfigBufferSize(buffer_size* 1024 * 1024);
+			sw->m_mmu->ConfigBufferSize(simConfig.buffer_size* 1024 * 1024);
 			sw->m_mmu->node_id = sw->GetId();
 		}
 	}
 
 	#if ENABLE_QP
-	FILE *fct_output = fopen(fct_output_file.c_str(), "w");
+	FILE *fct_output = fopen(simConfig.fct_output_file.c_str(), "w");
 	//
 	// install RDMA driver
 	//
@@ -1011,30 +717,30 @@ int main(int argc, char *argv[])
 		if (n.Get(i)->GetNodeType() == 0){ // is server
 			// create RdmaHw
 			Ptr<RdmaHw> rdmaHw = CreateObject<RdmaHw>();
-			rdmaHw->SetAttribute("ClampTargetRate", BooleanValue(clamp_target_rate));
-			rdmaHw->SetAttribute("AlphaResumInterval", DoubleValue(alpha_resume_interval));
-			rdmaHw->SetAttribute("RPTimer", DoubleValue(rp_timer));
-			rdmaHw->SetAttribute("FastRecoveryTimes", UintegerValue(fast_recovery_times));
-			rdmaHw->SetAttribute("EwmaGain", DoubleValue(ewma_gain));
-			rdmaHw->SetAttribute("RateAI", DataRateValue(DataRate(rate_ai)));
-			rdmaHw->SetAttribute("RateHAI", DataRateValue(DataRate(rate_hai)));
-			rdmaHw->SetAttribute("L2BackToZero", BooleanValue(l2_back_to_zero));
-			rdmaHw->SetAttribute("L2ChunkSize", UintegerValue(l2_chunk_size));
-			rdmaHw->SetAttribute("L2AckInterval", UintegerValue(l2_ack_interval));
-			rdmaHw->SetAttribute("NACK Generation Interval", DoubleValue(nak_interval));
-			rdmaHw->SetAttribute("CcMode", UintegerValue(cc_mode));
-			rdmaHw->SetAttribute("RateDecreaseInterval", DoubleValue(rate_decrease_interval));
-			rdmaHw->SetAttribute("MinRate", DataRateValue(DataRate(min_rate)));
-			rdmaHw->SetAttribute("Mtu", UintegerValue(packet_payload_size));
-			rdmaHw->SetAttribute("MiThresh", UintegerValue(mi_thresh));
-			rdmaHw->SetAttribute("VarWin", BooleanValue(var_win));
-			rdmaHw->SetAttribute("FastReact", BooleanValue(fast_react));
-			rdmaHw->SetAttribute("MultiRate", BooleanValue(multi_rate));
-			rdmaHw->SetAttribute("SampleFeedback", BooleanValue(sample_feedback));
-			rdmaHw->SetAttribute("TargetUtil", DoubleValue(u_target));
-			rdmaHw->SetAttribute("RateBound", BooleanValue(rate_bound));
-			rdmaHw->SetAttribute("DctcpRateAI", DataRateValue(DataRate(dctcp_rate_ai)));
-			rdmaHw->SetPintSmplThresh(pint_prob);
+			rdmaHw->SetAttribute("ClampTargetRate", BooleanValue(simConfig.clamp_target_rate));
+			rdmaHw->SetAttribute("AlphaResumInterval", DoubleValue(simConfig.alpha_resume_interval));
+			rdmaHw->SetAttribute("RPTimer", DoubleValue(simConfig.rp_timer));
+			rdmaHw->SetAttribute("FastRecoveryTimes", UintegerValue(simConfig.fast_recovery_times));
+			rdmaHw->SetAttribute("EwmaGain", DoubleValue(simConfig.ewma_gain));
+			rdmaHw->SetAttribute("RateAI", DataRateValue(DataRate(simConfig.rate_ai)));
+			rdmaHw->SetAttribute("RateHAI", DataRateValue(DataRate(simConfig.rate_hai)));
+			rdmaHw->SetAttribute("L2BackToZero", BooleanValue(simConfig.l2_back_to_zero));
+			rdmaHw->SetAttribute("L2ChunkSize", UintegerValue(simConfig.l2_chunk_size));
+			rdmaHw->SetAttribute("L2AckInterval", UintegerValue(simConfig.l2_ack_interval));
+			rdmaHw->SetAttribute("NACK Generation Interval", DoubleValue(simConfig.nak_interval));
+			rdmaHw->SetAttribute("CcMode", UintegerValue(simConfig.cc_mode));
+			rdmaHw->SetAttribute("RateDecreaseInterval", DoubleValue(simConfig.rate_decrease_interval));
+			rdmaHw->SetAttribute("MinRate", DataRateValue(DataRate(simConfig.min_rate)));
+			rdmaHw->SetAttribute("Mtu", UintegerValue(simConfig.packet_payload_size));
+			rdmaHw->SetAttribute("MiThresh", UintegerValue(simConfig.mi_thresh));
+			rdmaHw->SetAttribute("VarWin", BooleanValue(simConfig.var_win));
+			rdmaHw->SetAttribute("FastReact", BooleanValue(simConfig.fast_react));
+			rdmaHw->SetAttribute("MultiRate", BooleanValue(simConfig.multi_rate));
+			rdmaHw->SetAttribute("SampleFeedback", BooleanValue(simConfig.sample_feedback));
+			rdmaHw->SetAttribute("TargetUtil", DoubleValue(simConfig.u_target));
+			rdmaHw->SetAttribute("RateBound", BooleanValue(simConfig.rate_bound));
+			rdmaHw->SetAttribute("DctcpRateAI", DataRateValue(DataRate(simConfig.dctcp_rate_ai)));
+			rdmaHw->SetPintSmplThresh(simConfig.pint_prob);
 			// create and install RdmaDriver
 			Ptr<RdmaDriver> rdma = CreateObject<RdmaDriver>();
 			Ptr<Node> node = n.Get(i);
@@ -1043,13 +749,13 @@ int main(int argc, char *argv[])
 
 			node->AggregateObject (rdma);
 			rdma->Init();
-			rdma->TraceConnectWithoutContext("QpComplete", MakeBoundCallback (qp_finish, fct_output));
+			rdma->TraceConnectWithoutContext("QpComplete", MakeBoundCallback (qp_finish, fct_output, &simConfig));
 		}
 	}
 	#endif
 
 	// set ACK priority on hosts
-	if (ack_high_prio)
+	if (simConfig.ack_high_prio)
 		RdmaEgressQueue::ack_q_idx = 0;
 	else
 		RdmaEgressQueue::ack_q_idx = 3;
@@ -1089,7 +795,7 @@ int main(int argc, char *argv[])
 	for (uint32_t i = 0; i < node_num; i++){
 		if (n.Get(i)->GetNodeType() == 1){ // switch
 			Ptr<SwitchNode> sw = DynamicCast<SwitchNode>(n.Get(i));
-			sw->SetAttribute("CcMode", UintegerValue(cc_mode));
+			sw->SetAttribute("CcMode", UintegerValue(simConfig.cc_mode));
 			sw->SetAttribute("MaxRtt", UintegerValue(maxRtt));
 		}
 	}
@@ -1109,9 +815,9 @@ int main(int argc, char *argv[])
 		trace_nodes = NodeContainer(trace_nodes, n.Get(nid));
 	}
 
-	FILE *trace_output = fopen(trace_output_file.c_str(), "w");
+	FILE *trace_output = fopen(simConfig.trace_output_file.c_str(), "w");
 	NS_ABORT_MSG_IF(!trace_output, "Cannot open output trace file");
-	if (enable_trace)
+	if (simConfig.enable_trace)
 		qbb.EnableTracing(trace_output, trace_nodes);
 
 	// dump link speed to trace file
@@ -1132,8 +838,9 @@ int main(int argc, char *argv[])
 	Ipv4GlobalRoutingHelper::PopulateRoutingTables();
 
 	{
-		MulticastGroupsConfig groups = ParseMulticastGroupsConfig(groups_file);
-		PopulateMulticastGroups(groups);
+		MCastConfig mcastConfig;
+		mcastConfig.ParseFromFile(simConfig.groups_file);
+		MCastNetwork mcastNet(mcastConfig);
 	}
 
 	NS_LOG_INFO("Create Applications.");
@@ -1152,20 +859,20 @@ int main(int argc, char *argv[])
 	flow_input.idx = 0;
 	if (flow_num > 0){
 		ReadFlowInput();
-		Simulator::Schedule(Seconds(flow_input.start_time)-Simulator::Now(), ScheduleFlowInputs);
+		Simulator::Schedule(Seconds(flow_input.start_time)-Simulator::Now(), &SimConfig::ScheduleFlowInputs, &simConfig);
 	}
 
 	topof.close();
 	tracef.close();
 
 	// schedule link down
-	if (link_down_time > 0){
-		Simulator::Schedule(Seconds(2) + MicroSeconds(link_down_time), &TakeDownLink, n, n.Get(link_down_A), n.Get(link_down_B));
+	if (simConfig.link_down.time > 0){
+		Simulator::Schedule(Seconds(2) + MicroSeconds(simConfig.link_down.time), &TakeDownLink, n, n.Get(simConfig.link_down.src), n.Get(simConfig.link_down.dst));
 	}
 
 	// schedule buffer monitor
-	FILE* qlen_output = fopen(qlen_mon_file.c_str(), "w");
-	Simulator::Schedule(NanoSeconds(qlen_mon_start), &monitor_buffer, qlen_output, &n);
+	FILE* qlen_output = fopen(simConfig.qlen_mon_file.c_str(), "w");
+	Simulator::Schedule(NanoSeconds(simConfig.qlen_mon_start), &monitor_buffer, qlen_output, &simConfig, &n);
 
 	//
 	// Now, do the actual simulation.
@@ -1173,7 +880,7 @@ int main(int argc, char *argv[])
 	std::cout << "Running Simulation.\n";
 	fflush(stdout);
 	NS_LOG_INFO("Run Simulation.");
-	Simulator::Stop(Seconds(simulator_stop_time));
+	Simulator::Stop(Seconds(simConfig.simulator_stop_time));
 	Simulator::Run();
 	Simulator::Destroy();
 	NS_LOG_INFO("Done.");
