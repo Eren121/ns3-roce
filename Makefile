@@ -21,6 +21,16 @@ configure_release:
 build:
 	$(DOCKER_RUN) python2 waf build
 
+# Build netanim
+build_netanim:
+	$(DOCKER_RUN) bash ../build-netanim.sh
+
+run_netanim:
+	docker run --rm -it $(DOCKER_MOUNT) $(DOCKER_USER) \
+	 -e DISPLAY=$(DISPLAY) \
+	 -w /app/netanim -v /tmp/.X11-unix:/tmp/.X11-unix \
+	 $(TAG) ./NetAnim
+
 # Clean all build files + generated binaries
 distclean:
 	$(DOCKER_RUN) python2 waf distclean
