@@ -44,7 +44,7 @@ TypeId SwitchNode::GetTypeId (void)
 }
 
 SwitchNode::SwitchNode(){
-	m_ecmpSeed = m_id;
+	m_ecmpSeed = GetId();
 	m_mmu = CreateObject<SwitchMmu>();
 	for (uint32_t i = 0; i < pCnt; i++)
 		for (uint32_t j = 0; j < pCnt; j++)
