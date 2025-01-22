@@ -114,6 +114,8 @@ public:
   void ConnectWithoutContext(const CallbackBase& callback);
   void DisconnectWithoutContext(const CallbackBase& callback);
 
+  DataRate GetDataRate() const;
+  
   bool Attach (Ptr<QbbChannel> ch);
 
    virtual Ptr<Channel> GetChannel (void) const;

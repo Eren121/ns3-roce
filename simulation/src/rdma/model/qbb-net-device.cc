@@ -236,6 +236,11 @@ namespace ns3 {
 		NS_LOG_FUNCTION(this);
 	}
 
+	DataRate QbbNetDevice::GetDataRate() const
+	{
+		return m_bps;
+	}
+
 	void
 		QbbNetDevice::DoDispose()
 	{
