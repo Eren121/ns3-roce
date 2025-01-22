@@ -18,4 +18,7 @@ RUN update-alternatives --config g++ \
  && update-alternatives --config cc  \
  && update-alternatives --config c++
 
+# Download necessary stuff to build netanim
+RUN apt install -y mercurial qtbase5-dev qt5-qmake make
+
 WORKDIR /app
