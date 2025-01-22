@@ -107,14 +107,14 @@ void SwitchNode::OnPeerJoinGroup(uint32_t ifIndex, uint32_t group)
 }
 
 void SwitchNode::CheckAndSendPfc(uint32_t inDev, uint32_t qIndex){
-	Ptr<QbbNetDevice> device = DynamicCast<QbbNetDevice>(m_devices[inDev]);
+	Ptr<QbbNetDevice> device = DynamicCast<QbbNetDevice>(GetDevice(inDev));
 	if (m_mmu->CheckShouldPause(inDev, qIndex)){
 		device->SendPfc(qIndex, 0);
 		m_mmu->SetPause(inDev, qIndex);
 	}
 }
 void SwitchNode::CheckAndSendResume(uint32_t inDev, uint32_t qIndex){
-	Ptr<QbbNetDevice> device = DynamicCast<QbbNetDevice>(m_devices[inDev]);
+	Ptr<QbbNetDevice> device = DynamicCast<QbbNetDevice>(GetDevice(inDev));
 	if (m_mmu->CheckShouldResume(inDev, qIndex)){
 		device->SendPfc(qIndex, 1);
 		m_mmu->SetResume(inDev, qIndex);
@@ -124,7 +124,7 @@ void SwitchNode::CheckAndSendResume(uint32_t inDev, uint32_t qIndex){
 void SwitchNode::SendToDev(Ptr<Packet>p, CustomHeader &ch){
 	int idx = GetOutDev(p, ch);
 	if (idx >= 0){
-		NS_ASSERT_MSG(m_devices[idx]->IsLinkUp(), "The routing table look up should return link that is up");
+		NS_ASSERT_MSG(GetDevice(idx)->IsLinkUp(), "The routing table look up should return link that is up");
 
 		// determine the qIndex
 		uint32_t qIndex;
@@ -148,7 +148,7 @@ void SwitchNode::SendToDev(Ptr<Packet>p, CustomHeader &ch){
 			CheckAndSendPfc(inDev, qIndex);
 		}
 		m_bytes[inDev][idx][qIndex] += p->GetSize();
-		SwitchSend(m_devices[idx], qIndex, p, ch);
+		SwitchSend(GetDevice(idx), qIndex, p, ch);
 	}else {
 		std::cerr << "ERROR: Cannot find output device for packet" << std::endl;
 		return; // Drop
@@ -239,7 +239,7 @@ void SwitchNode::SwitchNotifyDequeue(uint32_t ifIndex, uint32_t qIndex, Ptr<Pack
 		uint8_t* buf = p->GetBuffer();
 		if (buf[PppHeader::GetStaticSize() + 9] == 0x11){ // udp packet
 			IntHeader *ih = (IntHeader*)&buf[PppHeader::GetStaticSize() + 20 + 8 + 6]; // ppp, ip, udp, SeqTs, INT
-			Ptr<QbbNetDevice> dev = DynamicCast<QbbNetDevice>(m_devices[ifIndex]);
+			Ptr<QbbNetDevice> dev = DynamicCast<QbbNetDevice>(GetDevice(ifIndex));
 			if (m_ccMode == 3){ // HPCC
 				ih->PushHop(Simulator::Now().GetTimeStep(), m_txBytes[ifIndex], dev->GetQueue()->GetNBytesTotal(), dev->GetDataRate().GetBitRate());
 			}else if (m_ccMode == 10){ // HPCC-PINT
