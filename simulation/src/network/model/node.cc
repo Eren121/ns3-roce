@@ -84,7 +84,6 @@ Node::Node(uint32_t sid)
 void
 Node::Construct (void)
 {
-	m_node_type = 0;
 	m_id = NodeList::Add (this);
 }
 
@@ -337,12 +336,6 @@ Node::NotifyDeviceAdded (Ptr<NetDevice> device)
     {
       (*i) (device);
     }  
-}
- 
-uint32_t 
-Node::GetNodeType()
-{
-	return m_node_type;
 }
 
 bool Node::SwitchReceiveFromDevice(Ptr<NetDevice> device, Ptr<Packet> packet, CustomHeader &ch){

@@ -378,7 +378,7 @@ void ScheduleFlowInputs()
 	while(flowsConfig.GetNextFlow(flow)) {
 		
 		const Time when = Seconds(flow.start_time) - Simulator::Now();
-		NS_ABORT_UNLESS(n.Get(flow.src)->GetNodeType() == 0 && n.Get(flow.dst)->GetNodeType() == 0);
+		NS_ABORT_UNLESS(!IsSwitchNode(n.Get(flow.src)) && !IsSwitchNode(n.Get(flow.dst)));
 		Simulator::Schedule(when, RunFlow, flow);
 	}
 }
@@ -407,7 +407,7 @@ void qp_finish(FILE* fout, const SimConfig* simConfig, Ptr<RdmaQueuePair> q){
 }
 
 void get_pfc(FILE* fout, Ptr<QbbNetDevice> dev, uint32_t type){
-	fprintf(fout, "%lu %u %u %u %u\n", Simulator::Now().GetTimeStep(), dev->GetNode()->GetId(), dev->GetNode()->GetNodeType(), dev->GetIfIndex(), type);
+	fprintf(fout, "%lu %u %u %u %u\n", Simulator::Now().GetTimeStep(), dev->GetNode()->GetId(), GetNodeType(dev->GetNode()), dev->GetIfIndex(), type);
 }
 
 struct QlenDistribution{
@@ -423,7 +423,7 @@ struct QlenDistribution{
 std::map<uint32_t, std::map<uint32_t, QlenDistribution> > queue_result;
 void monitor_buffer(FILE* qlen_output, const SimConfig* simConfig, NodeContainer *n){
 	for (uint32_t i = 0; i < n->GetN(); i++){
-		if (n->Get(i)->GetNodeType() == 1){ // is switch
+		if (IsSwitchNode(n->Get(i))){ // is switch
 			Ptr<SwitchNode> sw = DynamicCast<SwitchNode>(n->Get(i));
 			if (queue_result.find(i) == queue_result.end())
 				queue_result[i];
@@ -481,7 +481,7 @@ void CalculateRoute(Ptr<Node> host){
 				txDelay[next] = txDelay[now] + simConfig.packet_payload_size * 1000000000lu * 8 / it->second.bw;
 				bw[next] = std::min(bw[now], it->second.bw);
 				// we only enqueue switch, because we do not want packets to go through host as middle point
-				if (next->GetNodeType() == 1)
+				if (IsSwitchNode(next))
 					q.push_back(next);
 			}
 			// if 'now' is on the shortest path from 'next' to 'host'.
@@ -501,7 +501,7 @@ void CalculateRoute(Ptr<Node> host){
 void CalculateRoutes(NodeContainer &n){
 	for (int i = 0; i < (int)n.GetN(); i++){
 		Ptr<Node> node = n.Get(i);
-		if (node->GetNodeType() == 0)
+		if (!IsSwitchNode(node))
 			CalculateRoute(node);
 	}
 }
@@ -521,7 +521,7 @@ void SetRoutingEntries(){
 			for (int k = 0; k < (int)nexts.size(); k++){
 				Ptr<Node> next = nexts[k];
 				uint32_t interface = nbr2if[node][next].idx;
-				if (node->GetNodeType() == 1)
+				if (IsSwitchNode(node))
 					DynamicCast<SwitchNode>(node)->AddTableEntry(dstAddr, interface);
 				else{
 					node->GetObject<RdmaDriver>()->m_rdma->AddTableEntry(dstAddr, interface);
@@ -541,7 +541,7 @@ void TakeDownLink(NodeContainer n, Ptr<Node> a, Ptr<Node> b){
 	CalculateRoutes(n);
 	// clear routing tables
 	for (uint32_t i = 0; i < n.GetN(); i++){
-		if (n.Get(i)->GetNodeType() == 1)
+		if (IsSwitchNode(n.Get(i)))
 			DynamicCast<SwitchNode>(n.Get(i))->ClearTable();
 		else
 			n.Get(i)->GetObject<RdmaDriver>()->m_rdma->ClearTable();
@@ -553,14 +553,14 @@ void TakeDownLink(NodeContainer n, Ptr<Node> a, Ptr<Node> b){
 
 	// redistribute qp on each host
 	for (uint32_t i = 0; i < n.GetN(); i++){
-		if (n.Get(i)->GetNodeType() == 0)
+		if (!IsSwitchNode(n.Get(i)))
 			n.Get(i)->GetObject<RdmaDriver>()->m_rdma->RedistributeQp();
 	}
 }
 
 uint64_t get_nic_rate(NodeContainer &n){
 	for (uint32_t i = 0; i < n.GetN(); i++)
-		if (n.Get(i)->GetNodeType() == 0)
+		if (!IsSwitchNode(n.Get(i)))
 			return DynamicCast<QbbNetDevice>(n.Get(i)->GetDevice(1))->GetDataRate().GetBitRate();
 	NS_ABORT_MSG("Cannot find NIC");
 }
@@ -655,7 +655,7 @@ int main(int argc, char *argv[])
 	// Assign IP to each server
 	//
 	for (uint32_t i = 0; i < node_num; i++){
-		if (n.Get(i)->GetNodeType() == 0){ // is server
+		if (!IsSwitchNode(n.Get(i))){ // is server
 			serverAddress.resize(i + 1);
 			serverAddress[i] = node_id_to_ip(i);
 		}
@@ -721,12 +721,12 @@ int main(int argc, char *argv[])
 		// because we want our IP to be the primary IP (first in the IP address list),
 		// so that the global routing is based on our IP
 		NetDeviceContainer d = qbb.Install(snode, dnode);
-		if (snode->GetNodeType() == 0){
+		if (!IsSwitchNode(snode)){
 			Ptr<Ipv4> ipv4 = snode->GetObject<Ipv4>();
 			ipv4->AddInterface(d.Get(0));
 			ipv4->AddAddress(1, Ipv4InterfaceAddress(serverAddress[src], Ipv4Mask(0xff000000)));
 		}
-		if (dnode->GetNodeType() == 0){
+		if (!IsSwitchNode(dnode)){
 			Ptr<Ipv4> ipv4 = dnode->GetObject<Ipv4>();
 			ipv4->AddInterface(d.Get(1));
 			ipv4->AddAddress(1, Ipv4InterfaceAddress(serverAddress[dst], Ipv4Mask(0xff000000)));
@@ -757,7 +757,7 @@ int main(int argc, char *argv[])
 
 	// config switch
 	for (uint32_t i = 0; i < node_num; i++){
-		if (n.Get(i)->GetNodeType() == 1){ // is switch
+		if (IsSwitchNode(n.Get(i))){ // is switch
 			Ptr<SwitchNode> sw = DynamicCast<SwitchNode>(n.Get(i));
 			uint32_t shift = 3; // by default 1/8
 			for (uint32_t j = 1; j < sw->GetNDevices(); j++){
@@ -791,7 +791,7 @@ int main(int argc, char *argv[])
 	// install RDMA driver
 	//
 	for (uint32_t i = 0; i < node_num; i++){
-		if (n.Get(i)->GetNodeType() == 0){ // is server
+		if (!IsSwitchNode(n.Get(i))){ // is server
 			// create RdmaHw
 			Ptr<RdmaHw> rdmaHw = CreateObject<RdmaHw>();
 			rdmaHw->SetAttribute("ClampTargetRate", BooleanValue(simConfig.clamp_target_rate));
@@ -846,10 +846,10 @@ int main(int argc, char *argv[])
 	//
 	maxRtt = maxBdp = 0;
 	for (uint32_t i = 0; i < node_num; i++){
-		if (n.Get(i)->GetNodeType() != 0)
+		if (IsSwitchNode(n.Get(i)))
 			continue;
 		for (uint32_t j = 0; j < node_num; j++){
-			if (n.Get(j)->GetNodeType() != 0)
+			if (IsSwitchNode(n.Get(j)))
 				continue;
 			uint64_t delay = pairDelay[n.Get(i)][n.Get(j)];
 			uint64_t txDelay = pairTxDelay[n.Get(i)][n.Get(j)];
@@ -870,7 +870,7 @@ int main(int argc, char *argv[])
 	// setup switch CC
 	//
 	for (uint32_t i = 0; i < node_num; i++){
-		if (n.Get(i)->GetNodeType() == 1){ // switch
+		if (IsSwitchNode(n.Get(i))){ // switch
 			Ptr<SwitchNode> sw = DynamicCast<SwitchNode>(n.Get(i));
 			sw->SetAttribute("CcMode", UintegerValue(simConfig.cc_mode));
 			sw->SetAttribute("MaxRtt", UintegerValue(maxRtt));

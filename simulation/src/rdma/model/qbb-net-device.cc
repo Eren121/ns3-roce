@@ -263,7 +263,7 @@ namespace ns3 {
 		if (!m_linkUp) return; // if link is down, return
 		if (m_txMachineState == BUSY) return;	// Quit if channel busy
 		Ptr<Packet> p;
-		if (m_node->GetNodeType() == 0){
+		if (!IsSwitchNode(m_node)){
 			int qIndex = m_rdmaEQ->GetNextQindex(m_paused);
 			if (qIndex != -1024){
 				if (qIndex == -1){ // high prio
@@ -320,7 +320,7 @@ namespace ns3 {
 				return;
 			}else{ //No queue can deliver any packet
 				NS_LOG_INFO("PAUSE prohibits send at node " << m_node->GetId());
-				if (m_node->GetNodeType() == 0 && m_qcnEnabled){ //nothing to send, possibly due to qcn flow control, if so reschedule sending
+				if (!IsSwitchNode(m_node) && m_qcnEnabled){ //nothing to send, possibly due to qcn flow control, if so reschedule sending
 					Time t = Simulator::GetMaximumSimulationTime();
 					for (uint32_t i = 0; i < m_rdmaEQ->GetFlowCount(); i++){
 						Ptr<RdmaQueuePair> qp = m_rdmaEQ->GetQp(i);
@@ -382,7 +382,7 @@ namespace ns3 {
 				Resume(qIndex);
 			}
 		}else { // non-PFC packets (data, ACK, NACK, CNP...)
-			if (m_node->GetNodeType() > 0){ // switch
+			if (IsSwitchNode(m_node)){ // switch
 				packet->AddPacketTag(FlowIdTag(m_ifIndex));
 				m_node->SwitchReceiveFromDevice(this, packet, ch);
 			}else { // NIC
@@ -504,7 +504,7 @@ namespace ns3 {
 
 	void QbbNetDevice::TakeDown(){
 		// TODO: delete packets in the queue, set link down
-		if (m_node->GetNodeType() == 0){
+		if (!IsSwitchNode(m_node)){
 			// clean the high prio queue
 			m_rdmaEQ->CleanHighPrio(m_traceDrop);
 			// notify driver/RdmaHw that this link is down

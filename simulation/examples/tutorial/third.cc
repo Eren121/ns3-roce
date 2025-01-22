@@ -512,7 +512,7 @@ int main(int argc, char *argv[])
 			continue;
 		used_port[port] = true;
 		flowf >> src >> dst >> pg >> maxPacketCount >> start_time >> stop_time;
-		NS_ASSERT(n.Get(src)->GetNodeType() == 0 && n.Get(dst)->GetNodeType() == 0);
+		NS_ASSERT(!IsSwitchNode(n.Get(src)) && !IsSwitchNode(n.Get(dst)));
 		Ptr<Ipv4> ipv4 = n.Get(dst)->GetObject<Ipv4>();
 		Ipv4Address serverAddress = ipv4->GetAddress(1, 0).GetLocal(); //GetAddress(0,0) is the loopback 127.0.0.1
 
@@ -556,7 +556,7 @@ int main(int argc, char *argv[])
 			continue;
 		used_port[port] = true;
 		tcpflowf >> src >> dst >> pg >> maxPacketCount >> start_time >> stop_time;
-		NS_ASSERT(n.Get(src)->GetNodeType() == 0 && n.Get(dst)->GetNodeType() == 0);
+		NS_ASSERT(!IsSwitchNode(n.Get(src)) && !IsSwitchNode(n.Get(dst));
 		Ptr<Ipv4> ipv4 = n.Get(dst)->GetObject<Ipv4>();
 		Ipv4Address serverAddress = ipv4->GetAddress(1, 0).GetLocal();
 

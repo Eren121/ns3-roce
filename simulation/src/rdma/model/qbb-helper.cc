@@ -28,6 +28,7 @@
 #include "ns3/point-to-point-remote-channel.h"
 #include "ns3/qbb-channel.h"
 #include "ns3/qbb-remote-channel.h"
+#include "ns3/switch-node.h"
 #include "ns3/queue.h"
 #include "ns3/config.h"
 #include "ns3/packet.h"
@@ -316,7 +317,7 @@ void QbbHelper::GetTraceFromPacket(TraceFormat &tr, Ptr<QbbNetDevice> dev, Ptr<c
 
 	tr.event = event;
 	tr.node = dev->GetNode()->GetId();
-	tr.nodeType = dev->GetNode()->GetNodeType();
+	tr.nodeType = GetNodeType(dev->GetNode());
 	tr.intf = dev->GetIfIndex();
 	tr.qidx = qidx;
 	tr.time = Simulator::Now().GetTimeStep();

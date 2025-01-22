@@ -88,6 +88,14 @@ public:
 	int log2apprx(int x, int b, int m, int l); // given x of at most b bits, use most significant m bits of x, calc the result in l bits
 };
 
+enum NodeType {
+	NT_SERVER = 0,
+	NT_SWITCH = 1
+};
+
+bool IsSwitchNode(Ptr<Node> node);
+NodeType GetNodeType(Ptr<Node> node);
+
 } /* namespace ns3 */
 
 #endif /* SWITCH_NODE_H */

@@ -200,9 +200,6 @@ public:
    */
   static bool ChecksumEnabled (void);
 
-  //yibo
-  uint32_t GetNodeType();
-  
   /*
   bool CheckIngressAdmission(uint32_t port,uint32_t qIndex, uint32_t psize);
   bool CheckEgressAdmission(uint32_t port,uint32_t qIndex, uint32_t psize);
@@ -247,8 +244,6 @@ protected:
   virtual void DoStart (void);
 protected:
 
-	//yibo
-	uint32_t m_node_type;
 	/*
 	uint32_t m_maxBufferBytes;
 	uint32_t m_usedTotalBytes;

@@ -45,7 +45,6 @@ TypeId SwitchNode::GetTypeId (void)
 
 SwitchNode::SwitchNode(){
 	m_ecmpSeed = m_id;
-	m_node_type = 1;
 	m_mmu = CreateObject<SwitchMmu>();
 	for (uint32_t i = 0; i < pCnt; i++)
 		for (uint32_t j = 0; j < pCnt; j++)
@@ -344,6 +343,16 @@ int SwitchNode::log2apprx(int x, int b, int m, int l){
 		#endif
 	}
 	return int(log2(x) * (1<<logres_shift(b, l)));
+}
+
+bool IsSwitchNode(Ptr<Node> node)
+{
+	return DynamicCast<SwitchNode>(node) != nullptr;
+}
+
+NodeType GetNodeType(Ptr<Node> node)
+{
+	return IsSwitchNode(node) ? NT_SWITCH : NT_SERVER;
 }
 
 } /* namespace ns3 */
