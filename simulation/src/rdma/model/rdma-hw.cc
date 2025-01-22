@@ -8,6 +8,7 @@
 #include "ns3/double.h"
 #include "ns3/data-rate.h"
 #include "ns3/pointer.h"
+#include "ns3/data-rate-ops.h"
 #include "rdma-hw.h"
 #include "ns3/ppp-header.h"
 #include "qbb-header.h"

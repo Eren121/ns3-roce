@@ -22,7 +22,8 @@ def build(bld):
         'model/rdma-hw.cc',
         'model/rdma-queue-pair.cc',
         'model/switch-mmu.cc',
-        'model/switch-node.cc'
+        'model/switch-node.cc',
+        'model/data-rate-ops.cc'
     ]
     headers = bld(features='ns3header')
     headers.module = 'rdma'
@@ -49,5 +50,6 @@ def build(bld):
         'model/sim-setting.h',
         'model/switch-mmu.h',
         'model/switch-node.h',
-        'model/trace-format.h'
+        'model/trace-format.h',
+        'model/data-rate-ops.h'
     ]
