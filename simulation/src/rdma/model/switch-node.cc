@@ -11,6 +11,7 @@
 #include "ns3/ppp-header.h"
 #include "ns3/int-header.h"
 #include <cmath>
+#include <atomic>
 
 namespace ns3 {
 
@@ -44,7 +45,8 @@ TypeId SwitchNode::GetTypeId (void)
 }
 
 SwitchNode::SwitchNode(){
-	m_ecmpSeed = GetId();
+	static std::atomic<uint32_t> nextEcmpSeed = 0;
+	m_ecmpSeed = nextEcmpSeed++;
 	m_mmu = CreateObject<SwitchMmu>();
 	for (uint32_t i = 0; i < pCnt; i++)
 		for (uint32_t j = 0; j < pCnt; j++)
