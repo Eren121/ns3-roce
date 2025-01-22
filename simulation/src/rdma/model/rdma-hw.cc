@@ -9,7 +9,7 @@
 #include "ns3/data-rate.h"
 #include "ns3/pointer.h"
 #include "rdma-hw.h"
-#include "ppp-header.h"
+#include "ns3/ppp-header.h"
 #include "qbb-header.h"
 #include "rdma-bth.h"
 #include "cn-header.h"

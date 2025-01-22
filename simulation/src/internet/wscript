@@ -305,8 +305,7 @@ def build(bld):
         'model/tcp-socket-base.h',
         'model/tcp-tx-buffer.h',
         'model/tcp-rx-buffer.h',
-        'model/rtt-estimator.h',
-		'model/rdma.h',
+        'model/rtt-estimator.h'
        ]
 
     if bld.env['NSC_ENABLED']:

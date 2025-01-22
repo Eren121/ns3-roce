@@ -8,7 +8,7 @@
 #include "ns3/double.h"
 #include "switch-node.h"
 #include "qbb-net-device.h"
-#include "ppp-header.h"
+#include "ns3/ppp-header.h"
 #include "ns3/int-header.h"
 #include <cmath>
 

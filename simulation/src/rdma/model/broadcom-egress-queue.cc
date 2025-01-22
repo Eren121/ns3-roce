@@ -22,7 +22,7 @@
 #include "ns3/uinteger.h"
 #include "ns3/double.h"
 #include "ns3/simulator.h"
-#include "drop-tail-queue.h"
+#include "ns3/drop-tail-queue.h"
 #include "broadcom-egress-queue.h"
 
 NS_LOG_COMPONENT_DEFINE("BEgressQueue");

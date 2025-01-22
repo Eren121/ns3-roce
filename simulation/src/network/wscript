@@ -50,16 +50,13 @@ def build(bld):
         'utils/red-queue.cc',
         'utils/simple-channel.cc',
         'utils/simple-net-device.cc',
-        'utils/broadcom-egress-queue.cc',
         'helper/application-container.cc',
         'helper/net-device-container.cc',
         'helper/node-container.cc',
         'helper/packet-socket-helper.cc',
         'helper/trace-helper.cc',
         'helper/leaky-bucket-helper.cc',
-        'utils/leaky-bucket.cc',
-		'utils/custom-header.cc',
-		'utils/int-header.cc',
+        'utils/leaky-bucket.cc'
         ]
 
     network_test = bld.create_ns3_module_test_library('network')
@@ -134,11 +131,8 @@ def build(bld):
         'helper/node-container.h',
         'helper/packet-socket-helper.h',
         'helper/trace-helper.h',
-        'utils/broadcom-egress-queue.h',
         'helper/leaky-bucket-helper.h',
-        'utils/leaky-bucket.h',
-		'utils/custom-header.h',
-		'utils/int-header.h',
+        'utils/leaky-bucket.h'
         ]
 
     if (bld.env['ENABLE_EXAMPLES']):

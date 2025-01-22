@@ -36,8 +36,8 @@
 #include "ns3/mpi-receiver.h"
 
 #include "ns3/trace-helper.h"
-#include "point-to-point-helper.h"
-#include "qbb-helper.h"
+#include "ns3/point-to-point-helper.h"
+#include "ns3/qbb-helper.h"
 #include "ns3/custom-header.h"
 #include "ns3/trace-format.h"
 
