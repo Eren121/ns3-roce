@@ -135,14 +135,6 @@ void RdmaClient::SetSize(uint64_t size)
 	m_size = size;
 }
 
-void RdmaClient::Finish()
-{
-  if(!m_onFlowFinished.IsNull()) {
-    m_onFlowFinished(*this);
-  }
-	m_node->DeleteApplication(this);
-}
-
 void RdmaClient::DoDispose()
 {
   NS_LOG_FUNCTION_NOARGS();
@@ -155,13 +147,17 @@ void RdmaClient::StartApplication()
   // get RDMA driver and add up queue pair
   Ptr<Node> node = GetNode();
   Ptr<RdmaDriver> rdma = node->GetObject<RdmaDriver>();
-  rdma->AddQueuePair(m_size, m_reliable, m_pg, m_sip, m_dip, m_sport, m_dport, m_win, m_baseRtt, MakeCallback(&RdmaClient::Finish, this));
+  rdma->AddQueuePair(m_size, m_reliable, m_pg, m_sip, m_dip, m_sport, m_dport, m_win, m_baseRtt, MakeCallback(&RdmaClient::StopApplication, this));
 }
 
 void RdmaClient::StopApplication()
 {
   NS_LOG_FUNCTION_NOARGS();
   // TODO stop the queue pair
+  
+  if(!m_onFlowFinished.IsNull()) {
+    m_onFlowFinished(*this);
+  }
 }
 
 } // Namespace ns3

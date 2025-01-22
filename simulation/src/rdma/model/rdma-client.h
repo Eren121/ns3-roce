@@ -89,11 +89,6 @@ public:
 protected:
   void DoDispose() override;
 
-  /**
-   * \brief Callback called when the flow has been completed.
-   */
-  void Finish();
-
 private:
   void StartApplication() override;
   void StopApplication() override;
