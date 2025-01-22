@@ -49,13 +49,4 @@ uint32_t NetDevice::GetUsedBuffer(uint32_t port, uint32_t qIndex)
 	return 0;
 }
 
-bool NetDevice::IsQbb(void) const {
-	return false;
-}
-
-bool NetDevice::SwitchSend (uint32_t qIndex, Ptr<Packet> packet, CustomHeader &ch){
-	printf("NetDevice::SwitchSend not implemented\n");
-	return false;
-}
-
 } // namespace ns3

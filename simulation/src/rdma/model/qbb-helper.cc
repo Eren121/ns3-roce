@@ -444,7 +444,7 @@ void QbbHelper::EnableTracing(FILE *file, NodeContainer node_container){
       Ptr<Node> node = *i;
       for (uint32_t j = 0; j < node->GetNDevices (); ++j)
         {
-			if (node->GetDevice(j)->IsQbb())
+			if (IsQbb(node->GetDevice(j)))
 				EnableTracingDevice(file, DynamicCast<QbbNetDevice>(node->GetDevice(j)));
         }
     }

@@ -309,10 +309,10 @@ namespace ns3 {
 				FlowIdTag t;
 				uint32_t qIndex = m_queue->GetLastQueue();
 				if (qIndex == 0){//this is a pause or cnp, send it immediately!
-					m_node->SwitchNotifyDequeue(m_ifIndex, qIndex, p);
+					SwitchNotifyDequeue(m_node, m_ifIndex, qIndex, p);
 					p->RemovePacketTag(t);
 				}else{
-					m_node->SwitchNotifyDequeue(m_ifIndex, qIndex, p);
+					SwitchNotifyDequeue(m_node, m_ifIndex, qIndex, p);
 					p->RemovePacketTag(t);
 				}
 				m_traceDequeue(p, qIndex);
@@ -384,7 +384,7 @@ namespace ns3 {
 		}else { // non-PFC packets (data, ACK, NACK, CNP...)
 			if (IsSwitchNode(m_node)){ // switch
 				packet->AddPacketTag(FlowIdTag(m_ifIndex));
-				m_node->SwitchReceiveFromDevice(this, packet, ch);
+				SwitchReceiveFromDevice(m_node, this, packet, ch);
 			}else { // NIC
 				// send to RdmaHw
 				int ret = m_rdmaReceiveCb(packet, ch);
@@ -468,10 +468,6 @@ namespace ns3 {
 	{
 		return m_channel;
 	}
-
-   bool QbbNetDevice::IsQbb(void) const{
-	   return true;
-   }
 
    void QbbNetDevice::NewQp(Ptr<RdmaQueuePair> qp){
 	   qp->m_nextAvail = Simulator::Now();
@@ -568,4 +564,10 @@ namespace ns3 {
 		}
 		peer_qbb->OnPeerJoinGroup(group); // If the uplink is NIC, the early return will stop and avoid infinite loop.
 	}
+	
+	bool IsQbb(Ptr<const NetDevice> self)
+	{
+		return DynamicCast<const QbbNetDevice>(self) != nullptr;
+	}
+
 } // namespace ns3

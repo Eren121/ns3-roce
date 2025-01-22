@@ -99,7 +99,7 @@ public:
    * @param protocolNumber Protocol used in packet
    */
   virtual bool Send(Ptr<Packet> packet, const Address &dest, uint16_t protocolNumber);
-  virtual bool SwitchSend (uint32_t qIndex, Ptr<Packet> packet, CustomHeader &ch);
+  bool SwitchSend (uint32_t qIndex, Ptr<Packet> packet, CustomHeader &ch);
 
   /**
    * Get the size of Tx buffer available in the device
@@ -120,7 +120,6 @@ public:
 
    void SetQueue (Ptr<BEgressQueue> q);
    Ptr<BEgressQueue> GetQueue ();
-   virtual bool IsQbb(void) const;
    void NewQp(Ptr<RdmaQueuePair> qp);
    void ReassignedQp(Ptr<RdmaQueuePair> qp);
    void TriggerTransmit(void);
@@ -219,6 +218,8 @@ public:
 
 	TracedCallback<Ptr<const Packet>, Ptr<RdmaQueuePair> > m_traceQpDequeue; // the trace for printing dequeue
 };
+
+bool IsQbb(Ptr<const NetDevice> self);
 
 } // namespace ns3
 

@@ -148,7 +148,7 @@ void SwitchNode::SendToDev(Ptr<Packet>p, CustomHeader &ch){
 			CheckAndSendPfc(inDev, qIndex);
 		}
 		m_bytes[inDev][idx][qIndex] += p->GetSize();
-		m_devices[idx]->SwitchSend(qIndex, p, ch);
+		SwitchSend(m_devices[idx], qIndex, p, ch);
 	}else {
 		std::cerr << "ERROR: Cannot find output device for packet" << std::endl;
 		return; // Drop
@@ -353,6 +353,27 @@ bool IsSwitchNode(Ptr<Node> node)
 NodeType GetNodeType(Ptr<Node> node)
 {
 	return IsSwitchNode(node) ? NT_SWITCH : NT_SERVER;
+}
+
+bool SwitchSend(Ptr<NetDevice> self, uint32_t qIndex, Ptr<Packet> packet, CustomHeader &ch)
+{
+	Ptr<QbbNetDevice> qbb = DynamicCast<QbbNetDevice>(self);
+	NS_ASSERT(qbb);
+	return qbb->SwitchSend(qIndex, packet, ch);
+}
+
+void SwitchNotifyDequeue(Ptr<Node> self, uint32_t ifIndex, uint32_t qIndex, Ptr<Packet> p)
+{
+	Ptr<SwitchNode> sw = DynamicCast<SwitchNode>(self);
+	NS_ASSERT(sw);
+	sw->SwitchNotifyDequeue(ifIndex, qIndex, p);
+}
+
+bool SwitchReceiveFromDevice(Ptr<Node> self, Ptr<NetDevice> device, Ptr<Packet> packet, CustomHeader &ch)
+{
+	Ptr<SwitchNode> sw = DynamicCast<SwitchNode>(self);
+	NS_ASSERT(sw);
+	return sw->SwitchReceiveFromDevice(device, packet, ch);
 }
 
 } /* namespace ns3 */

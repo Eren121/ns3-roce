@@ -93,9 +93,16 @@ enum NodeType {
 	NT_SWITCH = 1
 };
 
-bool IsSwitchNode(Ptr<Node> node);
-NodeType GetNodeType(Ptr<Node> node);
+// These free functions are refactored from the original code base.
+// The original code added virtual functions to ns-3 classes with noop parent method.
+// Free functions make it easier to upgrade to new ns-3 releases without changing the original ns-3 source code.
 
+bool IsSwitchNode(Ptr<Node> self);
+NodeType GetNodeType(Ptr<Node> self);
+bool SwitchSend(Ptr<NetDevice> self, uint32_t qIndex, Ptr<Packet> packet, CustomHeader &ch);
+void SwitchNotifyDequeue(Ptr<Node> self, uint32_t ifIndex, uint32_t qIndex, Ptr<Packet> p);
+bool SwitchReceiveFromDevice(Ptr<Node> self, Ptr<NetDevice> device, Ptr<Packet> packet, CustomHeader &ch);
+	
 } /* namespace ns3 */
 
 #endif /* SWITCH_NODE_H */

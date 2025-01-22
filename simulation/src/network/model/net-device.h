@@ -214,7 +214,6 @@ public:
    */
   virtual bool IsPointToPoint (void) const = 0;
 
-  virtual bool IsQbb(void) const;
   /**
    * \param packet packet sent from above down to Network Device
    * \param dest mac address of the destination (already resolved)
@@ -338,10 +337,6 @@ public:
    * \return true if this interface supports a bridging mode, false otherwise.
    */
   virtual bool SupportsSendFrom (void) const = 0;
-
-  // Yuliang
-  // For switch
-  virtual bool SwitchSend (uint32_t qIndex, Ptr<Packet> packet, CustomHeader &ch);
 };
 
 } // namespace ns3

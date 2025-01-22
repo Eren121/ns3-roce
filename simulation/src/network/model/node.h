@@ -317,11 +317,6 @@ protected:
   std::vector<Ptr<Application> > m_applications;
   ProtocolHandlerList m_handlers;
   DeviceAdditionListenerList m_deviceAdditionListeners;
-
-  // Yuliang
-public:
-  virtual bool SwitchReceiveFromDevice(Ptr<NetDevice> device, Ptr<Packet> packet, CustomHeader &ch);
-  virtual void SwitchNotifyDequeue(uint32_t ifIndex, uint32_t qIndex, Ptr<Packet> p);
 };
 
 } // namespace ns3

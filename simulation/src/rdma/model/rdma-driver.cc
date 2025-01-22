@@ -25,21 +25,21 @@ void RdmaDriver::Init(void){
 	for (uint32_t i = 0; i < m_rdma->m_nic.size(); i++){
 		m_rdma->m_nic[i] = CreateObject<RdmaQueuePairGroup>();
 		// share the queue pair group with NIC
-		if (ipv4->GetNetDevice(i)->IsQbb()){
+		if (IsQbb(ipv4->GetNetDevice(i))){
 			DynamicCast<QbbNetDevice>(ipv4->GetNetDevice(i))->m_rdmaEQ->m_qpGrp = m_rdma->m_nic[i];
 		}
 	}
 	#endif
 	for (uint32_t i = 0; i < m_node->GetNDevices(); i++){
 		Ptr<QbbNetDevice> dev = NULL;
-		if (m_node->GetDevice(i)->IsQbb())
+		if (IsQbb(m_node->GetDevice(i)))
 			dev = DynamicCast<QbbNetDevice>(m_node->GetDevice(i));
 		m_rdma->m_nic.push_back(RdmaInterfaceMgr(dev));
 		m_rdma->m_nic.back().qpGrp = CreateObject<RdmaQueuePairGroup>();
-	}
+	}	
 	#if 0
 	for (uint32_t i = 0; i < ipv4->GetNInterfaces (); i++){
-		if (ipv4->GetNetDevice(i)->IsQbb() && ipv4->IsUp(i)){
+		if (IsQbb(ipv4->GetNetDevice(i)) && ipv4->IsUp(i)){
 			Ptr<QbbNetDevice> dev = DynamicCast<QbbNetDevice>(ipv4->GetNetDevice(i));
 			// add a new RdmaInterfaceMgr for this device
 			m_rdma->m_nic.push_back(RdmaInterfaceMgr(dev));
