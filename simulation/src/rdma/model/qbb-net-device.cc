@@ -44,7 +44,7 @@
 #include "ns3/cn-header.h"
 #include "ns3/ppp-header.h"
 #include "ns3/udp-header.h"
-#include "ns3/seq-ts-header.h"
+#include "ns3/rdma-seq-header.h"
 #include "ns3/pointer.h"
 #include "ns3/custom-header.h"
 #include "ns3/assert.h"

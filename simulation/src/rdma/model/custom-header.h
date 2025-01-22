@@ -104,7 +104,7 @@ public:
 		  uint16_t sport;        //!< Source port
 		  uint16_t dport;   //!< Destination port
 		  uint16_t payload_size;
-		  // SeqTsHeader
+		  // RdmaSeqHeader
 		  uint16_t pg;
 		  uint32_t seq;
 		  IntHeader ih;

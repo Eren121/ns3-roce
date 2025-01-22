@@ -1,5 +1,5 @@
 #include <ns3/simulator.h>
-#include <ns3/seq-ts-header.h>
+#include <ns3/rdma-seq-header.h>
 #include <ns3/udp-header.h>
 #include <ns3/ipv4-header.h>
 #include "ns3/ppp-header.h"
@@ -627,8 +627,8 @@ Ptr<Packet> RdmaHw::GetNxtPacket(Ptr<RdmaQueuePair> qp){
 	if (m_mtu < payload_size)
 		payload_size = m_mtu;
 	Ptr<Packet> p = Create<Packet> (payload_size);
-	// add SeqTsHeader
-	SeqTsHeader seqTs;
+	// add RdmaSeqHeader
+	RdmaSeqHeader seqTs;
 	seqTs.SetSeq (qp->snd_nxt);
 	seqTs.SetPG (qp->m_pg);
 	p->AddHeader (seqTs);

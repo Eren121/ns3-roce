@@ -158,7 +158,7 @@ void CustomHeader::Serialize (Buffer::Iterator start) const{
 		  i.WriteHtonU16 (udp.dport);
 		  i.WriteHtonU16 (udp.payload_size);
 		  i.WriteHtonU16 (0);
-		  // SeqTsHeader
+		  // RdmaSeqHeader
 		  i.WriteHtonU32 (udp.seq);
 		  i.WriteHtonU16 (udp.pg);
 		  udp.ih.Serialize(i);
@@ -277,7 +277,7 @@ CustomHeader::Deserialize (Buffer::Iterator start)
 			  i.Read(tcp.optionBuf, optionLen);
 		  }
 		  l4Size = tcp.length * 4;
-	  }else if (l3Prot == 0x11){ // UDP + SeqTsHeader
+	  }else if (l3Prot == 0x11){ // UDP + RdmaSeqHeader
 		  i = start;
 		  i.Next(l2Size + l3Size);
 		  // udp header
@@ -290,7 +290,7 @@ CustomHeader::Deserialize (Buffer::Iterator start)
 			  i.Next(2);
 		  }
 
-		  // SeqTsHeader
+		  // RdmaSeqHeader
 		  udp.seq = i.ReadNtohU32 ();
 		  udp.pg =  i.ReadNtohU16 ();
 		  if (getInt)

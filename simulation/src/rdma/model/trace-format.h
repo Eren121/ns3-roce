@@ -33,7 +33,7 @@ struct TraceFormat{
 			uint32_t seq;
 			uint64_t ts;
 			uint16_t pg;
-			uint16_t payload; // this does not include SeqTsHeader's size, diff from udp's payload size.
+			uint16_t payload; // this does not include RdmaSeqHeader's size, diff from udp's payload size.
 		} data;
 		struct {
 			uint16_t fid;

@@ -334,7 +334,7 @@ void QbbHelper::GetTraceFromPacket(TraceFormat &tr, Ptr<QbbNetDevice> dev, Ptr<c
 			tr.data.sport = hdr.udp.sport;
 			tr.data.dport = hdr.udp.dport;
 			tr.data.payload = p->GetSize() - hdr.GetSerializedSize();
-			// SeqTsHeader
+			// RdmaSeqHeader
 			tr.data.seq = hdr.udp.seq;
 			tr.data.ts = hdr.udp.ih.GetTs();
 			tr.data.pg = hdr.udp.pg;

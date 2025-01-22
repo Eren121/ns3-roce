@@ -34,7 +34,7 @@
 #include "ns3/qbb-net-device.h"
 #include "ns3/ipv4-end-point.h"
 #include "rdma-client.h"
-#include "ns3/seq-ts-header.h"
+#include "ns3/rdma-seq-header.h"
 #include <ns3/rdma-driver.h>
 #include <stdlib.h>
 #include <stdio.h>
