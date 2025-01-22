@@ -223,7 +223,6 @@ namespace ns3 {
 	QbbNetDevice::QbbNetDevice()
 	{
 		NS_LOG_FUNCTION(this);
-		m_ecn_source = new std::vector<ECNAccount>;
 		for (uint32_t i = 0; i < qCnt; i++){
 			m_paused[i] = false;
 		}

@@ -189,8 +189,6 @@ protected:
 	  uint16_t total;
   };
 
-  std::vector<ECNAccount> *m_ecn_source;
-
   // Multicast
 
   /**
