@@ -10,6 +10,7 @@
 #include "qbb-net-device.h"
 #include "ns3/ppp-header.h"
 #include "ns3/int-header.h"
+#include "ns3/abort.h"
 #include <cmath>
 #include <atomic>
 
@@ -237,6 +238,10 @@ void SwitchNode::SwitchNotifyDequeue(uint32_t ifIndex, uint32_t qIndex, Ptr<Pack
 		//CheckAndSendPfc(inDev, qIndex);
 		CheckAndSendResume(inDev, qIndex);
 	}
+
+	NS_ABORT_IF(m_ccMode == 3 || m_ccMode == 10);
+	#if 0 // A lot of invalid code in ns3.19
+	      // Simpler to remove: it does only concern only HPCC and HPCC-PINT congestion control.
 	if (1){
 		uint8_t* buf = p->GetBuffer();
 		if (buf[PppHeader::GetStaticSize() + 9] == 0x11){ // udp packet
@@ -321,6 +326,7 @@ void SwitchNode::SwitchNotifyDequeue(uint32_t ifIndex, uint32_t qIndex, Ptr<Pack
 			}
 		}
 	}
+	#endif
 	m_txBytes[ifIndex] += p->GetSize();
 	m_lastPktSize[ifIndex] = p->GetSize();
 	m_lastPktTs[ifIndex] = Simulator::Now().GetTimeStep();
