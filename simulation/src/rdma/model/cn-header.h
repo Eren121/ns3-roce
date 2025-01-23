@@ -42,7 +42,7 @@ public:
   CnHeader (const uint16_t fid, uint8_t qIndex, uint8_t ecnbits, uint16_t qfb, uint16_t total);
   //CnHeader (const uint16_t fid, uint8_t qIndex, uint8_t qfb);
   CnHeader ();
-  virtual ~CnHeader ();
+  ~CnHeader () override;
 
 //Setters
   /**
@@ -77,11 +77,11 @@ public:
   uint32_t GetSeq () const;
 
   static TypeId GetTypeId (void);
-  virtual TypeId GetInstanceTypeId (void) const;
-  virtual void Print (std::ostream &os) const;
-  virtual uint32_t GetSerializedSize (void) const;
-  virtual void Serialize (Buffer::Iterator start) const;
-  virtual uint32_t Deserialize (Buffer::Iterator start);
+  TypeId GetInstanceTypeId (void) const override;
+  void Print (std::ostream &os) const override;
+  uint32_t GetSerializedSize (void) const override;
+  void Serialize (Buffer::Iterator start) const override;
+  uint32_t Deserialize (Buffer::Iterator start) override;
 
 private:
   uint16_t sport, dport;

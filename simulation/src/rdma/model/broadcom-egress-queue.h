@@ -36,7 +36,7 @@ namespace ns3 {
 		static const unsigned fCnt = 128; //max number of queues, 128 for NICs
 		static const unsigned qCnt = 8; //max number of queues, 8 for switches
 		BEgressQueue();
-		virtual ~BEgressQueue();
+		~BEgressQueue() override;
 		bool Enqueue(Ptr<Packet> p, uint32_t qIndex);
 		Ptr<Packet> DequeueRR(bool paused[]);
 		uint32_t GetNBytes(uint32_t qIndex) const;
@@ -50,9 +50,9 @@ namespace ns3 {
 		bool DoEnqueue(Ptr<Packet> p, uint32_t qIndex);
 		Ptr<Packet> DoDequeueRR(bool paused[]);
 		//for compatibility
-		virtual bool DoEnqueue(Ptr<Packet> p);
-		virtual Ptr<Packet> DoDequeue(void);
-		virtual Ptr<const Packet> DoPeek(void) const;
+		bool DoEnqueue(Ptr<Packet> p) override;
+		Ptr<Packet> DoDequeue(void) override;
+		Ptr<const Packet> DoPeek(void) const override;
 		double m_maxBytes; //total bytes limit
 		uint32_t m_bytesInQueue[fCnt];
 		uint32_t m_bytesInQueueTotal;

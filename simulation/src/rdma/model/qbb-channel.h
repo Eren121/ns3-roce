@@ -71,13 +71,13 @@ public:
    * \param txTime Transmit time to apply
    * \returns true if successful (currently always true)
    */
-  virtual bool TransmitStart (Ptr<Packet> p, Ptr<QbbNetDevice> src, Time txTime);
+  bool TransmitStart (Ptr<Packet> p, Ptr<PointToPointNetDevice> src, Time txTime) override;
 
   /**
    * \brief Get number of devices on this channel
    * \returns number of devices on this channel
    */
-  virtual uint32_t GetNDevices (void) const;
+  uint32_t GetNDevices (void) const override;
 
   /*
    * \brief Get QbbNetDevice corresponding to index i on this channel
@@ -91,7 +91,7 @@ public:
    * \param i Index number of the device requested
    * \returns Ptr to NetDevice requested
    */
-  virtual Ptr<NetDevice> GetDevice (uint32_t i) const;
+  Ptr<NetDevice> GetDevice (uint32_t i) const override;
 
   /*
    * \brief Get the delay associated with this channel

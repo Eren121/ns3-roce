@@ -41,7 +41,7 @@ class PauseHeader : public Header
 public:
   PauseHeader (uint32_t time,uint32_t qlen,uint8_t qindex);
   PauseHeader ();
-  virtual ~PauseHeader ();
+  ~PauseHeader () override;
 
 //Setters
   /**
@@ -60,11 +60,11 @@ public:
   uint8_t GetQIndex () const;
 
   static TypeId GetTypeId (void);
-  virtual TypeId GetInstanceTypeId (void) const;
-  virtual void Print (std::ostream &os) const;
-  virtual uint32_t GetSerializedSize (void) const;
-  virtual void Serialize (Buffer::Iterator start) const;
-  virtual uint32_t Deserialize (Buffer::Iterator start);
+  TypeId GetInstanceTypeId (void) const override;
+  void Print (std::ostream &os) const override;
+  uint32_t GetSerializedSize (void) const override;
+  void Serialize (Buffer::Iterator start) const override;
+  uint32_t Deserialize (Buffer::Iterator start) override;
 
 private:
   uint32_t m_time;

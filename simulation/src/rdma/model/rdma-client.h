@@ -50,7 +50,7 @@ public:
   static TypeId GetTypeId();
 
   RdmaClient();
-  virtual ~RdmaClient();
+  ~RdmaClient() override;
 
   /**
    * \brief Set the destination where to send the data.

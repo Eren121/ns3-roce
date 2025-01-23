@@ -76,7 +76,7 @@ public:
   static TypeId GetTypeId (void);
 
   QbbNetDevice ();
-  virtual ~QbbNetDevice ();
+  ~QbbNetDevice () override;
 
   /**
    * Receive a packet from a connected PointToPointChannel.
@@ -98,7 +98,7 @@ public:
    * @param dest Unused
    * @param protocolNumber Protocol used in packet
    */
-  virtual bool Send(Ptr<Packet> packet, const Address &dest, uint16_t protocolNumber);
+  bool Send(Ptr<Packet> packet, const Address &dest, uint16_t protocolNumber) override;
   bool SwitchSend (uint32_t qIndex, Ptr<Packet> packet, CustomHeader &ch);
 
   /**
@@ -115,10 +115,10 @@ public:
   void DisconnectWithoutContext(const CallbackBase& callback);
 
   DataRate GetDataRate() const;
-  
+
   bool Attach (Ptr<QbbChannel> ch);
 
-   virtual Ptr<Channel> GetChannel (void) const;
+   Ptr<Channel> GetChannel (void) const override;
 
    void SetQueue (Ptr<BEgressQueue> q);
    Ptr<BEgressQueue> GetQueue ();

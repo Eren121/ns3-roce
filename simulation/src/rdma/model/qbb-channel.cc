@@ -22,6 +22,7 @@
 #include "ns3/packet.h"
 #include "ns3/simulator.h"
 #include "ns3/log.h"
+#include "ns3/assert.h"
 #include <iostream>
 #include <fstream>
 
@@ -88,11 +89,14 @@ QbbChannel::Attach (Ptr<QbbNetDevice> device)
 bool
 QbbChannel::TransmitStart (
   Ptr<Packet> p,
-  Ptr<QbbNetDevice> src,
+  Ptr<PointToPointNetDevice> src_,
   Time txTime)
 {
-  NS_LOG_FUNCTION (this << p << src);
+  NS_LOG_FUNCTION (this << p << src_);
   NS_LOG_LOGIC ("UID is " << p->GetUid () << ")");
+
+  Ptr<QbbNetDevice> src = DynamicCast<QbbNetDevice>(src_);
+  NS_ASSERT(src);
 
   NS_ASSERT (m_link[0].m_state != INITIALIZING);
   NS_ASSERT (m_link[1].m_state != INITIALIZING);

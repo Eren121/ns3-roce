@@ -26,6 +26,7 @@
 #include "ns3/simulator.h"
 #include "ns3/log.h"
 #include "ns3/mpi-interface.h"
+#include "ns3/assert.h"
 
 using namespace std;
 
@@ -56,12 +57,15 @@ QbbRemoteChannel::~QbbRemoteChannel ()
 bool
 QbbRemoteChannel::TransmitStart (
   Ptr<Packet> p,
-  Ptr<QbbNetDevice> src,
+  Ptr<PointToPointNetDevice> src_,
   Time txTime)
 {
-  NS_LOG_FUNCTION (this << p << src);
+  NS_LOG_FUNCTION (this << p << src_);
   NS_LOG_LOGIC ("UID is " << p->GetUid () << ")");
 
+  Ptr<QbbNetDevice> src = DynamicCast<QbbNetDevice>(src_);
+  NS_ASSERT(src);
+  
   IsInitialized ();
 
   uint32_t wire = src == GetSource (0) ? 0 : 1;

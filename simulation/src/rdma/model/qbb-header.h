@@ -28,7 +28,7 @@ public:
   };
   qbbHeader (uint16_t pg);
   qbbHeader ();
-  virtual ~qbbHeader ();
+  ~qbbHeader () override;
 
 //Setters
   /**
@@ -55,11 +55,11 @@ public:
   uint8_t GetCnp() const;
 
   static TypeId GetTypeId (void);
-  virtual TypeId GetInstanceTypeId (void) const;
-  virtual void Print (std::ostream &os) const;
-  virtual uint32_t GetSerializedSize (void) const;
-  virtual void Serialize (Buffer::Iterator start) const;
-  virtual uint32_t Deserialize (Buffer::Iterator start);
+  TypeId GetInstanceTypeId (void) const override;
+  void Print (std::ostream &os) const override;
+  uint32_t GetSerializedSize (void) const override;
+  void Serialize (Buffer::Iterator start) const override;
+  uint32_t Deserialize (Buffer::Iterator start) override;
   static uint32_t GetBaseSize(); // size without INT
 
 private:
