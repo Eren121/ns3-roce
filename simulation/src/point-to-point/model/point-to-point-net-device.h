@@ -188,14 +188,10 @@ public:
 protected:
   void DoMpiReceive (Ptr<Packet> p);
 
-private:
-
   PointToPointNetDevice& operator = (const PointToPointNetDevice &);
   PointToPointNetDevice (const PointToPointNetDevice &);
 
   virtual void DoDispose (void);
-
-private:
 
   /**
    * \returns the address of the remote device connected to this device

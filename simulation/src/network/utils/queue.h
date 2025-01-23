@@ -163,7 +163,7 @@ protected:
    */
   void Drop (Ptr<Packet> packet);
 
-private:
+protected:
   TracedCallback<Ptr<const Packet> > m_traceEnqueue;
   TracedCallback<Ptr<const Packet> > m_traceDequeue;
   TracedCallback<Ptr<const Packet> > m_traceDrop;
