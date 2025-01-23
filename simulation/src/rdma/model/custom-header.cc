@@ -189,6 +189,7 @@ CustomHeader::Deserialize (Buffer::Iterator start)
   int l2Size = 0;
   if (headerType & L2_Header){
 	  pppProto = i.ReadNtohU16();
+	  l2Size = 2;
   }
 
   // L3

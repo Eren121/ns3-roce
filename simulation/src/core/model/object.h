@@ -64,7 +64,8 @@ class Object : public SimpleRefCount<Object,ObjectBase,ObjectDeleter>
 {
 public:
   /**
-   * Get the type ID.
+   * \brief Register this type.
+   * \return The object TypeId.
    */
   static TypeId GetTypeId (void);
 
@@ -164,7 +165,6 @@ private:
    * \sa DoInitialize
    */
   void Initialize (void);
-  void Start (void);
 
 protected:
   /**
@@ -185,9 +185,6 @@ protected:
    * safe to call GetObject and AggregateObject from within this method.
    */
   virtual void DoInitialize (void);
-
-  virtual void DoStart(void);
-
   /**
    * This method is called by Object::Dispose or by the object's 
    * destructor, whichever comes first.

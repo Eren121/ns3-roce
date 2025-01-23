@@ -38,7 +38,8 @@
 
 namespace ns3 {
 
-NS_LOG_COMPONENT_DEFINE ("UanEnergyModelTestSuite");
+NS_LOG_COMPONENT_DEFINE ("UanEnergyModelTestSuite")
+  ;
 
 class AcousticModemEnergyTestCase : public TestCase
 {
@@ -303,8 +304,8 @@ public:
 UanEnergyModelTestSuite::UanEnergyModelTestSuite ()
   : TestSuite ("uan-energy-model", UNIT)
 {
-  AddTestCase (new AcousticModemEnergyTestCase);
-  AddTestCase (new AcousticModemEnergyDepletionTestCase);
+  AddTestCase (new AcousticModemEnergyTestCase, TestCase::QUICK);
+  AddTestCase (new AcousticModemEnergyDepletionTestCase, TestCase::QUICK);
 }
 
 // create an instance of the test suite

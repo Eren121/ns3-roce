@@ -22,13 +22,13 @@
 #include "ns3/packet.h"
 #include "ns3/simulator.h"
 #include "ns3/log.h"
-#include <iostream>
 
 NS_LOG_COMPONENT_DEFINE ("PointToPointChannel");
 
 namespace ns3 {
 
-NS_OBJECT_ENSURE_REGISTERED (PointToPointChannel);
+NS_OBJECT_ENSURE_REGISTERED (PointToPointChannel)
+  ;
 
 TypeId 
 PointToPointChannel::GetTypeId (void)
@@ -107,10 +107,6 @@ uint32_t
 PointToPointChannel::GetNDevices (void) const
 {
   NS_LOG_FUNCTION_NOARGS ();
-
-  //std::cout<<m_nDevices<<"\n";
-  //std::cout.flush();
-
   return m_nDevices;
 }
 

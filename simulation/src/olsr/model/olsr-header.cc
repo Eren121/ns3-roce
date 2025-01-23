@@ -18,10 +18,12 @@
  * Author: Gustavo J. A. M. Carneiro  <gjc@inescporto.pt>
  */
 
+#include <cmath>
+
 #include "ns3/assert.h"
+#include "ns3/log.h"
 
 #include "olsr-header.h"
-#include "ns3/log.h"
 
 #define IPV4_ADDRESS_SIZE 4
 #define OLSR_MSG_HEADER_SIZE 12
@@ -58,7 +60,7 @@ SecondsToEmf (double seconds)
   double tmp = 16*(seconds/(OLSR_C*(1<<b))-1);
 
   // round it up.  This results in the value for 'a'
-  a = (int) ceil (tmp);
+  a = (int) std::ceil (tmp);
 
   // if 'a' is equal to 16: increment 'b' by one, and set 'a' to 0
   if (a == 16)
@@ -94,7 +96,8 @@ EmfToSeconds (uint8_t olsrFormat)
 
 // ---------------- OLSR Packet -------------------------------
 
-NS_OBJECT_ENSURE_REGISTERED (PacketHeader);
+NS_OBJECT_ENSURE_REGISTERED (PacketHeader)
+  ;
 
 PacketHeader::PacketHeader ()
 {
@@ -128,7 +131,7 @@ PacketHeader::GetSerializedSize (void) const
 void 
 PacketHeader::Print (std::ostream &os) const
 {
-  // TODO
+  /// \todo
 }
 
 void
@@ -151,7 +154,8 @@ PacketHeader::Deserialize (Buffer::Iterator start)
 
 // ---------------- OLSR Message -------------------------------
 
-NS_OBJECT_ENSURE_REGISTERED (MessageHeader);
+NS_OBJECT_ENSURE_REGISTERED (MessageHeader)
+  ;
 
 MessageHeader::MessageHeader ()
   : m_messageType (MessageHeader::MessageType (0))
@@ -205,7 +209,7 @@ MessageHeader::GetSerializedSize (void) const
 void 
 MessageHeader::Print (std::ostream &os) const
 {
-  // TODO
+  /// \todo
 }
 
 void
@@ -286,7 +290,7 @@ MessageHeader::Mid::GetSerializedSize (void) const
 void 
 MessageHeader::Mid::Print (std::ostream &os) const
 {
-  // TODO
+  /// \todo
 }
 
 void
@@ -338,7 +342,7 @@ MessageHeader::Hello::GetSerializedSize (void) const
 void 
 MessageHeader::Hello::Print (std::ostream &os) const
 {
-  // TODO
+  /// \todo
 }
 
 void
@@ -421,7 +425,7 @@ MessageHeader::Tc::GetSerializedSize (void) const
 void 
 MessageHeader::Tc::Print (std::ostream &os) const
 {
-  // TODO
+  /// \todo
 }
 
 void
@@ -471,7 +475,7 @@ MessageHeader::Hna::GetSerializedSize (void) const
 void 
 MessageHeader::Hna::Print (std::ostream &os) const
 {
-  // TODO
+  /// \todo
 }
 
 void
@@ -498,12 +502,7 @@ MessageHeader::Hna::Deserialize (Buffer::Iterator start, uint32_t messageSize)
     {
       Ipv4Address address (i.ReadNtohU32 ());
       Ipv4Mask mask (i.ReadNtohU32 ());
-#ifndef WIN32
-	  this->associations.push_back((Association) { address, mask });
-#else
-	  Association association = { address, mask };
-	  this->associations.push_back(association);
-#endif
+      this->associations.push_back ((Association) { address, mask});
     }
   return messageSize;
 }

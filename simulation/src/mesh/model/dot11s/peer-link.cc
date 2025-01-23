@@ -31,7 +31,8 @@ NS_LOG_COMPONENT_DEFINE ("Dot11sPeerManagementProtocol");
 namespace ns3 {
 namespace dot11s {
 
-NS_OBJECT_ENSURE_REGISTERED ( PeerLink);
+NS_OBJECT_ENSURE_REGISTERED ( PeerLink)
+  ;
 
 TypeId
 PeerLink::GetTypeId ()
@@ -578,6 +579,7 @@ PeerLink::StateMachine (PeerEvent event, PmpReasonCode reasoncode)
         {
         case CLS_ACPT:
           ClearHoldingTimer ();
+          // fall through:
         case TOH:
           m_state = IDLE;
           m_linkStatusCallback (m_interface, m_peerAddress, m_peerMeshPointAddress, HOLDING, IDLE);

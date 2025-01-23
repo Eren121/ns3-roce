@@ -31,6 +31,12 @@ NS_LOG_COMPONENT_DEFINE ("AarfWifiManager");
 
 namespace ns3 {
 
+/**
+ * \brief hold per-remote-station state for AARF Wifi manager.
+ *
+ * This struct extends from WifiRemoteStation struct to hold additional
+ * information required by the AARF Wifi manager
+ */
 struct AarfWifiRemoteStation : public WifiRemoteStation
 {
   uint32_t m_timer;
@@ -46,7 +52,8 @@ struct AarfWifiRemoteStation : public WifiRemoteStation
 };
 
 
-NS_OBJECT_ENSURE_REGISTERED (AarfWifiManager);
+NS_OBJECT_ENSURE_REGISTERED (AarfWifiManager)
+  ;
 
 TypeId
 AarfWifiManager::GetTypeId (void)
@@ -84,14 +91,17 @@ AarfWifiManager::GetTypeId (void)
 
 AarfWifiManager::AarfWifiManager ()
 {
+  NS_LOG_FUNCTION (this);
 }
 AarfWifiManager::~AarfWifiManager ()
 {
+  NS_LOG_FUNCTION (this);
 }
 
 WifiRemoteStation *
 AarfWifiManager::DoCreateStation (void) const
 {
+  NS_LOG_FUNCTION (this);
   AarfWifiRemoteStation *station = new AarfWifiRemoteStation ();
 
   station->m_successThreshold = m_minSuccessThreshold;
@@ -109,6 +119,7 @@ AarfWifiManager::DoCreateStation (void) const
 void
 AarfWifiManager::DoReportRtsFailed (WifiRemoteStation *station)
 {
+  NS_LOG_FUNCTION (this << station);
 }
 /**
  * It is important to realize that "recovery" mode starts after failure of
@@ -118,10 +129,13 @@ AarfWifiManager::DoReportRtsFailed (WifiRemoteStation *station)
  * is the initial transmission of a packet or the retransmission of a packet.
  * The fundamental reason for this is that there is a backoff between each data
  * transmission, be it an initial transmission or a retransmission.
+ *
+ * \param st the station that we failed to send DATA
  */
 void
 AarfWifiManager::DoReportDataFailed (WifiRemoteStation *st)
 {
+  NS_LOG_FUNCTION (this << st);
   AarfWifiRemoteStation *station = (AarfWifiRemoteStation *)st;
   station->m_timer++;
   station->m_failed++;
@@ -168,17 +182,20 @@ void
 AarfWifiManager::DoReportRxOk (WifiRemoteStation *station,
                                double rxSnr, WifiMode txMode)
 {
+  NS_LOG_FUNCTION (this << station << rxSnr << txMode);
 }
 void
 AarfWifiManager::DoReportRtsOk (WifiRemoteStation *station,
                                 double ctsSnr, WifiMode ctsMode, double rtsSnr)
 {
+  NS_LOG_FUNCTION (this << station << ctsSnr << ctsMode << rtsSnr);
   NS_LOG_DEBUG ("station=" << station << " rts ok");
 }
 void
 AarfWifiManager::DoReportDataOk (WifiRemoteStation *st,
                                  double ackSnr, WifiMode ackMode, double dataSnr)
 {
+  NS_LOG_FUNCTION (this << st << ackSnr << ackMode << dataSnr);
   AarfWifiRemoteStation *station = (AarfWifiRemoteStation *) st;
   station->m_timer++;
   station->m_success++;
@@ -200,30 +217,35 @@ AarfWifiManager::DoReportDataOk (WifiRemoteStation *st,
 void
 AarfWifiManager::DoReportFinalRtsFailed (WifiRemoteStation *station)
 {
+  NS_LOG_FUNCTION (this << station);
 }
 void
 AarfWifiManager::DoReportFinalDataFailed (WifiRemoteStation *station)
 {
+  NS_LOG_FUNCTION (this << station);
 }
 
-WifiMode
-AarfWifiManager::DoGetDataMode (WifiRemoteStation *st, uint32_t size)
+WifiTxVector
+AarfWifiManager::DoGetDataTxVector (WifiRemoteStation *st, uint32_t size)
 {
+  NS_LOG_FUNCTION (this << st << size);
   AarfWifiRemoteStation *station = (AarfWifiRemoteStation *) st;
-  return GetSupported (station, station->m_rate);
+  return WifiTxVector (GetSupported (station, station->m_rate), GetDefaultTxPowerLevel (), GetLongRetryCount (station), GetShortGuardInterval (station), Min (GetNumberOfReceiveAntennas (station),GetNumberOfTransmitAntennas()), GetNumberOfTransmitAntennas (station), GetStbc (station));
 }
-WifiMode
-AarfWifiManager::DoGetRtsMode (WifiRemoteStation *st)
+WifiTxVector
+AarfWifiManager::DoGetRtsTxVector (WifiRemoteStation *st)
 {
-  // XXX: we could/should implement the Aarf algorithm for
-  // RTS only by picking a single rate within the BasicRateSet.
+  NS_LOG_FUNCTION (this << st);
+  /// \todo we could/should implement the Aarf algorithm for
+  /// RTS only by picking a single rate within the BasicRateSet.
   AarfWifiRemoteStation *station = (AarfWifiRemoteStation *) st;
-  return GetSupported (station, 0);
+  return WifiTxVector (GetSupported (station, 0), GetDefaultTxPowerLevel (), GetLongRetryCount (station), GetShortGuardInterval (station), Min (GetNumberOfReceiveAntennas (station),GetNumberOfTransmitAntennas()), GetNumberOfTransmitAntennas (station), GetStbc (station));
 }
 
 bool
 AarfWifiManager::IsLowLatency (void) const
 {
+  NS_LOG_FUNCTION (this);
   return true;
 }
 

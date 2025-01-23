@@ -1,8 +1,7 @@
 #include "ns3/int64x64.h"
 #include "ns3/test.h"
 
-namespace ns3
-{
+using namespace ns3;
 
 class Int64x64FracTestCase : public TestCase
 {
@@ -171,6 +170,9 @@ Int64x64ArithmeticTestCase::DoRun (void)
   CHECK_EXPECTED (V (2000000000) / V (3) * V (3), 1999999999);
 }
 
+/**
+ * See \bugid{455}
+ */
 class Int64x64Bug455TestCase : public TestCase
 {
 public:
@@ -202,6 +204,9 @@ Int64x64Bug455TestCase::DoRun (void)
   NS_TEST_ASSERT_MSG_EQ (a.GetDouble (), -2.5, "only second operand negative");
 }
 
+/**
+ * See \bugid{863}
+ */
 class Int64x64Bug863TestCase : public TestCase
 {
 public:
@@ -326,15 +331,13 @@ public:
   Int64x64128TestSuite ()
     : TestSuite ("int64x64", UNIT)
   {
-    AddTestCase (new Int64x64FracTestCase ());
-    AddTestCase (new Int64x64InputTestCase ());
-    AddTestCase (new Int64x64InputOutputTestCase ());
-    AddTestCase (new Int64x64ArithmeticTestCase ());
-    AddTestCase (new Int64x64Bug455TestCase ());
-    AddTestCase (new Int64x64Bug863TestCase ());
-    AddTestCase (new Int64x64CompareTestCase ());
-    AddTestCase (new Int64x64InvertTestCase ());
+    AddTestCase (new Int64x64FracTestCase (), TestCase::QUICK);
+    AddTestCase (new Int64x64InputTestCase (), TestCase::QUICK);
+    AddTestCase (new Int64x64InputOutputTestCase (), TestCase::QUICK);
+    AddTestCase (new Int64x64ArithmeticTestCase (), TestCase::QUICK);
+    AddTestCase (new Int64x64Bug455TestCase (), TestCase::QUICK);
+    AddTestCase (new Int64x64Bug863TestCase (), TestCase::QUICK);
+    AddTestCase (new Int64x64CompareTestCase (), TestCase::QUICK);
+    AddTestCase (new Int64x64InvertTestCase (), TestCase::QUICK);
   }
 } g_int64x64TestSuite;
-
-} // namespace ns3

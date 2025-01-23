@@ -115,7 +115,7 @@ struct SimConfig
 	LinkDown link_down;
 	uint32_t enable_trace = 1;
 	uint32_t buffer_size = 16;
-	uint32_t qlen_dump_interval = 100000000, qlen_mon_interval = 1e9;
+	uint32_t qlen_dump_interval = 100000000, qlen_mon_interval = 100;
 	uint64_t qlen_mon_start = 2000000000, qlen_mon_end = 2100000000;
 	std::string qlen_mon_file;
 
@@ -516,13 +516,21 @@ void SetRoutingEntries(){
 			Ptr<Node> dst = j->first;
 			// The IP address of the dst.
 			Ipv4Address dstAddr = dst->GetObject<Ipv4>()->GetAddress(1, 0).GetLocal();
+
 			// The next hops towards the dst.
 			std::vector<Ptr<Node> > nexts = j->second;
 			for (int k = 0; k < (int)nexts.size(); k++){
 				Ptr<Node> next = nexts[k];
 				uint32_t interface = nbr2if[node][next].idx;
-				if (IsSwitchNode(node))
-					DynamicCast<SwitchNode>(node)->AddTableEntry(dstAddr, interface);
+
+				
+				dstAddr.Print(std::cout);
+				std::cout<<" <=> "<<interface;
+				std::cout << "   " << ip_to_node_id(dstAddr);
+				std::cout<<std::endl;
+				
+				if (IsSwitchNode(node)){
+					DynamicCast<SwitchNode>(node)->AddTableEntry(dstAddr, interface);}
 				else{
 					node->GetObject<RdmaDriver>()->m_rdma->AddTableEntry(dstAddr, interface);
 				}

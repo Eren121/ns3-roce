@@ -22,7 +22,7 @@
 #include "ns3/log.h"
 #include "ns3/simulator.h"
 #include <string>
-#include <stdarg.h>
+#include <cstdarg>
 
 NS_LOG_COMPONENT_DEFINE ("Packet");
 
@@ -112,7 +112,9 @@ void
 PacketTagIterator::Item::GetTag (Tag &tag) const
 {
   NS_ASSERT (tag.GetInstanceTypeId () == m_data->tid);
-  tag.Deserialize (TagBuffer ((uint8_t*)m_data->data, (uint8_t*)m_data->data+PACKET_TAG_MAX_SIZE));
+  tag.Deserialize (TagBuffer ((uint8_t*)m_data->data,
+                              (uint8_t*)m_data->data
+                              + PacketTagList::TagData::MAX_SIZE));
 }
 
 
@@ -449,7 +451,6 @@ Packet::Print (std::ostream &os) const
           switch (item.type) {
             case PacketMetadata::Item::PAYLOAD:
               os << "Payload (size=" << item.currentSize << ")";
-			  os << item.currentSize;
               break;
             case PacketMetadata::Item::HEADER:
             case PacketMetadata::Item::TRAILER:
@@ -583,7 +584,7 @@ uint32_t Packet::GetSerializedSize (void) const
     }
 
   //Tag size
-  //XXX
+  /// \todo Serialze Tags size
   //size += m_tags.GetSerializedSize ();
 
   // increment total size by size of meta-data 
@@ -657,7 +658,7 @@ Packet::Serialize (uint8_t* buffer, uint32_t maxSize) const
     }
 
   // Serialize Tags
-  // XXX
+  /// \todo Serialize Tags
 
   // Serialize Metadata
   uint32_t metaSize = m_metadata.GetSerializedSize ();
@@ -755,7 +756,7 @@ Packet::Deserialize (const uint8_t* buffer, uint32_t size)
     }
 
   // read tags
-  //XXX
+  /// \todo Deserialize Tags
   //uint32_t tagsDeserialized = m_tags.Deserialize (buffer.Begin ());
   //buffer.RemoveAtStart (tagsDeserialized);
 
@@ -842,6 +843,7 @@ Packet::AddPacketTag (const Tag &tag) const
   NS_LOG_FUNCTION (this << tag.GetInstanceTypeId ().GetName () << tag.GetSerializedSize ());
   m_packetTagList.Add (tag);
 }
+
 bool 
 Packet::RemovePacketTag (Tag &tag)
 {
@@ -849,6 +851,14 @@ Packet::RemovePacketTag (Tag &tag)
   bool found = m_packetTagList.Remove (tag);
   return found;
 }
+bool
+Packet::ReplacePacketTag (Tag &tag)
+{
+  NS_LOG_FUNCTION (this << tag.GetInstanceTypeId ().GetName () << tag.GetSerializedSize ());
+  bool found = m_packetTagList.Replace (tag);
+  return found;
+}
+
 bool 
 Packet::PeekPacketTag (Tag &tag) const
 {
@@ -895,18 +905,6 @@ std::ostream& operator<< (std::ostream& os, const Packet &packet)
 {
   packet.Print (os);
   return os;
-}
-
-
-template <>
-Ptr<Packet> Create (uint32_t a1)
-{
-	//std::cout<<a1<<"\n";
-	return Ptr<Packet> (new Packet (a1), false);
-}
-
-uint8_t* Packet::GetBuffer() const{
-	return m_buffer.GetBuffer();
 }
 
 } // namespace ns3

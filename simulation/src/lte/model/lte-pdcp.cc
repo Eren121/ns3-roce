@@ -1,6 +1,6 @@
 /* -*-  Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil; -*- */
 /*
- * Copyright (c) 2011 Centre Tecnologic de Telecomunicacions de Catalunya (CTTC)
+ * Copyright (c) 2011-2012 Centre Tecnologic de Telecomunicacions de Catalunya (CTTC)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -61,7 +61,8 @@ LtePdcpSpecificLteRlcSapUser::ReceivePdcpPdu (Ptr<Packet> p)
 
 ///////////////////////////////////////
 
-NS_OBJECT_ENSURE_REGISTERED (LtePdcp);
+NS_OBJECT_ENSURE_REGISTERED (LtePdcp)
+  ;
 
 LtePdcp::LtePdcp ()
   : m_pdcpSapUser (0),
@@ -74,8 +75,11 @@ LtePdcp::LtePdcp ()
   NS_LOG_FUNCTION (this);
   m_pdcpSapProvider = new LtePdcpSpecificLtePdcpSapProvider<LtePdcp> (this);
   m_rlcSapUser = new LtePdcpSpecificLteRlcSapUser (this);
+}
 
-  Simulator::ScheduleNow (&LtePdcp::Start, this);
+LtePdcp::~LtePdcp ()
+{
+  NS_LOG_FUNCTION (this);
 }
 
 TypeId
@@ -94,6 +98,15 @@ LtePdcp::GetTypeId (void)
 }
 
 void
+LtePdcp::DoDispose ()
+{
+  NS_LOG_FUNCTION (this);
+  delete (m_pdcpSapProvider);
+  delete (m_rlcSapUser);
+}
+
+
+void
 LtePdcp::SetRnti (uint16_t rnti)
 {
   NS_LOG_FUNCTION (this << (uint32_t) rnti);
@@ -105,13 +118,6 @@ LtePdcp::SetLcId (uint8_t lcId)
 {
   NS_LOG_FUNCTION (this << (uint32_t) lcId);
   m_lcid = lcId;
-}
-
-LtePdcp::~LtePdcp ()
-{
-  NS_LOG_FUNCTION (this);
-  delete (m_pdcpSapProvider);
-  delete (m_rlcSapUser);
 }
 
 void
@@ -142,10 +148,26 @@ LtePdcp::GetLteRlcSapUser ()
   return m_rlcSapUser;
 }
 
+LtePdcp::Status 
+LtePdcp::GetStatus ()
+{
+  Status s;
+  s.txSn = m_txSequenceNumber;
+  s.rxSn = m_rxSequenceNumber;
+  return s;
+}
+
+void 
+LtePdcp::SetStatus (Status s)
+{
+  m_txSequenceNumber = s.txSn;
+  m_rxSequenceNumber = s.rxSn;
+}
+
 ////////////////////////////////////////
 
 void
-LtePdcp::DoTransmitRrcPdu (Ptr<Packet> p)
+LtePdcp::DoTransmitPdcpSdu (Ptr<Packet> p)
 {
   NS_LOG_FUNCTION (this << m_rnti << (uint32_t) m_lcid << p->GetSize ());
 
@@ -200,17 +222,11 @@ LtePdcp::DoReceivePdu (Ptr<Packet> p)
       m_rxSequenceNumber = 0;
     }
 
-  LtePdcpSapUser::ReceiveRrcPduParameters params;
-  params.rrcPdu = p;
+  LtePdcpSapUser::ReceivePdcpSduParameters params;
+  params.pdcpSdu = p;
   params.rnti = m_rnti;
   params.lcid = m_lcid;
-  m_pdcpSapUser->ReceiveRrcPdu (params);
-}
-
-void
-LtePdcp::Start ()
-{
-  NS_LOG_FUNCTION (this);
+  m_pdcpSapUser->ReceivePdcpSdu (params);
 }
 
 

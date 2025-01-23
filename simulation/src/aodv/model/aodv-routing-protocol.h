@@ -129,11 +129,6 @@ private:
    */
   Time DeletePeriod;
   Time NextHopWait;                  ///< Period of our waiting for the neighbour's RREP_ACK
-  /**
-   * The TimeoutBuffer is configurable.  Its purpose is to provide a buffer for the timeout so that if the RREP is delayed
-   * due to congestion, a timeout is less likely to occur while the RREP is still en route back to the source.
-   */
-  uint16_t TimeoutBuffer;
   Time BlackListTimeout;             ///< Time for which the node is put into the blacklist
   uint32_t MaxQueueLen;              ///< The maximum number of packets that we allow a routing protocol to buffer.
   Time MaxQueueTime;                 ///< The maximum period of time that a routing protocol is allowed to buffer a packet for.
@@ -248,6 +243,8 @@ private:
   void SendRerrWhenNoRouteToForward (Ipv4Address dst, uint32_t dstSeqNo, Ipv4Address origin);
   //\}
 
+  void SendTo (Ptr<Socket> socket, Ptr<Packet> packet, Ipv4Address destination);
+
   /// Hello timer
   Timer m_htimer;
   /// Schedule next send of hello message
@@ -269,6 +266,8 @@ private:
 
   /// Provides uniform random variables.
   Ptr<UniformRandomVariable> m_uniformRandomVariable;  
+  /// Keep track of the last bcast time
+  Time m_lastBcastTime;
 };
 
 }

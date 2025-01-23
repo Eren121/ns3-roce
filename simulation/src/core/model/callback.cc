@@ -103,7 +103,7 @@ CallbackBase::Demangle (const std::string& mangled)
 std::string
 ns3::CallbackBase::Demangle (const std::string& mangled)
 {
-  NS_LOG_FUNCTION (mangled);
+  NS_LOG_FUNCTION (this << mangled);
   return mangled;
 }
 

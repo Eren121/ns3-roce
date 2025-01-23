@@ -38,12 +38,19 @@
 #include "ns3/assert.h"
 #include <vector>
 
+#define Min(a,b) ((a < b) ? a : b)
+
 NS_LOG_COMPONENT_DEFINE ("MinstrelWifiManager");
 
 
 namespace ns3 {
 
-
+/**
+ * \brief hold per-remote-station state for Minstrel Wifi manager.
+ *
+ * This struct extends from WifiRemoteStation struct to hold additional
+ * information required by the Minstrel Wifi manager
+ */
 struct MinstrelWifiRemoteStation : public WifiRemoteStation
 {
   Time m_nextStatsUpdate;  ///< 10 times every second
@@ -76,7 +83,8 @@ struct MinstrelWifiRemoteStation : public WifiRemoteStation
   bool m_initialized;  ///< for initializing tables
 };
 
-NS_OBJECT_ENSURE_REGISTERED (MinstrelWifiManager);
+NS_OBJECT_ENSURE_REGISTERED (MinstrelWifiManager)
+  ;
 
 TypeId
 MinstrelWifiManager::GetTypeId (void)
@@ -99,11 +107,6 @@ MinstrelWifiManager::GetTypeId (void)
                    DoubleValue (75),
                    MakeDoubleAccessor (&MinstrelWifiManager::m_ewmaLevel),
                    MakeDoubleChecker<double> ())
-    .AddAttribute ("SegmentSize",
-                   "The largest allowable segment size packet",
-                   DoubleValue (6000),
-                   MakeDoubleAccessor (&MinstrelWifiManager::m_segmentSize),
-                   MakeDoubleChecker <double> ())
     .AddAttribute ("SampleColumn",
                    "The number of columns used for sampling",
                    DoubleValue (10),
@@ -136,7 +139,9 @@ MinstrelWifiManager::SetupPhy (Ptr<WifiPhy> phy)
   for (uint32_t i = 0; i < nModes; i++)
     {
       WifiMode mode = phy->GetMode (i);
-      AddCalcTxTime (mode, phy->CalculateTxDuration (m_pktLen, mode, WIFI_PREAMBLE_LONG));
+      WifiTxVector txVector;
+      txVector.SetMode(mode);
+      AddCalcTxTime (mode, phy->CalculateTxDuration (m_pktLen, txVector, WIFI_PREAMBLE_LONG));
     }
   WifiRemoteStationManager::SetupPhy (phy);
 }
@@ -435,8 +440,8 @@ MinstrelWifiManager::UpdateRetry (MinstrelWifiRemoteStation *station)
   station->m_longRetry = 0;
 }
 
-WifiMode
-MinstrelWifiManager::DoGetDataMode (WifiRemoteStation *st,
+WifiTxVector
+MinstrelWifiManager::DoGetDataTxVector (WifiRemoteStation *st,
                                     uint32_t size)
 {
   MinstrelWifiRemoteStation *station = (MinstrelWifiRemoteStation *) st;
@@ -448,16 +453,16 @@ MinstrelWifiManager::DoGetDataMode (WifiRemoteStation *st,
       station->m_txrate = m_nsupported / 2;
     }
   UpdateStats (station);
-  return GetSupported (station, station->m_txrate);
+  return WifiTxVector (GetSupported (station, station->m_txrate), GetDefaultTxPowerLevel (), GetLongRetryCount (station), GetShortGuardInterval (station), Min (GetNumberOfReceiveAntennas (station),GetNumberOfTransmitAntennas()), GetNumberOfTransmitAntennas (station), GetStbc (station));
 }
 
-WifiMode
-MinstrelWifiManager::DoGetRtsMode (WifiRemoteStation *st)
+WifiTxVector
+MinstrelWifiManager::DoGetRtsTxVector (WifiRemoteStation *st)
 {
   MinstrelWifiRemoteStation *station = (MinstrelWifiRemoteStation *) st;
   NS_LOG_DEBUG ("DoGetRtsMode m_txrate=" << station->m_txrate);
 
-  return GetSupported (station, 0);
+  return WifiTxVector (GetSupported (station, 0), GetDefaultTxPowerLevel (), GetShortRetryCount (station), GetShortGuardInterval (station), Min (GetNumberOfReceiveAntennas (station),GetNumberOfTransmitAntennas()), GetNumberOfTransmitAntennas (station), GetStbc (station));
 }
 
 bool

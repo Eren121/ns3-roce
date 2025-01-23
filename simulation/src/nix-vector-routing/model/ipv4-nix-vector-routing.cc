@@ -32,7 +32,8 @@ NS_LOG_COMPONENT_DEFINE ("Ipv4NixVectorRouting");
 
 namespace ns3 {
 
-NS_OBJECT_ENSURE_REGISTERED (Ipv4NixVectorRouting);
+NS_OBJECT_ENSURE_REGISTERED (Ipv4NixVectorRouting)
+  ;
 
 TypeId 
 Ipv4NixVectorRouting::GetTypeId (void)
@@ -136,7 +137,8 @@ Ipv4NixVectorRouting::GetNixVector (Ptr<Node> source, Ipv4Address dest, Ptr<NetD
     }
 
   // if source == dest, then we have a special case
-  // Do not process packets to self (see bug 1308)
+  /// \internal
+  /// Do not process packets to self (see \bugid{1308})
   if (source == destNode)
     {
       NS_LOG_DEBUG ("Do not processs packets to self");

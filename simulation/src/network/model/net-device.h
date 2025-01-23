@@ -29,7 +29,6 @@
 #include "address.h"
 #include "ns3/ipv4-address.h"
 #include "ns3/ipv6-address.h"
-#include "ns3/custom-header.h"
 
 namespace ns3 {
 
@@ -39,7 +38,7 @@ class Packet;
 
 /**
  * \ingroup network
- * \defgroup netdevice NetDevice
+ * \defgroup netdevice Network Device
  */
 /**
  * \ingroup netdevice
@@ -77,11 +76,6 @@ class NetDevice : public Object
 {
 public:
   static TypeId GetTypeId (void);
-
-  //Yibo: optimize
-  virtual uint32_t GetUsedBuffer(uint32_t port, uint32_t qIndex);
-
-
   virtual ~NetDevice();
 
   /**
@@ -164,7 +158,7 @@ public:
    * \brief Make and return a MAC multicast address using the provided
    *        multicast group
    *
-   * RFC 1112 says that an Ipv4 host group address is mapped to an Ethernet 
+   * \RFC{1112} says that an Ipv4 host group address is mapped to an Ethernet 
    * multicast address by placing the low-order 23-bits of the IP address into 
    * the low-order 23 bits of the Ethernet multicast address 
    * 01-00-5E-00-00-00 (hex).  Similar RFCs exist for Ipv6 and Eui64 mappings.
@@ -213,7 +207,6 @@ public:
    * \return value of m_isPointToPoint flag
    */
   virtual bool IsPointToPoint (void) const = 0;
-
   /**
    * \param packet packet sent from above down to Network Device
    * \param dest mac address of the destination (already resolved)
@@ -337,6 +330,7 @@ public:
    * \return true if this interface supports a bridging mode, false otherwise.
    */
   virtual bool SupportsSendFrom (void) const = 0;
+
 };
 
 } // namespace ns3

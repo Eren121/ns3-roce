@@ -43,7 +43,8 @@ NS_LOG_COMPONENT_DEFINE ("WimaxNetDevice");
 
 namespace ns3 {
 
-NS_OBJECT_ENSURE_REGISTERED (WimaxNetDevice);
+NS_OBJECT_ENSURE_REGISTERED (WimaxNetDevice)
+  ;
 
 uint32_t WimaxNetDevice::m_nrFrames = 0;
 uint8_t WimaxNetDevice::m_direction = ~0;
@@ -633,7 +634,7 @@ WimaxNetDevice::GetMulticast (Ipv6Address addr) const
 void
 WimaxNetDevice::AddLinkChangeCallback (Callback<void> callback)
 {
-  /* TODO: Add a callback invoked whenever the link
+  /* \todo Add a callback invoked whenever the link
    * status changes to UP. This callback is typically used
    * by the IP/ARP layer to flush the ARP cache and by IPv6 stack
    * to flush NDISC cache whenever the link goes up.

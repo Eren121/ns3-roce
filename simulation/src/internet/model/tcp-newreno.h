@@ -31,16 +31,24 @@ namespace ns3 {
  *
  * \brief An implementation of a stream socket using TCP.
  *
- * This class contains the NewReno implementation of TCP, as of RFC2582.
+ * This class contains the NewReno implementation of TCP, as of \RFC{2582}.
  */
 class TcpNewReno : public TcpSocketBase
 {
 public:
+  /**
+   * \brief Get the type ID.
+   * \return the object TypeId
+   */
   static TypeId GetTypeId (void);
   /**
    * Create an unbound tcp socket.
    */
   TcpNewReno (void);
+  /**
+   * \brief Copy constructor
+   * \param sock the object to copy
+   */
   TcpNewReno (const TcpNewReno& sock);
   virtual ~TcpNewReno (void);
 
@@ -61,27 +69,20 @@ protected:
   virtual uint32_t GetSSThresh (void) const;
   virtual void     SetInitialCwnd (uint32_t cwnd);
   virtual uint32_t GetInitialCwnd (void) const;
-  virtual void    HalveCwnd (void);
 private:
-  void InitializeCwnd (void);            // set m_cWnd when connection starts
+  /**
+   * \brief Set the congestion window when connection starts
+   */
+  void InitializeCwnd (void);
 
 protected:
-  TracedValue<uint32_t>  m_cWnd;         //< Congestion window
-  uint32_t               m_ssThresh;     //< Slow Start Threshold
-  uint32_t               m_initialCWnd;  //< Initial cWnd value
-  SequenceNumber32       m_recover;      //< Previous highest Tx seqnum for fast recovery
-  uint32_t               m_retxThresh;   //< Fast Retransmit threshold
-  bool                   m_inFastRec;    //< currently in fast recovery
-  bool                   m_limitedTx;    //< perform limited transmit
-  Time                   m_ssThreshLastChange; //< Time when ssThresh was last changed
-
-  double m_alpha;
-  double m_g;
-  double m_last_update_alpha;
-  uint32_t m_received;
-  uint32_t m_marked;
-  uint32_t m_lastwin;
-
+  TracedValue<uint32_t>  m_cWnd;         //!< Congestion window
+  uint32_t               m_ssThresh;     //!< Slow Start Threshold
+  uint32_t               m_initialCWnd;  //!< Initial cWnd value
+  SequenceNumber32       m_recover;      //!< Previous highest Tx seqnum for fast recovery
+  uint32_t               m_retxThresh;   //!< Fast Retransmit threshold
+  bool                   m_inFastRec;    //!< currently in fast recovery
+  bool                   m_limitedTx;    //!< perform limited transmit
 };
 
 } // namespace ns3

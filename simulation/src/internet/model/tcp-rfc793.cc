@@ -25,7 +25,8 @@ NS_LOG_COMPONENT_DEFINE ("TcpRfc793");
 
 namespace ns3 {
 
-NS_OBJECT_ENSURE_REGISTERED (TcpRfc793);
+NS_OBJECT_ENSURE_REGISTERED (TcpRfc793)
+  ;
 
 TypeId
 TcpRfc793::GetTypeId (void)
@@ -86,12 +87,6 @@ TcpRfc793::GetInitialCwnd (void) const
 {
   NS_LOG_WARN ("DoD TCP does not have congestion window");
   return 0;
-}
-
-void
-TcpRfc793::HalveCwnd(void)
-{
-  NS_LOG_WARN ("DoD TCP does not have congestion window");
 }
 
 } // namespace ns3

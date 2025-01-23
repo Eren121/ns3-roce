@@ -29,7 +29,8 @@
 namespace ns3 
 {
 
-NS_OBJECT_ENSURE_REGISTERED (Ipv6);
+NS_OBJECT_ENSURE_REGISTERED (Ipv6)
+  ;
 
 TypeId Ipv6::GetTypeId (void)
 {
@@ -40,13 +41,11 @@ TypeId Ipv6::GetTypeId (void)
                    MakeBooleanAccessor (&Ipv6::SetIpForward,
                                         &Ipv6::GetIpForward),
                    MakeBooleanChecker ())
-#if 0
-    .AddAttribute ("MtuDiscover", "If enabled, every outgoing IPv6 packet will have the DF flag set.",
-                   BooleanValue (false),
-                   MakeBooleanAccessor (&UdpSocket::SetMtuDiscover,
-                                        &UdpSocket::GetMtuDiscover),
+    .AddAttribute ("MtuDiscover", "If disabled, every interface will have its MTU set to 1280 bytes.",
+                   BooleanValue (true),
+                   MakeBooleanAccessor (&Ipv6::SetMtuDiscover,
+                                        &Ipv6::GetMtuDiscover),
                    MakeBooleanChecker ())
-#endif
   ;
   return tid;
 }

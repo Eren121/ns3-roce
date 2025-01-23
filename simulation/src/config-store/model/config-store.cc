@@ -14,10 +14,8 @@
 #include <string>
 #include <fstream>
 #include <iostream>
-#ifndef WIN32
 #include <unistd.h>
-#endif
-#include <stdlib.h>
+#include <cstdlib>
 
 
 NS_LOG_COMPONENT_DEFINE ("ConfigStore");
@@ -25,7 +23,8 @@ NS_LOG_COMPONENT_DEFINE ("ConfigStore");
 namespace ns3 {
 
 
-NS_OBJECT_ENSURE_REGISTERED (ConfigStore);
+NS_OBJECT_ENSURE_REGISTERED (ConfigStore)
+  ;
 
 TypeId 
 ConfigStore::GetTypeId (void)

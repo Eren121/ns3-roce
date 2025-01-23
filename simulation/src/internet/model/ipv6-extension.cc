@@ -44,7 +44,8 @@ NS_LOG_COMPONENT_DEFINE ("Ipv6Extension");
 
 namespace ns3 {
 
-NS_OBJECT_ENSURE_REGISTERED (Ipv6Extension);
+NS_OBJECT_ENSURE_REGISTERED (Ipv6Extension)
+  ;
 
 TypeId Ipv6Extension::GetTypeId ()
 {
@@ -54,7 +55,7 @@ TypeId Ipv6Extension::GetTypeId ()
                    UintegerValue (0),
                    MakeUintegerAccessor (&Ipv6Extension::GetExtensionNumber),
                    MakeUintegerChecker<uint8_t> ())
-    .AddTraceSource ("Drop", "Drop ipv6 packet",
+    .AddTraceSource ("Drop", "Drop IPv6 packet",
                      MakeTraceSourceAccessor (&Ipv6Extension::m_dropTrace))
   ;
   return tid;
@@ -182,7 +183,8 @@ Ipv6Extension::AssignStreams (int64_t stream)
   return 1;
 }
 
-NS_OBJECT_ENSURE_REGISTERED (Ipv6ExtensionHopByHop);
+NS_OBJECT_ENSURE_REGISTERED (Ipv6ExtensionHopByHop)
+  ;
 
 TypeId Ipv6ExtensionHopByHop::GetTypeId ()
 {
@@ -234,7 +236,8 @@ uint8_t Ipv6ExtensionHopByHop::Process (Ptr<Packet>& packet, uint8_t offset, Ipv
 }
 
 
-NS_OBJECT_ENSURE_REGISTERED (Ipv6ExtensionDestination);
+NS_OBJECT_ENSURE_REGISTERED (Ipv6ExtensionDestination)
+  ;
 
 TypeId Ipv6ExtensionDestination::GetTypeId ()
 {
@@ -286,7 +289,8 @@ uint8_t Ipv6ExtensionDestination::Process (Ptr<Packet>& packet, uint8_t offset, 
 }
 
 
-NS_OBJECT_ENSURE_REGISTERED (Ipv6ExtensionFragment);
+NS_OBJECT_ENSURE_REGISTERED (Ipv6ExtensionFragment)
+  ;
 
 TypeId Ipv6ExtensionFragment::GetTypeId ()
 {
@@ -506,6 +510,7 @@ void Ipv6ExtensionFragment::GetFragments (Ptr<Packet> packet, uint32_t maxFragme
         {
           moreFragment = true;
           currentFragmentablePartSize = maxFragmentablePartSize;
+          currentFragmentablePartSize -= currentFragmentablePartSize % 8;
         }
       else
         {
@@ -513,10 +518,8 @@ void Ipv6ExtensionFragment::GetFragments (Ptr<Packet> packet, uint32_t maxFragme
           currentFragmentablePartSize = p->GetSize () - offset;
         }
 
-      currentFragmentablePartSize -= currentFragmentablePartSize % 8;
 
       fragmentHeader.SetNextHeader (nextHeader);
-      fragmentHeader.SetLength (currentFragmentablePartSize);
       fragmentHeader.SetOffset (offset);
       fragmentHeader.SetMoreFragment (moreFragment);
       fragmentHeader.SetIdentification (identification);
@@ -530,15 +533,24 @@ void Ipv6ExtensionFragment::GetFragments (Ptr<Packet> packet, uint32_t maxFragme
         {
           if (it->second == Ipv6Header::IPV6_EXT_HOP_BY_HOP)
             {
-              fragment->AddHeader (*dynamic_cast<Ipv6ExtensionHopByHopHeader *> (it->first));
+              Ipv6ExtensionHopByHopHeader * p =
+                dynamic_cast<Ipv6ExtensionHopByHopHeader *> (it->first);
+              NS_ASSERT (p != 0);
+              fragment->AddHeader (*p);
             }
           else if (it->second == Ipv6Header::IPV6_EXT_ROUTING)
             {
-              fragment->AddHeader (*dynamic_cast<Ipv6ExtensionLooseRoutingHeader *> (it->first));
+              Ipv6ExtensionLooseRoutingHeader * p =
+                dynamic_cast<Ipv6ExtensionLooseRoutingHeader *> (it->first);
+              NS_ASSERT (p != 0);
+              fragment->AddHeader (*p);
             }
           else if (it->second == Ipv6Header::IPV6_EXT_DESTINATION)
             {
-              fragment->AddHeader (*dynamic_cast<Ipv6ExtensionDestinationHeader *> (it->first));
+              Ipv6ExtensionDestinationHeader * p =
+                dynamic_cast<Ipv6ExtensionDestinationHeader *> (it->first);
+              NS_ASSERT (p != 0);
+              fragment->AddHeader (*p);
             }
         }
 
@@ -695,7 +707,8 @@ void Ipv6ExtensionFragment::Fragments::CancelTimeout ()
 }
 
 
-NS_OBJECT_ENSURE_REGISTERED (Ipv6ExtensionRouting);
+NS_OBJECT_ENSURE_REGISTERED (Ipv6ExtensionRouting)
+  ;
 
 TypeId Ipv6ExtensionRouting::GetTypeId ()
 {
@@ -780,7 +793,8 @@ uint8_t Ipv6ExtensionRouting::Process (Ptr<Packet>& packet, uint8_t offset, Ipv6
 }
 
 
-NS_OBJECT_ENSURE_REGISTERED (Ipv6ExtensionRoutingDemux);
+NS_OBJECT_ENSURE_REGISTERED (Ipv6ExtensionRoutingDemux)
+  ;
 
 TypeId Ipv6ExtensionRoutingDemux::GetTypeId ()
 {
@@ -842,7 +856,8 @@ void Ipv6ExtensionRoutingDemux::Remove (Ptr<Ipv6ExtensionRouting> extensionRouti
 }
 
 
-NS_OBJECT_ENSURE_REGISTERED (Ipv6ExtensionLooseRouting);
+NS_OBJECT_ENSURE_REGISTERED (Ipv6ExtensionLooseRouting)
+  ;
 
 TypeId Ipv6ExtensionLooseRouting::GetTypeId ()
 {
@@ -995,7 +1010,8 @@ uint8_t Ipv6ExtensionLooseRouting::Process (Ptr<Packet>& packet, uint8_t offset,
 }
 
 
-NS_OBJECT_ENSURE_REGISTERED (Ipv6ExtensionESP);
+NS_OBJECT_ENSURE_REGISTERED (Ipv6ExtensionESP)
+  ;
 
 TypeId Ipv6ExtensionESP::GetTypeId ()
 {
@@ -1027,13 +1043,14 @@ uint8_t Ipv6ExtensionESP::Process (Ptr<Packet>& packet, uint8_t offset, Ipv6Head
 {
   NS_LOG_FUNCTION (this << packet << offset << ipv6Header << dst << nextHeader << isDropped);
 
-  /* TODO */
+  /** \todo */
 
   return 0;
 }
 
 
-NS_OBJECT_ENSURE_REGISTERED (Ipv6ExtensionAH);
+NS_OBJECT_ENSURE_REGISTERED (Ipv6ExtensionAH)
+  ;
 
 TypeId Ipv6ExtensionAH::GetTypeId ()
 {
@@ -1065,7 +1082,7 @@ uint8_t Ipv6ExtensionAH::Process (Ptr<Packet>& packet, uint8_t offset, Ipv6Heade
 {
   NS_LOG_FUNCTION (this << packet << offset << ipv6Header << dst << nextHeader << isDropped);
 
-  /* TODO */
+  /** \todo */
 
   return true;
 }

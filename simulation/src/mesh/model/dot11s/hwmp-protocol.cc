@@ -41,7 +41,9 @@ NS_LOG_COMPONENT_DEFINE ("HwmpProtocol");
 namespace ns3 {
 namespace dot11s {
 
-NS_OBJECT_ENSURE_REGISTERED (HwmpProtocol);
+NS_OBJECT_ENSURE_REGISTERED (HwmpProtocol)
+  ;
+  
 TypeId
 HwmpProtocol::GetTypeId ()
 {
@@ -201,7 +203,7 @@ HwmpProtocol::~HwmpProtocol ()
 }
 
 void
-HwmpProtocol::DoStart ()
+HwmpProtocol::DoInitialize ()
 {
   m_coefficient->SetAttribute ("Max", DoubleValue (m_randomStart.GetSeconds ()));
   if (m_isRoot)

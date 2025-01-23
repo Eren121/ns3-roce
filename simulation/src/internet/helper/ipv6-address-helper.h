@@ -35,7 +35,7 @@ namespace ns3 {
  * \class Ipv6AddressHelper
  * \brief Helper class to auto-assign global IPv6 unicast addresses
  *
- * Assign global unicast IPv6 addresses based on RFC 4291 definition.
+ * Assign global unicast IPv6 addresses based on \RFC{4291} definition.
  *
  *   |         n bits          | 64-n bits |       64 bits              |
  *   +-------------------------+-----------+----------------------------+
@@ -63,16 +63,21 @@ namespace ns3 {
  * that causes the subnet ID to roll over will trigger an assertion.  
  * 
  * By default, the prefix is 32 bits and the network is '2001:db8::/32'
- * (RFC 5156 section 2.6 Documentation prefix).  The prefix may range
+ * (\RFC{5156} section 2.6 Documentation prefix).  The prefix may range
  * from length 0 to 64, with the value 64 having a special meaning that
  * no subnet ID boundary is enforced (equivalent to value 0).
  * 
- * There are two variants of interface ID supported (RFC 4291, Sec. 2.5.1)
+ * There are two variants of interface ID supported (\RFC{4291}, Sec. 2.5.1)
  * The default is a "local" scope, but a "universal" scoped ID may be
  * formed by calling "NewAddress (Address addr)" with a 48-bit MAC address.
  * If this method is called, the addressed returned will include a
  * modified EUI-64-format identifier created from the MAC address as 
- * specified in RFC 4291.
+ * specified in \RFC{4291}.
+ *
+ * BEWARE: the underlying implementation acts as a Singleton.
+ * In other terms, two different instances of Ipv6AddressHelper will
+ * pick IPv6 numbers from the same pool. Changing the network in one of them
+ * will also change the network in the other instances.
  */
 class Ipv6AddressHelper
 {
@@ -110,6 +115,7 @@ public:
    *  
    * \param network The IPv6 network
    * \param prefix The prefix
+   * \deprecated
    */
   void NewNetwork (Ipv6Address network, Ipv6Prefix prefix) NS_DEPRECATED;
 
@@ -174,29 +180,6 @@ public:
    */
   Ipv6InterfaceContainer AssignWithoutAddress (const NetDeviceContainer &c);
 
-private:
-  /**
-   * \internal
-   * \brief The IPv6 network.
-   */
-  uint8_t m_network[16];
-
-  /**
-   * \internal
-   * \brief The prefix (mask).
-   */
-  uint8_t m_prefix[16];
-
-  /**
-   * \internal
-   * \brief The base interface ID
-   */
-  uint64_t m_base;
-  /**
-   * \internal
-   * \brief The current interface ID
-   */
-  uint64_t m_iid;
 };
 
 } /* namespace ns3 */

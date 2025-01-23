@@ -18,10 +18,14 @@
  * Author: Mathieu Lacage <mathieu.lacage@sophia.inria.fr>
  */
 #include "socket-factory.h"
+#include "ns3/log.h"
+
+NS_LOG_COMPONENT_DEFINE ("SocketFactory");
 
 namespace ns3 {
 
-NS_OBJECT_ENSURE_REGISTERED (SocketFactory);
+NS_OBJECT_ENSURE_REGISTERED (SocketFactory)
+  ;
 
 TypeId SocketFactory::GetTypeId (void)
 {
@@ -32,6 +36,7 @@ TypeId SocketFactory::GetTypeId (void)
 
 SocketFactory::SocketFactory ()
 {
+  NS_LOG_FUNCTION (this);
 }
 
 } // namespace ns3

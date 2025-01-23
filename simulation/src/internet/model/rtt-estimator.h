@@ -39,17 +39,26 @@ namespace ns3 {
  */
 class RttHistory {
 public:
-  RttHistory (SequenceNumber32 s, uint64_t c, Time t, uint64_t marked, uint64_t unmarked);
+  /**
+   * \brief Constructor - builds an RttHistory with the given parameters
+   * \param s First sequence number in packet sent
+   * \param c Number of bytes sent
+   * \param t Time this one was sent
+   */
+  RttHistory (SequenceNumber32 s, uint32_t c, Time t);
+  /**
+   * \brief Copy constructor
+   * \param h the object to copy
+   */
   RttHistory (const RttHistory& h); // Copy constructor
 public:
-  SequenceNumber32  seq;  // First sequence number in packet sent
-  uint64_t        count;  // Number of bytes sent
-  Time            time;   // Time this one was sent
-  uint64_t        nonMarked; // Number of unmarked packets (needed for DCTCP)
-  uint64_t        marked;   // Number of marked packets (needed for DCTCP)
-  bool            retx;   // True if this has been retransmitted
+  SequenceNumber32  seq;  //!< First sequence number in packet sent
+  uint32_t        count;  //!< Number of bytes sent
+  Time            time;   //!< Time this one was sent
+  bool            retx;   //!< True if this has been retransmitted
 };
 
+/// Container for RttHistory objects
 typedef std::deque<RttHistory> RttHistory_t;
 
 /**
@@ -59,33 +68,36 @@ typedef std::deque<RttHistory> RttHistory_t;
  */
 class RttEstimator : public Object {
 public:
+  /**
+   * \brief Get the type ID.
+   * \return the object TypeId
+   */
   static TypeId GetTypeId (void);
 
   RttEstimator();
-  RttEstimator (const RttEstimator&);
+  /**
+   * \brief Copy constructor
+   * \param r the object to copy
+   */
+  RttEstimator (const RttEstimator& r);
 
   virtual ~RttEstimator();
+
+  virtual TypeId GetInstanceTypeId (void) const;
 
   /**
    * \brief Note that a particular sequence has been sent
    * \param seq the packet sequence number.
    * \param size the packet size.
-   * \param number of unmarked packet so far (needed for DCTCP)
-   * \param number of marked packets so far (needed for DCTCP)
    */
   virtual void SentSeq (SequenceNumber32 seq, uint32_t size);
 
   /**
    * \brief Note that a particular ack sequence has been received
    * \param ackSeq the ack sequence number.
-   * \param flag is the packet was marked (needed for DCTCP)
-   * \param reference to number of unmarked packets so far (needed for DCTCP)
-   * \param reference to number of marked packets so far (needed for DCTCP)
-   * \param g parameter (needed for DCTCP)
-   * \param calculated alpha parameter (needed for DCTCP)
    * \return The measured RTT for this ack.
    */
-  virtual Time AckSeq (SequenceNumber32 ackSeq, bool markedFlag);
+  virtual Time AckSeq (SequenceNumber32 ackSeq);
 
   /**
    * \brief Clear all history entries
@@ -104,6 +116,10 @@ public:
    */
   virtual Time RetransmitTimeout () = 0;
 
+  /**
+   * \brief Copy object
+   * \returns a copy of itself
+   */
   virtual Ptr<RttEstimator> Copy () const = 0;
 
   /**
@@ -119,7 +135,7 @@ public:
   /**
    * \brief Resets the estimation to its initial state.
    */
-  virtual void Reset (SequenceNumber32 seq);
+  virtual void Reset ();
 
   /**
    * \brief Sets the Minimum RTO.
@@ -145,52 +161,17 @@ public:
    */
   Time GetCurrentEstimate (void) const;
 
-  /**
-   * \brief gets the current Alpha value.
-   * \return The current Alpha value.
-   */
-  double GetAlpha (void) const;
-
-  /**
-   * \brief gets the current DCTCP weight value.
-   * \return The current parameter g value.
-   */
-  double GetG (void) const;
-
-  /**
-   * \brief sets the current DCTCP weight value.
-   * \return The current parameter g value.
-   */
-  void SetG (double g);
-
-  /**
-   * \brief get the number of bytes sent so far
-   * \return number of bytes sent
-   */
-  uint64_t GetBytesSent (void) const;
-
-  void SetExpectedNextSeq(SequenceNumber32 seq)
-  {
-    m_next = seq;
-  }
-
 private:
-  SequenceNumber32 m_next;    // Next expected sequence to be sent
-  RttHistory_t m_history;     // List of sent packet
-  uint16_t m_maxMultiplier;
-  Time m_initialEstimatedRtt;
+  SequenceNumber32 m_next;    //!< Next expected sequence to be sent
+  RttHistory_t m_history;     //!< List of sent packet
+  uint16_t m_maxMultiplier;   //!< Maximum RTO Multiplier
+  Time m_initialEstimatedRtt; //!< Initial RTT estimation
 
 protected:
-  Time         m_currentEstimatedRtt;     // Current estimate
-  Time         m_minRto;                  // minimum value of the timeout
-  uint32_t     m_nSamples;                // Number of samples
-  uint16_t     m_multiplier;              // RTO Multiplier
-  uint64_t     m_sentBytes;               // Number of bytes sent
-  // Parameters needed for DCTCP
-  double      m_g;
-  uint64_t     m_marked;
-  uint64_t     m_nonMarked;
-  double      m_alpha;
+  Time         m_currentEstimatedRtt;     //!< Current estimate
+  Time         m_minRto;                  //!< minimum value of the timeout
+  uint32_t     m_nSamples;                //!< Number of samples
+  uint16_t     m_multiplier;              //!< RTO Multiplier
 };
 
 /**
@@ -205,11 +186,21 @@ protected:
  */
 class RttMeanDeviation : public RttEstimator {
 public:
+  /**
+   * \brief Get the type ID.
+   * \return the object TypeId
+   */
   static TypeId GetTypeId (void);
 
   RttMeanDeviation ();
 
-  RttMeanDeviation (const RttMeanDeviation&);
+  /**
+   * \brief Copy constructor
+   * \param r the object to copy
+   */
+  RttMeanDeviation (const RttMeanDeviation& r);
+
+  virtual TypeId GetInstanceTypeId (void) const;
 
   /**
    * \brief Add a new measurement to the estimator.
@@ -226,9 +217,9 @@ public:
   Ptr<RttEstimator> Copy () const;
 
   /**
-   * \brief Resets sthe estimator.
+   * \brief Resets the estimator.
    */
-  virtual void Reset (SequenceNumber32 seq);
+  void Reset ();
 
   /**
    * \brief Sets the estimator Gain.
@@ -237,8 +228,8 @@ public:
   void Gain (double g);
 
 private:
-  double       m_gain;       // Filter gain
-  Time         m_variance;   // Current variance
+  double       m_gain;       //!< Filter gain
+  Time         m_variance;   //!< Current variance
 };
 } // namespace ns3
 

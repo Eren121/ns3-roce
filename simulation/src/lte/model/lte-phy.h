@@ -39,7 +39,9 @@ namespace ns3 {
 
 class PacketBurst;
 class LteNetDevice;
-class IdealControlMessage;
+class LteControlMessage;
+
+
 
 /**
  * \ingroup lte
@@ -109,41 +111,6 @@ public:
    */
   void SetUplinkChannel (Ptr<SpectrumChannel> c);
 
-  /**
-   * \brief set a list of sub channel to use in the downlink.
-   * A sub channel is composed by a couple of resource bloks (180KHz x 1 ms)
-   * \param mask a vector of intefer values. Each elements of this vector carries information about
-   * the corresponding DL sub channel. If the i-th value of mask is equal to 1 (0) it means that the corresponding sub channel is used (not used) for the downlink.
-   */
-  void SetDownlinkSubChannels (std::vector<int> mask );
-  /**
-   * \brief do some operation after the set of a list of DL sub channels
-   */
-  virtual void DoSetDownlinkSubChannels ();
-
-  /**
-   * \brief set a list of sub channel to use in the uplink.
-   * A sub channel is composed by a couple of resource bloks (180KHz x 1 ms)
-   * \param mask a vector of intefer values. Each elements of this vector carries information about
-   * the corresponding UL sub channel. If the i-th value of mask is equal to 1 (0) it means that the corresponding sub channel is used (not used) for the uplink.
-   */
-  void SetUplinkSubChannels (std::vector<int> mask);
-  /**
-   * \brief do some operation after the set of a list of UL sub channels
-   */
-  virtual void DoSetUplinkSubChannels ();
-
-  /**
-   * \brief get a list of sub channel to use in the downlink
-   * \return
-   */
-  std::vector<int> GetDownlinkSubChannels (void);
-  /**
-   * \brief get a list of sub channel to use in the downlink
-   * \return
-   */
-  std::vector<int> GetUplinkSubChannels (void);
-
 
   /**
    * \brief Compute the TX Power Spectral Density
@@ -154,13 +121,6 @@ public:
   void DoDispose ();
 
   /**
-   * \brief Receive SendIdealControlMessage (PDCCH map, CQI feedbacks) using the ideal control channel
-   * \param msg the Ideal Control Message to receive
-   */
-  virtual void ReceiveIdealControlMessage (Ptr<IdealControlMessage> msg) = 0;
-
-
-  /**
    * \param tti transmission time interval
    */
   void SetTti (double tti);
@@ -168,19 +128,6 @@ public:
    * \returns transmission time interval
    */
   double GetTti (void) const;
-
-  /**
-  * \param ulBandwidth the UL bandwidth in RB
-  * \param dlBandwidth the DL bandwidth in RB
-  */
-  void DoSetBandwidth (uint8_t ulBandwidth, uint8_t dlBandwidth);
-
-  /**
-   *
-   * \param dlEarfcn the carrier frequency (EARFCN) in downlink
-   * \param ulEarfcn the carrier frequency (EARFCN) in downlink
-   */
-  virtual void DoSetEarfcn (uint16_t dlEarfcn, uint16_t ulEarfcn);
 
   /** 
    * 
@@ -193,6 +140,19 @@ public:
   * \returns the RB gruop size according to the bandwidth
   */
   uint8_t GetRbgSize (void) const;
+  
+  
+  /**
+  * \returns the SRS periodicity (see Table 8.2-1 of 36.213)
+  * \param srcCi the SRS Configuration Index
+  */
+  uint16_t GetSrsPeriodicity (uint16_t srcCi) const;
+  
+  /**
+  * \returns the SRS Subframe offset (see Table 8.2-1 of 36.213)
+  * \param srcCi the SRS Configuration Index
+  */
+  uint16_t GetSrsSubframeOffset (uint16_t srcCi) const;
 
 
   /**
@@ -208,20 +168,46 @@ public:
   /**
   * \param m the control message to be sent
   */
-  void SetControlMessages (Ptr<IdealControlMessage> m);
+  void SetControlMessages (Ptr<LteControlMessage> m);
 
   /**
   * \returns the list of control messages to be sent
   */
-  std::list<Ptr<IdealControlMessage> > GetControlMessages (void);
+  std::list<Ptr<LteControlMessage> > GetControlMessages (void);
 
 
   /** 
-   * generate a CQI report based on the given SINR
+   * generate a CQI report based on the given SINR of Ctrl frame
    * 
    * \param sinr the SINR vs frequency measured by the device
    */
-  virtual void  GenerateCqiReport (const SpectrumValue& sinr) = 0;
+  virtual void GenerateCtrlCqiReport (const SpectrumValue& sinr) = 0;
+  
+  /** 
+  * generate a CQI report based on the given SINR of Data frame
+  * (used for PUSCH CQIs)
+  * 
+  * \param sinr the SINR vs frequency measured by the device
+  */
+  virtual void GenerateDataCqiReport (const SpectrumValue& sinr) = 0;
+
+  /**
+  * generate a report based on the linear interference and noise power
+  * perceived during DATA frame
+  * NOTE: used only by eNB 
+  *
+  * \param interf the interference + noise power measured by the device
+  */
+  virtual void ReportInterference (const SpectrumValue& interf) = 0;
+
+  /**
+  * generate a report based on the linear RS power perceived during CTRL 
+  * frame
+  * NOTE: used only by UE for evaluating RSRP
+  *
+  * \param power the RS power measured by the device
+  */
+  virtual void ReportRsReceivedPower (const SpectrumValue& power) = 0;
 
 
 
@@ -230,9 +216,6 @@ protected:
 
   Ptr<LteSpectrumPhy> m_downlinkSpectrumPhy;
   Ptr<LteSpectrumPhy> m_uplinkSpectrumPhy;
-
-  std::vector <int> m_listOfDownlinkSubchannel;
-  std::vector <int> m_listOfUplinkSubchannel;
 
   double m_txPower;
   double m_noiseFigure;
@@ -246,7 +229,7 @@ protected:
   uint16_t m_ulEarfcn;
 
   std::vector< Ptr<PacketBurst> > m_packetBurstQueue;
-  std::vector< std::list<Ptr<IdealControlMessage> > > m_controlMessagesQueue;
+  std::vector< std::list<Ptr<LteControlMessage> > > m_controlMessagesQueue;
   uint8_t m_macChTtiDelay; // delay between MAC and channel layer in terms of TTIs
 
   uint16_t m_cellId;

@@ -31,13 +31,15 @@
 #include "ns3/uinteger.h"
 #include "packet-loss-counter.h"
 
-#include "ns3/seq-ts-header.h"
+#include "seq-ts-header.h"
 #include "udp-server.h"
 
 namespace ns3 {
 
-NS_LOG_COMPONENT_DEFINE ("UdpServer");
-NS_OBJECT_ENSURE_REGISTERED (UdpServer);
+NS_LOG_COMPONENT_DEFINE ("UdpServer")
+  ;
+NS_OBJECT_ENSURE_REGISTERED (UdpServer)
+  ;
 
 
 TypeId
@@ -76,27 +78,29 @@ UdpServer::~UdpServer ()
 uint16_t
 UdpServer::GetPacketWindowSize () const
 {
+  NS_LOG_FUNCTION (this);
   return m_lossCounter.GetBitMapSize ();
 }
 
 void
 UdpServer::SetPacketWindowSize (uint16_t size)
 {
+  NS_LOG_FUNCTION (this << size);
   m_lossCounter.SetBitMapSize (size);
 }
 
 uint32_t
 UdpServer::GetLost (void) const
 {
+  NS_LOG_FUNCTION (this);
   return m_lossCounter.GetLost ();
 }
 
 uint32_t
 UdpServer::GetReceived (void) const
 {
-
+  NS_LOG_FUNCTION (this);
   return m_received;
-
 }
 
 void
@@ -183,27 +187,7 @@ UdpServer::HandleRead (Ptr<Socket> socket)
           m_lossCounter.NotifyReceived (currentSequenceNumber);
           m_received++;
         }
-	  /*
-	  if (m_received>4000)
-	  {
-		  m_received = 0;
-		  Ptr<Packet> p = Create<Packet> (64);
-		  std::stringstream peerAddressStringStream;
-		  if (Ipv4Address::IsMatchingType (m_peerAddress))
-		  {
-			  peerAddressStringStream << Ipv4Address::ConvertFrom (m_peerAddress);
-		  }
-	  } 
-	  */
     }
 }
-
-void
-UdpServer::SetRemote (Ipv4Address ip, uint16_t port)
-{
-	m_peerAddress = Address(ip);
-	m_peerPort = port;
-}
-
 
 } // Namespace ns3

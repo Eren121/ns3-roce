@@ -30,7 +30,8 @@
 
 namespace ns3 {
 
-NS_LOG_COMPONENT_DEFINE ("BuildingList");
+NS_LOG_COMPONENT_DEFINE ("BuildingList")
+  ;
 
 /**
  * \brief private implementation detail of the BuildingList API.
@@ -57,7 +58,8 @@ private:
   std::vector<Ptr<Building> > m_buildings;
 };
 
-NS_OBJECT_ENSURE_REGISTERED (BuildingListPriv);
+NS_OBJECT_ENSURE_REGISTERED (BuildingListPriv)
+  ;
 
 TypeId
 BuildingListPriv::GetTypeId (void)
@@ -126,7 +128,7 @@ BuildingListPriv::Add (Ptr<Building> building)
 {
   uint32_t index = m_buildings.size ();
   m_buildings.push_back (building);
-  Simulator::ScheduleWithContext (index, TimeStep (0), &Building::Start, building);
+  Simulator::ScheduleWithContext (index, TimeStep (0), &Building::Initialize, building);
   return index;
 
 }

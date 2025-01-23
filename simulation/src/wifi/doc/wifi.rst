@@ -1,4 +1,5 @@
 .. include:: replace.txt
+.. highlight:: cpp
 
 Wifi
 ----
@@ -57,7 +58,7 @@ beacons, and that accepts every attempt to associate.
 These three MAC high models share a common parent in
 ``ns3::RegularWifiMac``, which exposes, among other MAC
 configuration, an attribute ``QosSupported`` that allows
-configuration of 802.11e/WMM-style QoS support. With QoS-enabled MAC
+configuration of 802.11e/WMM-style QoS support and an attribute "HtSupported" that allows configuration og 802.11n High Throughput style support. With QoS-enabled MAC
 models it is possible to work with traffic belonging to four different
 Access Categories (ACs): **AC_VO** for voice traffic,
 **AC_VI** for video traffic, **AC_BE** for best-effort
@@ -149,7 +150,7 @@ propagation delay equal to a constant, the speed of light, and a propagation
 loss based on a log distance model with a reference loss of 46.6777 dB at
 reference distance of 1m.
 
-Users will typically type code such as:::
+Users will typically type code such as::
 
   YansWifiChannelHelper wifiChannelHelper = YansWifiChannelHelper::Default ();
   Ptr<WifiChannel> wifiChannel = wifiChannelHelper.Create ();
@@ -174,7 +175,7 @@ the ``YansWifiPhyHelper`` will do the work.
 The YansWifiPhyHelper class configures an object factory to create instances of
 a ``YansWifiPhy`` and adds some other objects to it, including possibly a
 supplemental ErrorRateModel and a pointer to a MobilityModel. The user code is
-typically:::
+typically::
 
   YansWifiPhyHelper wifiPhyHelper = YansWifiPhyHelper::Default ();
   wifiPhyHelper.SetChannel (wifiChannel);
@@ -182,6 +183,10 @@ typically:::
 Note that we haven't actually created any WifiPhy objects yet; we've just
 prepared the YansWifiPhyHelper by telling it which channel it is connected to.
 The phy objects are created in the next step.
+
+To enable 802.11n High Throughput style parameters the following line of code could be used
+ wifiPhyHelper.Set ("ShortGuardEnabled",BooleanValue(true));
+ wifiPhyHelper.Set ("GreenfieldEnabled",BooleanValue(true));
 
 NqosWifiMacHelper and QosWifiMacHelper
 ++++++++++++++++++++++++++++++++++++++
@@ -195,7 +200,7 @@ instances that do not have 802.11e/WMM-style QoS support enabled.
 
 For example the following user code configures a non-QoS MAC that
 will be a non-AP STA in an infrastructure network where the AP has
-SSID ``ns-3-ssid``:::
+SSID ``ns-3-ssid``::
 
     NqosWifiMacHelper wifiMacHelper = NqosWifiMacHelper::Default ();
     Ssid ssid = Ssid ("ns-3-ssid");
@@ -213,7 +218,7 @@ To create MAC instances with QoS support enabled,
   mechanism should be used) and inactivity timeout.
 
 The following code shows an example use of ``ns3::QosWifiMacHelper`` to 
-create an AP with QoS enabled, aggregation on AC_VO, and Block Ack on AC_BE:::
+create an AP with QoS enabled, aggregation on AC_VO, and Block Ack on AC_BE::
 
   QosWifiMacHelper wifiMacHelper = QosWifiMacHelper::Default ();
   wifiMacHelper.SetType ("ns3::ApWifiMac",
@@ -225,18 +230,37 @@ create an AP with QoS enabled, aggregation on AC_VO, and Block Ack on AC_BE:::
   wifiMacHelper.SetBlockAckThresholdForAc (AC_BE, 10);
   wifiMacHelper.SetBlockAckInactivityTimeoutForAc (AC_BE, 5);
 
+HtWifiMacHelper
++++++++++++++++
+
+The ``ns3::HtWifiMacHelper``configures an
+object factory to create instances of a ``ns3::WifiMac``. It is used to
+supports creation of MAC instances that have 802.11n-style High throughput (Ht) and QoS support enabled.  
+
+For example the following user code configures a HT MAC that
+will be a non-AP STA in an infrastructure network where the AP has
+SSID ``ns-3-ssid``::
+
+    HtWifiMacHelper wifiMacHelper = HtWifiMacHelper::Default ();
+    Ssid ssid = Ssid ("ns-3-ssid");
+    wifiMacHelper.SetType ("ns3::StaWifiMac",
+                          "Ssid", SsidValue (ssid),
+                          "ActiveProbing", BooleanValue (false));
+
+This object can be also used to set in the same way as ``ns3::QosWifiMacHelper``
+
 WifiHelper
 ++++++++++
 
 We're now ready to create WifiNetDevices. First, let's create
-a WifiHelper with default settings:::
+a WifiHelper with default settings::
 
   WifiHelper wifiHelper = WifiHelper::Default ();
 
 What does this do?  It sets the RemoteStationManager to
 ``ns3::ArfWifiManager``.
 Now, let's use the wifiPhyHelper and wifiMacHelper created above to install WifiNetDevices
-on a set of nodes in a NodeContainer "c":::
+on a set of nodes in a NodeContainer "c"::
 
   NetDeviceContainer wifiContainer = WifiHelper::Install (wifiPhyHelper, wifiMacHelper, c);
 
@@ -336,6 +360,30 @@ chose to use the method described in [ji2004sslswn]_
 where the backoff timer duration is lazily calculated whenever needed since it
 is claimed to have much better performance than the simpler recurring timer
 solution.
+
+The backoff procedure of DCF is described in section 9.2.5.2 of [ieee80211]_.
+
+*  “The backoff procedure shall be invoked for a STA to transfer a frame 
+   when finding the medium busy as indicated by either the physical or 
+   virtual CS mechanism.”
+*  “A backoff procedure shall be performed immediately after the end of 
+   every transmission with the More Fragments bit set to 0 of an MPDU of 
+   type Data, Management, or Control with subtype PS-Poll, even if no 
+   additional transmissions are currently queued.”
+
+Thus, if the queue is empty, a newly arrived packet should be transmitted 
+immediately after channel is sensed idle for DIFS.  If queue is not empty 
+and after a successful MPDU that has no more fragments, a node should 
+also start the backoff timer.
+
+Some users have observed that the 802.11 MAC with an empty queue on an 
+idle channel will transmit the first frame arriving to the model 
+immediately without waiting for DIFS or backoff, and wonder whether this 
+is compliant.  According to the standard, “The backoff procedure shall 
+be invoked for a STA to transfer a frame when finding the medium busy 
+as indicated by either the physical or virtual CS mechanism.”  So in 
+this case, the medium is not found to be busy in recent past and the 
+station can transmit immediately. 
 
 The higher-level MAC functions are implemented in a set of other C++ classes and
 deal with:

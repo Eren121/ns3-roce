@@ -24,6 +24,7 @@
 #include "ns3/ptr.h"
 #include "ns3/nstime.h"
 #include "ns3/output-stream-wrapper.h"
+#include "ns3/ipv6-list-routing.h"
 
 namespace ns3 {
 
@@ -110,10 +111,78 @@ public:
    */
   void PrintRoutingTableEvery (Time printInterval, Ptr<Node> node, Ptr<OutputStreamWrapper> stream) const;
 
+  /**
+   * \brief Request a specified routing protocol &lt;T&gt; from Ipv6RoutingProtocol protocol
+   *
+   * If protocol is Ipv6ListRouting, then protocol will be searched in the list,
+   * otherwise a simple DynamicCast will be performed
+   *
+   * \param protocol Smart pointer to Ipv6RoutingProtocol object
+   * \return a Smart Pointer to the requested protocol (zero if the protocol can't be found)
+   */
+  template<class T>
+  static Ptr<T> GetRouting (Ptr<Ipv6RoutingProtocol> protocol);
+  
 private:
+  /**
+   * \internal
+   *
+   * \brief prints the routing tables of a node.
+   * \param node The node ptr for which we need the routing table to be printed
+   * \param stream The output stream object to use
+   *
+   * This method calls the PrintRoutingTable() method of the
+   * Ipv6RoutingProtocol stored in the Ipv6 object;
+   * the output format is routing protocol-specific.
+   */
   void Print (Ptr<Node> node, Ptr<OutputStreamWrapper> stream) const;
+
+  /**
+   * \internal
+   *
+   * \brief prints the routing tables of a node at regular intervals specified by user.
+   * \param printInterval the time interval for which the routing table is supposed to be printed.
+   * \param node The node ptr for which we need the routing table to be printed
+   * \param stream The output stream object to use
+   *
+   * This method calls the PrintRoutingTable() method of the
+   * Ipv6RoutingProtocol stored in the Ipv6 object, for the selected node
+   * at the specified interval; the output format is routing protocol-specific.
+   */
   void PrintEvery (Time printInterval, Ptr<Node> node, Ptr<OutputStreamWrapper> stream) const;
 };
+
+/**
+ * \brief Request a specified routing protocol &lt;T&gt; from Ipv6RoutingProtocol protocol
+ *
+ * If protocol is Ipv6ListRouting, then protocol will be searched in the list,
+ * otherwise a simple DynamicCast will be performed
+ *
+ * \param protocol Smart pointer to Ipv6RoutingProtocol object
+ * \return a Smart Pointer to the requested protocol (zero if the protocol can't be found)
+ */
+template<class T>
+Ptr<T> Ipv6RoutingHelper::GetRouting (Ptr<Ipv6RoutingProtocol> protocol)
+{
+  Ptr<T> ret = DynamicCast<T> (protocol);
+  if (ret == 0)
+    {
+      // trying to check if protocol is a list routing
+      Ptr<Ipv6ListRouting> lrp = DynamicCast<Ipv6ListRouting> (protocol);
+      if (lrp != 0)
+        {
+          for (uint32_t i = 0; i < lrp->GetNRoutingProtocols ();  i++)
+            {
+              int16_t priority;
+              ret = GetRouting<T> (lrp->GetRoutingProtocol (i, priority)); // potential recursion, if inside ListRouting is ListRouting
+              if (ret != 0)
+                break;
+            }
+        }
+    }
+
+  return ret;
+}
 
 } // namespace ns3
 

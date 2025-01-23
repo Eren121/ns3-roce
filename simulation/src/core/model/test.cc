@@ -21,7 +21,6 @@
 #include "abort.h"
 #include "system-path.h"
 #include "log.h"
-#include "config.h"
 #include <cmath>
 #include <cstring>
 #include <vector>
@@ -31,7 +30,8 @@
 
 namespace ns3 {
 
-NS_LOG_COMPONENT_DEFINE ("Test");
+NS_LOG_COMPONENT_DEFINE ("Test")
+  ;
 
 bool
 TestDoubleIsEqual (const double x1, const double x2, const double epsilon)
@@ -76,9 +76,7 @@ struct TestCaseFailure
 struct TestCase::Result
 {
   Result ();
-#ifndef WIN32
   SystemWallClockMs clock;
-#endif
   std::vector<TestCaseFailure> failure;
   bool childrenFailed;
 };
@@ -224,13 +222,10 @@ TestCase::Run (TestRunnerImpl *runner)
   m_result = new Result ();
   m_runner = runner;
   DoSetup ();
-#ifndef WIN32
   m_result->clock.Start ();
-#endif
   for (std::vector<TestCase *>::const_iterator i = m_children.begin (); i != m_children.end (); ++i)
     {
       TestCase *test = *i;
-	  //std::cout << "Running: " << test->GetName() << std::endl;
       test->Run (runner);
       if (IsFailed ())
         {
@@ -238,10 +233,8 @@ TestCase::Run (TestRunnerImpl *runner)
         }
     }
   DoRun ();
-out:
-#ifndef WIN32
+ out:
   m_result->clock.End ();
-#endif
   DoTeardown ();
   m_runner = 0;
 }
@@ -316,9 +309,6 @@ TestCase::CreateTempDirFilename (std::string filename)
           names.push_front (current->m_name);
           current = current->m_parent;
         }
-#ifdef WIN32
-	  names.pop_back();
-#endif
       std::string tempDir = SystemPath::Append (m_runner->GetTempDir (), SystemPath::Join (names.begin (), names.end ()));
       SystemPath::MakeDirectories (tempDir);
       return SystemPath::Append (tempDir, filename);
@@ -554,11 +544,10 @@ TestRunnerImpl::PrintReport (TestCase *test, std::ostream *os, bool xml, int lev
     }
   // Report times in seconds, from ms timer
   const double MS_PER_SEC = 1000.;
-#ifndef WIN32
   double real = test->m_result->clock.GetElapsedReal () / MS_PER_SEC;
   double user = test->m_result->clock.GetElapsedUser () / MS_PER_SEC;
   double system = test->m_result->clock.GetElapsedSystem () / MS_PER_SEC;
-#endif
+
   std::streamsize oldPrecision = (*os).precision (3);
   *os << std::fixed;
 
@@ -569,10 +558,8 @@ TestRunnerImpl::PrintReport (TestCase *test, std::ostream *os, bool xml, int lev
       *os << Indent (level+1) << "<Name>" << ReplaceXmlSpecialCharacters (test->m_name)
           << "</Name>" << std::endl;
       *os << Indent (level+1) << "<Result>" << statusString << "</Result>" << std::endl;
-#ifndef WIN32
-	  *os << Indent (level+1) << "<Time real=\"" << real << "\" user=\"" << user 
+      *os << Indent (level+1) << "<Time real=\"" << real << "\" user=\"" << user 
           << "\" system=\"" << system << "\"/>" << std::endl;
-#endif
       for (uint32_t i = 0; i < test->m_result->failure.size (); i++)
         {
           TestCaseFailure failure = test->m_result->failure[i];
@@ -599,10 +586,8 @@ TestRunnerImpl::PrintReport (TestCase *test, std::ostream *os, bool xml, int lev
     }
   else
     {
-#ifndef WIN32
       *os << Indent (level) << statusString << " " << test->GetName () 
           << " " << real << " s" << std::endl;
-#endif
       if (m_verbose)
         {
           for (uint32_t i = 0; i < test->m_result->failure.size (); i++)
@@ -752,129 +737,6 @@ TestRunnerImpl::FilterTests (std::string testName,
   return tests;
 }
 
-#ifdef WIN32
-#include <Windows.h>
-//the goal of this code is to avoid having to use test.py which relies on waf
-//at the same time the goal is to reuse as much as possible which is already here
-//Written as a seperate function to avoid one large function littered with #ifdefs
-int 
-TestRunnerImpl::Run (int argc, char *argv[])
-{
-	NS_LOG_FUNCTION (this << argc << argv);
-
-	std::string testName = "";
-	enum TestCase::TestDuration maximumTestDuration = TestCase::QUICK;
-	enum TestSuite::Type testType = TestSuite::ALL;
-	bool xml = false;
-	std::string out = "";
-	bool mainProgram = true;
-	std::stringstream arguments;
-
-	char *progname = argv[0];
-	if (strncmp(progname, "--suite=", strlen("--suite=")) != 0)
-      argv++;
-
-	while (*argv != 0)
-	{
-		char *arg = *argv;
-
-		arguments << arg << " ";
-
-		if (strncmp(arg, "--suite=", strlen("--suite=")) == 0)
-        {
-			testName = arg + strlen("--suite=");
-			mainProgram = false;
-        }
-		else if (strncmp(arg, "--out=", strlen("--out=")) == 0)
-        {
-			out = arg + strlen("--out=");
-        }
-		else if (strcmp (arg, "--verbose") == 0)
-        {
-			m_verbose = true;
-        }
-		argv++;
-	}
-
-	std::list<TestCase *> tests = FilterTests (testName, testType, maximumTestDuration);
-
-	if(mainProgram)
-	{
-		std::cout << "Running ns-3 tests." << std::endl;
-		for (std::list<TestCase *>::const_iterator i = tests.begin (); i != tests.end (); ++i)
-		{
-			std::stringstream programArgs;
-			TestCase* test = *i;
-
-			programArgs << arguments.str() << "--suite=" << test->GetName();
-
-			std::cout << test->GetName() << " : ";
-
-			//call the program
-			PROCESS_INFORMATION processInformation = {0};
-			STARTUPINFO startupInfo = {0};
-			startupInfo.cb = sizeof(startupInfo);
-
-			BOOL result = CreateProcess(progname, const_cast<char*>(programArgs.str().c_str()), NULL, NULL, FALSE, NORMAL_PRIORITY_CLASS | CREATE_NO_WINDOW, NULL, NULL, &startupInfo, &processInformation);
-
-			if(!result) //create process failed
-			{
-				std::cout << "ERROR!" << std::endl;
-				NS_ASSERT("ERROR!");
-			}
-
-			//wait for it to exit
-			WaitForSingleObject(processInformation.hProcess, INFINITE);
-
-			//get exit code
-			DWORD exitCode;
-			result = GetExitCodeProcess(processInformation.hProcess, &exitCode);
-
-			//cleanup
-			CloseHandle(processInformation.hProcess);
-			CloseHandle(processInformation.hThread);
-
-			//report result on screen
-			std::cout << (!exitCode ? "PASSED!" : "FAILED") << std::endl;		
-		}
-	}
-	else
-	{
-		bool failed = false;
-
-		std::ofstream testDetails;
-		testDetails.open("testDetails.txt", std::ios::out | std::ios::app);
-
-		std::ofstream output;
-		output.open("testResults.txt", std::ios::out | std::ios::app);
-
-		m_tempDir = SystemPath::MakeTemporaryDirectoryName ();
-
-		//this should always only be one test
-		for (std::list<TestCase *>::const_iterator i = tests.begin (); i != tests.end (); ++i)
-		{
-			TestCase *test = *i;
-			test->Run (this);
-			PrintReport (test, &testDetails, xml, 0);
-			if (test->IsFailed ())
-			{
-				output << "Test: " << test->GetName() << " FAILED!" << std::endl;
-				failed = true;
-			}
-			else
-			{
-				output << "Test: " << test->GetName() << " PASSED!" << std::endl;
-			}
-		}
-		
-		output.close();
-		testDetails.close();
-
-		return failed?1:0;
-	}
-}
-
-#else
 
 int 
 TestRunnerImpl::Run (int argc, char *argv[])
@@ -1076,6 +938,7 @@ TestRunnerImpl::Run (int argc, char *argv[])
   for (std::list<TestCase *>::const_iterator i = tests.begin (); i != tests.end (); ++i)
     {
       TestCase *test = *i;
+
       test->Run (this);
       PrintReport (test, os, xml, 0);
       if (test->IsFailed ())
@@ -1086,17 +949,15 @@ TestRunnerImpl::Run (int argc, char *argv[])
               return 1;
             }
         }
+    }
 
   if (out != "")
     {
       delete os;
     }
 
-    }
   return failed?1:0;
 }
-
-#endif
 
 int 
 TestRunner::Run (int argc, char *argv[])
@@ -1104,6 +965,5 @@ TestRunner::Run (int argc, char *argv[])
   NS_LOG_FUNCTION (argc << argv);
   return TestRunnerImpl::Instance ()->Run (argc, argv);
 }
-
 
 } // namespace ns3

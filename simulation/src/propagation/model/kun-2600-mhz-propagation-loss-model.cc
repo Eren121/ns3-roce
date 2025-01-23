@@ -31,7 +31,8 @@ NS_LOG_COMPONENT_DEFINE ("Kun2600MhzPropagationLossModel");
 
 namespace ns3 {
 
-NS_OBJECT_ENSURE_REGISTERED (Kun2600MhzPropagationLossModel);
+NS_OBJECT_ENSURE_REGISTERED (Kun2600MhzPropagationLossModel)
+  ;
 
 
 TypeId
@@ -47,7 +48,7 @@ double
 Kun2600MhzPropagationLossModel::GetLoss (Ptr<MobilityModel> a, Ptr<MobilityModel> b) const
 {
   double dist = a->GetDistanceFrom (b);  
-  double loss = 36 + 26 * log10 (dist);
+  double loss = 36 + 26 * std::log10 (dist);
   return loss;
 }
 

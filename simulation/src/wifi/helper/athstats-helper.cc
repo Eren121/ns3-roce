@@ -105,7 +105,8 @@ AthstatsHelper::EnableAthstats (std::string filename, NodeContainer n)
 
 
 
-NS_OBJECT_ENSURE_REGISTERED (AthstatsWifiTraceSink);
+NS_OBJECT_ENSURE_REGISTERED (AthstatsWifiTraceSink)
+  ;
 
 TypeId
 AthstatsWifiTraceSink::GetTypeId (void)
@@ -277,7 +278,7 @@ AthstatsWifiTraceSink::WriteStats ()
   // the comments below refer to how each value maps to madwifi's athstats
   // I know C strings are ugly but that's the quickest way to use exactly the same format as in madwifi
   char str[200];
-  sprintf (str, "%8u %8u %7u %7u %7u %6u %6u %6u %7u %4u %3uM\n",
+  snprintf (str, 200, "%8u %8u %7u %7u %7u %6u %6u %6u %7u %4u %3uM\n",
             (unsigned int) m_txCount, // /proc/net/dev transmitted packets to which we should subract mgmt frames
             (unsigned int) m_rxCount, // /proc/net/dev received packets but subracts mgmt frames from it
             (unsigned int) 0,        // ast_tx_altrate,

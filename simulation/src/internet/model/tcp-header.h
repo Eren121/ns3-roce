@@ -23,7 +23,6 @@
 
 #include <stdint.h>
 #include "ns3/header.h"
-#include "ns3/tcp-option.h"
 #include "ns3/buffer.h"
 #include "ns3/tcp-socket-factory.h"
 #include "ns3/ipv4-address.h"
@@ -41,14 +40,16 @@ namespace ns3 {
  * as methods for serialization to and deserialization from a byte buffer.
  */
 
-class TcpHeader : public Header
+class TcpHeader : public Header 
 {
 public:
   TcpHeader ();
   virtual ~TcpHeader ();
 
   /**
-   * \brief Enable checksum calculation for TCP (XXX currently has no effect)
+   * \brief Enable checksum calculation for TCP
+   *
+   * \todo currently has no effect
    */
   void EnableChecksums (void);
 //Setters
@@ -75,7 +76,7 @@ public:
   /**
    * \param flags the flags for this TcpHeader
    */
-  void SetFlags (uint16_t flags);
+  void SetFlags (uint8_t flags);
   /**
    * \param windowSize the window size for this TcpHeader
    */
@@ -110,7 +111,7 @@ public:
   /**
    * \return the flags for this TcpHeader
    */
-  uint16_t  GetFlags () const;
+  uint8_t  GetFlags () const;
   /**
    * \return the window size for this TcpHeader
    */
@@ -119,39 +120,71 @@ public:
    * \return the urgent pointer for this TcpHeader
    */
   uint16_t GetUrgentPointer () const;
-  /**
-   * \return Whether the header contains a specific kind of option
-   */
-  Ptr<TcpOption> GetOption (TcpOption::Kind kind) const;
-  /**
-   * \brief Add an option to the TCP header
-   */
-  void AppendOption (Ptr<TcpOption> option);
 
   /**
-   * \param source the ip source to use in the underlying
-   *        ip packet.
-   * \param destination the ip destination to use in the
-   *        underlying ip packet.
-   * \param protocol the protocol number to use in the underlying
-   *        ip packet.
+   * \brief Initialize the TCP checksum.
    *
    * If you want to use tcp checksums, you should call this
    * method prior to adding the header to a packet.
+   *
+   * \param source the IP source to use in the underlying
+   *        IP packet.
+   * \param destination the IP destination to use in the
+   *        underlying IP packet.
+   * \param protocol the protocol number to use in the underlying
+   *        IP packet.
+   *
    */
-  void InitializeChecksum (Ipv4Address source,
+  void InitializeChecksum (Ipv4Address source, 
                            Ipv4Address destination,
                            uint8_t protocol);
-  void InitializeChecksum (Ipv6Address source,
+
+  /**
+   * \brief Initialize the TCP checksum.
+   *
+   * If you want to use tcp checksums, you should call this
+   * method prior to adding the header to a packet.
+   *
+   * \param source the IP source to use in the underlying
+   *        IP packet.
+   * \param destination the IP destination to use in the
+   *        underlying IP packet.
+   * \param protocol the protocol number to use in the underlying
+   *        IP packet.
+   *
+   */
+  void InitializeChecksum (Ipv6Address source, 
                            Ipv6Address destination,
                            uint8_t protocol);
-  void InitializeChecksum (Address source,
+
+  /**
+   * \brief Initialize the TCP checksum.
+   *
+   * If you want to use tcp checksums, you should call this
+   * method prior to adding the header to a packet.
+   *
+   * \param source the IP source to use in the underlying
+   *        IP packet.
+   * \param destination the IP destination to use in the
+   *        underlying IP packet.
+   * \param protocol the protocol number to use in the underlying
+   *        IP packet.
+   *
+   */
+  void InitializeChecksum (Address source, 
                            Address destination,
                            uint8_t protocol);
 
-  typedef enum { NONE = 0, FIN = 1, SYN = 2, RST = 4, PSH = 8, ACK = 16,
-                 URG = 32, ECE = 64, CWR = 128, NS = 256} Flags_t;
+  /**
+   * \brief TCP flag field values
+   */
+  typedef enum { NONE = 0, FIN = 1, SYN = 2, RST = 4, PSH = 8, ACK = 16, 
+                 URG = 32, ECE = 64, CWR = 128} Flags_t;
 
+  /**
+   * \brief Get the type ID.
+   * \return the object TypeId
+   */
   static TypeId GetTypeId (void);
   virtual TypeId GetInstanceTypeId (void) const;
   virtual void Print (std::ostream &os) const;
@@ -166,25 +199,27 @@ public:
   bool IsChecksumOk (void) const;
 
 private:
+  /**
+   * \brief Calculate the header checksum
+   * \param size packet size
+   * \returns the checksum
+   */
   uint16_t CalculateHeaderChecksum (uint16_t size) const;
-  uint16_t m_sourcePort;
-  uint16_t m_destinationPort;
-  SequenceNumber32 m_sequenceNumber;
-  SequenceNumber32 m_ackNumber;
-  uint8_t m_length; // really a uint4_t
-  uint16_t m_flags;      // really a uint9_t
-  uint16_t m_windowSize;
-  uint16_t m_urgentPointer;
+  uint16_t m_sourcePort;        //!< Source port
+  uint16_t m_destinationPort;   //!< Destination port
+  SequenceNumber32 m_sequenceNumber;  //!< Sequence number
+  SequenceNumber32 m_ackNumber;       //!< ACK number
+  uint8_t m_length;             //!< Length (really a uint4_t)
+  uint8_t m_flags;              //!< Flags (really a uint6_t)
+  uint16_t m_windowSize;        //!< Window size
+  uint16_t m_urgentPointer;     //!< Urgent pointer
 
-  Address m_source;
-  Address m_destination;
-  uint8_t m_protocol;
+  Address m_source;       //!< Source IP address
+  Address m_destination;  //!< Destination IP address
+  uint8_t m_protocol;     //!< Protocol number
 
-  uint16_t m_initialChecksum;
-  bool m_calcChecksum;
-  bool m_goodChecksum;
-
-  std::list<Ptr<TcpOption> > m_options;
+  bool m_calcChecksum;    //!< Flag to calculate checksum
+  bool m_goodChecksum;    //!< Flag to indicate that checksum is correct
 };
 
 } // namespace ns3

@@ -22,15 +22,8 @@
 #include <iostream>
 #include <cmath>
 #include <cstdlib>
-#if HAVE_SYS_TIME_H
 #include <sys/time.h>                   // for gettimeofday
-#endif
-#if HAVE_UNISTD_H
 #include <unistd.h>
-#endif
-#ifdef WIN32
-#include "winport.h"
-#endif
 #include <iostream>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -51,7 +44,8 @@ namespace ns3 {
 // -----------------------------------------------------------------------------
 // RandomVariableBase methods
 
-NS_LOG_COMPONENT_DEFINE ("RandomVariable");
+NS_LOG_COMPONENT_DEFINE ("RandomVariable")
+  ;
 
 /** \ingroup legacyrandom */
 class RandomVariableBase

@@ -39,10 +39,27 @@ public:
   static TypeId GetTypeId (void);
   SimpleChannel ();
 
-  void Send (Ptr<Packet> p, uint16_t protocol, Mac48Address to, Mac48Address from,
-             Ptr<SimpleNetDevice> sender);
+  /**
+   * A packet is sent by a net device.  A receive event will be 
+   * scheduled for all net device connected to the channel other 
+   * than the net device who sent the packet
+   *
+   * \param p packet to be sent
+   * \param protocol protocol number
+   * \param to address to send packet to
+   * \param from address the packet is coming from
+   * \param sender netdevice who sent the packet
+   *
+   */
+  virtual void Send (Ptr<Packet> p, uint16_t protocol, Mac48Address to, Mac48Address from,
+                     Ptr<SimpleNetDevice> sender);
 
-  void Add (Ptr<SimpleNetDevice> device);
+  /**
+   * Attached a net device to the channel.
+   *
+   * \param device the device to attach to the channel
+   */ 
+  virtual void Add (Ptr<SimpleNetDevice> device);
 
   // inherited from ns3::Channel
   virtual uint32_t GetNDevices (void) const;

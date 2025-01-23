@@ -28,7 +28,7 @@ namespace ns3 {
  * \brief Packet header for PPP
  *
  * This class can be used to add a header to PPP packet.  Currently we do not
- * implement any of the state machine in RFC 1661, we just encapsulate the
+ * implement any of the state machine in \RFC{1661}, we just encapsulate the
  * inbound packet send it on.  The goal here is not really to implement the
  * point-to-point protocol, but to encapsulate our packets in a known protocol
  * so packet sniffers can parse them.
@@ -65,12 +65,11 @@ public:
   virtual void Serialize (Buffer::Iterator start) const;
   virtual uint32_t Deserialize (Buffer::Iterator start);
   virtual uint32_t GetSerializedSize (void) const;
-  static uint32_t GetStaticSize (void);
 
   /**
    * \brief Set the protocol type carried by this PPP packet
    *
-   * The type numbers to be used are defined in RFC3818
+   * The type numbers to be used are defined in \RFC{3818}
    *
    * \param protocol the protocol type being carried
    */
@@ -79,7 +78,7 @@ public:
   /**
    * \brief Get the protocol type carried by this PPP packet
    *
-   * The type numbers to be used are defined in RFC3818
+   * The type numbers to be used are defined in \RFC{3818}
    *
    * \return the protocol type being carried
    */

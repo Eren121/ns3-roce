@@ -34,7 +34,8 @@ NS_LOG_COMPONENT_DEFINE ("WifiNetDevice");
 
 namespace ns3 {
 
-NS_OBJECT_ENSURE_REGISTERED (WifiNetDevice);
+NS_OBJECT_ENSURE_REGISTERED (WifiNetDevice)
+  ;
 
 TypeId
 WifiNetDevice::GetTypeId (void)
@@ -96,12 +97,12 @@ WifiNetDevice::DoDispose (void)
 }
 
 void
-WifiNetDevice::DoStart (void)
+WifiNetDevice::DoInitialize (void)
 {
-  m_phy->Start ();
-  m_mac->Start ();
-  m_stationManager->Start ();
-  NetDevice::DoStart ();
+  m_phy->Initialize ();
+  m_mac->Initialize ();
+  m_stationManager->Initialize ();
+  NetDevice::DoInitialize ();
 }
 
 void

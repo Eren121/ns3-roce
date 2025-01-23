@@ -38,8 +38,10 @@ namespace flame {
 //-----------------------------------------------------------------------------
 // FlameTag
 //-----------------------------------------------------------------------------
-NS_OBJECT_ENSURE_REGISTERED (FlameTag);
-NS_OBJECT_ENSURE_REGISTERED (FlameProtocol);
+NS_OBJECT_ENSURE_REGISTERED (FlameTag)
+  ;
+NS_OBJECT_ENSURE_REGISTERED (FlameProtocol)
+  ;
 
 TypeId
 FlameTag::GetTypeId ()
@@ -305,7 +307,7 @@ FlameProtocol::Install (Ptr<MeshPointDevice> mp)
           return false;
         }
       // Installing plugins:
-      Ptr<FlameProtocolMac> flameMac = Create<FlameProtocolMac> (wifiNetDev->GetIfIndex (), this);
+      Ptr<FlameProtocolMac> flameMac = Create<FlameProtocolMac> (this);
       m_interfaces[wifiNetDev->GetIfIndex ()] = flameMac;
       mac->SetBeaconGeneration (false);
       mac->InstallPlugin (flameMac);

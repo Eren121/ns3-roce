@@ -27,7 +27,8 @@
 
 namespace ns3 {
 
-NS_LOG_COMPONENT_DEFINE ("LiIonEnergySourceTestSuite");
+NS_LOG_COMPONENT_DEFINE ("LiIonEnergySourceTestSuite")
+  ;
 
 class LiIonEnergyTestCase : public TestCase
 {
@@ -87,7 +88,7 @@ public:
 LiIonEnergySourceTestSuite::LiIonEnergySourceTestSuite ()
   : TestSuite ("li-ion-energy-source", UNIT)
 {
-  AddTestCase (new LiIonEnergyTestCase);
+  AddTestCase (new LiIonEnergyTestCase, TestCase::QUICK);
 }
 
 // create an instance of the test suite

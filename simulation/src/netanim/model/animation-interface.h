@@ -14,6 +14,7 @@
  *
  * Author: George F. Riley<riley@ece.gatech.edu>
  * Author: John Abraham <john.abraham@gatech.edu>
+ * Contributions: Eugene Kalishenko <ydginster@gmail.com> (Open Source and Linux Laboratory http://dev.osll.ru/)
  */
 
 // Interface between ns3 and the network animator
@@ -22,7 +23,7 @@
 #define ANIMATION_INTERFACE__H
 
 #include <string>
-#include <stdio.h>
+#include <cstdio>
 #include <map>
 #include "ns3/ptr.h"
 #include "ns3/net-device.h"
@@ -38,6 +39,7 @@
 #include "ns3/lte-ue-net-device.h"
 #include "ns3/lte-enb-net-device.h"
 #include "ns3/uan-phy-gen.h"
+#include "ns3/rectangle.h"
 
 namespace ns3 {
 
@@ -58,7 +60,7 @@ typedef struct
 
 struct LinkPairCompare
 {
-  bool operator () (const P2pLinkNodeIdPair &first, const P2pLinkNodeIdPair &second) const
+  bool operator () (P2pLinkNodeIdPair first, P2pLinkNodeIdPair second) const
     {
       //Check if they are the same node pairs but flipped
       if (  ((first.fromNode == second.fromNode) && (first.toNode == second.toNode)) ||
@@ -75,8 +77,20 @@ struct LinkPairCompare
    
 };
 
+struct Ipv4RouteTrackElement {
+  std::string destination;
+  uint32_t fromNodeId;
+};
+
+
+typedef struct {
+  uint32_t nodeId;
+  std::string nextHop;
+  
+} Ipv4RoutePathElement;
+
 /**
- * \defgroup netanim Netanim
+ * \defgroup netanim Network Animation
  *
  * This section documents the API of the ns-3 netanim module. For a generic functional description, please refer to the ns-3 manual.
  */
@@ -114,33 +128,38 @@ public:
   ~AnimationInterface ();
 
   /**
+   * \brief Enable tracking of the Ipv4 routing table for all Nodes
+   *
+   * \param fileName Trace file for storing routing table information 
+   * \param startTime Start time for capture
+   * \param stopTime  End time for capture
+   * \param pollInterval The periodic interval at which routing table information is polled
+   *        Default: 5s
+   *
+   * \returns reference to this AnimationInterface object
+   */
+  AnimationInterface & EnableIpv4RouteTracking (std::string fileName, Time startTime, Time stopTime, Time pollInterval = Seconds (5));
+
+  /**
+   * \brief Enable tracking of the Ipv4 routing table for a set of Nodes
+   *
+   * \param fileName Trace file for storing routing table information
+   * \param startTime Start time for capture
+   * \param stopTime  End time for capture
+   * \param nc A NodeContainer containing nodes for which Routing table has to be tracked
+   * \param pollInterval The periodic interval at which routing table information is polled
+   *        Default: 5s
+   *
+   * \returns reference to this AnimationInterface object
+   */
+  AnimationInterface & EnableIpv4RouteTracking (std::string fileName, Time startTime, Time stopTime, NodeContainer nc, Time pollInterval = Seconds (5));
+
+  /**
    * \brief Check if AnimationInterface is initialized
    * \returns true if AnimationInterface was already initialized
    *
    */
   static bool IsInitialized (void);
-
-  /**
-   * \brief Specify that animation commands are to be written
-   * to the specified output file.
-   *
-   * This call is used to write the animation information to a text
-   * file that can later be used as input to the network animator tool.
-   *
-   * \param fn The name of the output file.
-   * \returns true if successful open.
-   *
-   */
-  bool SetOutputFile (const std::string& fn);
-
-  /**
-   * \brief Specify that animation commands are to be written
-   * in XML format.
-   *
-   * \returns none
-   *
-   */
-  void SetXMLOutput ();
 
   /**
    * \brief Specify the time at which capture should start
@@ -159,25 +178,6 @@ public:
    * \returns none
    */
   void SetStopTime (Time t);
-
-  /**
-   * \brief Writes the topology information and sets up the appropriate
-   *  animation packet tx callback
-   *
-   * Writes the topology information to the appropriate output, depending
-   * on prior calls to SetOutputFile, SetServerPort, or SetInternalAnimation.
-   * Then creates the callbacks needed for the animator to start processing
-   * packets.
-   * 
-   * \param restart True when restarting animation
-   */
-  void StartAnimation (bool restart = false);
-
-  /**
-   * \brief Closes the interface to the animator.
-   *
-   */
-  void StopAnimation ();
 
   /**
    * \brief Set mobility poll interval:WARNING: setting a low interval can 
@@ -228,6 +228,16 @@ public:
    *
    */
   static void SetConstantPosition (Ptr <Node> n, double x, double y, double z=0);
+
+  /**
+   * \brief Helper function to set the topology boundary rectangle
+   * \param minX X value of the lower left corner
+   * \param minY Y value of the lower left corner
+   * \param maxX X value of the upper right corner
+   * \param maxY Y value of the upper right corner
+   *
+   */
+  static void SetBoundary (double minX, double minY, double maxX, double maxY);
 
   /**
    * \brief Helper function to set a brief description for a given node
@@ -311,7 +321,7 @@ public:
 
   /**
    * \brief Helper function to set the color of nodes in a container
-   * \param n Ptr to the node
+   * \param nc A Node Container of Nodes 
    * \param r Red component value (0-255)
    * \param g Green component value (0-255)
    * \param b Blue component value (0-255)
@@ -368,6 +378,14 @@ public:
   void UpdateLinkDescription (Ptr <Node> fromNode, Ptr <Node> toNode,
                               std::string linkDescription);
 
+  /**
+   * \brief Helper function to print the routing path from a source node to destination IP
+   * \param fromNodeId The source node
+   * \param destinationIpv4Address The destination Ipv4 Address 
+   *
+   * \returns reference to this AnimationInterface object
+   */
+  AnimationInterface & AddSourceDestination (uint32_t fromNodeId, std::string destinationIpv4Address);
 
   /**
    * \brief Is AnimationInterface started
@@ -377,21 +395,12 @@ public:
   bool IsStarted (void);
 
   /**
-   * \brief Show all 802.11 frames. Default: show only frames accepted by mac layer
-   * \param showAll if true shows all 802.11 frames including beacons, association
-   *  request and acks (very chatty). if false only frames accepted by mac layer
-   *
-   */
-  void ShowAll802_11 (bool showAll); 
-
-  /**
    *
    * \brief Enable Packet metadata
    * \param enable if true enables writing the packet metadata to the XML trace file
    *        if false disables writing the packet metadata
    */
   void EnablePacketMetadata (bool enable);
-
 
   /**
    *
@@ -401,6 +410,15 @@ public:
    *
    */
   uint64_t GetTracePktCount ();
+
+  /**
+   *
+   * \brief Get node's energy fraction (This used only for testing)
+   *
+   * returns current node's remaining energy (between [0, 1])
+   *
+   */
+  double GetNodeEnergyFraction (Ptr <const Node> node) const;
 
  /**
   * Assign a fixed random variable stream number to the random variables
@@ -413,9 +431,10 @@ public:
   int64_t AssignStreams (int64_t stream);
 
 private:
-  FILE * m_f; // File handle for output (-1 if none)
+  FILE * m_f; // File handle for output (0 if none)
+  FILE * m_routingF; // File handle for routing table output (0 if None);
   // Write specified amount of data to the specified handle
-  int WriteN (const char*, uint32_t);
+  int WriteN (const char*, uint32_t, FILE * f);
   bool m_xml;      // True if xml format desired
   Time m_mobilityPollInterval;
   std::string m_outputFileName;
@@ -429,6 +448,56 @@ private:
   Time m_stopTime;
   uint64_t m_maxPktsPerFile;
   std::string m_originalFileName;
+  Time m_routingStopTime;
+  std::string m_routingFileName;
+  Time m_routingPollInterval;
+  NodeContainer m_routingNc;
+  
+  void TrackIpv4Route ();
+  void TrackIpv4RoutePaths ();
+  std::string GetIpv4RoutingTable (Ptr <Node> n);
+
+  /**
+   * \brief Specify that animation commands are to be written
+   * to the specified output file.
+   *
+   * This call is used to write the animation information to a text
+   * file that can later be used as input to the network animator tool.
+   *
+   * \param fn The name of the output file.
+   * \returns true if successful open.
+   *
+   */
+  bool SetOutputFile (const std::string& fn);
+  bool SetRoutingOutputFile (const std::string& fn);
+
+  /**
+   * \brief Specify that animation commands are to be written
+   * in XML format.
+   *
+   * \returns none
+   *
+   */
+  void SetXMLOutput ();
+
+  /**
+   * \brief Writes the topology information and sets up the appropriate
+   *  animation packet tx callback
+   *
+   * Writes the topology information to the appropriate output, depending
+   * on prior calls to SetOutputFile, SetServerPort, or SetInternalAnimation.
+   * Then creates the callbacks needed for the animator to start processing
+   * packets.
+   *
+   * \param restart True when restarting animation
+   */
+  void StartAnimation (bool restart = false);
+
+  /**
+   * \brief Closes the interface to the animator.
+   *
+   */
+  void StopAnimation (bool onlyAnimation = false);
 
   void DevTxTrace (std::string context,
                    Ptr<const Packet> p,
@@ -483,10 +552,12 @@ private:
   void UanPhyGenRxTrace (std::string context,
                          Ptr<const Packet>);
 
+  void RemainingEnergyTrace (std::string context, double previousEnergy, double currentEnergy);
+
   void MobilityCourseChangeTrace (Ptr <const MobilityModel> mob);
 
   // Write a string to the specified handle;
-  int  WriteN (const std::string&);
+  int  WriteN (const std::string&, FILE * f);
 
   void OutputWirelessPacket (Ptr<const Packet> p, AnimPacketInfo& pktInfo, AnimRxInfo pktrxInfo);
   void OutputCsmaPacket (Ptr<const Packet> p, AnimPacketInfo& pktInfo, AnimRxInfo pktrxInfo);
@@ -521,7 +592,6 @@ private:
   Vector UpdatePosition (Ptr <Node> n, Vector v);
   void WriteDummyPacket ();
   bool NodeHasMoved (Ptr <Node> n, Vector newLocation);
-  void AddMargin ();
 
   void PurgePendingWifi ();
   void PurgePendingWimax ();
@@ -539,20 +609,35 @@ private:
 
   
   std::map <std::string, uint32_t> m_macToNodeIdMap;
+  std::map <std::string, uint32_t> m_ipv4ToNodeIdMap;
+  void AddToIpv4AddressNodeIdTable (std::string, uint32_t);
+  std::vector <Ipv4RouteTrackElement> m_ipv4RouteTrackElements;
+  typedef std::vector <Ipv4RoutePathElement> Ipv4RoutePathElements;
+  void RecursiveIpv4RoutePathSearch (std::string fromIpv4, std::string toIpv4, Ipv4RoutePathElements &);
+  void WriteRoutePath (uint32_t nodeId, std::string destination, Ipv4RoutePathElements rpElements);
   bool IsInTimeWindow ();
 
   // Path helper
-  std::vector<std::string> GetElementsFromContext (std::string context);
+  const std::vector<std::string> GetElementsFromContext (const std::string& context) const;
+  Ptr <Node> GetNodeFromContext (const std::string& context) const;
   Ptr <NetDevice> GetNetDeviceFromContext (std::string context);
+
+  typedef std::map <uint32_t, double> EnergyFractionMap;
 
   static std::map <uint32_t, Rgb> nodeColors;
   static std::map <uint32_t, std::string> nodeDescriptions;
   static std::map <P2pLinkNodeIdPair, LinkProperties, LinkPairCompare> linkProperties;
+  EnergyFractionMap m_nodeEnergyFraction;
   uint64_t m_currentPktCount;
 
-  void StartNewTraceFile();
+  void StartNewTraceFile ();
 
+  std::string GetMacAddress (Ptr <NetDevice> nd);
   std::string GetIpv4Address (Ptr <NetDevice> nd);
+  void WriteNonP2pLinkProperties (uint32_t id, std::string ipv4Address, std::string channelType);
+
+  void WriteNodeUpdate (uint32_t nodeId);
+
   std::string GetNetAnimVersion ();
 
   // XML helpers
@@ -562,6 +647,7 @@ private:
   double m_topoMinY;
   double m_topoMaxX;
   double m_topoMaxY;
+  static Rectangle * userBoundary;
 
   std::string GetPacketMetadata (Ptr<const Packet> p);
 
@@ -573,10 +659,19 @@ private:
   std::string GetXMLOpenClose_link (uint32_t fromLp, uint32_t fromId, uint32_t toLp, uint32_t toId);
   std::string GetXMLOpenClose_linkupdate (uint32_t fromId, uint32_t toId, std::string);
   std::string GetXMLOpen_packet (uint32_t fromLp, uint32_t fromId, double fbTx, double lbTx, std::string auxInfo = "");
+  std::string GetXMLOpenClose_p (std::string pktType, uint32_t fId, double fbTx, double lbTx, uint32_t tId, double fbRx, double lbRx,
+                                 std::string metaInfo = "", std::string auxInfo = "");
   std::string GetXMLOpenClose_rx (uint32_t toLp, uint32_t toId, double fbRx, double lbRx);
   std::string GetXMLOpen_wpacket (uint32_t fromLp, uint32_t fromId, double fbTx, double lbTx, double range);
   std::string GetXMLClose (std::string name) {return "</" + name + ">\n"; }
   std::string GetXMLOpenClose_meta (std::string metaInfo);
+  std::string GetXMLOpenClose_NonP2pLinkProperties (uint32_t id, std::string ipv4Address, std::string channelType);
+  std::string GetXMLOpenClose_routing (uint32_t id, std::string routingInfo);
+  std::string GetXMLOpenClose_rp (uint32_t nodeId, std::string destination, Ipv4RoutePathElements rpElements);
+
+  void AppendXMLNodeDescription (std::ostream& ostream, uint32_t id) const;
+  void AppendXMLNodeColor (std::ostream& ostream, const Rgb& color) const;
+  void AppendXMLRemainingEnergy (std::ostream& ostream, uint32_t id) const;
 
   /// Provides uniform random variables.
   Ptr<UniformRandomVariable> m_uniformRandomVariable;  

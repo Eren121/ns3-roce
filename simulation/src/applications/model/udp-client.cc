@@ -28,18 +28,17 @@
 #include "ns3/socket-factory.h"
 #include "ns3/packet.h"
 #include "ns3/uinteger.h"
-#include "ns3/random-variable.h"
-#include "ns3/qbb-net-device.h"
-#include "ns3/ipv4-end-point.h"
 #include "udp-client.h"
-#include "ns3/seq-ts-header.h"
-#include <stdlib.h>
-#include <stdio.h>
+#include "seq-ts-header.h"
+#include <cstdlib>
+#include <cstdio>
 
 namespace ns3 {
 
-NS_LOG_COMPONENT_DEFINE ("UdpClient");
-NS_OBJECT_ENSURE_REGISTERED (UdpClient);
+NS_LOG_COMPONENT_DEFINE ("UdpClient")
+  ;
+NS_OBJECT_ENSURE_REGISTERED (UdpClient)
+  ;
 
 TypeId
 UdpClient::GetTypeId (void)
@@ -57,30 +56,26 @@ UdpClient::GetTypeId (void)
                    MakeTimeAccessor (&UdpClient::m_interval),
                    MakeTimeChecker ())
     .AddAttribute ("RemoteAddress",
-					"The destination Address of the outbound packets",
-					AddressValue (),
-					MakeAddressAccessor (&UdpClient::m_peerAddress),
-					MakeAddressChecker ())
+                   "The destination Address of the outbound packets",
+                   AddressValue (),
+                   MakeAddressAccessor (&UdpClient::m_peerAddress),
+                   MakeAddressChecker ())
     .AddAttribute ("RemotePort", "The destination port of the outbound packets",
                    UintegerValue (100),
                    MakeUintegerAccessor (&UdpClient::m_peerPort),
                    MakeUintegerChecker<uint16_t> ())
-	.AddAttribute ("PriorityGroup", "The priority group of this flow",
-				   UintegerValue (0),
-				   MakeUintegerAccessor (&UdpClient::m_pg),
-				   MakeUintegerChecker<uint16_t> ())
     .AddAttribute ("PacketSize",
-                   "Size of packets generated. The minimum packet size is 14 bytes which is the size of the header carrying the sequence number and the time stamp.",
+                   "Size of packets generated. The minimum packet size is 12 bytes which is the size of the header carrying the sequence number and the time stamp.",
                    UintegerValue (1024),
                    MakeUintegerAccessor (&UdpClient::m_size),
-                   MakeUintegerChecker<uint32_t> (14,1500))
+                   MakeUintegerChecker<uint32_t> (12,1500))
   ;
   return tid;
 }
 
 UdpClient::UdpClient ()
 {
-  NS_LOG_FUNCTION_NOARGS ();
+  NS_LOG_FUNCTION (this);
   m_sent = 0;
   m_socket = 0;
   m_sendEvent = EventId ();
@@ -88,12 +83,13 @@ UdpClient::UdpClient ()
 
 UdpClient::~UdpClient ()
 {
-  NS_LOG_FUNCTION_NOARGS ();
+  NS_LOG_FUNCTION (this);
 }
 
 void
 UdpClient::SetRemote (Ipv4Address ip, uint16_t port)
 {
+  NS_LOG_FUNCTION (this << ip << port);
   m_peerAddress = Address(ip);
   m_peerPort = port;
 }
@@ -101,6 +97,7 @@ UdpClient::SetRemote (Ipv4Address ip, uint16_t port)
 void
 UdpClient::SetRemote (Ipv6Address ip, uint16_t port)
 {
+  NS_LOG_FUNCTION (this << ip << port);
   m_peerAddress = Address(ip);
   m_peerPort = port;
 }
@@ -108,6 +105,7 @@ UdpClient::SetRemote (Ipv6Address ip, uint16_t port)
 void
 UdpClient::SetRemote (Address ip, uint16_t port)
 {
+  NS_LOG_FUNCTION (this << ip << port);
   m_peerAddress = ip;
   m_peerPort = port;
 }
@@ -115,14 +113,14 @@ UdpClient::SetRemote (Address ip, uint16_t port)
 void
 UdpClient::DoDispose (void)
 {
-  NS_LOG_FUNCTION_NOARGS ();
+  NS_LOG_FUNCTION (this);
   Application::DoDispose ();
 }
 
 void
 UdpClient::StartApplication (void)
 {
-  NS_LOG_FUNCTION_NOARGS ();
+  NS_LOG_FUNCTION (this);
 
   if (m_socket == 0)
     {
@@ -140,108 +138,56 @@ UdpClient::StartApplication (void)
         }
     }
 
-  m_socket->SetRecvCallback (MakeCallback (&UdpClient::Reset, this));
+  m_socket->SetRecvCallback (MakeNullCallback<void, Ptr<Socket> > ());
   m_sendEvent = Simulator::Schedule (Seconds (0.0), &UdpClient::Send, this);
-  m_allowed = m_count;
 }
 
 void
-UdpClient::StopApplication ()
+UdpClient::StopApplication (void)
 {
-  NS_LOG_FUNCTION_NOARGS ();
+  NS_LOG_FUNCTION (this);
   Simulator::Cancel (m_sendEvent);
 }
 
 void
 UdpClient::Send (void)
 {
-  NS_LOG_FUNCTION_NOARGS ();
+  NS_LOG_FUNCTION (this);
   NS_ASSERT (m_sendEvent.IsExpired ());
+  SeqTsHeader seqTs;
+  seqTs.SetSeq (m_sent);
+  Ptr<Packet> p = Create<Packet> (m_size-(8+4)); // 8+4 : the size of the seqTs header
+  p->AddHeader (seqTs);
 
-  //Yibo: optimize!!!
-  Ptr<Node> node = GetNode();
-  uint32_t dn = node->GetNDevices();
-  double next_avail=10;
-  bool found=false;
-
-  for (uint32_t i=0;i<dn;i++)
-  {
-	  Ptr<NetDevice> d = node->GetDevice(i);
-	  uint32_t localp=m_socket->GetLocalPort();
-	  
-	  //std::cout<<localp<<"\n";
-	  uint32_t buffer = d->GetUsedBuffer(localp,m_pg);
-	  double tmp = (buffer*8.0-1500*8.0)/40/1000000000*0.95; //0.95 is for conservative. assuming 40Gbps link.
-	  if (tmp<next_avail && tmp>0)
-	  {
-		  next_avail = tmp;
-		  found = true;
-	  }
-	      //std::cout<<tmp<<"\n";
-  }
-  if (!found)
-  {
-	  next_avail=0;
-  }
-  
-  next_avail = next_avail>m_interval.GetSeconds()?next_avail:m_interval.GetSeconds();
-  //next_avail = m_interval.GetSeconds();
-
-  if (next_avail < 0.000005)
-  {
-	  SeqTsHeader seqTs;
-	  seqTs.SetSeq (m_sent);
-	  seqTs.SetPG (m_pg);
-	  //Ptr<Packet> p = Create<Packet> (m_size-14-10); // 14 : the size of the seqTs header, 10: the size of qbb header
-	  Ptr<Packet> p = Create<Packet> (m_size);
-	  p->AddHeader (seqTs);
-
-	  std::stringstream peerAddressStringStream;
-	  if (Ipv4Address::IsMatchingType (m_peerAddress))
-	  {
-		  peerAddressStringStream << Ipv4Address::ConvertFrom (m_peerAddress);
-	  }
-	  else if (Ipv6Address::IsMatchingType (m_peerAddress))
-	  {
-		  peerAddressStringStream << Ipv6Address::ConvertFrom (m_peerAddress);
-	  }
-
-	  if ((m_socket->Send (p)) >= 0)
-	  {
-		  ++m_sent;
-		  NS_LOG_INFO ("TraceDelay TX " << m_size << " bytes to "
-			  << peerAddressStringStream.str () << " Uid: "
-			  << p->GetUid () << " Time: "
-			  << (Simulator::Now ()).GetSeconds ());
-
-	  }
-	  else
-	  {
-		  NS_LOG_INFO ("Error while sending " << m_size << " bytes to "
-			  << peerAddressStringStream.str ());
-	  }
-  }
-
-  //Yibo: add jitter here to avoid unfairness!!!!!
-  if (m_sent < m_allowed)
+  std::stringstream peerAddressStringStream;
+  if (Ipv4Address::IsMatchingType (m_peerAddress))
     {
-      m_sendEvent = Simulator::Schedule (Seconds(next_avail * UniformVariable(0.45,0.55).GetValue()), &UdpClient::Send, this);
+      peerAddressStringStream << Ipv4Address::ConvertFrom (m_peerAddress);
+    }
+  else if (Ipv6Address::IsMatchingType (m_peerAddress))
+    {
+      peerAddressStringStream << Ipv6Address::ConvertFrom (m_peerAddress);
     }
 
-}
+  if ((m_socket->Send (p)) >= 0)
+    {
+      ++m_sent;
+      NS_LOG_INFO ("TraceDelay TX " << m_size << " bytes to "
+                                    << peerAddressStringStream.str () << " Uid: "
+                                    << p->GetUid () << " Time: "
+                                    << (Simulator::Now ()).GetSeconds ());
 
-void 
-UdpClient::SetPG (uint16_t pg)
-{
-	m_pg = pg;
-	return;
-}
+    }
+  else
+    {
+      NS_LOG_INFO ("Error while sending " << m_size << " bytes to "
+                                          << peerAddressStringStream.str ());
+    }
 
-void
-UdpClient::Reset(Ptr<Socket> socket)
-{
-	m_allowed += m_count;
-	Send();
+  if (m_sent < m_count)
+    {
+      m_sendEvent = Simulator::Schedule (m_interval, &UdpClient::Send, this);
+    }
 }
 
 } // Namespace ns3

@@ -26,7 +26,8 @@
 
 namespace ns3 {
 namespace dot11s {
-NS_OBJECT_ENSURE_REGISTERED (PeerLinkFrameStart);
+NS_OBJECT_ENSURE_REGISTERED (PeerLinkFrameStart)
+  ;
 
 PeerLinkFrameStart::PeerLinkFrameStart () :
   m_subtype (255), m_capability (0), m_aid (0), m_rates (SupportedRates ()), m_meshId (),
@@ -72,7 +73,7 @@ PeerLinkFrameStart::PlinkFrameStartFields
 PeerLinkFrameStart::GetFields () const
 {
   PlinkFrameStartFields retval;
-  //TODO: protocol version:
+  /// \todo protocol version:
   retval.subtype = m_subtype;
   retval.capability = m_capability;
   retval.aid = m_aid;

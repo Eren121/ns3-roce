@@ -31,7 +31,8 @@
 
 namespace ns3 {
 
-NS_LOG_COMPONENT_DEFINE ("Kun2600MhzPropagationLossModelTest");
+NS_LOG_COMPONENT_DEFINE ("Kun2600MhzPropagationLossModelTest")
+  ;
 
 
 class Kun2600MhzPropagationLossModelTestCase : public TestCase
@@ -105,7 +106,7 @@ Kun2600MhzPropagationLossModelTestSuite::Kun2600MhzPropagationLossModelTestSuite
 
   LogComponentEnable ("Kun2600MhzPropagationLossModelTest", LOG_LEVEL_ALL);
 
-  AddTestCase (new Kun2600MhzPropagationLossModelTestCase (2000, 30, 1,  121.83, "dist=2000m"));
+  AddTestCase (new Kun2600MhzPropagationLossModelTestCase (2000, 30, 1,  121.83, "dist=2000m"), TestCase::QUICK);
 
 
 }

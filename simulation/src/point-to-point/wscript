@@ -2,7 +2,7 @@
 
 
 def build(bld):
-    module = bld.create_ns3_module('point-to-point', ['internet','network', 'mpi'])
+    module = bld.create_ns3_module('point-to-point', ['network', 'mpi'])
     module.source = [
         'model/point-to-point-net-device.cc',
         'model/point-to-point-channel.cc',
@@ -23,7 +23,7 @@ def build(bld):
         'model/point-to-point-channel.h',
         'model/point-to-point-remote-channel.h',
         'model/ppp-header.h',
-        'helper/point-to-point-helper.h'
+        'helper/point-to-point-helper.h',
         ]
 
     if (bld.env['ENABLE_EXAMPLES']):

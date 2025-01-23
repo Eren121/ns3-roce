@@ -3,7 +3,7 @@
 #include "ns3/double.h"
 #include "ns3/test.h"
 
-namespace ns3 {
+using namespace ns3;
 
 //-----------------------------------------------------------------------------
 // Unit tests
@@ -58,9 +58,8 @@ BufferTest::EnsureWrittenBytes (Buffer b, uint32_t n, uint8_t array[], const cha
     }
 }
 
-/* Note: works only when variadic macros are
+/** \todo Works only when variadic macros are
  * available which is the case for gcc.
- * XXX
  */
 #define ENSURE_WRITTEN_BYTES(buffer, n, ...)                    \
   {                                                             \
@@ -244,7 +243,8 @@ BufferTest::DoRun (void)
   i.Prev (100);
   i.WriteU8 (1, 100);
 
-  // Bug #54
+  /// \internal
+  /// See \bugid{54}
   {
     const uint32_t actualSize = 72602;
     const uint32_t chunkSize = 67624;
@@ -302,7 +302,7 @@ BufferTest::DoRun (void)
   i.Write (buffer.Begin (), buffer.End ());
   ENSURE_WRITTEN_BYTES (other, 9, 0x1, 0x2, 0x00, 0x00, 0x00, 0x00, 0x00, 0x3, 0x4);
 
-  // BUG #1001
+  /// \internal See \bugid{1001}
   std::string ct ("This is the next content of the buffer.");
   buffer = Buffer ();
   buffer.AddAtStart (ct.size ());
@@ -332,9 +332,7 @@ public:
 BufferTestSuite::BufferTestSuite ()
   : TestSuite ("buffer", UNIT)
 {
-  AddTestCase (new BufferTest);
+  AddTestCase (new BufferTest, TestCase::QUICK);
 }
 
 static BufferTestSuite g_bufferTestSuite;
-
-} // namespace ns3

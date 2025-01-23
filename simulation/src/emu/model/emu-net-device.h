@@ -19,7 +19,8 @@
 #ifndef EMU_NET_DEVICE_H
 #define EMU_NET_DEVICE_H
 
-#include <string.h>
+#include <cstring>
+
 #include "ns3/address.h"
 #include "ns3/net-device.h"
 #include "ns3/node.h"
@@ -39,7 +40,7 @@ namespace ns3 {
 class Queue;
 
 /**
- * \defgroup emu EmuNetDevice
+ * \defgroup emu Emu Network Device
  * This section documents the API of the ns-3 emu module. For a generic functional description, please refer to the ns-3 manual.
  */
 
@@ -145,7 +146,7 @@ public:
    * \brief Make and return a MAC multicast address using the provided
    *        multicast group
    *
-   * RFC 1112 says that an Ipv4 host group address is mapped to an Ethernet 
+   * \RFC{1112} says that an Ipv4 host group address is mapped to an Ethernet 
    * multicast address by placing the low-order 23-bits of the IP address into 
    * the low-order 23 bits of the Ethernet multicast address 
    * 01-00-5E-00-00-00 (hex).

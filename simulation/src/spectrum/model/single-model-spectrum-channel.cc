@@ -44,7 +44,8 @@ NS_LOG_COMPONENT_DEFINE ("SingleModelSpectrumChannel");
 namespace ns3 {
 
 
-NS_OBJECT_ENSURE_REGISTERED (SingleModelSpectrumChannel);
+NS_OBJECT_ENSURE_REGISTERED (SingleModelSpectrumChannel)
+  ;
 
 SingleModelSpectrumChannel::SingleModelSpectrumChannel ()
 {
@@ -172,7 +173,7 @@ SingleModelSpectrumChannel::StartTx (Ptr<SpectrumSignalParameters> txParams)
                   // beyond range
                   continue;
                 }
-              double pathGainLinear = pow (10.0, (-pathLossDb) / 10.0);
+              double pathGainLinear = std::pow (10.0, (-pathLossDb) / 10.0);
               *(rxParams->psd) *= pathGainLinear;              
 
               if (m_spectrumPropagationLoss)

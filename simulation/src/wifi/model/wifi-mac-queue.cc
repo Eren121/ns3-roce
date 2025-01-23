@@ -19,6 +19,7 @@
  * Author: Mathieu Lacage <mathieu.lacage@sophia.inria.fr>
  * Author: Mirko Banchi <mk.banchi@gmail.com>
  */
+
 #include "ns3/simulator.h"
 #include "ns3/packet.h"
 #include "ns3/uinteger.h"
@@ -26,11 +27,10 @@
 #include "wifi-mac-queue.h"
 #include "qos-blocked-destinations.h"
 
-using namespace std;
-
 namespace ns3 {
 
-NS_OBJECT_ENSURE_REGISTERED (WifiMacQueue);
+NS_OBJECT_ENSURE_REGISTERED (WifiMacQueue)
+  ;
 
 WifiMacQueue::Item::Item (Ptr<const Packet> packet,
                           const WifiMacHeader &hdr,
@@ -168,7 +168,6 @@ WifiMacQueue::DequeueByTidAndAddress (WifiMacHeader *hdr, uint8_t tid,
   if (!m_queue.empty ())
     {
       PacketQueueI it;
-      NS_ASSERT (type <= 4);
       for (it = m_queue.begin (); it != m_queue.end (); ++it)
         {
           if (it->hdr.IsQosData ())
@@ -196,7 +195,6 @@ WifiMacQueue::PeekByTidAndAddress (WifiMacHeader *hdr, uint8_t tid,
   if (!m_queue.empty ())
     {
       PacketQueueI it;
-      NS_ASSERT (type <= 4);
       for (it = m_queue.begin (); it != m_queue.end (); ++it)
         {
           if (it->hdr.IsQosData ())
@@ -289,7 +287,6 @@ WifiMacQueue::GetNPacketsByTidAndAddress (uint8_t tid, WifiMacHeader::AddressTyp
   if (!m_queue.empty ())
     {
       PacketQueueI it;
-      NS_ASSERT (type <= 4);
       for (it = m_queue.begin (); it != m_queue.end (); it++)
         {
           if (GetAddressForPacket (type, it) == addr)

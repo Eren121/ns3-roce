@@ -31,7 +31,8 @@ NS_LOG_COMPONENT_DEFINE ("TcpSocket");
 
 namespace ns3 {
 
-NS_OBJECT_ENSURE_REGISTERED (TcpSocket);
+NS_OBJECT_ENSURE_REGISTERED (TcpSocket)
+  ;
 
 const char* const TcpSocket::TcpStateName[LAST_STATE] = { "CLOSED", "LISTEN", "SYN_SENT", "SYN_RCVD", "ESTABLISHED", "CLOSE_WAIT", "LAST_ACK", "FIN_WAIT_1", "FIN_WAIT_2", "CLOSING", "TIME_WAIT" };
 
@@ -42,19 +43,19 @@ TcpSocket::GetTypeId (void)
     .SetParent<Socket> ()
     .AddAttribute ("SndBufSize",
                    "TcpSocket maximum transmit buffer size (bytes)",
-                   UintegerValue (4194304), // 4M
+                   UintegerValue (131072), // 128k
                    MakeUintegerAccessor (&TcpSocket::GetSndBufSize,
                                          &TcpSocket::SetSndBufSize),
                    MakeUintegerChecker<uint32_t> ())
     .AddAttribute ("RcvBufSize",
                    "TcpSocket maximum receive buffer size (bytes)",
-				   UintegerValue(4194304), // 4M
+                   UintegerValue (131072),
                    MakeUintegerAccessor (&TcpSocket::GetRcvBufSize,
                                          &TcpSocket::SetRcvBufSize),
                    MakeUintegerChecker<uint32_t> ())
     .AddAttribute ("SegmentSize",
                    "TCP maximum segment size in bytes (may be adjusted based on MTU discovery)",
-                   UintegerValue (988),
+                   UintegerValue (536),
                    MakeUintegerAccessor (&TcpSocket::GetSegSize,
                                          &TcpSocket::SetSegSize),
                    MakeUintegerChecker<uint32_t> ())
@@ -90,7 +91,7 @@ TcpSocket::GetTypeId (void)
                    MakeTimeChecker ())
     .AddAttribute ("DelAckCount",
                    "Number of packets to wait before sending a TCP ack",
-                   UintegerValue (0),
+                   UintegerValue (2),
                    MakeUintegerAccessor (&TcpSocket::GetDelAckMaxCount,
                                          &TcpSocket::SetDelAckMaxCount),
                    MakeUintegerChecker<uint32_t> ())
@@ -105,12 +106,6 @@ TcpSocket::GetTypeId (void)
                    MakeTimeAccessor (&TcpSocket::GetPersistTimeout,
                                      &TcpSocket::SetPersistTimeout),
                    MakeTimeChecker ())
-    .AddAttribute ("ECN",
-                   "ECN capability of TCP socket",
-                   BooleanValue (true),
-                   MakeBooleanAccessor (&TcpSocket::GetEcnCap,
-                                        &TcpSocket::SetEcnCap),
-                   MakeBooleanChecker ())
   ;
   return tid;
 }

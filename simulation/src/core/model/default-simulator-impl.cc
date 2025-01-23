@@ -38,7 +38,8 @@ NS_LOG_COMPONENT_DEFINE ("DefaultSimulatorImpl");
 
 namespace ns3 {
 
-NS_OBJECT_ENSURE_REGISTERED (DefaultSimulatorImpl);
+NS_OBJECT_ENSURE_REGISTERED (DefaultSimulatorImpl)
+  ;
 
 TypeId
 DefaultSimulatorImpl::GetTypeId (void)
@@ -65,9 +66,7 @@ DefaultSimulatorImpl::DefaultSimulatorImpl ()
   m_currentContext = 0xffffffff;
   m_unscheduledEvents = 0;
   m_eventsWithContextEmpty = true;
-#if HAVE_PTHREAD_H
   m_main = SystemThread::Self();
-#endif
 }
 
 DefaultSimulatorImpl::~DefaultSimulatorImpl ()
@@ -162,9 +161,7 @@ DefaultSimulatorImpl::ProcessEventsWithContext (void)
   // swap queues
   EventsWithContext eventsWithContext;
   {
-#ifdef HAVE_PTHREAD_H 
     CriticalSection cs (m_eventsWithContextMutex);
-#endif
     m_eventsWithContext.swap(eventsWithContext);
     m_eventsWithContextEmpty = true;
   }
@@ -188,9 +185,7 @@ DefaultSimulatorImpl::Run (void)
 {
   NS_LOG_FUNCTION (this);
   // Set the current threadId as the main threadId
-#ifdef HAVE_PTHREAD_H 
   m_main = SystemThread::Self();
-#endif
   ProcessEventsWithContext ();
   m_stop = false;
 
@@ -225,9 +220,8 @@ EventId
 DefaultSimulatorImpl::Schedule (Time const &time, EventImpl *event)
 {
   NS_LOG_FUNCTION (this << time.GetTimeStep () << event);
-#ifdef HAVE_PTHREAD_H 
   NS_ASSERT_MSG (SystemThread::Equals (m_main), "Simulator::Schedule Thread-unsafe invocation!");
-#endif
+
   Time tAbsolute = time + TimeStep (m_currentTs);
 
   NS_ASSERT (tAbsolute.IsPositive ());
@@ -243,7 +237,6 @@ DefaultSimulatorImpl::Schedule (Time const &time, EventImpl *event)
   return EventId (event, ev.key.m_ts, ev.key.m_context, ev.key.m_uid);
 }
 
-#ifdef HAVE_PTHREAD_H 
 void
 DefaultSimulatorImpl::ScheduleWithContext (uint32_t context, Time const &time, EventImpl *event)
 {
@@ -274,29 +267,11 @@ DefaultSimulatorImpl::ScheduleWithContext (uint32_t context, Time const &time, E
       }
     }
 }
-#else
-void
-DefaultSimulatorImpl::ScheduleWithContext (uint32_t context, Time const &time, EventImpl *event)
-{
-  NS_LOG_FUNCTION (this << context << time.GetTimeStep () << event);
-  Time tAbsolute = time + TimeStep (m_currentTs);
-  Scheduler::Event ev;
-  ev.impl = event;
-  ev.key.m_ts = (uint64_t) tAbsolute.GetTimeStep ();
-  ev.key.m_context = context;
-  ev.key.m_uid = m_uid;
-  m_uid++;
-  m_unscheduledEvents++;
-  m_events->Insert (ev);
-}
-#endif
 
 EventId
 DefaultSimulatorImpl::ScheduleNow (EventImpl *event)
 {
-#ifdef HAVE_PTHREAD_H 
   NS_ASSERT_MSG (SystemThread::Equals (m_main), "Simulator::ScheduleNow Thread-unsafe invocation!");
-#endif
 
   Scheduler::Event ev;
   ev.impl = event;
@@ -312,9 +287,8 @@ DefaultSimulatorImpl::ScheduleNow (EventImpl *event)
 EventId
 DefaultSimulatorImpl::ScheduleDestroy (EventImpl *event)
 {
-#ifdef HAVE_PTHREAD_H 
   NS_ASSERT_MSG (SystemThread::Equals (m_main), "Simulator::ScheduleDestroy Thread-unsafe invocation!");
-#endif
+
   EventId id (Ptr<EventImpl> (event, false), m_currentTs, 0xffffffff, 2);
   m_destroyEvents.push_back (id);
   m_uid++;

@@ -1,6 +1,7 @@
 EPSTOPDF = epstopdf
 DIA = dia
 SEQDIAG = seqdiag
+DOT = dot
 CONVERT = convert -density 250
 
 
@@ -10,18 +11,35 @@ FIGURES = $(SOURCE)/figures
 # specify dia figures from which .png and .pdf figures need to be built
 
 IMAGES_DIA = \
+	$(FIGURES)/epc-ctrl-arch.dia \
 	$(FIGURES)/epc-data-flow-dl.dia \
 	$(FIGURES)/epc-data-flow-ul.dia \
 	$(FIGURES)/epc-profiling-scenario.dia \
 	$(FIGURES)/epc-topology.dia \
+	$(FIGURES)/epc-topology-x2-enhanced.dia \
 	$(FIGURES)/eutran-profiling-scenario.dia \
 	$(FIGURES)/ff-example.dia \
 	$(FIGURES)/ff-mac-saps.dia \
-	$(FIGURES)/lte-arch-data-rrc-pdcp-rlc.dia \
-	$(FIGURES)/lte-enb-architecture.dia \
+	$(FIGURES)/lte-arch-enb-data.dia \
+	$(FIGURES)/lte-arch-enb-ctrl.dia \
+	$(FIGURES)/lte-arch-ue-data.dia \
+	$(FIGURES)/lte-arch-ue-ctrl.dia \
+	$(FIGURES)/lte-enb-phy.dia \
+	$(FIGURES)/lte-ue-phy.dia \
+	$(FIGURES)/lte-epc-x2-handover-seq-diagram.dia \
 	$(FIGURES)/lte-epc-e2e-data-protocol-stack.dia \
 	$(FIGURES)/lte-interference-test-scenario.dia \
-	$(FIGURES)/lte-ue-architecture.dia
+	$(FIGURES)/lte-subframe-structure.dia \
+	$(FIGURES)/lte-epc-x2-interface.dia \
+	$(FIGURES)/lte-harq-architecture.dia \
+	$(FIGURES)/lte-harq-processes-scheme.dia \
+	$(FIGURES)/ue-meas-consumer.dia \
+	$(FIGURES)/ue-meas-piecewise-motion.dia \
+	$(FIGURES)/ue-meas-piecewise-a1.dia \
+	$(FIGURES)/ue-meas-piecewise-a1-hys.dia \
+	$(FIGURES)/lte-cell-selection-timeline.dia \
+	$(FIGURES)/lte-cell-selection-scenario.dia \
+	$(FIGURES)/lte-handover-target-scenario.dia
 
 
 # specify eps figures from which .png and .pdf figures need to be built
@@ -42,38 +60,47 @@ IMAGES_EPS = \
 	$(FIGURES)/lte-rlc-data-txon-dl.eps \
 	$(FIGURES)/lte-rlc-data-retx-dl.eps \
 	$(FIGURES)/lte-rlc-data-txon-ul.eps \
-	$(FIGURES)/lte-rlc-data-retx-ul.eps 
-
+	$(FIGURES)/lte-rlc-data-retx-ul.eps \
+	$(FIGURES)/lte-epc-x2-entity-saps.eps \
+	$(FIGURES)/lte-strongest-cell-handover-algorithm.eps
 
 # rescale pdf figures as necessary
-$(FIGURES)/testbed.pdf_width = 5in
-$(FIGURES)/emulated-channel.pdf_width = 6in
-$(FIGURES)/node.pdf_width = 5in
-$(FIGURES)/packet.pdf_width = 4in
-$(FIGURES)/buffer.pdf_width = 15cm
-$(FIGURES)/sockets-overview.pdf_width = 10cm
-$(FIGURES)/internet-node-send.pdf_width = 5in
-$(FIGURES)/internet-node-recv.pdf_width = 5in
-$(FIGURES)/routing.pdf_width = 6in
-$(FIGURES)/routing-specialization.pdf_width = 5in
-$(FIGURES)/snir.pdf_width = 3in
 $(FIGURES)/lte-interference-test-scenario.pdf_width = 3in
+$(FIGURES)/epc-ctrl-arch.pdf_width = 8cm
 $(FIGURES)/epc-topology.pdf_width = 4in
+$(FIGURES)/epc-topology-x2-enhanced.pdf_width = 14cm
 $(FIGURES)/lte-arch-data-rrc-pdcp-rlc.pdf_width = 3in
 $(FIGURES)/lte-epc-e2e-data-protocol-stack.pdf_width = 15cm
 $(FIGURES)/ff-mac-saps.pdf_width = 5in
 $(FIGURES)/ff-example.pdf_width = 5in
+$(FIGURES)/lte-arch-enb-data.pdf_width = 6cm 
+$(FIGURES)/lte-arch-enb-ctrl.pdf_width = 10cm
+$(FIGURES)/lte-arch-ue-data.pdf_width = 6cm
+$(FIGURES)/lte-arch-ue-ctrl.pdf_width = 10cm
 $(FIGURES)/lte-rlc-implementation-model.pdf_width = 20in
 $(FIGURES)/lte-rlc-data-txon-dl.pdf_width = 10cm
 $(FIGURES)/lte-rlc-data-txon-ul.pdf_width = 10cm
 $(FIGURES)/lte-rlc-data-retx-ul.pdf_width = 10cm
 $(FIGURES)/lte-phy-interference.pdf_width = 12cm
-$(FIGURES)/auvmobility-classes.pdf_width = 10cm
-
+$(FIGURES)/lte-subframe-structure.pdf_width = 2in
+$(FIGURES)/mac-random-access-contention.pdf_width = 10cm
+$(FIGURES)/mac-random-access-noncontention.pdf_width = 15cm
+$(FIGURES)/helpers.pdf_width = 8cm
 
 IMAGES_SEQDIAG = \
 	$(FIGURES)/lte-phy-interference.seqdiag \
-	$(FIGURES)/helpers.seqdiag
+	$(FIGURES)/helpers.seqdiag \
+	$(FIGURES)/mac-random-access-contention.seqdiag \
+	$(FIGURES)/mac-random-access-noncontention.seqdiag \
+	$(FIGURES)/rrc-connection-establishment.seqdiag \
+	$(FIGURES)/rrc-connection-reconfiguration.seqdiag \
+	$(FIGURES)/rrc-connection-reconfiguration-handover.seqdiag \
+	$(FIGURES)/nas-attach.seqdiag 
+
+IMAGES_DOT = \
+	$(FIGURES)/lte-enb-rrc-states.dot \
+	$(FIGURES)/lte-ue-rrc-states.dot \
+	$(FIGURES)/lte-legacy-handover-algorithm.dot
 
 IMAGES_NOBUILD = $(FIGURES)/fading_pedestrian.png \
 	$(FIGURES)/fading_vehicular.png \
@@ -109,8 +136,13 @@ IMAGES_NOBUILD = $(FIGURES)/fading_pedestrian.png \
 	$(FIGURES)/helpers.pdf \
 	$(FIGURES)/miesm_scheme.pdf \
 	$(FIGURES)/miesm_scheme.png \
+	$(FIGURES)/lte-handover-campaign-rem.pdf \
+	$(FIGURES)/lte-handover-campaign-rem.png \
 	${IMAGES_SEQDIAG:.seqdiag=.png} \
-	${IMAGES_SEQDIAG:.seqdiag=.pdf}
+	${IMAGES_SEQDIAG:.seqdiag=.pdf} \
+	${IMAGES_DOT:.dot=.png} \
+	${IMAGES_DOT:.dot=.pdf} \
+
 
 IMAGES_BUILD = \
 	${IMAGES_DIA:.dia=.eps} \
@@ -123,22 +155,23 @@ IMAGES_BUILD = \
 
 IMAGES = $(IMAGES_NOBUILD) $(IMAGES_BUILD)
 
+RESCALE = ../../../utils/rescale-pdf.sh
+
 %.eps : %.dia; $(DIA) -t eps $< -e $@
 %.png : %.dia; $(DIA) -t png $< -e $@
-%.png : %.seqdiag; $(SEQDIAG) -Tpng -o $@ $< 
+%.png : %.seqdiag; $(SEQDIAG) -Tpng --no-transparency -o $@ $< 
+%.png : %.dot; $(DOT) -Tpng -o$@ $< 
 %.png : %.eps; $(CONVERT) $< $@
 %.pdf : %.seqdiag
 	$(SEQDIAG) -Tpdf -o $@ $<
-	if test x$($@_width) != x; then ./rescale-pdf.sh $($@_width) $@ ; fi
+	if test x$($@_width) != x; then $(RESCALE) $($@_width) $@ ; fi
+%.pdf : %.dot
+	$(DOT) -Tpdf -o $@ $<
+	if test x$($@_width) != x; then $(RESCALE) $($@_width) $@ ; fi
 %.pdf : %.eps
 	$(EPSTOPDF) $< -o=$@
-	if test x$($@_width) != x; ./rescale-pdf.sh $($@_width) $@ ; fi
+	if test x$($@_width) != x; then $(RESCALE) $($@_width) $@ ; fi
 
-
-%.png : %.eps; $(CONVERT) $< $@
-%.pdf : %.eps
-	$(EPSTOPDF) $< -o=$@
-	if test x$($@_width) != x; then ./rescale-pdf.sh $($@_width) $@ ; fi
 
 # You can set these variables from the command line.
 SPHINXOPTS    =
@@ -175,6 +208,9 @@ help:
 clean:
 	-rm -rf $(BUILDDIR)/*
 	-rm -f $(IMAGES_BUILD)
+
+
+images: $(IMAGES_NOBUILD) $(IMAGES_BUILD)
 
 frag: pickle
 	@if test ! -d $(BUILDDIR)/frag; then mkdir $(BUILDDIR)/frag; fi

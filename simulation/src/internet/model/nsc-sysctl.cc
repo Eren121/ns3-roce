@@ -23,9 +23,19 @@
 
 namespace ns3 {
 
+/**
+ * \ingroup nsctcp
+ *
+ * This object represent the underlying nsc stack attributes and
+ * provide a ns-3-like system to access them though sysctls
+ */
 class NscStackStringAccessor : public AttributeAccessor
 {
 public:
+  /**
+   * \brief Constructor
+   * \param name name of the attribute
+   */
   NscStackStringAccessor (std::string name) : m_name (name) {}
 
   virtual bool Set (ObjectBase * object, const AttributeValue &val) const;
@@ -33,7 +43,7 @@ public:
   virtual bool HasGetter (void) const;
   virtual bool HasSetter (void) const;
 private:
-  std::string m_name;
+  std::string m_name; //!< name of the attribute
 };
 
 bool NscStackStringAccessor::HasGetter (void) const
@@ -142,7 +152,8 @@ Ns3NscStack::Set (std::string name, std::string value)
     }
 }
 
-NS_OBJECT_ENSURE_REGISTERED (Ns3NscStack);
+NS_OBJECT_ENSURE_REGISTERED (Ns3NscStack)
+  ;
 
 TypeId
 Ns3NscStack::Ns3NscStack::GetTypeId (void)

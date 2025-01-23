@@ -24,7 +24,9 @@
 
 namespace ns3 {
 
-NS_OBJECT_ENSURE_REGISTERED (WifiMac);
+NS_OBJECT_ENSURE_REGISTERED (WifiMac)
+  ;
+  
 
 Time
 WifiMac::GetDefaultMaxPropagationDelay (void)
@@ -43,6 +45,12 @@ WifiMac::GetDefaultSifs (void)
 {
   // 802.11-a specific
   return MicroSeconds (16);
+}
+Time 
+WifiMac::GetDefaultRifs (void)
+{
+  //802.11n specific
+  return MicroSeconds (2);
 }
 Time
 WifiMac::GetDefaultEifsNoDifs (void)
@@ -78,8 +86,9 @@ WifiMac::GetDefaultBasicBlockAckDelay (void)
 Time
 WifiMac::GetDefaultCompressedBlockAckDelay (void)
 {
-  // This value must be rivisited
-  return MicroSeconds (68);
+  // This value must be rivisited was 68. 
+ //CompressedBlockAckSize 32* 8*time it takes to transfer at the lowest rate (6Mb/s)+ aPhy-StartDelay(33)
+  return MicroSeconds (76);
 }
 Time
 WifiMac::GetDefaultBasicBlockAckTimeout (void)
@@ -171,6 +180,12 @@ WifiMac::GetTypeId (void)
                    MakeTimeAccessor (&WifiMac::SetPifs,
                                      &WifiMac::GetPifs),
                    MakeTimeChecker ())
+.AddAttribute ("Rifs", "The value of the RIFS constant.",
+                   TimeValue (GetDefaultRifs ()),
+                   MakeTimeAccessor (&WifiMac::SetRifs,
+                                     &WifiMac::GetRifs),
+                   MakeTimeChecker ())
+
     .AddAttribute ("MaxPropagationDelay", "The maximum propagation delay. Unused for now.",
                    TimeValue (GetDefaultMaxPropagationDelay ()),
                    MakeTimeAccessor (&WifiMac::m_maxPropagationDelay),
@@ -280,11 +295,11 @@ WifiMac::ConfigureStandard (enum WifiPhyStandard standard)
     case WIFI_PHY_STANDARD_holland:
       Configure80211a ();
       break;
-    case WIFI_PHY_STANDARD_80211p_CCH:
-      Configure80211p_CCH ();
+    case WIFI_PHY_STANDARD_80211n_2_4GHZ:
+      Configure80211n_2_4Ghz ();
       break;
-    case WIFI_PHY_STANDARD_80211p_SCH:
-      Configure80211p_SCH ();
+    case WIFI_PHY_STANDARD_80211n_5GHZ:
+      Configure80211n_5Ghz ();
       break;
     default:
       NS_ASSERT (false);
@@ -350,15 +365,20 @@ WifiMac::Configure80211_5Mhz (void)
 }
 
 void
-WifiMac::Configure80211p_CCH (void)
+WifiMac::Configure80211n_2_4Ghz (void)
 {
-  Configure80211_10Mhz ();
+  Configure80211g ();
+  SetRifs(MicroSeconds (2));
+  SetCtsTimeout (MicroSeconds (10 + 52 + 20 + GetDefaultMaxPropagationDelay ().GetMicroSeconds () * 2));
+  SetAckTimeout (MicroSeconds (10 + 52 + 20 + GetDefaultMaxPropagationDelay ().GetMicroSeconds () * 2));
 }
-
 void
-WifiMac::Configure80211p_SCH (void)
+WifiMac::Configure80211n_5Ghz (void)
 {
-  Configure80211_10Mhz ();
+  Configure80211a ();
+  SetRifs(MicroSeconds (2));
+  SetCtsTimeout (MicroSeconds (10 + 52 + 20 + GetDefaultMaxPropagationDelay ().GetMicroSeconds () * 2));
+  SetAckTimeout (MicroSeconds (10 + 52 + 20 + GetDefaultMaxPropagationDelay ().GetMicroSeconds () * 2));
 }
 
 void
@@ -386,43 +406,6 @@ WifiMac::ConfigureDcf (Ptr<Dcf> dcf, uint32_t cwmin, uint32_t cwmax, enum AcInde
       dcf->SetMinCw (cwmin);
       dcf->SetMaxCw (cwmax);
       dcf->SetAifsn (7);
-      break;
-    case AC_BE_NQOS:
-      dcf->SetMinCw (cwmin);
-      dcf->SetMaxCw (cwmax);
-      dcf->SetAifsn (2);
-      break;
-    case AC_UNDEF:
-      NS_FATAL_ERROR ("I don't know what to do with this");
-      break;
-    }
-}
-
-void
-WifiMac::ConfigureCCHDcf (Ptr<Dcf> dcf, uint32_t cwmin, uint32_t cwmax, enum AcIndex ac)
-{
-  /* see IEEE 1609.4-2006 section 6.3.1, Table 1 */
-  switch (ac)
-    {
-    case AC_VO:
-      dcf->SetMinCw ((cwmin + 1) / 4 - 1);
-      dcf->SetMaxCw ((cwmin + 1) / 2 - 1);
-      dcf->SetAifsn (2);
-      break;
-    case AC_VI:
-      dcf->SetMinCw ((cwmin + 1) / 4 - 1);
-      dcf->SetMaxCw ((cwmin + 1) / 2 - 1);
-      dcf->SetAifsn (3);
-      break;
-    case AC_BE:
-      dcf->SetMinCw ((cwmin + 1) / 2 - 1);
-      dcf->SetMaxCw (cwmin);
-      dcf->SetAifsn (6);
-      break;
-    case AC_BK:
-      dcf->SetMinCw (cwmin);
-      dcf->SetMaxCw (cwmax);
-      dcf->SetAifsn (9);
       break;
     case AC_BE_NQOS:
       dcf->SetMinCw (cwmin);

@@ -31,7 +31,7 @@
 #include "ns3/udp-socket-factory.h"
 #include "ns3/simulator.h"
 #include "error-channel.h"
-#include "error-net-device.h"
+#include "ns3/simple-net-device.h"
 #include "ns3/drop-tail-queue.h"
 #include "ns3/socket.h"
 #include "ns3/udp-socket.h"
@@ -59,7 +59,7 @@
 #include <limits>
 #include <netinet/in.h>
 
-namespace ns3 {
+using namespace ns3;
 
 class UdpSocketImpl;
 
@@ -265,20 +265,15 @@ Ptr<Packet> Ipv6FragmentationTest::SendClient (void)
 void
 Ipv6FragmentationTest::DoRun (void)
 {
-  // set the arp cache to something quite high
-  // we shouldn't need because the NetDevice used doesn't need arp, but still
-  // Config::SetDefault ("ns3::ArpCache::PendingQueueSize", UintegerValue (100));
-//  LogComponentEnable ("ErrorNetDevice", LOG_LEVEL_ALL);
-// LogComponentEnableAll(LOG_LEVEL_ALL);
-// Create topology
+  // Create topology
 
   // Receiver Node
   Ptr<Node> serverNode = CreateObject<Node> ();
   AddInternetStack (serverNode);
-  Ptr<ErrorNetDevice> serverDev;
+  Ptr<SimpleNetDevice> serverDev;
   Ptr<BinaryErrorModel> serverDevErrorModel = CreateObject<BinaryErrorModel> ();
   {
-    serverDev = CreateObject<ErrorNetDevice> ();
+    serverDev = CreateObject<SimpleNetDevice> ();
     serverDev->SetAddress (Mac48Address::ConvertFrom (Mac48Address::Allocate ()));
     serverDev->SetMtu (1500);
     serverDev->SetReceiveErrorModel (serverDevErrorModel);
@@ -295,12 +290,12 @@ Ipv6FragmentationTest::DoRun (void)
   // Sender Node
   Ptr<Node> clientNode = CreateObject<Node> ();
   AddInternetStack (clientNode);
-  Ptr<ErrorNetDevice> clientDev;
+  Ptr<SimpleNetDevice> clientDev;
   Ptr<BinaryErrorModel> clientDevErrorModel = CreateObject<BinaryErrorModel> ();
   {
-    clientDev = CreateObject<ErrorNetDevice> ();
+    clientDev = CreateObject<SimpleNetDevice> ();
     clientDev->SetAddress (Mac48Address::ConvertFrom (Mac48Address::Allocate ()));
-    clientDev->SetMtu (1000);
+    clientDev->SetMtu (1500);
     clientDev->SetReceiveErrorModel (clientDevErrorModel);
     clientDevErrorModel->Disable ();
     clientNode->AddDevice (clientDev);
@@ -320,7 +315,7 @@ Ipv6FragmentationTest::DoRun (void)
 
 
   // some small packets, some rather big ones
-  uint32_t packetSizes[5] = {1000, 2000, 5000, 10000, 65000};
+  uint32_t packetSizes[5] = {2000, 2500, 5000, 10000, 65000};
 
   // using the alphabet
   uint8_t fillData[78];
@@ -423,8 +418,6 @@ class Ipv6FragmentationTestSuite : public TestSuite
 public:
   Ipv6FragmentationTestSuite () : TestSuite ("ipv6-fragmentation", UNIT)
   {
-    AddTestCase (new Ipv6FragmentationTest);
+    AddTestCase (new Ipv6FragmentationTest, TestCase::QUICK);
   }
 } g_ipv6fragmentationTestSuite;
-
-}; // namespace ns3

@@ -92,13 +92,13 @@ public:
    */
   virtual Ptr<NetDevice> GetDevice (uint32_t i) const;
 
+protected:
   /*
    * \brief Get the delay associated with this channel
    * \returns Time delay
    */
   Time GetDelay (void) const;
 
-protected:
   /*
    * \brief Check to make sure the link is initialized
    * \returns true if initialized, asserts otherwise

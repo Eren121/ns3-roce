@@ -31,10 +31,6 @@
 #include <ostream>
 #include <set>
 
-#ifdef WIN32
-#include "winport.h"
-#endif
-
 namespace ns3 {
 
 /**
@@ -45,64 +41,42 @@ namespace ns3 {
  * \ingroup time
  * \brief keep track of time values and allow control of global simulation resolution
  *
- * This class defines all the classic C++ arithmetic
- * operators +, -, *, /, and all the classic comparison operators:
+ * This class defines all the classic C++ addition/subtraction
+ * operators: +, -, +=, -=; and all the classic comparison operators:
  * ==, !=, <, >, <=, >=. It is thus easy to add, substract, or
- * multiply Time objects.
+ * compare Time objects.
  *
  * For example:
  * \code
  * Time t1 = Seconds (10.0);
  * Time t2 = Seconds (10.0);
- * Time t3 = t1 * t2;
- * Time t4 = t1 / t2;
- * Time t5 = t3 * t1;
- * Time t6 = t1 / t5;
- * Time t7 = t3;
+ * Time t3 = t1;
+ * t3 += t2;
  * \endcode
  *
  * You can also use the following non-member functions to manipulate
  * any of these ns3::Time object:
- *  - \ref ns3-Time-Abs ns3::Abs
- *  - \ref ns3-Time-Max ns3::Max
- *  - \ref ns3-Time-Min ns3::Min
+ *  - \ref Abs()
+ *  - \ref Max()
+ *  - \ref Min()
  *
- * This class also controls
- * the resolution of the underlying time value . The default resolution
- * is nanoseconds. That is, TimeStep (1).GetNanoSeconds () will return
- * 1. It is possible to either increase or decrease the resolution and the
- * code tries really hard to make this easy.
+ * This class also controls the resolution of the underlying time value.
+ * The resolution is the smallest representable time interval.
+ * The default resolution is nanoseconds.
  *
- * If your resolution is X (say, nanoseconds) and if you create Time objects
- * with a lower resolution (say, picoseconds), don't expect that this
- * code will return 1: PicoSeconds (1).GetPicoSeconds (). It will most
- * likely return 0 because the Time object has only 64 bits of fractional
- * precision which means that PicoSeconds (1) is stored as a 64-bit aproximation
- * of 1/1000 in the Time object. If you later multiply it again by the exact
- * value 1000, the result is unlikely to be 1 exactly. It will be close to
- * 1 but not exactly 1.
+ * To change the resolution, use SetResolution().  All Time objects created
+ * before the call to SetResolution() will be updated to the new resolution.
+ * This can only be done once!  (Tracking each Time object uses 4 pointers.
+ * For speed, once we convert the existing instances we discard the recording
+ * data structure and stop tracking new instances, so we have no way
+ * to do a second conversion.)
  *
- * In general, it is thus a really bad idea to try to use time objects of a
- * resolution higher than the global resolution controlled through
- * Time::SetResolution. If you do need to use picoseconds, it's thus best
- * to switch the global resolution to picoseconds to avoid nasty surprises.
- *
- * Another important issue to keep in mind is that if you increase the
- * global resolution, you also implicitely decrease the range of your simulation.
- * i.e., the global simulation time is stored in a 64 bit integer whose interpretation
- * will depend on the global resolution so, 2^64 picoseconds which is the maximum
- * duration of your simulation if the global resolution is picoseconds
- * is smaller than 2^64 nanoseconds which is the maximum duration of your simulation
- * if the global resolution is nanoseconds.
- *
- * Finally, don't even think about ever changing the global resolution after
- * creating Time objects: all Time objects created before the call to SetResolution
- * will contain values which are not updated to the new resolution. In practice,
- * the default value for the attributes of many models is indeed calculated
- * before the main function of the main program enters. Because of this, if you
- * use one of these models (and it's likely), it's going to be hard to change
- * the global simulation resolution in a way which gives reasonable results. This
- * issue has been filed as bug 954 in the ns-3 bugzilla installation.
+ * If you increase the global resolution, you also implicitly decrease
+ * the range of your simulation.  The global simulation time is stored
+ * in a 64 bit integer, whose interpretation will depend on the global
+ * resolution.  Therefore the maximum duration of your simulation,
+ * if you use picoseconds, is 2^64 ps = 2^24 s = 7 months, whereas,
+ * had you used nanoseconds, you could have run for 584 years.
  */
 class Time
 {
@@ -112,13 +86,17 @@ public:
    */
   enum Unit
   {
-    S  = 0,   //!< second
-    MS = 1,   //!< millisecond
-    US = 2,   //!< microsecond
-    NS = 3,   //!< nanosecond
-    PS = 4,   //!< picosecond
-    FS = 5,   //!< femtosecond
-    LAST = 6
+    Y   = 0,   //!< year, 365 days
+    D   = 1,   //!< day, 24 hours
+    H   = 2,   //!< hour, 60 minutes
+    MIN = 3,   //!< minute, 60 seconds
+    S   = 4,   //!< second
+    MS  = 5,   //!< millisecond
+    US  = 6,   //!< microsecond
+    NS  = 7,   //!< nanosecond
+    PS  = 8,   //!< picosecond
+    FS  = 9,   //!< femtosecond
+    LAST = 10
   };
 
   inline Time &operator = (const Time &o)
@@ -208,6 +186,10 @@ public:
    * - `ns` (nanoseconds)
    * - `ps` (picoseconds)
    * - `fs` (femtoseconds)
+   * - `min`  (minutes)
+   * - `h`  (hours)
+   * - `d`  (days)
+   * - `y`  (years)
    *
    * There can be no white space between the numerical portion
    * and the units.  Any otherwise malformed string causes a fatal error to
@@ -334,6 +316,40 @@ public:
   {
     return ToInteger (Time::FS);
   }
+
+  /**
+   * \returns an approximation in minutes of the time stored in this
+   *          instance.
+   */
+  inline double GetMinutes (void) const
+  {
+    return ToDouble (Time::MIN);
+  }
+  /**
+   * \returns an approximation in hours of the time stored in this
+   *          instance.
+   */
+  inline double GetHours (void) const
+  {
+    return ToDouble (Time::H);
+  }
+  /**
+   * \returns an approximation in days of the time stored in this
+   *          instance.
+   */
+  inline double GetDays (void) const
+  {
+    return ToDouble (Time::D);
+  }
+  /**
+   * \returns an approximation in years of the time stored in this
+   *          instance.
+   */
+  inline double GetYears (void) const
+  {
+    return ToDouble (Time::Y);
+  }
+
   /**
    * \returns the raw time value, in the current units
    */
@@ -343,7 +359,7 @@ public:
   }
   inline double GetDouble (void) const
   {
-    return double (m_data);
+    return m_data;
   }
   inline int64_t GetInteger (void) const
   {
@@ -551,6 +567,12 @@ public:
    *  Function to force static initialization of Time
    */
   static bool StaticInit ();
+private:
+
+  /* Friend the Simulator class so it can call the private function
+     ClearMarkedTimes ()
+  */
+  friend class Simulator;
   /**
    *  Remove all MarkedTimes.
    *
@@ -558,13 +580,6 @@ public:
    *  Has to be visible to the Simulator class, hence the friending.
    */
   static void ClearMarkedTimes ();
-
-private:
-
-  /* Friend the Simulator class so it can call the private function
-     ClearMarkedTimes ()
-  */
-  friend class Simulator;
   /**
    *  Record a Time instance with the MarkedTimes
    */
@@ -789,7 +804,66 @@ inline Time FemtoSeconds (uint64_t fs)
 {
   return Time::FromInteger (fs, Time::FS);
 }
-
+/**
+ * \brief create ns3::Time instances in units of minutes (equal to 60 seconds).
+ *
+ * For example:
+ * \code
+ * Time t = Minutes (2.0);
+ * Simulator::Schedule (Minutes (5.0), ...);
+ * \endcode
+ * \param minutes mintues value
+ * \relates ns3::Time
+ */
+inline Time Minutes (double minutes)
+{
+  return Time::FromDouble (minutes, Time::MIN);
+}
+/**
+ * \brief create ns3::Time instances in units of hours (equal to 60 minutes).
+ *
+ * For example:
+ * \code
+ * Time t = Hours (2.0);
+ * Simulator::Schedule (Hours (5.0), ...);
+ * \endcode
+ * \param hours hours value
+ * \relates ns3::Time
+ */
+inline Time Hours (double hours)
+{
+  return Time::FromDouble (hours, Time::H);
+}
+/**
+ * \brief create ns3::Time instances in units of days (equal to 24 hours).
+ *
+ * For example:
+ * \code
+ * Time t = Days (2.0);
+ * Simulator::Schedule (Days (5.0), ...);
+ * \endcode
+ * \param days days value
+ * \relates ns3::Time
+ */
+inline Time Days (double days)
+{
+  return Time::FromDouble (days, Time::D);
+}
+/**
+ * \brief create ns3::Time instances in units of years (equal to 365 days).
+ *
+ * For example:
+ * \code
+ * Time t = Years (2.0);
+ * Simulator::Schedule (Years (5.0), ...);
+ * \endcode
+ * \param years years value
+ * \relates ns3::Time
+ */
+inline Time Years (double years)
+{
+  return Time::FromDouble (years, Time::Y);
+}
 
 /**
  * \see Seconds(double)
@@ -838,6 +912,38 @@ inline Time PicoSeconds (int64x64_t ps)
 inline Time FemtoSeconds (int64x64_t fs)
 {
   return Time::From (fs, Time::FS);
+}
+/**
+ * \see Minutes(uint64_t)
+ * \relates ns3::Time
+ */
+inline Time Minutes (int64x64_t minutes)
+{
+  return Time::From (minutes, Time::MIN);
+}
+/**
+ * \see Minutes(uint64_t)
+ * \relates ns3::Time
+ */
+inline Time Hours (int64x64_t hours)
+{
+  return Time::From (hours, Time::H);
+}
+/**
+ * \see Minutes(uint64_t)
+ * \relates ns3::Time
+ */
+inline Time Days (int64x64_t days)
+{
+  return Time::From (days, Time::D);
+}
+/**
+ * \see Minutes(uint64_t)
+ * \relates ns3::Time
+ */
+inline Time Years (int64x64_t years)
+{
+  return Time::From (years, Time::Y);
 }
 
 // internal function not publicly documented

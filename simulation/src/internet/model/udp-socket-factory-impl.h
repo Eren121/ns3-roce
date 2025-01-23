@@ -32,7 +32,7 @@ class UdpL4Protocol;
  * \defgroup udp Udp
  *
  * This  is  an  implementation of the User Datagram Protocol described in
- * RFC 768.  It implements a connectionless,  unreliable  datagram  packet
+ * \RFC{768}.  It implements a connectionless,  unreliable  datagram  packet
  * service.   Packets  may  be reordered or duplicated before they arrive.
  * UDP generates and checks checksums to catch transmission errors.
  *
@@ -57,6 +57,10 @@ public:
   UdpSocketFactoryImpl ();
   virtual ~UdpSocketFactoryImpl ();
 
+  /**
+   * \brief Set the associated UDP L4 protocol.
+   * \param udp the UDP L4 protocol
+   */
   void SetUdp (Ptr<UdpL4Protocol> udp);
 
   /**
@@ -71,7 +75,7 @@ public:
 protected:
   virtual void DoDispose (void);
 private:
-  Ptr<UdpL4Protocol> m_udp;
+  Ptr<UdpL4Protocol> m_udp; //!< the associated UDP L4 protocol
 };
 
 } // namespace ns3

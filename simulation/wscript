@@ -288,6 +288,8 @@ def configure(conf):
     conf.env['NS3_OPTIONAL_FEATURES'] = []
 
     conf.load('compiler_c')
+    cc_string='.'.join(conf.env['CC_VERSION'])
+    conf.msg('Checking for cc version',cc_string,'GREEN')
     conf.load('compiler_cxx')
     conf.load('cflags', tooldir=['waf-tools'])
     conf.load('command', tooldir=['waf-tools'])
@@ -468,8 +470,10 @@ def configure(conf):
     conf.report_optional_feature("ENABLE_EXAMPLES", "Build examples", env['ENABLE_EXAMPLES'], 
                                  why_not_examples)
 
+    env['VALGRIND_FOUND'] = False
     try:
         conf.find_program('valgrind', var='VALGRIND')
+        env['VALGRIND_FOUND'] = True
     except WafError:
         pass
 
@@ -527,7 +531,7 @@ def configure(conf):
         else:
             status = 'not enabled (%s)' % reason_not_enabled
             color = 'RED'
-        print "%-30s: %s%s%s" % (caption, Logs.colors_lst[color], status, Logs.colors_lst['NORMAL'])
+        print "%-30s: %s%s%s" % (caption, Logs.colors(color), status, Logs.colors('NORMAL'))
 
 
 class SuidBuild_task(Task.Task):
@@ -820,6 +824,10 @@ def build(bld):
     # build command.
     bld.env['PRINT_BUILT_MODULES_AT_END'] = True
 
+    # Do not print the modules built if build command was "clean"
+    if bld.cmd == 'clean':
+        bld.env['PRINT_BUILT_MODULES_AT_END'] = False
+
     if Options.options.run:
         # Check that the requested program name is valid
         program_name, dummy_program_argv = wutils.get_run_program(Options.options.run, wutils.get_command_template(env))
@@ -849,8 +857,9 @@ def _cleandir(name):
 def _cleandocs():
     _cleandir('doc/html')
     _cleandir('doc/manual/build')
+    _cleandir('doc/manual/source-temp')
     _cleandir('doc/tutorial/build')
-    _cleandir('doc/tutorial-pt/build')
+    _cleandir('doc/tutorial-pt-br/build')
     _cleandir('doc/models/build')
     _cleandir('doc/models/source-temp')
 

@@ -32,7 +32,8 @@ NS_LOG_COMPONENT_DEFINE ("LteHexGridEnbTopologyHelper");
 
 namespace ns3 {
 
-NS_OBJECT_ENSURE_REGISTERED (LteHexGridEnbTopologyHelper);
+NS_OBJECT_ENSURE_REGISTERED (LteHexGridEnbTopologyHelper)
+  ;
 
 LteHexGridEnbTopologyHelper::LteHexGridEnbTopologyHelper ()
 {
@@ -103,7 +104,7 @@ LteHexGridEnbTopologyHelper::SetPositionAndInstallEnbDevice (NodeContainer c)
 {
   NS_LOG_FUNCTION (this);
   NetDeviceContainer enbDevs;
-  const double xydfactor = sqrt (0.75);
+  const double xydfactor = std::sqrt (0.75);
   double yd = xydfactor*m_d;
   for (uint32_t n = 0; n < c.GetN (); ++n)
     {
@@ -153,8 +154,7 @@ LteHexGridEnbTopologyHelper::SetPositionAndInstallEnbDevice (NodeContainer c)
 	  y -= m_offset*xydfactor;
 	  break;
 	
-	default:
-	  break;
+          // no default, n%3 = 0, 1, 2
 	}
       Ptr<Node> node = c.Get (n);
       Ptr<MobilityModel> mm = node->GetObject<MobilityModel> ();

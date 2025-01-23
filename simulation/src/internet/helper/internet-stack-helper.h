@@ -80,7 +80,15 @@ public:
    * Destroy the InternetStackHelper
    */
   virtual ~InternetStackHelper(void);
+
+  /**
+   * \brief Copy constructor
+   */
   InternetStackHelper (const InternetStackHelper &);
+
+  /**
+   * \brief Copy constructor
+   */
   InternetStackHelper &operator = (const InternetStackHelper &o);
 
   /**
@@ -178,7 +186,19 @@ public:
    */
   void SetIpv6StackInstall (bool enable);
 
- /**
+  /**
+   * \brief Enable/disable IPv4 ARP Jitter.
+   * \param enable enable state
+   */
+  void SetIpv4ArpJitter (bool enable);
+
+  /**
+   * \brief Enable/disable IPv6 NS and RS Jitter.
+   * \param enable enable state
+   */
+  void SetIpv6NsRsJitter (bool enable);
+
+  /**
   * Assign a fixed random variable stream number to the random variables
   * used by this model.  Return the number of streams (possibly zero) that
   * have been assigned.  The Install() method should have previously been
@@ -254,8 +274,21 @@ private:
                                         uint32_t interface,
                                         bool explicitFilename);
 
+  /**
+   * \brief Initialize the helper to its default values
+   */
   void Initialize (void);
+
+  /**
+   * \internal
+   * \brief TCP objects factory
+   */
   ObjectFactory m_tcpFactory;
+
+  /**
+   * \internal
+   * \brief IPv4 routing helper.
+   */
   const Ipv4RoutingHelper *m_routing;
 
   /**
@@ -266,6 +299,10 @@ private:
 
   /**
    * \internal
+   *
+   * \brief create an object from its TypeId and aggregates it to the node
+   * \param node the node
+   * \param typeId the object TypeId
    */
   static void CreateAndAggregateObjectFromTypeId (Ptr<Node> node, const std::string typeId);
 
@@ -276,33 +313,67 @@ private:
 
   /**
    * \internal
+   *
+   * \brief checks if there is an hook to a Pcap wrapper
+   * \param ipv4 pointer to the IPv4 object
+   * \returns true if a hook is found
    */
   bool PcapHooked (Ptr<Ipv4> ipv4);
 
   /**
    * \internal
+   *
+   * \brief checks if there is an hook to an ascii output stream
+   * \param ipv4 pointer to the IPv4 object
+   * \returns true if a hook is found
    */
   bool AsciiHooked (Ptr<Ipv4> ipv4);
 
   /**
    * \internal
+   *
+   * \brief checks if there is an hook to a Pcap wrapper
+   * \param ipv6 pointer to the IPv6 object
+   * \returns true if a hook is found
    */
   bool PcapHooked (Ptr<Ipv6> ipv6);
 
   /**
    * \internal
+   *
+   * \brief checks if there is an hook to an ascii output stream
+   * \param ipv6 pointer to the IPv6 object
+   * \returns true if a hook is found
    */
   bool AsciiHooked (Ptr<Ipv6> ipv6);
 
   /**
+   * \internal
+   *
    * \brief IPv4 install state (enabled/disabled) ?
    */
   bool m_ipv4Enabled;
 
   /**
+   * \internal
+   *
    * \brief IPv6 install state (enabled/disabled) ?
    */
   bool m_ipv6Enabled;
+
+  /**
+   * \internal
+   *
+   * \brief IPv4 ARP Jitter state (enabled/disabled) ?
+   */
+  bool m_ipv4ArpJitterEnabled;
+
+  /**
+   * \internal
+   *
+   * \brief IPv6 IPv6 NS and RS Jitter state (enabled/disabled) ?
+   */
+  bool m_ipv6NsRsJitterEnabled;
 };
 
 } // namespace ns3

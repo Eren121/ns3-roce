@@ -26,9 +26,11 @@
 namespace ns3
 {
 
-NS_LOG_COMPONENT_DEFINE ("Ipv6ExtensionHeader");
+NS_LOG_COMPONENT_DEFINE ("Ipv6ExtensionHeader")
+  ;
 
-NS_OBJECT_ENSURE_REGISTERED (Ipv6ExtensionHeader);
+NS_OBJECT_ENSURE_REGISTERED (Ipv6ExtensionHeader)
+  ;
 
 TypeId Ipv6ExtensionHeader::GetTypeId ()
 {
@@ -133,23 +135,13 @@ OptionField::~OptionField ()
 
 uint32_t OptionField::GetSerializedSize () const
 {
-#ifndef WIN32
-	return m_optionData.GetSize() + CalculatePad((Ipv6OptionHeader::Alignment) { 8, 0 });
-#else
-	Ipv6OptionHeader::Alignment a = { 8, 0 };
-	return m_optionData.GetSize() + CalculatePad(a);
-#endif
+  return m_optionData.GetSize () + CalculatePad ((Ipv6OptionHeader::Alignment) { 8,0});
 }
 
 void OptionField::Serialize (Buffer::Iterator start) const
 {
   start.Write (m_optionData.Begin (), m_optionData.End ());
-#ifndef WIN32
-  uint32_t fill = CalculatePad((Ipv6OptionHeader::Alignment) { 8, 0 });
-#else
-  Ipv6OptionHeader::Alignment a = { 8, 0 };
-  uint32_t fill = CalculatePad(a);
-#endif
+  uint32_t fill = CalculatePad ((Ipv6OptionHeader::Alignment) { 8,0});
   NS_LOG_LOGIC ("fill with " << fill << " bytes padding");
   switch (fill)
     {
@@ -209,7 +201,8 @@ Buffer OptionField::GetOptionBuffer ()
 }
 
 
-NS_OBJECT_ENSURE_REGISTERED (Ipv6ExtensionHopByHopHeader);
+NS_OBJECT_ENSURE_REGISTERED (Ipv6ExtensionHopByHopHeader)
+  ;
 
 TypeId Ipv6ExtensionHopByHopHeader::GetTypeId ()
 {
@@ -249,7 +242,7 @@ void Ipv6ExtensionHopByHopHeader::Serialize (Buffer::Iterator start) const
   Buffer::Iterator i = start;
 
   i.WriteU8 (GetNextHeader ());
-  i.WriteU8 ((GetLength () >> 3) - 1);
+  i.WriteU8 ((GetSerializedSize () >> 3) - 1);
   OptionField::Serialize (i);
 }
 
@@ -264,7 +257,8 @@ uint32_t Ipv6ExtensionHopByHopHeader::Deserialize (Buffer::Iterator start)
   return GetSerializedSize ();
 }
 
-NS_OBJECT_ENSURE_REGISTERED (Ipv6ExtensionDestinationHeader);
+NS_OBJECT_ENSURE_REGISTERED (Ipv6ExtensionDestinationHeader)
+  ;
 
 TypeId Ipv6ExtensionDestinationHeader::GetTypeId ()
 {
@@ -304,8 +298,7 @@ void Ipv6ExtensionDestinationHeader::Serialize (Buffer::Iterator start) const
   Buffer::Iterator i = start;
 
   i.WriteU8 (GetNextHeader ());
-  i.WriteU8 ((GetLength () >> 3) - 1);
-
+  i.WriteU8 ((GetSerializedSize () >> 3) - 1);
   OptionField::Serialize (i);
 }
 
@@ -320,7 +313,8 @@ uint32_t Ipv6ExtensionDestinationHeader::Deserialize (Buffer::Iterator start)
   return GetSerializedSize ();
 }
 
-NS_OBJECT_ENSURE_REGISTERED (Ipv6ExtensionFragmentHeader);
+NS_OBJECT_ENSURE_REGISTERED (Ipv6ExtensionFragmentHeader)
+  ;
 
 TypeId Ipv6ExtensionFragmentHeader::GetTypeId ()
 {
@@ -340,6 +334,7 @@ Ipv6ExtensionFragmentHeader::Ipv6ExtensionFragmentHeader ()
   : m_offset (0),
     m_identification (0)
 {
+  SetLength (0);
 }
 
 Ipv6ExtensionFragmentHeader::~Ipv6ExtensionFragmentHeader ()
@@ -394,7 +389,7 @@ void Ipv6ExtensionFragmentHeader::Serialize (Buffer::Iterator start) const
   Buffer::Iterator i = start;
 
   i.WriteU8 (GetNextHeader ());
-  i.WriteU8 ((GetLength () >> 3) - 1);
+  i.WriteU8 (0);
   i.WriteHtonU16 (m_offset);
   i.WriteHtonU32 (m_identification);
 }
@@ -404,14 +399,16 @@ uint32_t Ipv6ExtensionFragmentHeader::Deserialize (Buffer::Iterator start)
   Buffer::Iterator i = start;
 
   SetNextHeader (i.ReadU8 ());
-  SetLength ((i.ReadU8 () + 1) << 3);
+  i.ReadU8();
+  SetLength (0);
   m_offset = i.ReadNtohU16 ();
   m_identification = i.ReadNtohU32 ();
 
   return GetSerializedSize ();
 }
 
-NS_OBJECT_ENSURE_REGISTERED (Ipv6ExtensionRoutingHeader);
+NS_OBJECT_ENSURE_REGISTERED (Ipv6ExtensionRoutingHeader)
+  ;
 
 TypeId Ipv6ExtensionRoutingHeader::GetTypeId ()
 {
@@ -490,7 +487,8 @@ uint32_t Ipv6ExtensionRoutingHeader::Deserialize (Buffer::Iterator start)
   return GetSerializedSize ();
 }
 
-NS_OBJECT_ENSURE_REGISTERED (Ipv6ExtensionLooseRoutingHeader);
+NS_OBJECT_ENSURE_REGISTERED (Ipv6ExtensionLooseRoutingHeader)
+  ;
 
 TypeId Ipv6ExtensionLooseRoutingHeader::GetTypeId ()
 {
@@ -597,7 +595,8 @@ uint32_t Ipv6ExtensionLooseRoutingHeader::Deserialize (Buffer::Iterator start)
   return GetSerializedSize ();
 }
 
-NS_OBJECT_ENSURE_REGISTERED (Ipv6ExtensionESPHeader);
+NS_OBJECT_ENSURE_REGISTERED (Ipv6ExtensionESPHeader)
+  ;
 
 TypeId Ipv6ExtensionESPHeader::GetTypeId ()
 {
@@ -623,27 +622,28 @@ Ipv6ExtensionESPHeader::~Ipv6ExtensionESPHeader ()
 
 void Ipv6ExtensionESPHeader::Print (std::ostream &os) const
 {
-  /* TODO */
+  /** \todo */
 }
 
 uint32_t Ipv6ExtensionESPHeader::GetSerializedSize () const
 {
-  /* TODO */
+  /** \todo */
   return 0;
 }
 
 void Ipv6ExtensionESPHeader::Serialize (Buffer::Iterator start) const
 {
-  /* TODO */
+  /** \todo */
 }
 
 uint32_t Ipv6ExtensionESPHeader::Deserialize (Buffer::Iterator start) 
 {
-  /* TODO */
+  /** \todo */
   return 0;
 }
 
-NS_OBJECT_ENSURE_REGISTERED (Ipv6ExtensionAHHeader);
+NS_OBJECT_ENSURE_REGISTERED (Ipv6ExtensionAHHeader)
+  ;
 
 TypeId Ipv6ExtensionAHHeader::GetTypeId ()
 {
@@ -669,23 +669,23 @@ Ipv6ExtensionAHHeader::~Ipv6ExtensionAHHeader ()
 
 void Ipv6ExtensionAHHeader::Print (std::ostream &os) const
 {
-  /* TODO */
+  /** \todo */
 }
 
 uint32_t Ipv6ExtensionAHHeader::GetSerializedSize () const
 {
-  /* TODO */
+  /** \todo */
   return 0;
 }
 
 void Ipv6ExtensionAHHeader::Serialize (Buffer::Iterator start) const
 {
-  /* TODO */
+  /** \todo */
 }
 
 uint32_t Ipv6ExtensionAHHeader::Deserialize (Buffer::Iterator start) 
 {
-  /* TODO */ 
+  /** \todo */ 
   return 0;
 }
 

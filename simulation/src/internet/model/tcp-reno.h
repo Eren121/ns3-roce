@@ -31,18 +31,26 @@ namespace ns3 {
  *
  * \brief An implementation of a stream socket using TCP.
  *
- * This class contains the Reno implementation of TCP, according to RFC2581,
+ * This class contains the Reno implementation of TCP, according to \RFC{2581},
  * except sec.4.1 "re-starting idle connections", which we do not detect for
  * idleness and thus no slow start upon resumption.
  */
 class TcpReno : public TcpSocketBase
 {
 public:
+  /**
+   * \brief Get the type ID.
+   * \return the object TypeId
+   */
   static TypeId GetTypeId (void);
   /**
    * Create an unbound tcp socket.
    */
   TcpReno (void);
+  /**
+   * \brief Copy constructor
+   * \param sock the object to copy
+   */
   TcpReno (const TcpReno& sock);
   virtual ~TcpReno (void);
 
@@ -63,17 +71,18 @@ protected:
   virtual uint32_t GetSSThresh (void) const;
   virtual void     SetInitialCwnd (uint32_t cwnd);
   virtual uint32_t GetInitialCwnd (void) const;
-  virtual void    HalveCwnd (void);
 private:
-  void InitializeCwnd (void);            // set m_cWnd when connection starts
+  /**
+   * \brief Set the congestion window when connection starts
+   */
+  void InitializeCwnd (void);
 
 protected:
-  TracedValue<uint32_t>  m_cWnd;         //< Congestion window
-  uint32_t               m_ssThresh;     //< Slow Start Threshold
-  uint32_t               m_initialCWnd;  //< Initial cWnd value
-  uint32_t               m_retxThresh;   //< Fast Retransmit threshold
-  bool                   m_inFastRec;    //< currently in fast recovery
-  Time                   m_ssThreshLastChange; //< Time when ssThresh was last changed
+  TracedValue<uint32_t>  m_cWnd;         //!< Congestion window
+  uint32_t               m_ssThresh;     //!< Slow Start Threshold
+  uint32_t               m_initialCWnd;  //!< Initial cWnd value
+  uint32_t               m_retxThresh;   //!< Fast Retransmit threshold
+  bool                   m_inFastRec;    //!< currently in fast recovery
 };
 
 } // namespace ns3

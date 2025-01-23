@@ -31,9 +31,11 @@
 
 namespace ns3 {
 
-NS_LOG_COMPONENT_DEFINE ("FlowMonitor");
+NS_LOG_COMPONENT_DEFINE ("FlowMonitor")
+  ;
 
-NS_OBJECT_ENSURE_REGISTERED (FlowMonitor);
+NS_OBJECT_ENSURE_REGISTERED (FlowMonitor)
+  ;
 
 
 TypeId 
@@ -87,6 +89,17 @@ FlowMonitor::FlowMonitor ()
   // m_histogramBinWidth=DEFAULT_BIN_WIDTH;
 }
 
+void
+FlowMonitor::DoDispose (void)
+{
+  m_classifier = 0;
+  for (uint32_t i = 0; i < m_flowProbes.size (); i++)
+    {
+      m_flowProbes[i]->Dispose ();
+      m_flowProbes[i] = 0;
+    }
+  Object::DoDispose ();
+}
 
 inline FlowMonitor::FlowStats&
 FlowMonitor::GetStatsForFlow (FlowId flowId)
@@ -340,7 +353,7 @@ FlowMonitor::Start (const Time &time)
       return;
     }
   Simulator::Cancel (m_startEvent);
-  m_startEvent = Simulator::Schedule (time, &FlowMonitor::StartRightNow, Ptr<FlowMonitor> (this));
+  m_startEvent = Simulator::Schedule (time, &FlowMonitor::StartRightNow, this);
 }
 
 void
@@ -351,7 +364,7 @@ FlowMonitor::Stop (const Time &time)
       return;
     }
   Simulator::Cancel (m_stopEvent);
-  m_stopEvent = Simulator::Schedule (time, &FlowMonitor::StopRightNow, Ptr<FlowMonitor> (this));
+  m_stopEvent = Simulator::Schedule (time, &FlowMonitor::StopRightNow, this);
 }
 
 

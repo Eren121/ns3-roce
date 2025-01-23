@@ -27,7 +27,8 @@ NS_LOG_COMPONENT_DEFINE ("PppHeader");
 
 namespace ns3 {
 
-NS_OBJECT_ENSURE_REGISTERED (PppHeader);
+NS_OBJECT_ENSURE_REGISTERED (PppHeader)
+  ;
 
 PppHeader::PppHeader ()
 {
@@ -75,25 +76,19 @@ PppHeader::Print (std::ostream &os) const
 uint32_t
 PppHeader::GetSerializedSize (void) const
 {
-	return GetStaticSize();
-}
-uint32_t PppHeader::GetStaticSize (void){
-	return 14;
+  return 2;
 }
 
 void
 PppHeader::Serialize (Buffer::Iterator start) const
 {
   start.WriteHtonU16 (m_protocol);
-  start.WriteU64(0);
-  start.WriteU32(0);
 }
 
 uint32_t
 PppHeader::Deserialize (Buffer::Iterator start)
 {
   m_protocol = start.ReadNtohU16 ();
-  start.Next(12);
   return GetSerializedSize ();
 }
 

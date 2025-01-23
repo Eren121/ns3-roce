@@ -33,11 +33,13 @@
 #include "simple-ofdm-wimax-channel.h"
 #include "ns3/trace-source-accessor.h"
 #include <string>
-#include <math.h>
+#include <cmath>
+
 NS_LOG_COMPONENT_DEFINE ("SimpleOfdmWimaxPhy");
 namespace ns3 {
 
-NS_OBJECT_ENSURE_REGISTERED (SimpleOfdmWimaxPhy);
+NS_OBJECT_ENSURE_REGISTERED (SimpleOfdmWimaxPhy)
+  ;
 
 TypeId SimpleOfdmWimaxPhy::GetTypeId (void)
 {
@@ -240,6 +242,7 @@ void
 SimpleOfdmWimaxPhy::Send (SendParams *params)
 {
   OfdmSendParams *o_params = dynamic_cast<OfdmSendParams*> (params);
+  NS_ASSERT (o_params !=0);
   Send (o_params->GetBurst (),
         (WimaxPhy::ModulationType) o_params->GetModulationType (),
         o_params->GetDirection ());
@@ -283,6 +286,7 @@ SimpleOfdmWimaxPhy::StartSendDummyFecBlock (bool isFirstBlock,
     }
 
   SimpleOfdmWimaxChannel *channel = dynamic_cast<SimpleOfdmWimaxChannel*> (PeekPointer (GetChannel ()));
+  NS_ASSERT (channel != 0);
 
   if (m_nrRemainingBlocksToSend==1)
     {
@@ -344,7 +348,7 @@ SimpleOfdmWimaxPhy::StartReceive (uint32_t burstSize,
 {
 
   uint8_t drop = 0;
-  double Nwb = -114 + m_noiseFigure + 10 * log (GetBandwidth () / 1000000000.0) / 2.303;
+  double Nwb = -114 + m_noiseFigure + 10 * std::log (GetBandwidth () / 1000000000.0) / 2.303;
   double SNR = rxPower - Nwb;
 
   SNRToBlockErrorRateRecord * record = m_snrToBlockErrorRateManager->GetSNRToBlockErrorRateRecord (SNR, modulationType);
@@ -477,8 +481,8 @@ SimpleOfdmWimaxPhy::ConvertBurstToBits (Ptr<const PacketBurst> burst)
   for (std::list<Ptr<Packet> >::iterator iter = packets.begin (); iter != packets.end (); ++iter)
     {
       Ptr<Packet> packet = *iter;
-      uint8_t *pstart = (uint8_t*) malloc (packet->GetSize ());
-      memset (pstart, 0, packet->GetSize ());
+      uint8_t *pstart = (uint8_t*) std::malloc (packet->GetSize ());
+      std::memset (pstart, 0, packet->GetSize ());
       packet->CopyData (pstart, packet->GetSize ());
       bvec temp (8);
       temp.resize (0, 0);
@@ -492,7 +496,7 @@ SimpleOfdmWimaxPhy::ConvertBurstToBits (Ptr<const PacketBurst> burst)
             }
           j++;
         }
-      free (pstart);
+      std::free (pstart);
     }
 
   return buffer;
@@ -509,11 +513,7 @@ SimpleOfdmWimaxPhy::ConvertBurstToBits (Ptr<const PacketBurst> burst)
 Ptr<PacketBurst>
 SimpleOfdmWimaxPhy::ConvertBitsToBurst (bvec buffer)
 {
-#ifndef WIN32
-	uint8_t init[buffer.size() / 8];
-#else
-	uint8_t * init = new uint8_t[buffer.size() / 8];
-#endif
+  uint8_t init[buffer.size () / 8];
   uint8_t *pstart = init;
   uint8_t temp;
   int32_t j = 0;
@@ -525,7 +525,7 @@ SimpleOfdmWimaxPhy::ConvertBitsToBurst (bvec buffer)
       for (int l = 0; l < 8; l++)
         {
           bool bin = buffer.at (i + l);
-          temp += (uint8_t)(bin * pow (2, (7 - l)));
+          temp += (uint8_t)(bin * std::pow (2.0, (7 - l)));
         }
 
       *(pstart + j) = temp;
@@ -559,9 +559,6 @@ SimpleOfdmWimaxPhy::ConvertBitsToBurst (bvec buffer)
       RecvBurst->AddPacket (p);
       pos += packetSize;
     }
-#ifdef WIN32
-  delete[] init;
-#endif
   return RecvBurst;
 }
 
@@ -591,7 +588,7 @@ bvec
 SimpleOfdmWimaxPhy::RecreateBuffer ()
 {
 
-  bvec buffer (m_blockSize * m_nrBlocks);
+  bvec buffer (m_blockSize * (unsigned long)m_nrBlocks);
   bvec block (m_blockSize);
   uint32_t i = 0;
   for (uint32_t j = 0; j < m_nrBlocks; j++)
@@ -718,14 +715,14 @@ SimpleOfdmWimaxPhy::DoGetNrSymbols (uint32_t size, WimaxPhy::ModulationType modu
 {
   Time transmissionTime = Seconds ((double)(GetNrBlocks (size, modulationType) * GetFecBlockSize (modulationType))
                                    / DoGetDataRate (modulationType));
-  return (uint64_t) ceil (transmissionTime.GetSeconds () / GetSymbolDuration ().GetSeconds ());
+  return (uint64_t) std::ceil (transmissionTime.GetSeconds () / GetSymbolDuration ().GetSeconds ());
 }
 
 uint64_t
 SimpleOfdmWimaxPhy::DoGetNrBytes (uint32_t symbols, WimaxPhy::ModulationType modulationType) const
 {
   Time transmissionTime = Seconds (symbols * GetSymbolDuration ().GetSeconds ());
-  return (uint64_t) floor ((transmissionTime.GetSeconds () * DoGetDataRate (modulationType)) / 8);
+  return (uint64_t) std::floor ((transmissionTime.GetSeconds () * DoGetDataRate (modulationType)) / 8);
 }
 
 uint32_t
@@ -826,51 +823,51 @@ SimpleOfdmWimaxPhy::DoGetFrameDurationCode (void) const
 {
   uint16_t duration = 0;
   duration = (uint16_t)(GetFrameDuration ().GetSeconds () * 10000);
+  uint8_t retval = 0;
   switch (duration)
     {
     case 25:
       {
-        return FRAME_DURATION_2_POINT_5_MS;
+        retval = FRAME_DURATION_2_POINT_5_MS;
         break;
       }
     case 40:
       {
-        return FRAME_DURATION_4_MS;
+        retval = FRAME_DURATION_4_MS;
         break;
       }
     case 50:
       {
-        return FRAME_DURATION_5_MS;
+        retval = FRAME_DURATION_5_MS;
         break;
       }
     case 80:
       {
-        return FRAME_DURATION_8_MS;
+        retval = FRAME_DURATION_8_MS;
         break;
       }
     case 100:
       {
-        return FRAME_DURATION_10_MS;
+        retval = FRAME_DURATION_10_MS;
         break;
       }
     case 125:
       {
-        return FRAME_DURATION_12_POINT_5_MS;
+        retval = FRAME_DURATION_12_POINT_5_MS;
         break;
       }
     case 200:
       {
-        return FRAME_DURATION_20_MS;
+        retval = FRAME_DURATION_20_MS;
         break;
       }
     default:
       {
         NS_FATAL_ERROR ("Invalid frame duration = " << duration);
-        return 0;
+        retval = 0;
       }
     }
-  NS_FATAL_ERROR ("Invalid frame duration = " << duration);
-  return 0;
+  return retval;
 }
 
 Time

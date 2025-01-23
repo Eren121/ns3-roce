@@ -26,7 +26,8 @@ NS_LOG_COMPONENT_DEFINE ("WifiPhyStateHelper");
 
 namespace ns3 {
 
-NS_OBJECT_ENSURE_REGISTERED (WifiPhyStateHelper);
+NS_OBJECT_ENSURE_REGISTERED (WifiPhyStateHelper)
+  ;
 
 TypeId
 WifiPhyStateHelper::GetTypeId (void)
@@ -420,7 +421,10 @@ WifiPhyStateHelper::SwitchMaybeToCcaBusy (Time duration)
     case WifiPhy::TX:
       break;
     }
-  m_startCcaBusy = now;
+  if (GetState () != WifiPhy::CCA_BUSY)
+    {
+      m_startCcaBusy = now;
+    }
   m_endCcaBusy = std::max (m_endCcaBusy, now + duration);
 }
 

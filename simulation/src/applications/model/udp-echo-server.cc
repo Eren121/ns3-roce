@@ -29,14 +29,15 @@
 #include "ns3/socket-factory.h"
 #include "ns3/packet.h"
 #include "ns3/uinteger.h"
-#include "ns3/seq-ts-header.h"
 
 #include "udp-echo-server.h"
 
 namespace ns3 {
 
-NS_LOG_COMPONENT_DEFINE ("UdpEchoServerApplication");
-NS_OBJECT_ENSURE_REGISTERED (UdpEchoServer);
+NS_LOG_COMPONENT_DEFINE ("UdpEchoServerApplication")
+  ;
+NS_OBJECT_ENSURE_REGISTERED (UdpEchoServer)
+  ;
 
 TypeId
 UdpEchoServer::GetTypeId (void)
@@ -48,28 +49,18 @@ UdpEchoServer::GetTypeId (void)
                    UintegerValue (9),
                    MakeUintegerAccessor (&UdpEchoServer::m_port),
                    MakeUintegerChecker<uint16_t> ())
-	.AddAttribute ("PriorityGroup", "The priority group of this flow",
-				   UintegerValue (0),
-				   MakeUintegerAccessor (&UdpEchoServer::m_pg),
-				   MakeUintegerChecker<uint16_t> ())
-	.AddAttribute ("ChunkSize", 
-				   "The chunk size can be sent before getting an ack",
-				   UintegerValue (4000000),
-				   MakeUintegerAccessor (&UdpEchoServer::m_chunk),
-				   MakeUintegerChecker<uint32_t> ())
   ;
   return tid;
 }
 
 UdpEchoServer::UdpEchoServer ()
 {
-	m_received = 0;
-  NS_LOG_FUNCTION_NOARGS ();
+  NS_LOG_FUNCTION (this);
 }
 
 UdpEchoServer::~UdpEchoServer()
 {
-  NS_LOG_FUNCTION_NOARGS ();
+  NS_LOG_FUNCTION (this);
   m_socket = 0;
   m_socket6 = 0;
 }
@@ -77,14 +68,14 @@ UdpEchoServer::~UdpEchoServer()
 void
 UdpEchoServer::DoDispose (void)
 {
-  NS_LOG_FUNCTION_NOARGS ();
+  NS_LOG_FUNCTION (this);
   Application::DoDispose ();
 }
 
 void 
 UdpEchoServer::StartApplication (void)
 {
-  NS_LOG_FUNCTION_NOARGS ();
+  NS_LOG_FUNCTION (this);
 
   if (m_socket == 0)
     {
@@ -135,7 +126,7 @@ UdpEchoServer::StartApplication (void)
 void 
 UdpEchoServer::StopApplication ()
 {
-  NS_LOG_FUNCTION_NOARGS ();
+  NS_LOG_FUNCTION (this);
 
   if (m_socket != 0) 
     {
@@ -152,6 +143,8 @@ UdpEchoServer::StopApplication ()
 void 
 UdpEchoServer::HandleRead (Ptr<Socket> socket)
 {
+  NS_LOG_FUNCTION (this << socket);
+
   Ptr<Packet> packet;
   Address from;
   while ((packet = socket->RecvFrom (from)))
@@ -161,32 +154,20 @@ UdpEchoServer::HandleRead (Ptr<Socket> socket)
           NS_LOG_INFO ("At time " << Simulator::Now ().GetSeconds () << "s server received " << packet->GetSize () << " bytes from " <<
                        InetSocketAddress::ConvertFrom (from).GetIpv4 () << " port " <<
                        InetSocketAddress::ConvertFrom (from).GetPort ());
-
-		  packet->RemoveAllPacketTags ();
-		  packet->RemoveAllByteTags ();
-
-		  m_received += packet->GetSize();
-		  if (m_received>=m_chunk)
-		  {
-			  m_received = 0;
-			  SeqTsHeader seqTs;
-			  seqTs.SetSeq (1);
-			  seqTs.SetPG (m_pg);
-			  Ptr<Packet> p = Create<Packet> (0);
-			  p->AddHeader (seqTs);
-			  NS_LOG_LOGIC ("Echoing packet");
-			  socket->SendTo (p, 0, from);	  //ack
-		  } 
-	  }
+        }
       else if (Inet6SocketAddress::IsMatchingType (from))
         {
           NS_LOG_INFO ("At time " << Simulator::Now ().GetSeconds () << "s server received " << packet->GetSize () << " bytes from " <<
                        Inet6SocketAddress::ConvertFrom (from).GetIpv6 () << " port " <<
-                       InetSocketAddress::ConvertFrom (from).GetPort ());
+                       Inet6SocketAddress::ConvertFrom (from).GetPort ());
         }
 
+      packet->RemoveAllPacketTags ();
+      packet->RemoveAllByteTags ();
 
-	  /*
+      NS_LOG_LOGIC ("Echoing packet");
+      socket->SendTo (packet, 0, from);
+
       if (InetSocketAddress::IsMatchingType (from))
         {
           NS_LOG_INFO ("At time " << Simulator::Now ().GetSeconds () << "s server sent " << packet->GetSize () << " bytes to " <<
@@ -197,9 +178,8 @@ UdpEchoServer::HandleRead (Ptr<Socket> socket)
         {
           NS_LOG_INFO ("At time " << Simulator::Now ().GetSeconds () << "s server sent " << packet->GetSize () << " bytes to " <<
                        Inet6SocketAddress::ConvertFrom (from).GetIpv6 () << " port " <<
-                       InetSocketAddress::ConvertFrom (from).GetPort ());
+                       Inet6SocketAddress::ConvertFrom (from).GetPort ());
         }
-		*/
     }
 }
 

@@ -31,14 +31,6 @@ UdpEchoServerHelper::UdpEchoServerHelper (uint16_t port)
   SetAttribute ("Port", UintegerValue (port));
 }
 
-UdpEchoServerHelper::UdpEchoServerHelper (uint16_t port, uint16_t pg)
-{
-	m_factory.SetTypeId (UdpEchoServer::GetTypeId ());
-	SetAttribute ("Port", UintegerValue (port));
-	SetAttribute ("PriorityGroup", UintegerValue (pg));
-}
-
-
 void 
 UdpEchoServerHelper::SetAttribute (
   std::string name, 
@@ -100,14 +92,6 @@ UdpEchoClientHelper::UdpEchoClientHelper (Ipv6Address address, uint16_t port)
   m_factory.SetTypeId (UdpEchoClient::GetTypeId ());
   SetAttribute ("RemoteAddress", AddressValue (Address(address)));
   SetAttribute ("RemotePort", UintegerValue (port));
-}
-
-UdpEchoClientHelper::UdpEchoClientHelper (Ipv4Address address, uint16_t port, uint16_t pg)
-{
-	m_factory.SetTypeId (UdpEchoClient::GetTypeId ());
-	SetAttribute ("RemoteAddress", AddressValue (Address(address)));
-	SetAttribute ("RemotePort", UintegerValue (port));
-	SetAttribute ("PriorityGroup", UintegerValue (pg));
 }
 
 void 

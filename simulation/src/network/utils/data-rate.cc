@@ -21,11 +21,14 @@
 #include "data-rate.h"
 #include "ns3/nstime.h"
 #include "ns3/fatal-error.h"
+#include "ns3/log.h"
 
+NS_LOG_COMPONENT_DEFINE ("DataRate");
 
 static bool
 DoParse (const std::string s, uint64_t *v)
 {
+  NS_LOG_FUNCTION (s << v);
   std::string::size_type n = s.find_first_not_of ("0123456789.");
   if (n != std::string::npos)
     { // Found non-numeric
@@ -179,16 +182,18 @@ DoParse (const std::string s, uint64_t *v)
 
 namespace ns3 {
 
-ATTRIBUTE_HELPER_CPP (DataRate);
+ATTRIBUTE_HELPER_CPP (DataRate);  /// Macro to make help make data-rate an ns-3 attribute
 
 DataRate::DataRate ()
   : m_bps (0)
 {
+  NS_LOG_FUNCTION (this);
 }
 
 DataRate::DataRate(uint64_t bps)
   : m_bps (bps)
 {
+  NS_LOG_FUNCTION (this << bps);
 }
 
 bool DataRate::operator < (const DataRate& rhs) const
@@ -223,16 +228,19 @@ bool DataRate::operator != (const DataRate& rhs) const
 
 double DataRate::CalculateTxTime (uint32_t bytes) const
 {
+  NS_LOG_FUNCTION (this << bytes);
   return static_cast<double>(bytes)*8/m_bps;
 }
 
 uint64_t DataRate::GetBitRate () const
 {
+  NS_LOG_FUNCTION (this);
   return m_bps;
 }
 
 DataRate::DataRate (std::string rate)
 {
+  NS_LOG_FUNCTION (this << rate);
   bool ok = DoParse (rate, &m_bps);
   if (!ok)
     {
@@ -240,11 +248,13 @@ DataRate::DataRate (std::string rate)
     }
 }
 
+/* For printing of data rate */
 std::ostream &operator << (std::ostream &os, const DataRate &rate)
 {
   os << rate.GetBitRate () << "bps";
   return os;
 }
+/* Initialize a data rate from an input stream */
 std::istream &operator >> (std::istream &is, DataRate &rate)
 {
   std::string value;
@@ -259,17 +269,26 @@ std::istream &operator >> (std::istream &is, DataRate &rate)
   return is;
 }
 
-DataRate& DataRate::operator/=(const double& c)
-{
-	m_bps /= c;
-	return *this;
-};
-
+/**
+  * \brief Multiply datarate by a time value
+  *
+  * Calculates the number of bits that have been transmitted over a period of time
+  * \param lhs rate
+  * \param rhs time
+  * \return the number of bits over the period of time
+  */
 double operator* (const DataRate& lhs, const Time& rhs)
 {
   return rhs.GetSeconds ()*lhs.GetBitRate ();
 }
-
+/**
+  * \brief Multiply time value by a data rate
+  *
+  * Calculates the number of bits that have been transmitted over a period of time
+  * \param lhs time
+  * \param rhs rate
+  * \return the number of bits over the period of time
+  */
 double operator* (const Time& lhs, const DataRate& rhs)
 {
   return lhs.GetSeconds ()*rhs.GetBitRate ();

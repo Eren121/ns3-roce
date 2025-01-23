@@ -19,10 +19,14 @@
 #include "ns3/assert.h"
 #include "ipv4-route.h"
 #include "ipv4-routing-protocol.h"
+#include "ns3/log.h"
+
+NS_LOG_COMPONENT_DEFINE ("Ipv4RoutingProtocol");
 
 namespace ns3 {
 
-NS_OBJECT_ENSURE_REGISTERED (Ipv4RoutingProtocol);
+NS_OBJECT_ENSURE_REGISTERED (Ipv4RoutingProtocol)
+  ;
 
 TypeId Ipv4RoutingProtocol::GetTypeId (void)
 {

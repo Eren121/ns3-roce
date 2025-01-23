@@ -74,29 +74,6 @@ public:
   Ipv6Header (void);
 
   /**
-   * \enum EcnType
-   * \brief ECN Type defined in RFC 3168
-   */
-  enum EcnType
-    {
-      NotECT = 0x00,
-      ECT1 = 0x01,
-      ECT0 = 0x02,
-      CE = 0x03
-    };
-
-  /**
-   * \brief Set ECN Field
-   * \param ecn ECN Type
-   */
-  void SetEcn (EcnType ecn);
-
-  /**
-   * \returns the ECN field of this packet.
-   */
-  EcnType GetEcn (void) const;
-
-  /**
    * \brief Set the "Traffic class" field.
    * \param traffic the 8-bit value
    */
@@ -206,8 +183,6 @@ public:
    */
   virtual uint32_t Deserialize (Buffer::Iterator start);
 
-  virtual bool IsCongestionAware(void) const;
-  virtual void SetCongested (void);
 private:
   /**
    * \brief The version (always equal to 6).

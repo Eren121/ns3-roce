@@ -17,7 +17,6 @@
  */
 
 #include <ctime> // for clock_getres
-
 #include <sys/time.h>
 
 #include "log.h"

@@ -18,14 +18,15 @@
  * Author: Mathieu Lacage <mathieu.lacage@sophia.inria.fr>
  */
 
-#include <math.h>
+#include <cmath>
 
 #include "mobility-model.h"
 #include "ns3/trace-source-accessor.h"
 
 namespace ns3 {
 
-NS_OBJECT_ENSURE_REGISTERED (MobilityModel);
+NS_OBJECT_ENSURE_REGISTERED (MobilityModel)
+  ;
 
 TypeId 
 MobilityModel::GetTypeId (void)

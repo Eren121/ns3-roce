@@ -41,7 +41,8 @@ namespace ns3 {
  *         The Object implementation
  *********************************************************************/
 
-NS_OBJECT_ENSURE_REGISTERED (Object);
+NS_OBJECT_ENSURE_REGISTERED (Object)
+  ;
 
 Object::AggregateIterator::AggregateIterator ()
   : m_object (0),
@@ -175,13 +176,6 @@ Object::DoGetObject (TypeId tid) const
     }
   return 0;
 }
-
-void
-Object::Start(void)
-{
-	Initialize();
-}
-
 void
 Object::Initialize (void)
 {
@@ -201,7 +195,7 @@ restart:
       Object *current = m_aggregates->buffer[i];
       if (!current->m_initialized)
         {
-          current->DoStart ();
+          current->DoInitialize ();
           current->m_initialized = true;
           goto restart;
         }
@@ -343,13 +337,6 @@ Object::DoDispose (void)
 {
   NS_LOG_FUNCTION (this);
   NS_ASSERT (!m_disposed);
-}
-
-
-void
-Object::DoStart(void)
-{
-	DoInitialize();
 }
 
 void

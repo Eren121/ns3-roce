@@ -26,7 +26,8 @@ NS_LOG_COMPONENT_DEFINE ("UanPropModelThorp");
 
 namespace ns3 {
 
-NS_OBJECT_ENSURE_REGISTERED (UanPropModelThorp);
+NS_OBJECT_ENSURE_REGISTERED (UanPropModelThorp)
+  ;
 
 UanPropModelThorp::UanPropModelThorp ()
 {
@@ -43,7 +44,7 @@ UanPropModelThorp::GetTypeId (void)
     .SetParent<Object> ()
     .AddConstructor<UanPropModelThorp> ()
     .AddAttribute ("SpreadCoef",
-                   "Spreading coefficient used in calculation of Thorp's approximation",
+                   "Spreading coefficient used in calculation of Thorp's approximation.",
                    DoubleValue (1.5),
                    MakeDoubleAccessor (&UanPropModelThorp::m_SpreadCoef),
                    MakeDoubleChecker<double> ())
@@ -56,8 +57,8 @@ UanPropModelThorp::GetPathLossDb (Ptr<MobilityModel> a, Ptr<MobilityModel> b, Ua
 {
   double dist = a->GetDistanceFrom (b);
 
-  return m_SpreadCoef * 10.0 * log10 (dist)
-         + dist * GetAttenDbKm (mode.GetCenterFreqHz () / 1000.0);
+  return m_SpreadCoef * 10.0 * std::log10 (dist)
+         + (dist / 1000.0) * GetAttenDbKm (mode.GetCenterFreqHz () / 1000.0);
 }
 
 UanPdp
@@ -88,7 +89,7 @@ UanPropModelThorp::GetAttenDbKm (double freqKhz)
 
   if (freqKhz >= 0.4)
     {
-      atten = 0.11 * fsq / (1 + fsq) + 44 * fsq / (4100 + freqKhz)
+      atten = 0.11 * fsq / (1 + fsq) + 44 * fsq / (4100 + fsq)
         + 2.75 * 0.0001 * fsq + 0.003;
     }
   else

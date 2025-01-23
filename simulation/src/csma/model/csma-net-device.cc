@@ -37,7 +37,8 @@ NS_LOG_COMPONENT_DEFINE ("CsmaNetDevice");
 
 namespace ns3 {
 
-NS_OBJECT_ENSURE_REGISTERED (CsmaNetDevice);
+NS_OBJECT_ENSURE_REGISTERED (CsmaNetDevice)
+  ;
 
 TypeId
 CsmaNetDevice::GetTypeId (void)
@@ -699,7 +700,6 @@ CsmaNetDevice::Receive (Ptr<Packet> packet, Ptr<CsmaNetDevice> senderDevice)
       trailer.EnableFcs (true);
     }
 
-  trailer.CheckFcs (packet);
   bool crcGood = trailer.CheckFcs (packet);
   if (!crcGood)
     {

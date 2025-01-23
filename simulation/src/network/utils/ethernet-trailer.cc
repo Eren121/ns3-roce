@@ -22,28 +22,33 @@
 #include "ns3/log.h"
 #include "ns3/trailer.h"
 #include "ethernet-trailer.h"
+#include "crc32.h"
 
 NS_LOG_COMPONENT_DEFINE ("EthernetTrailer");
 
 namespace ns3 {
 
-NS_OBJECT_ENSURE_REGISTERED (EthernetTrailer);
+NS_OBJECT_ENSURE_REGISTERED (EthernetTrailer)
+  ;
 
 EthernetTrailer::EthernetTrailer ()
   : m_calcFcs (false),
     m_fcs (0)
 {
+  NS_LOG_FUNCTION (this);
 }
 
 void
 EthernetTrailer::EnableFcs (bool enable)
 {
+  NS_LOG_FUNCTION (this << enable);
   m_calcFcs = enable;
 }
 
 bool
 EthernetTrailer::CheckFcs (Ptr<const Packet> p) const
 {
+  NS_LOG_FUNCTION (this << p);
   int len = p->GetSize ();
   uint8_t *buffer;
   uint32_t crc;
@@ -55,7 +60,7 @@ EthernetTrailer::CheckFcs (Ptr<const Packet> p) const
 
   buffer = new uint8_t[len];
   p->CopyData (buffer, len);
-  crc = DoCalcFcs (buffer, len);
+  crc = CRC32Calculate (buffer, len);
   delete[] buffer;
   return (m_fcs == crc);
 }
@@ -63,6 +68,7 @@ EthernetTrailer::CheckFcs (Ptr<const Packet> p) const
 void
 EthernetTrailer::CalcFcs (Ptr<const Packet> p)
 {
+  NS_LOG_FUNCTION (this << p);
   int len = p->GetSize ();
   uint8_t *buffer;
 
@@ -73,25 +79,28 @@ EthernetTrailer::CalcFcs (Ptr<const Packet> p)
 
   buffer = new uint8_t[len];
   p->CopyData (buffer, len);
-  m_fcs = DoCalcFcs (buffer, len);
+  m_fcs = CRC32Calculate (buffer, len);
   delete[] buffer;
 }
 
 void
 EthernetTrailer::SetFcs (uint32_t fcs)
 {
+  NS_LOG_FUNCTION (this << fcs);
   m_fcs = fcs;
 }
 
 uint32_t
 EthernetTrailer::GetFcs (void)
 {
+  NS_LOG_FUNCTION (this);
   return m_fcs;
 }
 
 uint32_t
 EthernetTrailer::GetTrailerSize (void) const
 {
+  NS_LOG_FUNCTION (this);
   return GetSerializedSize ();
 }
 
@@ -112,17 +121,20 @@ EthernetTrailer::GetInstanceTypeId (void) const
 void 
 EthernetTrailer::Print (std::ostream &os) const
 {
+  NS_LOG_FUNCTION (this << &os);
   os << "fcs=" << m_fcs;
 }
 uint32_t 
 EthernetTrailer::GetSerializedSize (void) const
 {
+  NS_LOG_FUNCTION (this);
   return 4;
 }
 
 void
 EthernetTrailer::Serialize (Buffer::Iterator end) const
 {
+  NS_LOG_FUNCTION (this << &end);
   Buffer::Iterator i = end;
   i.Prev (GetSerializedSize ());
 
@@ -131,6 +143,7 @@ EthernetTrailer::Serialize (Buffer::Iterator end) const
 uint32_t
 EthernetTrailer::Deserialize (Buffer::Iterator end)
 {
+  NS_LOG_FUNCTION (this << &end);
   Buffer::Iterator i = end;
   uint32_t size = GetSerializedSize ();
   i.Prev (size);
@@ -138,25 +151,6 @@ EthernetTrailer::Deserialize (Buffer::Iterator end)
   m_fcs = i.ReadU32 ();
 
   return size;
-}
-
-// This code is copied from /lib/crc32.c in the linux kernel.
-// It assumes little endian ordering.
-uint32_t
-EthernetTrailer::DoCalcFcs (uint8_t const *buffer, size_t len) const
-{
-  uint32_t crc = 0xffffffff;
-  int i;
-
-  while (len--)
-    {
-      crc ^= *buffer++;
-      for (i = 0; i < 8; i++)
-        {
-          crc = (crc >> 1) ^ ((crc & 1) ? 0xedb88320 : 0);
-        }
-    }
-  return ~crc;
 }
 
 } // namespace ns3

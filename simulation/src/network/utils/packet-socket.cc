@@ -26,14 +26,15 @@
 #include "ns3/packet.h"
 #include "ns3/uinteger.h"
 #include "ns3/trace-source-accessor.h"
-#include "ns3/seq-ts-header.h"
+
 #include <algorithm>
 
 NS_LOG_COMPONENT_DEFINE ("PacketSocket");
 
 namespace ns3 {
 
-NS_OBJECT_ENSURE_REGISTERED (PacketSocket);
+NS_OBJECT_ENSURE_REGISTERED (PacketSocket)
+  ;
 
 TypeId
 PacketSocket::GetTypeId (void)
@@ -92,6 +93,7 @@ PacketSocket::GetErrno (void) const
 enum Socket::SocketType
 PacketSocket::GetSocketType (void) const
 {
+  NS_LOG_FUNCTION (this);
   return NS3_SOCK_RAW;
 }
 
@@ -115,6 +117,7 @@ PacketSocket::Bind (void)
 int
 PacketSocket::Bind6 (void)
 {
+  NS_LOG_FUNCTION (this);
   return(Bind());
 }
 
@@ -161,6 +164,7 @@ PacketSocket::DoBind (const PacketSocketAddress &address)
   m_protocol = address.GetProtocol ();
   m_isSingleDevice = address.IsSingleDevice ();
   m_device = address.GetSingleDevice ();
+  m_boundnetdevice = dev;
   return 0;
 }
 
@@ -246,6 +250,7 @@ error:
 int 
 PacketSocket::Listen (void)
 {
+  NS_LOG_FUNCTION (this);
   m_errno = Socket::ERROR_OPNOTSUPP;
   return -1;
 }
@@ -253,10 +258,6 @@ PacketSocket::Listen (void)
 int
 PacketSocket::Send (Ptr<Packet> p, uint32_t flags)
 {
-	//SeqTsHeader sth;
-	//p->PeekHeader(sth);
-	//std::cout << "in packet socket send " << sth.GetSeq() << "\n";
-
   NS_LOG_FUNCTION (this << p << flags);
   if (m_state == STATE_OPEN ||
       m_state == STATE_BOUND)
@@ -270,6 +271,7 @@ PacketSocket::Send (Ptr<Packet> p, uint32_t flags)
 uint32_t
 PacketSocket::GetMinMtu (PacketSocketAddress ad) const
 {
+  NS_LOG_FUNCTION (this << ad);
   if (ad.IsSingleDevice ())
     {
       Ptr<NetDevice> device = m_node->GetDevice (ad.GetSingleDevice ());
@@ -290,6 +292,7 @@ PacketSocket::GetMinMtu (PacketSocketAddress ad) const
 uint32_t 
 PacketSocket::GetTxAvailable (void) const
 {
+  NS_LOG_FUNCTION (this);
   if (m_state == STATE_CONNECTED)
     {
       PacketSocketAddress ad = PacketSocketAddress::ConvertFrom (m_destAddr);
@@ -302,10 +305,6 @@ PacketSocket::GetTxAvailable (void) const
 int
 PacketSocket::SendTo (Ptr<Packet> p, uint32_t flags, const Address &address)
 {
-	//SeqTsHeader sth;
-	//p->PeekHeader(sth);
-	//std::cout << "in packet socket sendto " << sth.GetSeq() << "\n";
-
   NS_LOG_FUNCTION (this << p << flags << address);
   PacketSocketAddress ad;
   if (m_state == STATE_CLOSED)
@@ -335,13 +334,9 @@ PacketSocket::SendTo (Ptr<Packet> p, uint32_t flags, const Address &address)
 
   bool error = false;
   Address dest = ad.GetPhysicalAddress ();
-
-  
-
   if (ad.IsSingleDevice ())
     {
       Ptr<NetDevice> device = m_node->GetDevice (ad.GetSingleDevice ());
-
       if (!device->Send (p, dest, ad.GetProtocol ()))
         {
           NS_LOG_LOGIC ("error: NetDevice::Send error");
@@ -353,7 +348,6 @@ PacketSocket::SendTo (Ptr<Packet> p, uint32_t flags, const Address &address)
       for (uint32_t i = 0; i < m_node->GetNDevices (); i++)
         {
           Ptr<NetDevice> device = m_node->GetDevice (i);
-		  
           if (!device->Send (p, dest, ad.GetProtocol ()))
             {
               NS_LOG_LOGIC ("error: NetDevice::Send error");
@@ -389,8 +383,6 @@ PacketSocket::ForwardUp (Ptr<NetDevice> device, Ptr<const Packet> packet,
     {
       return;
     }
-
-
   PacketSocketAddress address;
   address.SetPhysicalAddress (from);
   address.SetSingleDevice (device->GetIfIndex ());
@@ -399,9 +391,16 @@ PacketSocket::ForwardUp (Ptr<NetDevice> device, Ptr<const Packet> packet,
   if ((m_rxAvailable + packet->GetSize ()) <= m_rcvBufSize)
     {
       Ptr<Packet> copy = packet->Copy ();
+      DeviceNameTag dnt;
+      dnt.SetDeviceName (device->GetTypeId ().GetName ());
+      PacketSocketTag pst;
+      pst.SetPacketType (packetType);
+      pst.SetDestAddress (to);
       SocketAddressTag tag;
       tag.SetAddress (address);
-      copy->AddPacketTag (tag);
+      copy->AddPacketTag (tag); // Attach From Physical Address
+      copy->AddPacketTag (pst); // Attach Packet Type and Dest Address
+      copy->AddPacketTag (dnt); // Attach device source name
       m_deliveryQueue.push (copy);
       m_rxAvailable += packet->GetSize ();
       NS_LOG_LOGIC ("UID is " << packet->GetUid () << " PacketSocket " << this);
@@ -491,6 +490,7 @@ PacketSocket::GetSockName (Address &address) const
 bool
 PacketSocket::SetAllowBroadcast (bool allowBroadcast)
 {
+  NS_LOG_FUNCTION (this << allowBroadcast);
   if (allowBroadcast)
     {
       return false;
@@ -501,7 +501,154 @@ PacketSocket::SetAllowBroadcast (bool allowBroadcast)
 bool
 PacketSocket::GetAllowBroadcast () const
 {
+  NS_LOG_FUNCTION (this);
   return false;
 }
+
+/***************************************************************
+ *           PacketSocket Tags
+ ***************************************************************/
+
+PacketSocketTag::PacketSocketTag ()
+{
+}
+
+void
+PacketSocketTag::SetPacketType(NetDevice::PacketType t)
+{
+  m_packetType = t;
+}
+
+NetDevice::PacketType
+PacketSocketTag::GetPacketType (void) const
+{
+  return m_packetType;
+}
+
+void
+PacketSocketTag::SetDestAddress(Address a)
+{
+  m_destAddr = a;
+}
+
+Address
+PacketSocketTag::GetDestAddress (void) const
+{
+  return m_destAddr;
+}
+
+NS_OBJECT_ENSURE_REGISTERED (PacketSocketTag)
+  ;
+
+TypeId
+PacketSocketTag::GetTypeId (void)
+{
+  static TypeId tid = TypeId ("ns3::PacketSocketTag")
+    .SetParent<Tag> ()
+    .AddConstructor<PacketSocketTag> ()
+  ;
+  return tid;
+}
+TypeId
+PacketSocketTag::GetInstanceTypeId (void) const
+{
+  return GetTypeId ();
+}
+uint32_t
+PacketSocketTag::GetSerializedSize (void) const
+{
+  return  1 + m_destAddr.GetSerializedSize();
+}
+void
+PacketSocketTag::Serialize (TagBuffer i) const
+{
+  i.WriteU8 (m_packetType);
+  m_destAddr.Serialize (i);
+}
+void
+PacketSocketTag::Deserialize (TagBuffer i)
+{
+  m_packetType = (NetDevice::PacketType) i.ReadU8 ();
+  m_destAddr.Deserialize (i);
+}
+void
+PacketSocketTag::Print (std::ostream &os) const
+{
+  os << "packetType=" << m_packetType;
+}
+
+/***************************************************************
+ *           DeviceName Tags
+ ***************************************************************/
+
+DeviceNameTag::DeviceNameTag ()
+{
+}
+
+void
+DeviceNameTag::SetDeviceName (std::string n)
+{
+  if ( n.substr(0,5) == "ns3::" )
+    {
+      n = n.substr (5);
+    }
+  m_deviceName = n;
+}
+
+std::string
+DeviceNameTag::GetDeviceName (void) const
+{
+  return m_deviceName;
+}
+
+NS_OBJECT_ENSURE_REGISTERED (DeviceNameTag)
+  ;
+
+TypeId
+DeviceNameTag::GetTypeId (void)
+{
+  static TypeId tid = TypeId ("ns3::DeviceNameTag")
+    .SetParent<Tag> ()
+    .AddConstructor<DeviceNameTag> ();
+  return tid;
+}
+TypeId
+DeviceNameTag::GetInstanceTypeId (void) const
+{
+  return GetTypeId ();
+}
+uint32_t
+DeviceNameTag::GetSerializedSize (void) const
+{
+  uint32_t s = 1 + m_deviceName.size();  // +1 for name length field
+  s = std::min (s, (uint32_t)PacketTagList::TagData::MAX_SIZE);
+  return s;
+}
+void
+DeviceNameTag::Serialize (TagBuffer i) const
+{
+  const char *n = m_deviceName.c_str();
+  uint8_t l = (uint8_t) m_deviceName.size ();
+
+  l = std::min ((uint32_t)l, (uint32_t)PacketTagList::TagData::MAX_SIZE - 1);
+
+  i.WriteU8 (l);
+  i.Write ( (uint8_t*) n , (uint32_t) l);
+}
+void
+DeviceNameTag::Deserialize (TagBuffer i)
+{
+  uint8_t l = i.ReadU8();
+  char buf[256];
+
+  i.Read ( (uint8_t* ) buf, (uint32_t) l);
+  m_deviceName = std::string (buf, l);
+}
+void
+DeviceNameTag::Print (std::ostream &os) const
+{
+  os << "DeviceName=" << m_deviceName;
+}
+
 
 } // namespace ns3

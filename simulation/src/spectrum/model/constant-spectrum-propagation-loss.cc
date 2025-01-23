@@ -18,7 +18,7 @@
  * Author: Manuel Requena <manuel.requena@cttc.es>
  */
 
-#include <math.h>
+#include <cmath>
 
 #include "ns3/log.h"
 
@@ -31,7 +31,8 @@ NS_LOG_COMPONENT_DEFINE ("ConstantSpectrumPropagationLossModel");
 namespace ns3 {
 
 
-NS_OBJECT_ENSURE_REGISTERED (ConstantSpectrumPropagationLossModel);
+NS_OBJECT_ENSURE_REGISTERED (ConstantSpectrumPropagationLossModel)
+  ;
 
 ConstantSpectrumPropagationLossModel::ConstantSpectrumPropagationLossModel ()
 {
@@ -65,7 +66,7 @@ ConstantSpectrumPropagationLossModel::SetLossDb (double lossDb)
 {
   NS_LOG_FUNCTION (this);
   m_lossDb = lossDb;
-  m_lossLinear = pow (10, m_lossDb / 10);
+  m_lossLinear = std::pow (10, m_lossDb / 10);
 }
 
 

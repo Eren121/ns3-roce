@@ -42,7 +42,7 @@ public:
   LteRlcSpecificLteMacSapUser (LteRlc* rlc);
 
   // Interface implemented from LteMacSapUser
-  virtual void NotifyTxOpportunity (uint32_t bytes, uint8_t layer);
+  virtual void NotifyTxOpportunity (uint32_t bytes, uint8_t layer, uint8_t harqId);
   virtual void NotifyHarqDeliveryFailure ();
   virtual void ReceivePdu (Ptr<Packet> p);
 
@@ -61,9 +61,9 @@ LteRlcSpecificLteMacSapUser::LteRlcSpecificLteMacSapUser ()
 }
 
 void
-LteRlcSpecificLteMacSapUser::NotifyTxOpportunity (uint32_t bytes, uint8_t layer)
+LteRlcSpecificLteMacSapUser::NotifyTxOpportunity (uint32_t bytes, uint8_t layer, uint8_t harqId)
 {
-  m_rlc->DoNotifyTxOpportunity (bytes, layer);
+  m_rlc->DoNotifyTxOpportunity (bytes, layer, harqId);
 }
 
 void
@@ -81,7 +81,8 @@ LteRlcSpecificLteMacSapUser::ReceivePdu (Ptr<Packet> p)
 
 ///////////////////////////////////////
 
-NS_OBJECT_ENSURE_REGISTERED (LteRlc);
+NS_OBJECT_ENSURE_REGISTERED (LteRlc)
+  ;
 
 LteRlc::LteRlc ()
   : m_rlcSapUser (0),
@@ -92,6 +93,11 @@ LteRlc::LteRlc ()
   NS_LOG_FUNCTION (this);
   m_rlcSapProvider = new LteRlcSpecificLteRlcSapProvider<LteRlc> (this);
   m_macSapUser = new LteRlcSpecificLteMacSapUser (this);
+}
+
+LteRlc::~LteRlc ()
+{
+  NS_LOG_FUNCTION (this);
 }
 
 TypeId LteRlc::GetTypeId (void)
@@ -109,6 +115,14 @@ TypeId LteRlc::GetTypeId (void)
 }
 
 void
+LteRlc::DoDispose ()
+{
+  NS_LOG_FUNCTION (this);
+  delete (m_rlcSapProvider);
+  delete (m_macSapUser);
+}
+
+void
 LteRlc::SetRnti (uint16_t rnti)
 {
   NS_LOG_FUNCTION (this << (uint32_t) rnti);
@@ -120,13 +134,6 @@ LteRlc::SetLcId (uint8_t lcId)
 {
   NS_LOG_FUNCTION (this << (uint32_t) lcId);
   m_lcid = lcId;
-}
-
-LteRlc::~LteRlc ()
-{
-  NS_LOG_FUNCTION (this);
-  delete (m_rlcSapProvider);
-  delete (m_macSapUser);
 }
 
 void
@@ -161,18 +168,17 @@ LteRlc::GetLteMacSapUser ()
 
 ////////////////////////////////////////
 
-NS_OBJECT_ENSURE_REGISTERED (LteRlcSm);
+NS_OBJECT_ENSURE_REGISTERED (LteRlcSm)
+  ;
 
 LteRlcSm::LteRlcSm ()
 {
-
   NS_LOG_FUNCTION (this);
-  Simulator::ScheduleNow (&LteRlcSm::Start, this);
 }
 
 LteRlcSm::~LteRlcSm ()
 {
-
+  NS_LOG_FUNCTION (this);
 }
 
 TypeId
@@ -183,6 +189,20 @@ LteRlcSm::GetTypeId (void)
     .AddConstructor<LteRlcSm> ()
     ;
   return tid;
+}
+
+void
+LteRlcSm::DoInitialize ()
+{
+  NS_LOG_FUNCTION (this);
+  ReportBufferStatus ();
+}
+
+void
+LteRlcSm::DoDispose ()
+{
+  NS_LOG_FUNCTION (this);
+  LteRlc::DoDispose ();
 }
 
 void
@@ -210,7 +230,7 @@ LteRlcSm::DoReceivePdu (Ptr<Packet> p)
 }
 
 void
-LteRlcSm::DoNotifyTxOpportunity (uint32_t bytes, uint8_t layer)
+LteRlcSm::DoNotifyTxOpportunity (uint32_t bytes, uint8_t layer, uint8_t harqId)
 {
   NS_LOG_FUNCTION (this << bytes);
   LteMacSapProvider::TransmitPduParameters params;
@@ -218,6 +238,7 @@ LteRlcSm::DoNotifyTxOpportunity (uint32_t bytes, uint8_t layer)
   params.rnti = m_rnti;
   params.lcid = m_lcid;
   params.layer = layer;
+  params.harqProcessId = harqId;
 
   // RLC Performance evaluation
   RlcTag tag (Simulator::Now());
@@ -235,13 +256,6 @@ void
 LteRlcSm::DoNotifyHarqDeliveryFailure ()
 {
   NS_LOG_FUNCTION (this);
-}
-
-void
-LteRlcSm::Start ()
-{
-  NS_LOG_FUNCTION (this);
-  ReportBufferStatus ();
 }
 
 void

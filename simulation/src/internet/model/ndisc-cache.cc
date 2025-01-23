@@ -30,9 +30,11 @@
 namespace ns3
 {
 
-NS_LOG_COMPONENT_DEFINE ("NdiscCache");
+NS_LOG_COMPONENT_DEFINE ("NdiscCache")
+  ;
 
-NS_OBJECT_ENSURE_REGISTERED (NdiscCache);
+NS_OBJECT_ENSURE_REGISTERED (NdiscCache)
+  ;
 
 TypeId NdiscCache::GetTypeId ()
 {
@@ -182,7 +184,7 @@ void NdiscCache::Entry::AddWaitingPacket (Ptr<Packet> p)
   if (m_waiting.size () >= m_ndCache->GetUnresQlen ())
     {
       /* we store only m_unresQlen packet => first packet in first packet remove */
-      /* XXX report packet as 'dropped' */
+      /** \todo report packet as 'dropped' */
       m_waiting.remove (0);
     }
   m_waiting.push_back (p);
@@ -191,7 +193,7 @@ void NdiscCache::Entry::AddWaitingPacket (Ptr<Packet> p)
 void NdiscCache::Entry::ClearWaitingPacket ()
 {
   NS_LOG_FUNCTION_NOARGS ();
-  /* XXX report packets as 'dropped' */
+  /** \todo report packets as 'dropped' */
   m_waiting.clear ();
 }
 

@@ -19,7 +19,7 @@
 #ifndef POINT_TO_POINT_NET_DEVICE_H
 #define POINT_TO_POINT_NET_DEVICE_H
 
-#include <string.h>
+#include <cstring>
 #include "ns3/address.h"
 #include "ns3/node.h"
 #include "ns3/net-device.h"
@@ -38,7 +38,7 @@ class PointToPointChannel;
 class ErrorModel;
 
 /**
- * \defgroup point-to-point PointToPointNetDevice
+ * \defgroup point-to-point Point-To-Point Network Device
  * This section documents the API of the ns-3 point-to-point module. For a generic functional description, please refer to the ns-3 manual.
  */
 
@@ -159,7 +159,7 @@ public:
 
   virtual bool IsLinkUp (void) const;
 
-  virtual void AddLinkChangeCallback (Callback<void> callback); 
+  virtual void AddLinkChangeCallback (Callback<void> callback);
 
   virtual bool IsBroadcast (void) const;
   virtual Address GetBroadcast (void) const;
@@ -188,29 +188,14 @@ public:
 protected:
   void DoMpiReceive (Ptr<Packet> p);
 
-  virtual void DoDispose (void);
-  
-    /**
-   * Enumeration of the states of the transmit machine of the net device.
-   */
-  enum TxMachineState
-  {
-    READY,   /**< The transmitter is ready to begin transmission of a packet */
-    BUSY     /**< The transmitter is busy transmitting a packet */
-  };
-  /**
-   * The state of the Net Device transmit state machine.
-   * @see TxMachineState
-   */
-  TxMachineState m_txMachineState;
-  
 private:
 
   PointToPointNetDevice& operator = (const PointToPointNetDevice &);
   PointToPointNetDevice (const PointToPointNetDevice &);
 
+  virtual void DoDispose (void);
 
-protected:
+private:
 
   /**
    * \returns the address of the remote device connected to this device
@@ -263,7 +248,19 @@ protected:
 
   void NotifyLinkUp (void);
 
-
+  /**
+   * Enumeration of the states of the transmit machine of the net device.
+   */
+  enum TxMachineState
+  {
+    READY,   /**< The transmitter is ready to begin transmission of a packet */
+    BUSY     /**< The transmitter is busy transmitting a packet */
+  };
+  /**
+   * The state of the Net Device transmit state machine.
+   * @see TxMachineState
+   */
+  TxMachineState m_txMachineState;
 
   /**
    * The data rate that the Net Device uses to simulate packet transmission

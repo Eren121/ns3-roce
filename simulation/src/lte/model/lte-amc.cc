@@ -24,26 +24,20 @@
 #include <ns3/lte-amc.h>
 #include <ns3/log.h>
 #include <ns3/assert.h>
-#include <math.h>
+#include <ns3/math.h>
 #include <vector>
 #include <ns3/spectrum-value.h>
 #include <ns3/double.h>
 #include "ns3/enum.h"
 #include <ns3/lte-mi-error-model.h>
 
-#ifdef __FreeBSD__
-#define log2(x) (log(x)/M_LN2)
-#endif
 
 NS_LOG_COMPONENT_DEFINE ("LteAmc");
 
-#ifdef WIN32
-#include "winport.h"
-#endif
-
 namespace ns3 {
 
-NS_OBJECT_ENSURE_REGISTERED (LteAmc);
+NS_OBJECT_ENSURE_REGISTERED (LteAmc)
+  ;
 
 // from 3GPP R1-081483 "Conveying MCS and TB size via PDCCH"
 // file TBS_support.xls
@@ -322,14 +316,13 @@ LteAmc::CreateCqiFeedbacks (const SpectrumValue& sinr, uint8_t rbgSize)
               * NB: SINR must be expressed in linear units
               */
 
-              double s = log2 ( 1 + ( sinr_ /
-                                      ( (-log (5.0 * m_ber )) / 1.5) ));
+              double s = log2 ( 1 + ( sinr_ / ( (-std::log (5.0 * m_ber )) / 1.5) ));
 
               int cqi_ = GetCqiFromSpectralEfficiency (s);
 
               NS_LOG_LOGIC (" PRB =" << cqi.size ()
                                     << ", sinr = " << sinr_
-                                    << " (=" << 10 * log10 (sinr_) << " dB)"
+                                    << " (=" << 10 * std::log10 (sinr_) << " dB)"
                                     << ", spectral efficiency =" << s
                                     << ", CQI = " << cqi_ << ", BER = " << m_ber);
 
@@ -349,18 +342,25 @@ LteAmc::CreateCqiFeedbacks (const SpectrumValue& sinr, uint8_t rbgSize)
         if ((rbId % rbgSize == 0)||((it+1)==sinr.ConstValuesEnd ()))
          {
             uint8_t mcs = 0;
-            double ber = 0.0;
-            while (mcs < 28)
+            TbStats_t tbStats;
+            while (mcs <= 28)
               {
-                ber = LteMiErrorModel::GetTbError (sinr, rbgMap, (uint16_t)GetTbSizeFromMcs (mcs, rbgSize) / 8, mcs);
-                if (ber > 0.1)
-                  break;
+                HarqProcessInfoList_t harqInfoList;
+                tbStats = LteMiErrorModel::GetTbDecodificationStats (sinr, rbgMap, (uint16_t)GetTbSizeFromMcs (mcs, rbgSize) / 8, mcs, harqInfoList);
+                if (tbStats.tbler > 0.1)
+                  {
+                    break;
+                  }
                 mcs++;
                 
               }
-            NS_LOG_DEBUG (this << "\t RBG " << rbId << " MCS " << (uint16_t)mcs << " BER " << ber);
+            if (mcs > 0)
+              {
+                mcs--;
+              }
+            NS_LOG_DEBUG (this << "\t RBG " << rbId << " MCS " << (uint16_t)mcs << " TBLER " << tbStats.tbler);
             int rbgCqi = 0;
-            if ((ber > 0.1)&&(mcs==0))
+            if ((tbStats.tbler > 0.1)&&(mcs==0))
               {
                 rbgCqi = 0; // any MCS can guarantee the 10 % of BER
               }
@@ -377,7 +377,7 @@ LteAmc::CreateCqiFeedbacks (const SpectrumValue& sinr, uint8_t rbgSize)
                   ++rbgCqi;
                 }
               }
-            NS_LOG_DEBUG (this << "\t CQI " << rbgCqi);
+            NS_LOG_DEBUG (this << "\t MCS " << (uint16_t)mcs << "-> CQI " << rbgCqi);
             // fill the cqi vector (per RB basis)
             for (uint8_t j = 0; j < rbgSize; j++)
               {

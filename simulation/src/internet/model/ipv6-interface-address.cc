@@ -28,7 +28,8 @@
 namespace ns3
 {
 
-NS_LOG_COMPONENT_DEFINE ("Ipv6InterfaceAddress");
+NS_LOG_COMPONENT_DEFINE ("Ipv6InterfaceAddress")
+  ;
 
 Ipv6InterfaceAddress::Ipv6InterfaceAddress () 
   : m_address (Ipv6Address ()),
@@ -95,6 +96,12 @@ void Ipv6InterfaceAddress::SetAddress (Ipv6Address address)
       /* link-local address is always /64 prefix */
       m_prefix = Ipv6Prefix (64);
     }
+  else if (address.IsLinkLocalMulticast ())
+    {
+      m_scope = LINKLOCAL;
+      /* link-local multicast address is always /16 prefix */
+      m_prefix = Ipv6Prefix (16);
+    }
   else
     {
       m_scope = GLOBAL;
@@ -133,8 +140,22 @@ Ipv6InterfaceAddress::Scope_e Ipv6InterfaceAddress::GetScope () const
 
 std::ostream& operator<< (std::ostream& os, const Ipv6InterfaceAddress &addr)
 {
-  os << "address=" << addr.GetAddress () << "; prefix=" <<
-  addr.GetPrefix () << "; scope=" << addr.GetScope ();
+  os << "address: " << addr.GetAddress () << addr.GetPrefix () << "; scope: ";
+  switch (addr.GetScope ())
+  {
+    case Ipv6InterfaceAddress::HOST:
+      os << "HOST";
+      break;
+    case Ipv6InterfaceAddress::LINKLOCAL:
+      os << "LINK-LOCAL";
+      break;
+    case Ipv6InterfaceAddress::GLOBAL:
+      os << "GLOBAL";
+      break;
+    default:
+      os << "UNKNOWN";
+      break;
+  }
   return os;
 }
 

@@ -142,16 +142,9 @@ def build(bld):
         'model/tcp-tahoe.cc',
         'model/tcp-reno.cc',
         'model/tcp-newreno.cc',
+        'model/tcp-westwood.cc',
         'model/tcp-rx-buffer.cc',
         'model/tcp-tx-buffer.cc',
-        'model/tcp-option.cc',
-        'model/tcp-option-end.cc',
-        'model/tcp-option-no-op.cc',
-        'model/tcp-option-mss.cc',
-        'model/tcp-option-winscale.cc',
-        'model/tcp-option-sack-permitted.cc',
-        'model/tcp-option-sack.cc',
-        'model/tcp-option-ts.cc',
         'model/ipv4-packet-info-tag.cc',
         'model/ipv6-packet-info-tag.cc',
         'model/ipv4-interface-address.cc',
@@ -196,7 +189,9 @@ def build(bld):
         'helper/ipv6-interface-container.cc',
         'helper/ipv6-routing-helper.cc',
         'model/ipv6-address-generator.cc',
-        'model/seq-ts-header.cc',
+        'model/ipv4-packet-probe.cc',
+        'model/ipv6-packet-probe.cc',
+        'model/ipv6-pmtu-cache.cc',
         ]
 
     internet_test = bld.create_ns3_module_test_library('internet')
@@ -209,27 +204,28 @@ def build(bld):
         'test/ipv4-raw-test.cc',
         'test/ipv4-header-test.cc',
         'test/ipv4-fragmentation-test.cc',
+        'test/ipv4-forwarding-test.cc',
         'test/error-channel.cc',
-        'test/error-net-device.cc',
         'test/ipv4-test.cc',
         'test/ipv6-extension-header-test-suite.cc',
         'test/ipv6-list-routing-test-suite.cc',
         'test/ipv6-packet-info-tag-test-suite.cc',
         'test/ipv6-test.cc',
+        'test/ipv6-raw-test.cc',
         'test/tcp-test.cc',
         'test/udp-test.cc',
         'test/ipv6-address-generator-test-suite.cc',
         'test/ipv6-dual-stack-test-suite.cc',
         'test/ipv6-fragmentation-test.cc',
+        'test/ipv6-forwarding-test.cc',
         'test/ipv6-address-helper-test-suite.cc',
+        'test/rtt-test.cc',
         ]
     headers = bld(features='ns3header')
     headers.module = 'internet'
     headers.source = [
         'model/udp-header.h',
         'model/tcp-header.h',
-        'model/tcp-option.h',
-        'model/tcp-option-no-op.h',
         'model/icmpv4.h',
         'model/icmpv6-header.h',
         # used by routing
@@ -297,15 +293,18 @@ def build(bld):
         'helper/ipv6-interface-container.h',
         'helper/ipv6-routing-helper.h',
         'model/ipv6-address-generator.h',
-        'model/seq-ts-header.h',
         'model/tcp-rfc793.h',        
         'model/tcp-tahoe.h',
         'model/tcp-reno.h',
         'model/tcp-newreno.h',
+        'model/tcp-westwood.h',
         'model/tcp-socket-base.h',
         'model/tcp-tx-buffer.h',
         'model/tcp-rx-buffer.h',
-        'model/rtt-estimator.h'
+        'model/rtt-estimator.h',
+        'model/ipv4-packet-probe.h',
+        'model/ipv6-packet-probe.h',
+        'model/ipv6-pmtu-cache.h',
        ]
 
     if bld.env['NSC_ENABLED']:

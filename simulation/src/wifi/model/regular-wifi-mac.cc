@@ -38,7 +38,8 @@ NS_LOG_COMPONENT_DEFINE ("RegularWifiMac");
 
 namespace ns3 {
 
-NS_OBJECT_ENSURE_REGISTERED (RegularWifiMac);
+NS_OBJECT_ENSURE_REGISTERED (RegularWifiMac)
+  ;
 
 RegularWifiMac::RegularWifiMac ()
 {
@@ -75,15 +76,15 @@ RegularWifiMac::~RegularWifiMac ()
 }
 
 void
-RegularWifiMac::DoStart ()
+RegularWifiMac::DoInitialize ()
 {
   NS_LOG_FUNCTION (this);
 
-  m_dca->Start ();
+  m_dca->Initialize ();
 
   for (EdcaQueues::iterator i = m_edca.begin (); i != m_edca.end (); ++i)
     {
-      i->second->Start ();
+      i->second->Initialize ();
     }
 }
 
@@ -92,26 +93,26 @@ RegularWifiMac::DoDispose ()
 {
   NS_LOG_FUNCTION (this);
   delete m_rxMiddle;
-  m_rxMiddle = NULL;
+  m_rxMiddle = 0;
 
   delete m_txMiddle;
-  m_txMiddle = NULL;
+  m_txMiddle = 0;
 
   delete m_dcfManager;
-  m_dcfManager = NULL;
+  m_dcfManager = 0;
 
   m_low->Dispose ();
-  m_low = NULL;
+  m_low = 0;
 
-  m_phy = NULL;
-  m_stationManager = NULL;
+  m_phy = 0;
+  m_stationManager = 0;
 
   m_dca->Dispose ();
-  m_dca = NULL;
+  m_dca = 0;
 
   for (EdcaQueues::iterator i = m_edca.begin (); i != m_edca.end (); ++i)
     {
-      i->second = NULL;
+      i->second = 0;
     }
 }
 
@@ -120,6 +121,7 @@ RegularWifiMac::SetWifiRemoteStationManager (Ptr<WifiRemoteStationManager> stati
 {
   NS_LOG_FUNCTION (this << stationManager);
   m_stationManager = stationManager;
+  m_stationManager->SetHtSupported (GetHtSupported());
   m_low->SetWifiRemoteStationManager (stationManager);
 
   m_dca->SetWifiRemoteStationManager (stationManager);
@@ -244,6 +246,30 @@ RegularWifiMac::GetQosSupported () const
 {
   return m_qosSupported;
 }
+void
+RegularWifiMac::SetHtSupported (bool enable)
+{
+  NS_LOG_FUNCTION (this);
+  m_htSupported = enable;
+}
+
+bool
+RegularWifiMac::GetHtSupported () const
+{
+  return m_htSupported;
+}
+void
+RegularWifiMac::SetCtsToSelfSupported(bool enable)
+{
+  NS_LOG_FUNCTION (this);
+  m_low->SetCtsToSelfSupported (enable);
+}
+
+bool
+RegularWifiMac::GetCtsToSelfSupported () const
+{
+   return  m_low->GetCtsToSelfSupported ();
+}
 
 void
 RegularWifiMac::SetSlot (Time slotTime)
@@ -284,6 +310,18 @@ Time
 RegularWifiMac::GetEifsNoDifs (void) const
 {
   return m_dcfManager->GetEifsNoDifs ();
+}
+void
+RegularWifiMac::SetRifs (Time rifs)
+{
+  NS_LOG_FUNCTION (this << rifs);
+  m_low->SetRifs (rifs);
+}
+
+Time
+RegularWifiMac::GetRifs (void) const
+{
+  return m_low->GetRifs();
 }
 
 void
@@ -512,10 +550,13 @@ RegularWifiMac::Receive (Ptr<Packet> packet, const WifiMacHeader *hdr)
 
             default:
               NS_FATAL_ERROR ("Unsupported Action field in Block Ack Action frame");
+              return;
             }
+
 
         default:
           NS_FATAL_ERROR ("Unsupported Action frame received");
+          return;
         }
     }
   NS_FATAL_ERROR ("Don't know how to handle frame (type=" << hdr->GetType ());
@@ -606,6 +647,18 @@ RegularWifiMac::GetTypeId (void)
                    MakeBooleanAccessor (&RegularWifiMac::SetQosSupported,
                                         &RegularWifiMac::GetQosSupported),
                    MakeBooleanChecker ())
+    .AddAttribute ("HtSupported",
+                   "This Boolean attribute is set to enable 802.11n support at this STA",
+                   BooleanValue (false),
+                   MakeBooleanAccessor (&RegularWifiMac::SetHtSupported,
+                                        &RegularWifiMac::GetHtSupported),
+                   MakeBooleanChecker ())
+   .AddAttribute ("CtsToSelfSupported",
+                   "Use CTS to Self when using a rate that is not in the basic set rate",
+                   BooleanValue (false),
+                   MakeBooleanAccessor (&RegularWifiMac::SetCtsToSelfSupported,
+                                        &RegularWifiMac::GetCtsToSelfSupported),
+                    MakeBooleanChecker ())
     .AddAttribute ("DcaTxop", "The DcaTxop object",
                    PointerValue (),
                    MakePointerAccessor (&RegularWifiMac::GetDcaTxop),
@@ -649,17 +702,13 @@ RegularWifiMac::FinishConfigureStandard (enum WifiPhyStandard standard)
 
   switch (standard)
     {
-    case WIFI_PHY_STANDARD_80211p_CCH:
-    case WIFI_PHY_STANDARD_80211p_SCH:
-      cwmin = 15;
-      cwmax = 511;
-      break;
-
     case WIFI_PHY_STANDARD_holland:
     case WIFI_PHY_STANDARD_80211a:
     case WIFI_PHY_STANDARD_80211g:
     case WIFI_PHY_STANDARD_80211_10MHZ:
     case WIFI_PHY_STANDARD_80211_5MHZ:
+    case WIFI_PHY_STANDARD_80211n_5GHZ:
+    case WIFI_PHY_STANDARD_80211n_2_4GHZ:
       cwmin = 15;
       cwmax = 1023;
       break;
@@ -680,15 +729,7 @@ RegularWifiMac::FinishConfigureStandard (enum WifiPhyStandard standard)
   // Now we configure the EDCA functions
   for (EdcaQueues::iterator i = m_edca.begin (); i != m_edca.end (); ++i)
     {
-      // Special configuration for 802.11p CCH
-      if (standard == WIFI_PHY_STANDARD_80211p_CCH)
-        {
-          ConfigureCCHDcf (i->second, cwmin, cwmax, i->first);
-        }
-      else
-        {
-          ConfigureDcf (i->second, cwmin, cwmax, i->first);
-        }
+      ConfigureDcf (i->second, cwmin, cwmax, i->first);
     }
 }
 

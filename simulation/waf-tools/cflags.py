@@ -19,11 +19,7 @@ class GccTraits(CompilerTraits):
 	def __init__(self):
 		super(GccTraits, self).__init__()
 		# cumulative list of warnings per level
-		#self.warnings_flags = [['-Wall'], ['-Werror'], ['-Wextra']]
-		self.warnings_flags = []
-
-	def get_cxx_version_flags(self):
-		return ['-std=c++17']
+		self.warnings_flags = [['-Wall'], ['-Werror'], ['-Wextra']]
 
 	def get_warnings_flags(self, level):
 		warnings = []
@@ -181,7 +177,6 @@ def configure(conf):
 	optimizations = compiler.get_optimization_flags(opt_level)
 	debug, debug_defs = compiler.get_debug_flags(dbg_level)
 	warnings = compiler.get_warnings_flags(warn_level)
-	cxx_version = compiler.get_cxx_version_flags()
 	
 	if cc and not conf.env['CCFLAGS']:
 		conf.env.append_value('CCFLAGS', optimizations)
@@ -192,5 +187,4 @@ def configure(conf):
 		conf.env.append_value('CXXFLAGS', optimizations)
 		conf.env.append_value('CXXFLAGS', debug)
 		conf.env.append_value('CXXFLAGS', warnings)
-		conf.env.append_value('CXXFLAGS', cxx_version)
 		conf.env.append_value('CXXDEFINES', debug_defs)

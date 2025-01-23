@@ -34,7 +34,8 @@ NS_LOG_COMPONENT_DEFINE ("UanNetDevice");
 
 namespace ns3 {
 
-NS_OBJECT_ENSURE_REGISTERED (UanNetDevice);
+NS_OBJECT_ENSURE_REGISTERED (UanNetDevice)
+  ;
 
 UanNetDevice::UanNetDevice ()
   : NetDevice (),
@@ -92,7 +93,7 @@ UanNetDevice::GetTypeId ()
 
   static TypeId tid = TypeId ("ns3::UanNetDevice")
     .SetParent<NetDevice> ()
-    .AddAttribute ("Channel", "The channel attached to this device",
+    .AddAttribute ("Channel", "The channel attached to this device.",
                    PointerValue (),
                    MakePointerAccessor (&UanNetDevice::DoGetChannel, &UanNetDevice::SetChannel),
                    MakePointerChecker<UanChannel> ())
@@ -226,7 +227,7 @@ UanNetDevice::GetAddress () const
 bool
 UanNetDevice::SetMtu (uint16_t mtu)
 {
-  // TODO:  Check this in MAC
+  /// \todo  Check this in MAC
   NS_LOG_WARN ("UanNetDevice:  MTU is not implemented");
   m_mtu = mtu;
   return true;

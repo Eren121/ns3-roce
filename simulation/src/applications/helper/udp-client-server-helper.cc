@@ -82,15 +82,6 @@ UdpClientHelper::UdpClientHelper (Ipv4Address address, uint16_t port)
   SetAttribute ("RemotePort", UintegerValue (port));
 }
 
-UdpClientHelper::UdpClientHelper (Ipv4Address address, uint16_t port, uint16_t pg)
-{
-	m_factory.SetTypeId (UdpClient::GetTypeId ());
-	SetAttribute ("RemoteAddress", AddressValue (Address(address)));
-	SetAttribute ("RemotePort", UintegerValue (port));
-	SetAttribute ("PriorityGroup", UintegerValue (pg));
-}
-
-
 UdpClientHelper::UdpClientHelper (Ipv6Address address, uint16_t port)
 {
   m_factory.SetTypeId (UdpClient::GetTypeId ());

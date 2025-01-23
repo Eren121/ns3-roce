@@ -17,10 +17,12 @@
  *
  * Author: Mathieu Lacage <mathieu.lacage@sophia.inria.fr>
  */
+
 #include "ns3/node.h"
 #include "ns3/node-list.h"
 #include "ns3/simulator.h"
 #include "ns3/ipv4-routing-protocol.h"
+#include "ns3/ipv4-list-routing.h"
 #include "ipv4-routing-helper.h"
 
 namespace ns3 {

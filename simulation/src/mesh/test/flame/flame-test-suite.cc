@@ -73,8 +73,6 @@ private:
   void TestExpire ();
   ///\}
 private:
-  bool error;
-
   Mac48Address dst;
   Mac48Address hop;
   uint32_t iface;
@@ -88,7 +86,6 @@ static FlameRtableTest g_FlameRtableTest;
 
 FlameRtableTest::FlameRtableTest () :
   TestCase ("FlameRtable"), 
-  error (false), 
   dst ("01:00:00:01:00:01"), 
   hop ("01:00:00:01:00:03"),
   iface (8010), 
@@ -145,8 +142,8 @@ public:
 FlameTestSuite::FlameTestSuite ()
   : TestSuite ("devices-mesh-flame", UNIT)
 {
-  AddTestCase (new FlameHeaderTest);
-  AddTestCase (new FlameRtableTest);
+  AddTestCase (new FlameHeaderTest, TestCase::QUICK);
+  AddTestCase (new FlameRtableTest, TestCase::QUICK);
 }
 
 static FlameTestSuite g_flameTestSuite;

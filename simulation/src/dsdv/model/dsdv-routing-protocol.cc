@@ -44,7 +44,8 @@ NS_LOG_COMPONENT_DEFINE ("DsdvRoutingProtocol");
 
 namespace ns3 {
 namespace dsdv {
-NS_OBJECT_ENSURE_REGISTERED (RoutingProtocol);
+NS_OBJECT_ENSURE_REGISTERED (RoutingProtocol)
+  ;
 
 /// UDP Port for DSDV control traffic
 const uint32_t RoutingProtocol::DSDV_PORT = 269;
@@ -1073,7 +1074,7 @@ RoutingProtocol::Send (Ptr<Ipv4Route> route,
   Ptr<Ipv4L3Protocol> l3 = m_ipv4->GetObject<Ipv4L3Protocol> ();
   NS_ASSERT (l3 != 0);
   Ptr<Packet> p = packet->Copy ();
-  l3->Send (p, route->GetSource (), header.GetDestination (), header.GetTos (), header.GetProtocol (), route);
+  l3->Send (p,route->GetSource (),header.GetDestination (),header.GetProtocol (),route);
 }
 
 void

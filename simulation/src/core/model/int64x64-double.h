@@ -5,10 +5,6 @@
 #include <iostream>
 #include <cmath>
 
-#if HAVE_STDINT_H
-#include <stdint.h>
-#endif
-
 namespace ns3 {
 
 class int64x64_t
@@ -23,15 +19,15 @@ public:
   inline int64x64_t (long int v)
     : _v (v) {}
   inline int64x64_t (long long int v)
-    : _v (double (v)) {}
+    : _v (v) {}
   inline int64x64_t (unsigned int v)
     : _v (v) {}
   inline int64x64_t (unsigned long int v)
     : _v (v) {}
   inline int64x64_t (unsigned long long int v)
-    : _v (double (v)) {}
+    : _v (v) {}
   inline int64x64_t (int64_t hi, uint64_t lo)
-    : _v (double (hi)) { /** \todo add in lo? */}
+    : _v (hi) { /** \todo add in lo? */}
 
   inline int64x64_t (const int64x64_t &o)
     : _v (o._v) {}
@@ -62,7 +58,7 @@ public:
 
   static inline int64x64_t Invert (uint64_t v)
   {
-    double d = double (v);
+    double d = v;
     return int64x64_t (1/d);
   }
 

@@ -25,7 +25,6 @@
 #include "ns3/trace-source-accessor.h"
 #include "ns3/uinteger.h"
 #include "ns3/pointer.h"
-#include "ns3/mpi-interface.h"
 #include "point-to-point-net-device.h"
 #include "point-to-point-channel.h"
 #include "ppp-header.h"
@@ -34,7 +33,8 @@ NS_LOG_COMPONENT_DEFINE ("PointToPointNetDevice");
 
 namespace ns3 {
 
-NS_OBJECT_ENSURE_REGISTERED (PointToPointNetDevice);
+NS_OBJECT_ENSURE_REGISTERED (PointToPointNetDevice)
+  ;
 
 TypeId 
 PointToPointNetDevice::GetTypeId (void)
@@ -313,7 +313,6 @@ PointToPointNetDevice::Receive (Ptr<Packet> packet)
       // If we have an error model and it indicates that it is time to lose a
       // corrupted packet, don't forward this packet up, let it go.
       //
-	  //exit(-1);
       m_phyRxDropTrace (packet);
     }
   else 

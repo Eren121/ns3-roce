@@ -24,6 +24,7 @@
 #include "ns3/node.h"
 #include "ns3/simulator.h"
 #include "ns3/log.h"
+#include "ns3/random-variable-stream.h"
 #include "ns3/mac48-address.h"
 #include "ns3/ipv4-interface.h"
 #include "ns3/ipv4-l3-click-protocol.h"
@@ -44,7 +45,8 @@ namespace ns3 {
 #define INTERFACE_ID_FIRST 1
 #define INTERFACE_ID_FIRST_DROP 33
 
-NS_OBJECT_ENSURE_REGISTERED (Ipv4ClickRouting);
+NS_OBJECT_ENSURE_REGISTERED (Ipv4ClickRouting)
+  ;
 
 std::map < simclick_node_t *, Ptr<Ipv4ClickRouting> > Ipv4ClickRouting::m_clickInstanceFromSimNode;
 
@@ -63,6 +65,11 @@ Ipv4ClickRouting::Ipv4ClickRouting ()
   : m_nonDefaultName (false),
     m_ipv4 (0)
 {
+  m_random = CreateObject<UniformRandomVariable> ();
+  m_simNode = new simclick_node_t;
+  timerclear (&m_simNode->curtime);
+
+  AddSimNodeToClickMapping ();
 }
 
 Ipv4ClickRouting::~Ipv4ClickRouting ()
@@ -70,7 +77,7 @@ Ipv4ClickRouting::~Ipv4ClickRouting ()
 }
 
 void
-Ipv4ClickRouting::DoStart ()
+Ipv4ClickRouting::DoInitialize ()
 {
   uint32_t id = m_ipv4->GetObject<Node> ()->GetId ();
 
@@ -80,11 +87,6 @@ Ipv4ClickRouting::DoStart ()
       name << "Node" << id;
       m_nodeName = name.str ();
     }
-
-  m_simNode = new simclick_node_t;
-  timerclear (&m_simNode->curtime);
-
-  AddSimNodeToClickMapping ();
 
   NS_ASSERT (m_clickFile.length () > 0);
 
@@ -111,6 +113,12 @@ Ipv4ClickRouting::SetIpv4 (Ptr<Ipv4> ipv4)
   m_ipv4 = ipv4;
 }
 
+Ptr<UniformRandomVariable>
+Ipv4ClickRouting::GetRandomVariable (void)
+{
+  return m_random;
+}
+
 void
 Ipv4ClickRouting::DoDispose ()
 {
@@ -127,6 +135,18 @@ void
 Ipv4ClickRouting::SetClickFile (std::string clickfile)
 {
   m_clickFile = clickfile;
+}
+
+void
+Ipv4ClickRouting::SetDefines (std::map<std::string, std::string> defines)
+{
+  m_defines = defines;
+}
+
+std::map<std::string, std::string>
+Ipv4ClickRouting::GetDefines (void)
+{
+  return m_defines;
 }
 
 void
@@ -487,6 +507,7 @@ Ipv4ClickRouting::RouteOutput (Ptr<Packet> p, const Ipv4Header &header, Ptr<NetD
         }
       else
         {
+          /** \todo Implement IP aliasing and Click */
           NS_FATAL_ERROR ("XXX Not implemented yet:  IP aliasing and Click");
         }
       rtentry->SetSource (ifAddr.GetLocal ());
@@ -606,7 +627,7 @@ int simclick_sim_command (simclick_node_t *simnode, int cmd, ...)
     case SIMCLICK_SUPPORTS:
       {
         int othercmd = va_arg (val, int);
-        retval = (othercmd >= SIMCLICK_VERSION && othercmd <= SIMCLICK_GET_NODE_ID);
+        retval = (othercmd >= SIMCLICK_VERSION && othercmd <= SIMCLICK_GET_DEFINES);
         break;
       }
 
@@ -737,6 +758,59 @@ int simclick_sim_command (simclick_node_t *simnode, int cmd, ...)
         // Used only for tracing
         NS_LOG_DEBUG (clickInstance->GetNodeName () << " Received a call for SIMCLICK_GET_NODE_ID");
         break;
+      }
+
+    case SIMCLICK_GET_RANDOM_INT:
+      {
+        uint32_t *randomValue = va_arg (val, uint32_t *);
+        uint32_t maxValue = va_arg (val, uint32_t);
+
+        *randomValue = static_cast<uint32_t> (clickInstance->GetRandomVariable ()->GetValue (0.0, static_cast<double> (maxValue) + 1.0));
+        retval = 0;
+        NS_LOG_DEBUG (clickInstance->GetNodeName () << " SIMCLICK_RANDOM: " << *randomValue << " " << maxValue << " " << ns3::Simulator::Now ());
+        break;
+      }
+
+    case SIMCLICK_GET_DEFINES:
+      {
+        char *buf = va_arg (val, char *);
+        size_t *size = va_arg (val, size_t *);
+        uint32_t required = 0;
+
+        // Try to fill the buffer with up to size bytes.
+        // If this is not enough space, write the required buffer size into
+        // the size variable and return an error code.
+        // Otherwise return the bytes actually writte into the buffer in size.
+
+        // Append key/value pair, seperated by \0.
+        std::map<std::string, std::string> defines = clickInstance->GetDefines ();
+        std::map<std::string, std::string>::const_iterator it = defines.begin ();
+        while (it != defines.end ())
+          {
+            size_t available = *size - required;
+            if (it->first.length() + it->second.length() + 2 <= available)
+              {
+                simstrlcpy(buf + required, available, it->first);
+                required += it->first.length() + 1;
+                available -= it->first.length() + 1;
+                simstrlcpy(buf + required, available, it->second);
+                required += it->second.length() + 1;
+              }
+            else
+              {
+                required += it->first.length() + it->second.length() + 2;
+              }
+            it++;
+          }
+        if (required > *size)
+          {
+            retval = -1;
+          }
+        else
+          {
+            retval = 0;
+          }
+        *size = required;
       }
     }
   return retval;

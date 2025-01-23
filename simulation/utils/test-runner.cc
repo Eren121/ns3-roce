@@ -17,10 +17,8 @@
  */
 
 #include "ns3/test.h"
-#include "ns3/nstime.h"
 
 int main (int argc, char *argv[])
 {
-  ns3::Time::ClearMarkedTimes(); 
   return ns3::TestRunner::Run (argc, argv);
 }
