@@ -115,7 +115,7 @@ struct SimConfig
 	LinkDown link_down;
 	uint32_t enable_trace = 1;
 	uint32_t buffer_size = 16;
-	uint32_t qlen_dump_interval = 100000000, qlen_mon_interval = 100;
+	uint32_t qlen_dump_interval = 100000000, qlen_mon_interval = 1e9;
 	uint64_t qlen_mon_start = 2000000000, qlen_mon_end = 2100000000;
 	std::string qlen_mon_file;
 
