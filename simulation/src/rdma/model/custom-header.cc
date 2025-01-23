@@ -109,9 +109,6 @@ void CustomHeader::Serialize (Buffer::Iterator start) const{
   // ppp
   if (headerType & L2_Header){
 	  i.WriteHtonU16(pppProto);
-	  // skip 12 Bytes, so total 14 bytes as Ethernet
-	  i.WriteU64(0); // 8 bytes
-	  i.WriteU32(0); // 4 byets
   }
 
   // IPv4
@@ -192,8 +189,6 @@ CustomHeader::Deserialize (Buffer::Iterator start)
   int l2Size = 0;
   if (headerType & L2_Header){
 	  pppProto = i.ReadNtohU16();
-	  i.Next(12);
-	  l2Size = 14;
   }
 
   // L3
@@ -337,7 +332,7 @@ uint32_t CustomHeader::GetUdpHeaderSize(void){
 }
 
 uint32_t CustomHeader::GetStaticWholeHeaderSize(void){
-	return 14 + 20 + GetUdpHeaderSize();
+	return 2 + 20 + GetUdpHeaderSize();
 }
 
 } // namespace ns3
