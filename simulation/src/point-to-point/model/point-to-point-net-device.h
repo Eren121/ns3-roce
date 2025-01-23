@@ -147,7 +147,7 @@ public:
    *
    * \param p Ptr to the received packet.
    */
-  void Receive (Ptr<Packet> p);
+  virtual void Receive (Ptr<Packet> p);
 
   // The remaining methods are documented in ns3::NetDevice*
 
