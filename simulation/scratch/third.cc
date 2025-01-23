@@ -51,13 +51,13 @@ void WarnInvalidKeys(const json& object)
 
 	for(const auto& [key, val] : object_default.items()) {
 		if(!object.contains(key)) {
-			std::cerr << "WARNING: Missing json key " << key << std::endl;
+			NS_LOG_WARN("Missing json key " << key);
 		}
 	}
 	
 	for(const auto& [key, val] : object.items()) {
 		if(!object_default.contains(key)) {
-			std::cerr << "WARNING: Unknown json key " << key << std::endl;
+			NS_LOG_WARN("WARNING: Unknown json key " << key);
 		}
 	}
 }
@@ -369,7 +369,7 @@ void RunFlow(ScheduledFlow flow)
 	clientHelper.SetAttribute("Reliable", BooleanValue(flow.reliable));
 	ApplicationContainer appCon = clientHelper.Install(n.Get(flow.src));
 	appCon.Start(Time(0));
-	std::cout << "Running flow " << Simulator::Now() << json(flow) << std::endl;
+	NS_LOG_INFO("Running flow " << Simulator::Now() << json(flow));
 }
 
 void ScheduleFlowInputs()
@@ -569,11 +569,13 @@ uint64_t get_nic_rate(NodeContainer &n){
 
 int main(int argc, char *argv[])
 {
+	LogComponentEnable("GENERIC_SIMULATION", LOG_LEVEL_INFO);
+
 	const clock_t begint = clock();
 	clock_t endt;
 
 	if(argc < 2) {
-		std::cout << "Error: require a config file" << std::endl;
+		NS_LOG_ERROR("Error: require a config file");
 		return 1;
 	}
 
@@ -581,7 +583,7 @@ int main(int argc, char *argv[])
 	{
 		const json j = json::parse(std::ifstream(argv[1]));
 		from_json(j, simConfig);
-		std::cout << "Config: " << json(simConfig).dump(4) << std::endl;
+		NS_LOG_LOGIC("Config: " << json(simConfig));
 		WarnInvalidKeys<SimConfig>(j);
 	}
 
@@ -648,7 +650,7 @@ int main(int argc, char *argv[])
 	}
 
 
-	NS_LOG_INFO("Create nodes.");
+	NS_LOG_LOGIC("Create nodes.");
 
 	InternetStackHelper internet;
 	internet.Install(n);
@@ -663,7 +665,7 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	NS_LOG_INFO("Create channels.");
+	NS_LOG_LOGIC("Create channels.");
 
 	//
 	// Explicitly create the channels required by the topology.
@@ -674,10 +676,10 @@ int main(int argc, char *argv[])
 		NS_ABORT_MSG_IF(!urandom, "Cannot open /dev/urandom");
 		NS_ABORT_IF(fread(&simConfig.rng_seed, sizeof(simConfig.rng_seed), 1, urandom) != sizeof(simConfig.rng_seed));
 		if(!fclose(urandom)) {
-			std::cerr << "ERROR: Closing /dev/urandom failed" << std::endl;
+			NS_LOG_WARN("Closing /dev/urandom failed");
 		}
 	}
-	std::cout << "Effective RNG seed: " << simConfig.rng_seed << std::endl;
+	NS_LOG_INFO("Effective RNG seed: " << simConfig.rng_seed);
 	Ptr<RateErrorModel> rem = CreateObject<RateErrorModel>();
 	Ptr<UniformRandomVariable> uv = CreateObject<UniformRandomVariable>();
 	rem->SetRandomVariable(uv);
@@ -922,7 +924,7 @@ int main(int argc, char *argv[])
 		MCastNetwork mcastNet(mcastConfig);
 	}
 
-	NS_LOG_INFO("Create Applications.");
+	NS_LOG_LOGIC("Create Applications.");
 
 	Time interPacketInterval = Seconds(0.0000005 / 2);
 
@@ -943,16 +945,13 @@ int main(int argc, char *argv[])
 	//
 	// Now, do the actual simulation.
 	//
-	std::cout << "Running Simulation.\n";
-	fflush(stdout);
-	NS_LOG_INFO("Run Simulation.");
+	NS_LOG_INFO("Run Simulation");
 	Simulator::Stop(Seconds(simConfig.simulator_stop_time));
 	Simulator::Run();
 	Simulator::Destroy();
-	NS_LOG_INFO("Done.");
+	NS_LOG_LOGIC("Done.");
 	fclose(trace_output);
 
 	endt = clock();
-	std::cout << (double)(endt - begint) / CLOCKS_PER_SEC << "\n";
-
+	NS_LOG_INFO((double)(endt - begint) / CLOCKS_PER_SEC);
 }
