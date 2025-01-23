@@ -88,7 +88,7 @@ public:
    * @see PointToPointNetDevice
    * @param p Ptr to the received packet.
    */
-  virtual void Receive (Ptr<Packet> p);
+  void Receive (Ptr<Packet> p) override;
 
   /**
    * Send a packet to the channel by putting it to the queue
