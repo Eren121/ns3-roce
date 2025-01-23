@@ -18,3 +18,7 @@ simulation/build
 ################## Python
 
 *.pyc
+
+################## Netanim built
+
+/netanim
