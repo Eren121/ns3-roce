@@ -21,6 +21,7 @@
 #define __STDC_LIMIT_MACROS 1
 #include <stdint.h>
 #include <stdio.h>
+#include "ns3/rdma-random.h"
 #include "ns3/qbb-net-device.h"
 #include "ns3/log.h"
 #include "ns3/boolean.h"
@@ -37,7 +38,6 @@
 #include "ns3/simulator.h"
 #include "ns3/point-to-point-channel.h"
 #include "ns3/qbb-channel.h"
-#include "ns3/random-variable.h"
 #include "ns3/flow-id-tag.h"
 #include "ns3/qbb-header.h"
 #include "ns3/error-model.h"
@@ -423,7 +423,7 @@ namespace ns3 {
 		ipv4h.SetDestination(Ipv4Address("255.255.255.255"));
 		ipv4h.SetPayloadSize(p->GetSize());
 		ipv4h.SetTtl(1);
-		ipv4h.SetIdentification(UniformVariable(0, 65536).GetValue());
+		ipv4h.SetIdentification(GenRandomInt(65536));
 		p->AddHeader(ipv4h);
 		AddHeader(p, 0x800);
 		CustomHeader ch(CustomHeader::L2_Header | CustomHeader::L3_Header | CustomHeader::L4_Header);

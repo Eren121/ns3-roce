@@ -24,7 +24,8 @@ def build(bld):
         'model/switch-mmu.cc',
         'model/switch-node.cc',
         'model/data-rate-ops.cc',
-        'model/rdma-seq-header.cc'
+        'model/rdma-seq-header.cc',
+        'model/rdma-random.cc'
     ]
     headers = bld(features='ns3header')
     headers.module = 'rdma'
@@ -53,5 +54,6 @@ def build(bld):
         'model/switch-node.h',
         'model/trace-format.h',
         'model/data-rate-ops.h',
-        'model/rdma-seq-header.h'
+        'model/rdma-seq-header.h',
+        'model/rdma-random.h'
     ]

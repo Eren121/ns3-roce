@@ -9,7 +9,7 @@
 #include "ns3/global-value.h"
 #include "ns3/boolean.h"
 #include "ns3/simulator.h"
-#include "ns3/random-variable.h"
+#include "ns3/rdma-random.h"
 #include "switch-mmu.h"
 
 NS_LOG_COMPONENT_DEFINE("SwitchMmu");
@@ -21,7 +21,8 @@ namespace ns3 {
 		return tid;
 	}
 
-	SwitchMmu::SwitchMmu(void){
+	SwitchMmu::SwitchMmu(void)
+	{
 		buffer_size = 12 * 1024 * 1024;
 		reserve = 4 * 1024;
 		resume_offset = 3 * 1024;
@@ -103,7 +104,7 @@ namespace ns3 {
 			return true;
 		if (egress_bytes[ifindex][qIndex] > kmin[ifindex]){
 			double p = pmax[ifindex] * double(egress_bytes[ifindex][qIndex] - kmin[ifindex]) / (kmax[ifindex] - kmin[ifindex]);
-			if (UniformVariable(0, 1).GetValue() < p)
+			if (GenRandomDouble(0, 1) < p)
 				return true;
 		}
 		return false;
