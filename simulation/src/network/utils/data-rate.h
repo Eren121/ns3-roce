@@ -91,7 +91,6 @@ public:
   bool operator != (const DataRate& rhs) const;
 
   DataRate& operator /=(const double& c);
-  DataRate& operator +=(const DataRate& r);
 
   /**
    * \brief Calculate transmission time

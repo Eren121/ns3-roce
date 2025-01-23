@@ -265,12 +265,6 @@ DataRate& DataRate::operator/=(const double& c)
 	return *this;
 };
 
-DataRate& DataRate::operator+=(const DataRate& r)
-{
-	m_bps += r.m_bps;
-	return *this;
-};
-
 double operator* (const DataRate& lhs, const Time& rhs)
 {
   return rhs.GetSeconds ()*lhs.GetBitRate ();
