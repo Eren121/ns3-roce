@@ -36,8 +36,6 @@ class QbbRemoteChannel : public QbbChannel
 {
 public:
   static TypeId GetTypeId (void);
-  QbbRemoteChannel ();
-  ~QbbRemoteChannel ();
   bool TransmitStart (Ptr<Packet> p, Ptr<PointToPointNetDevice> src, Time txTime) override;
 };
 

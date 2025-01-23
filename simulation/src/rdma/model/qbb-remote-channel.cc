@@ -46,14 +46,6 @@ QbbRemoteChannel::GetTypeId (void)
   return tid;
 }
 
-QbbRemoteChannel::QbbRemoteChannel ()
-{
-}
-
-QbbRemoteChannel::~QbbRemoteChannel ()
-{
-}
-
 bool
 QbbRemoteChannel::TransmitStart (
   Ptr<Packet> p,
@@ -69,7 +61,7 @@ QbbRemoteChannel::TransmitStart (
   IsInitialized ();
 
   uint32_t wire = src == GetSource (0) ? 0 : 1;
-  Ptr<QbbNetDevice> dst = GetDestination (wire);
+  Ptr<PointToPointNetDevice> dst = GetDestination (wire);
 
 #ifdef NS3_MPI
   // Calculate the rxTime (absolute)
