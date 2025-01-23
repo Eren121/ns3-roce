@@ -8,8 +8,10 @@
 #include "ns3/double.h"
 #include "switch-node.h"
 #include "qbb-net-device.h"
+#include "ns3/rdma-random.h"
 #include "ns3/ppp-header.h"
 #include "ns3/int-header.h"
+#include "ns3/simulator.h"
 #include "ns3/abort.h"
 #include <cmath>
 #include <atomic>
@@ -46,7 +48,7 @@ TypeId SwitchNode::GetTypeId (void)
 }
 
 SwitchNode::SwitchNode(){
-	static std::atomic<uint32_t> nextEcmpSeed = 0;
+	static std::atomic<uint32_t> nextEcmpSeed(1);
 	m_ecmpSeed = nextEcmpSeed++;
 	m_mmu = CreateObject<SwitchMmu>();
 	for (uint32_t i = 0; i < pCnt; i++)

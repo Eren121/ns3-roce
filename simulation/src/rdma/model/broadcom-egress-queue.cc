@@ -36,11 +36,6 @@ namespace ns3 {
 		static TypeId tid = TypeId("ns3::BEgressQueue")
 			.SetParent<Queue>()
 			.AddConstructor<BEgressQueue>()
-			.AddAttribute("MaxBytes",
-				"The maximum number of bytes accepted by this BEgressQueue.",
-				DoubleValue(1000.0 * 1024 * 1024),
-				MakeDoubleAccessor(&BEgressQueue::m_maxBytes),
-				MakeDoubleChecker<double>())
 			.AddTraceSource ("BeqEnqueue", "Enqueue a packet in the BEgressQueue. Multiple queue",
 					MakeTraceSourceAccessor (&BEgressQueue::m_traceBeqEnqueue))
 			.AddTraceSource ("BeqDequeue", "Dequeue a packet in the BEgressQueue. Multiple queue",
@@ -75,7 +70,7 @@ namespace ns3 {
 
 		if (m_bytesInQueueTotal + p->GetSize() < m_maxBytes)  //infinite queue
 		{
-			m_queues[qIndex]->Enqueue(p);
+			m_queues[qIndex]->Enqueue(Create<QueueItem>(p));
 			m_bytesInQueueTotal += p->GetSize();
 			m_bytesInQueue[qIndex] += p->GetSize();
 		}
@@ -121,7 +116,7 @@ namespace ns3 {
 		}
 		if (found)
 		{
-			Ptr<Packet> p = m_queues[qIndex]->Dequeue();
+			Ptr<Packet> p = m_queues[qIndex]->Dequeue()->GetPacket();
 			m_traceBeqDequeue(p, qIndex);
 			m_bytesInQueueTotal -= p->GetSize();
 			m_bytesInQueue[qIndex] -= p->GetSize();
@@ -180,14 +175,15 @@ namespace ns3 {
 	}
 
 	bool
-		BEgressQueue::DoEnqueue(Ptr<Packet> p)	//for compatiability
+		BEgressQueue::DoEnqueue(Ptr<QueueItem> item)	//for compatiability
 	{
+		Ptr<Packet> p = item->GetPacket();
 		std::cout << "Warning: Call Broadcom queues without priority\n";
 		uint32_t qIndex = 0;
 		NS_LOG_FUNCTION(this << p);
 		if (m_bytesInQueueTotal + p->GetSize() < m_maxBytes)
 		{
-			m_queues[qIndex]->Enqueue(p);
+			m_queues[qIndex]->Enqueue(Create<QueueItem>(p));
 			m_bytesInQueueTotal += p->GetSize();
 			m_bytesInQueue[qIndex] += p->GetSize();
 		}
@@ -200,15 +196,21 @@ namespace ns3 {
 	}
 
 
-	Ptr<Packet>
+	Ptr<QueueItem>
 		BEgressQueue::DoDequeue(void)
 	{
 		NS_ASSERT_MSG(false, "BEgressQueue::DoDequeue not implemented");
 		return 0;
 	}
 
+	Ptr<QueueItem>
+		BEgressQueue::DoRemove(void)
+	{
+		NS_ASSERT_MSG(false, "BEgressQueue::DoRemove not implemented");
+		return 0;
+	}
 
-	Ptr<const Packet>
+	Ptr<const QueueItem>
 		BEgressQueue::DoPeek(void) const	//DoPeek doesn't work for multiple queues!!
 	{
 		std::cout << "Warning: Call Broadcom queues without priority\n";

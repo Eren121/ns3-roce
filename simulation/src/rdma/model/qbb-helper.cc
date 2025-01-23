@@ -247,8 +247,10 @@ QbbHelper::Install (Ptr<Node> a, Ptr<Node> b)
   
   Ptr<BEgressQueue> queueA = CreateObject<BEgressQueue> ();
   devA->SetQueue (queueA);
+  queueA->SetAttribute("MaxBytes", UintegerValue(1000 * 1024 * 1024));
   Ptr<BEgressQueue> queueB = CreateObject<BEgressQueue> ();
   devB->SetQueue (queueB);
+  queueB->SetAttribute("MaxBytes", UintegerValue(1000 * 1024 * 1024));
 
 
   // If MPI is enabled, we need to see if both nodes have the same system id 

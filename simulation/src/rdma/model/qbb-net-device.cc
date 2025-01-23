@@ -78,7 +78,7 @@ namespace ns3 {
 
 	Ptr<Packet> RdmaEgressQueue::DequeueQindex(int qIndex){
 		if (qIndex == -1){ // high prio
-			Ptr<Packet> p = m_ackQ->Dequeue();
+			Ptr<Packet> p = m_ackQ->Dequeue()->GetPacket();
 			m_qlast = -1;
 			m_traceRdmaDequeue(p, 0);
 			return p;
@@ -154,12 +154,12 @@ namespace ns3 {
 
 	void RdmaEgressQueue::EnqueueHighPrioQ(Ptr<Packet> p){
 		m_traceRdmaEnqueue(p, 0);
-		m_ackQ->Enqueue(p);
+		m_ackQ->Enqueue(Create<QueueItem>(p));
 	}
 
 	void RdmaEgressQueue::CleanHighPrio(TracedCallback<Ptr<const Packet>, uint32_t> dropCb){
 		while (m_ackQ->GetNPackets() > 0){
-			Ptr<Packet> p = m_ackQ->Dequeue();
+			Ptr<Packet> p = m_ackQ->Dequeue()->GetPacket();
 			dropCb(p, 0);
 		}
 	}
@@ -238,14 +238,6 @@ namespace ns3 {
 	DataRate QbbNetDevice::GetDataRate() const
 	{
 		return m_bps;
-	}
-
-	void
-		QbbNetDevice::DoDispose()
-	{
-		NS_LOG_FUNCTION(this);
-
-		PointToPointNetDevice::DoDispose();
 	}
 
 	void

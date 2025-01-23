@@ -50,10 +50,10 @@ namespace ns3 {
 		bool DoEnqueue(Ptr<Packet> p, uint32_t qIndex);
 		Ptr<Packet> DoDequeueRR(bool paused[]);
 		//for compatibility
-		bool DoEnqueue(Ptr<Packet> p) override;
-		Ptr<Packet> DoDequeue(void) override;
-		Ptr<const Packet> DoPeek(void) const override;
-		double m_maxBytes; //total bytes limit
+		bool DoEnqueue(Ptr<QueueItem> p) override;
+		Ptr<QueueItem> DoDequeue(void) override;
+		Ptr<const QueueItem> DoPeek(void) const override;
+  		Ptr<QueueItem> DoRemove (void) override;
 		uint32_t m_bytesInQueue[fCnt];
 		uint32_t m_bytesInQueueTotal;
 		uint32_t m_rrlast;

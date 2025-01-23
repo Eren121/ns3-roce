@@ -218,7 +218,6 @@ protected:
    */
   void Drop (Ptr<QueueItem> item);
 
-private:
   /**
    * Push an item in the queue
    * \param item the item to enqueue

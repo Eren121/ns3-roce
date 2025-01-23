@@ -226,7 +226,7 @@ private:
    */
   virtual void DoDispose (void);
 
-private:
+protected:
 
   /**
    * \returns the address of the remote device connected to this device

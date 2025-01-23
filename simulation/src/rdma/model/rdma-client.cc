@@ -30,9 +30,8 @@
 #include "ns3/uinteger.h"
 #include "ns3/boolean.h"
 #include "ns3/callback.h"
-#include "ns3/random-variable.h"
+#include "ns3/rdma-random.h"
 #include "ns3/qbb-net-device.h"
-#include "ns3/ipv4-end-point.h"
 #include "rdma-client.h"
 #include "ns3/rdma-seq-header.h"
 #include <ns3/rdma-driver.h>

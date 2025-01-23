@@ -145,8 +145,6 @@ protected:
 
   bool TransmitStart (Ptr<Packet> p);
   
-  virtual void DoDispose(void);
-
   /// Reset the channel into READY state and try transmit again
   virtual void TransmitComplete(void);
 
