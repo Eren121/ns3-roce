@@ -522,12 +522,6 @@ void SetRoutingEntries(){
 			for (int k = 0; k < (int)nexts.size(); k++){
 				Ptr<Node> next = nexts[k];
 				uint32_t interface = nbr2if[node][next].idx;
-
-				
-				dstAddr.Print(std::cout);
-				std::cout<<" <=> "<<interface;
-				std::cout << "   " << ip_to_node_id(dstAddr);
-				std::cout<<std::endl;
 				
 				if (IsSwitchNode(node)){
 					DynamicCast<SwitchNode>(node)->AddTableEntry(dstAddr, interface);}

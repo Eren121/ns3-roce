@@ -376,11 +376,6 @@ namespace ns3 {
 		ch.getInt = 1; // parse INT header
 		packet->PeekHeader(ch);
 		
-		std::cout << GetNode()->GetId() << std::endl;
-		std::cout << ch.sip << std::endl;
-		std::cout << ch.dip << std::endl;
-		std::terminate();
-		
 		if (ch.l3Prot == 0xFE){ // PFC
 			if (!m_qbbEnabled) return;
 			unsigned qIndex = ch.pfc.qIndex;

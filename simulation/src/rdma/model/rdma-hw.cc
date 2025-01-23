@@ -660,18 +660,6 @@ Ptr<Packet> RdmaHw::GetNxtPacket(Ptr<RdmaQueuePair> qp){
 	qp->snd_nxt += payload_size;
 	qp->m_ipid++;
 
-	{
-		CustomHeader ch(CustomHeader::L2_Header | CustomHeader::L3_Header | CustomHeader::L4_Header);
-		ch.getInt = 1; // parse INT header
-		p->PeekHeader(ch);
-		
-		std::cout << m_node->GetId() << std::endl;
-		std::cout << (int)ipHeader.GetTtl() << " / " << ch.m_ttl << std::endl;
-		std::cout << ppp.GetProtocol() << " / " << ch.pppProto << std::endl;
-		std::cout << qp->sip.Get() << " / " << ch.sip << std::endl;
-		std::cout << qp->dip.Get() << " / " << ch.dip << std::endl;
-	}
-
 	// return
 	return p;
 }
