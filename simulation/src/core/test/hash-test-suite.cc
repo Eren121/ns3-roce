@@ -24,7 +24,7 @@
 #include "ns3/test.h"
 #include "ns3/hash.h"
 
-namespace ns3 {
+using namespace ns3;
 
 /**
  * Base class for hash tests
@@ -45,7 +45,7 @@ private:
   virtual void DoRun (void);
 };  // class HashTestCase
 
-HashTestCase::HashTestCase (const std:: string name)
+HashTestCase::HashTestCase (const std::string name)
   : TestCase (name),
     key ("The quick brown fox jumped over the lazy dogs.")
 {
@@ -385,5 +385,3 @@ HashTestSuite::HashTestSuite ()
 }
 
 static HashTestSuite g_hashTestSuite;
-
-}  // namespace ns3

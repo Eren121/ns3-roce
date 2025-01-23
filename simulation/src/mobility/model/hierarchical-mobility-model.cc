@@ -22,14 +22,14 @@
 
 namespace ns3 {
 
-NS_OBJECT_ENSURE_REGISTERED (HierarchicalMobilityModel)
-  ;
+NS_OBJECT_ENSURE_REGISTERED (HierarchicalMobilityModel);
 
 TypeId 
 HierarchicalMobilityModel::GetTypeId (void)
 {
   static TypeId tid = TypeId ("ns3::HierarchicalMobilityModel")
     .SetParent<MobilityModel> ()
+    .SetGroupName ("Mobility")
     .AddConstructor<HierarchicalMobilityModel> ()
     .AddAttribute ("Child", "The child mobility model.",
                    PointerValue (),

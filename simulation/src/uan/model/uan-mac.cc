@@ -22,13 +22,14 @@
 
 namespace ns3 {
 
-NS_OBJECT_ENSURE_REGISTERED (UanMac)
-  ;
+NS_OBJECT_ENSURE_REGISTERED (UanMac);
 
 TypeId UanMac::GetTypeId (void)
 {
   static TypeId tid = TypeId ("ns3::UanMac")
-    .SetParent<Object> ();
+    .SetParent<Object> ()
+    .SetGroupName ("Uan")
+  ;
   return tid;
 }
 

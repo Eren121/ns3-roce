@@ -29,6 +29,8 @@
 namespace ns3 {
 
 /**
+ * \ingroup ipv4Helpers
+ *
  * @brief Base class providing common user-level pcap operations for helpers
  * representing IPv4 protocols .
  */
@@ -47,7 +49,6 @@ public:
 
   /**
    * @brief Enable pcap output the indicated Ipv4 and interface pair.
-   * @internal
    *
    * @param prefix Filename prefix to use for pcap files.
    * @param ipv4 Ptr<Ipv4> on which you want to enable tracing.
@@ -121,6 +122,8 @@ public:
 };
 
 /**
+ * \ingroup ipv4Helpers
+ *
  * @brief Base class providing common user-level ascii trace operations for 
  * helpers representing IPv4 protocols .
  */
@@ -139,7 +142,6 @@ public:
 
   /**
    * @brief Enable ascii trace output on the indicated Ipv4 and interface pair.
-   * @internal
    *
    * The implementation is expected to use a provided Ptr<OutputStreamWrapper>
    * if it is non-null.  If the OutputStreamWrapper is null, the implementation
@@ -299,8 +301,6 @@ public:
 
 private:
   /**
-   * @internal
-   *
    * @brief Enable ascii trace output on the Ipv4 and interface pair specified by a
    * global node-id (of a previously created node) and interface.  Since there
    * can be only one Ipv4 aggregated to a node, the node-id unambiguously
@@ -322,8 +322,6 @@ private:
                             bool explicitFilename);
 
   /**
-   * @internal
-   *
    * @brief Enable ascii trace output on the Ipv4 and interface pair specified by a
    * global node-id (of a previously created node) and interface.  Since there
    * can be only one Ipv4 aggregated to a node, the node-id unambiguously
@@ -337,8 +335,6 @@ private:
   void EnableAsciiIpv4Impl (Ptr<OutputStreamWrapper> stream, std::string prefix, NodeContainer n);
 
   /**
-   * @internal
-   *
    * @brief Enable ascii trace output on the Ipv4 and interface pair specified by a
    * global node-id (of a previously created node) and interface.  Since there
    * can be only one Ipv4 aggregated to a node, the node-id unambiguously
@@ -352,8 +348,6 @@ private:
   void EnableAsciiIpv4Impl (Ptr<OutputStreamWrapper> stream, std::string prefix, Ipv4InterfaceContainer c);
 
   /**
-   * @internal
-   *
    * @brief Enable ascii trace output on the Ipv4 and interface pair specified by a
    * global node-id (of a previously created node) and interface.  Since there
    * can be only one Ipv4 aggregated to a node, the node-id unambiguously
@@ -374,8 +368,6 @@ private:
                             bool explicitFilename);
 
   /**
-   * @internal
-   *
    * @brief Enable ascii trace output on the Ipv4 and interface pair specified by a
    * global node-id (of a previously created node) and interface.  Since there
    * can be only one Ipv4 aggregated to a node, the node-id unambiguously
@@ -397,6 +389,8 @@ private:
 };
 
 /**
+ * \ingroup ipv6Helpers
+ *
  * @brief Base class providing common user-level pcap operations for helpers
  * representing IPv6 protocols .
  */
@@ -415,7 +409,6 @@ public:
 
   /**
    * @brief Enable pcap output the indicated Ipv6 and interface pair.
-   * @internal
    *
    * @param prefix Filename prefix to use for pcap files.
    * @param ipv6 Ptr<Ipv6> on which you want to enable tracing.
@@ -488,6 +481,8 @@ public:
 };
 
 /**
+ * \ingroup ipv6Helpers
+ *
  * @brief Base class providing common user-level ascii trace operations for
  * helpers representing IPv6 protocols .
  */
@@ -506,7 +501,6 @@ public:
 
   /**
    * @brief Enable ascii trace output on the indicated Ipv6 and interface pair.
-   * @internal
    *
    * The implementation is expected to use a provided Ptr<OutputStreamWrapper>
    * if it is non-null.  If the OutputStreamWrapper is null, the implementation
@@ -665,8 +659,6 @@ public:
 
 private:
   /**
-   * @internal
-   *
    * @brief Enable ascii trace output on the Ipv6 and interface pair specified by a
    * global node-id (of a previously created node) and interface.  Since there
    * can be only one Ipv6 aggregated to a node, the node-id unambiguously
@@ -688,8 +680,6 @@ private:
                             bool explicitFilename);
 
   /**
-   * @internal
-   *
    * @brief Enable ascii trace output on the Ipv6 and interface pair specified by a
    * global node-id (of a previously created node) and interface.  Since there
    * can be only one Ipv6 aggregated to a node, the node-id unambiguously
@@ -703,8 +693,6 @@ private:
   void EnableAsciiIpv6Impl (Ptr<OutputStreamWrapper> stream, std::string prefix, NodeContainer n);
 
   /**
-   * @internal
-   *
    * @brief Enable ascii trace output on the Ipv6 and interface pair specified by a
    * global node-id (of a previously created node) and interface.  Since there
    * can be only one Ipv6 aggregated to a node, the node-id unambiguously
@@ -718,8 +706,6 @@ private:
   void EnableAsciiIpv6Impl (Ptr<OutputStreamWrapper> stream, std::string prefix, Ipv6InterfaceContainer c);
 
   /**
-   * @internal
-   *
    * @brief Enable ascii trace output on the Ipv6 and interface pair specified by a
    * global node-id (of a previously created node) and interface.  Since there
    * can be only one Ipv6 aggregated to a node, the node-id unambiguously
@@ -740,8 +726,6 @@ private:
                             bool explicitFilename);
 
   /**
-   * @internal
-   *
    * @brief Enable ascii trace output on the Ipv6 and interface pair specified by a
    * global node-id (of a previously created node) and interface.  Since there
    * can be only one Ipv6 aggregated to a node, the node-id unambiguously

@@ -17,6 +17,7 @@
 ^\.waf
 ^doc/introspected-doxygen\.h$
 .*\.py[co]$
+\.json$
 \.pcap$
 \.mob$
 \.routes$
@@ -42,5 +43,7 @@ massif.*
 \.plt$
 \#[^\#/]+\#$
 ^coverity
+^(D|U)l[A-Z][a-z]*Stats.txt$
 syntax: glob
 TAGS
+waf

@@ -30,13 +30,11 @@
 #include "lte-test-entities.h"
 
 
-NS_LOG_COMPONENT_DEFINE ("LteSimpleHelper");
-
 namespace ns3 {
 
+NS_LOG_COMPONENT_DEFINE ("LteSimpleHelper");
 
-NS_OBJECT_ENSURE_REGISTERED (LteSimpleHelper)
-  ;
+NS_OBJECT_ENSURE_REGISTERED (LteSimpleHelper);
 
 LteSimpleHelper::LteSimpleHelper (void)
 {
@@ -150,6 +148,8 @@ LteSimpleHelper::InstallSingleEnbDevice (Ptr<Node> n)
 
   m_enbMac = CreateObject<LteTestMac> ();
   m_enbMac->SetDevice (enbDev);
+
+  m_enbRrc->SetDevice (enbDev);
 
   enbDev->SetReceiveCallback (MakeCallback (&LteTestMac::Receive, m_enbMac));
 

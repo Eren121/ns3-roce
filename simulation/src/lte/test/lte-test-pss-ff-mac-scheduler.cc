@@ -58,9 +58,9 @@
 
 #include "lte-test-pss-ff-mac-scheduler.h"
 
-NS_LOG_COMPONENT_DEFINE ("LenaTestPssFfMacScheduler");
+using namespace ns3;
 
-namespace ns3 {
+NS_LOG_COMPONENT_DEFINE ("LenaTestPssFfMacScheduler");
 
 LenaTestPssFfMacSchedulerSuite::LenaTestPssFfMacSchedulerSuite ()
   : TestSuite ("lte-pss-ff-mac-scheduler", SYSTEM)
@@ -687,10 +687,3 @@ LenaPssFfMacSchedulerTestCase2::DoRun (void)
   Simulator::Destroy ();
 
 }
-
-
-} // namespace ns3
-
-
-
-

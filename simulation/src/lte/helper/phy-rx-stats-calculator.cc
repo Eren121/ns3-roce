@@ -27,11 +27,9 @@
 
 namespace ns3 {
 
-NS_LOG_COMPONENT_DEFINE ("PhyRxStatsCalculator")
-  ;
+NS_LOG_COMPONENT_DEFINE ("PhyRxStatsCalculator");
 
-NS_OBJECT_ENSURE_REGISTERED (PhyRxStatsCalculator)
-  ;
+NS_OBJECT_ENSURE_REGISTERED (PhyRxStatsCalculator);
 
 PhyRxStatsCalculator::PhyRxStatsCalculator ()
   : m_dlRxFirstWrite (true),
@@ -51,6 +49,7 @@ PhyRxStatsCalculator::GetTypeId (void)
 {
   static TypeId tid = TypeId ("ns3::PhyRxStatsCalculator")
     .SetParent<LteStatsCalculator> ()
+    .SetGroupName("Lte")
     .AddConstructor<PhyRxStatsCalculator> ()
     .AddAttribute ("DlRxOutputFilename",
                    "Name of the file where the downlink results will be saved.",

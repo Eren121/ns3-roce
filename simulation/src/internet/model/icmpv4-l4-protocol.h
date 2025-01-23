@@ -1,3 +1,23 @@
+/* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
+/*
+ * Copyright (c) 2008 INRIA
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation;
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *
+ * Author: Mathieu Lacage <mathieu.lacage@cutebugs.net>
+ */
+
 #ifndef ICMPV4_L4_PROTOCOL_H
 #define ICMPV4_L4_PROTOCOL_H
 
@@ -11,6 +31,17 @@ class Node;
 class Ipv4Interface;
 class Ipv4Route;
 
+/**
+ * \ingroup ipv4
+ * \defgroup icmp ICMP protocol and associated headers.
+ */
+
+/**
+ * \ingroup icmp
+ *
+ * \brief This is the implementation of the ICMP protocol as
+ * described in \RFC{792}.
+ */
 class Icmpv4L4Protocol : public IpL4Protocol
 {
 public:

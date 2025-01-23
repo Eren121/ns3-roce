@@ -70,8 +70,7 @@ void set_nw_addr (ofpbuf *buffer, sw_flow_key *key, const ofp_action_header *ah)
 void set_tp_port (ofpbuf *buffer, sw_flow_key *key, const ofp_action_header *ah);
 void set_mpls_label (ofpbuf *buffer, sw_flow_key *key, const ofp_action_header *ah);
 void set_mpls_exp (ofpbuf *buffer, sw_flow_key *key, const ofp_action_header *ah);
-#include "openflow/private/pt_act.h" // The function below is defined in pt_act.c
-void update_checksums (ofpbuf *buffer, const sw_flow_key *key, uint32_t old_word, uint32_t new_word);
+#include "openflow/private/pt_act.h"
 
 #undef list
 #undef private
@@ -346,19 +345,13 @@ struct SwitchPacketMetadata
 class Controller : public Object
 {
 public:
-  static TypeId GetTypeId (void)
-  {
-    static TypeId tid = TypeId ("ns3::ofi::Controller")
-      .SetParent<Object> ()
-      .AddConstructor<Controller> ()
-    ;
-    return tid;
-  }
-
-  virtual ~Controller ()
-  {
-    m_switches.clear ();
-  }
+  /**
+   * Register this type.
+   * \return The TypeId.
+   */
+  static TypeId GetTypeId (void);
+  /** Destructor. */
+  virtual ~Controller ();
 
   /**
    * Adds a switch to the controller.
@@ -398,8 +391,6 @@ public:
 
 protected:
   /**
-   * \internal
-   *
    * However the controller is implemented, this method is to
    * be used to pass a message on to a switch.
    *
@@ -410,8 +401,6 @@ protected:
   virtual void SendToSwitch (Ptr<OpenFlowSwitchNetDevice> swtch, void * msg, size_t length);
 
   /**
-   * \internal
-   *
    * Construct flow data from a matching key to build a flow
    * entry for adding, modifying, or deleting a flow.
    *
@@ -427,8 +416,6 @@ protected:
   ofp_flow_mod* BuildFlow (sw_flow_key key, uint32_t buffer_id, uint16_t command, void* acts, size_t actions_len, int idle_timeout, int hard_timeout);
 
   /**
-   * \internal
-   *
    * Get the packet type on the buffer, which can then be used
    * to determine how to handle the buffer.
    *
@@ -449,6 +436,12 @@ protected:
 class DropController : public Controller
 {
 public:
+  /**
+   * Register this type.
+   * \return The TypeId.
+   */
+  static TypeId GetTypeId (void);
+  
   void ReceiveFromSwitch (Ptr<OpenFlowSwitchNetDevice> swtch, ofpbuf* buffer);
 };
 
@@ -462,6 +455,10 @@ public:
 class LearningController : public Controller
 {
 public:
+  /**
+   * Register this type.
+   * \return The TypeId.
+   */
   static TypeId GetTypeId (void);
 
   virtual ~LearningController ()

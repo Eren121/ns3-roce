@@ -27,21 +27,32 @@
 
 #include "kun-2600-mhz-propagation-loss-model.h"
 
-NS_LOG_COMPONENT_DEFINE ("Kun2600MhzPropagationLossModel");
-
 namespace ns3 {
 
-NS_OBJECT_ENSURE_REGISTERED (Kun2600MhzPropagationLossModel)
-  ;
+NS_LOG_COMPONENT_DEFINE ("Kun2600MhzPropagationLossModel");
+
+NS_OBJECT_ENSURE_REGISTERED (Kun2600MhzPropagationLossModel);
 
 
 TypeId
 Kun2600MhzPropagationLossModel::GetTypeId (void)
 {
   static TypeId tid = TypeId ("ns3::Kun2600MhzPropagationLossModel")
-    .SetParent<PropagationLossModel> ();
+    .SetParent<PropagationLossModel> ()
+    .SetGroupName ("Propagation")
+    .AddConstructor<Kun2600MhzPropagationLossModel> ()
+    ;
 
   return tid;
+}
+
+Kun2600MhzPropagationLossModel::Kun2600MhzPropagationLossModel ()
+  : PropagationLossModel ()
+{
+}
+
+Kun2600MhzPropagationLossModel::~Kun2600MhzPropagationLossModel ()
+{
 }
 
 double

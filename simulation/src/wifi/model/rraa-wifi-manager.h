@@ -17,6 +17,7 @@
  *
  * Author: Federico Maguolo <maguolof@dei.unipd.it>
  */
+
 #ifndef RRAA_WIFI_MANAGER_H
 #define RRAA_WIFI_MANAGER_H
 
@@ -35,6 +36,10 @@ struct RraaWifiRemoteStation;
  * "Robust rate adaptation for 802.11 wireless networks"
  * by "Starsky H. Y. Wong", "Hao Yang", "Songwu Lu", and,
  * "Vaduvur Bharghavan" published in Mobicom 06.
+ *
+ * This RAA does not support HT or VHT modes and will error exit
+ * if the user tries to configure this RAA with a Wi-Fi MAC that
+ * has VhtSupported or HtSupported set.
  */
 class RraaWifiManager : public WifiRemoteStationManager
 {
@@ -43,6 +48,10 @@ public:
 
   RraaWifiManager ();
   virtual ~RraaWifiManager ();
+
+  // Inherited from WifiRemoteStationManager
+  virtual void SetHtSupported (bool enable);
+  virtual void SetVhtSupported (bool enable);
 
 private:
   struct ThresholdsItem
@@ -53,7 +62,7 @@ private:
     uint32_t ewnd;
   };
 
-  // overriden from base class
+  //overriden from base class
   virtual WifiRemoteStation * DoCreateStation (void) const;
   virtual void DoReportRxOk (WifiRemoteStation *station,
                              double rxSnr, WifiMode txMode);
@@ -65,7 +74,7 @@ private:
                                double ackSnr, WifiMode ackMode, double dataSnr);
   virtual void DoReportFinalRtsFailed (WifiRemoteStation *station);
   virtual void DoReportFinalDataFailed (WifiRemoteStation *station);
-  virtual WifiTxVector DoGetDataTxVector (WifiRemoteStation *station, uint32_t size);
+  virtual WifiTxVector DoGetDataTxVector (WifiRemoteStation *station);
   virtual WifiTxVector DoGetRtsTxVector (WifiRemoteStation *station);
   virtual bool DoNeedRts (WifiRemoteStation *st,
                           Ptr<const Packet> packet, bool normally);
@@ -76,6 +85,7 @@ private:
    * the given station.
    *
    * \param station
+   *
    * \return the index for the maximum transmission rate
    */
   uint32_t GetMaxRate (RraaWifiRemoteStation *station);
@@ -84,6 +94,7 @@ private:
    * the given station.
    *
    * \param station
+   *
    * \return the index for the minimum transmission rate
    */
   uint32_t GetMinRate (RraaWifiRemoteStation *station);
@@ -116,14 +127,17 @@ private:
    * Get a threshold for the given mode.
    *
    * \param mode
+   * \param station
+   *
    * \return threshold
    */
-  struct ThresholdsItem GetThresholds (WifiMode mode) const;
+  struct ThresholdsItem GetThresholds (WifiMode mode, RraaWifiRemoteStation *station) const;
   /**
    * Get a threshold for the given station and mode index.
    *
    * \param station
    * \param rate
+   *
    * \return threshold
    */
   struct ThresholdsItem GetThresholds (RraaWifiRemoteStation *station, uint32_t rate) const;
@@ -154,6 +168,6 @@ private:
   double m_pmtlfor9;
 };
 
-} // namespace ns3
+} //namespace ns3
 
 #endif /* RRAA_WIFI_MANAGER_H */

@@ -17,6 +17,7 @@ SOURCES = \
 	source/internet-models.rst \
 	source/network.rst \
 	source/emulation-overview.rst \
+	source/traffic-control.rst \
 	$(SRC)/antenna/doc/source/antenna.rst \
 	$(SRC)/antenna/doc/source/antenna-design.rst \
 	$(SRC)/antenna/doc/source/antenna-user.rst \
@@ -34,12 +35,15 @@ SOURCES = \
 	$(SRC)/csma/doc/csma.rst \
 	$(SRC)/dsdv/doc/dsdv.rst \
 	$(SRC)/dsr/doc/dsr.rst \
-	$(SRC)/emu/doc/emu.rst \
 	$(SRC)/mpi/doc/distributed.rst \
 	$(SRC)/energy/doc/energy.rst \
 	$(SRC)/fd-net-device/doc/fd-net-device.rst \
 	$(SRC)/tap-bridge/doc/tap.rst \
-	$(SRC)/mesh/doc/mesh.rst \
+	$(SRC)/mesh/doc/source/mesh.rst \
+	$(SRC)/mesh/doc/source/mesh-user.rst \
+	$(SRC)/mesh/doc/source/mesh-design.rst \
+	$(SRC)/mesh/doc/source/mesh-references.rst \
+	$(SRC)/mesh/doc/source/mesh-testing.rst \
 	$(SRC)/lte/doc/source/lte.rst \
 	$(SRC)/lte/doc/source/lte-user.rst \
 	$(SRC)/lte/doc/source/lte-design.rst \
@@ -53,19 +57,32 @@ SOURCES = \
 	$(SRC)/network/doc/sockets-api.rst \
 	$(SRC)/network/doc/simple.rst \
 	$(SRC)/network/doc/queue.rst \
+	$(SRC)/network/doc/queue-limits.rst \
 	$(SRC)/internet/doc/internet-stack.rst \
 	$(SRC)/internet/doc/ipv4.rst \
 	$(SRC)/internet/doc/ipv6.rst \
 	$(SRC)/internet/doc/routing-overview.rst \
 	$(SRC)/internet/doc/tcp.rst \
+	$(SRC)/internet-apps/doc/internet-apps.rst \
 	$(SRC)/mobility/doc/mobility.rst \
 	$(SRC)/olsr/doc/olsr.rst \
 	$(SRC)/openflow/doc/openflow-switch.rst \
 	$(SRC)/point-to-point/doc/point-to-point.rst \
-	$(SRC)/wifi/doc/wifi.rst \
+	$(SRC)/wifi/doc/source/wifi.rst \
+	$(SRC)/wifi/doc/source/wifi-design.rst \
+	$(SRC)/wifi/doc/source/wifi-user.rst \
+	$(SRC)/wifi/doc/source/wifi-testing.rst \
+	$(SRC)/wifi/doc/source/wifi-references.rst \
 	$(SRC)/wimax/doc/wimax.rst \
 	$(SRC)/uan/doc/uan.rst \
 	$(SRC)/topology-read/doc/topology.rst \
+	$(SRC)/traffic-control/doc/traffic-control-layer.rst \
+	$(SRC)/traffic-control/doc/queue-discs.rst \
+	$(SRC)/traffic-control/doc/pfifo-fast.rst \
+	$(SRC)/traffic-control/doc/red.rst \
+	$(SRC)/traffic-control/doc/codel.rst \
+	$(SRC)/traffic-control/doc/fq-codel.rst \
+	$(SRC)/traffic-control/doc/pie.rst \
 	$(SRC)/spectrum/doc/spectrum.rst \
 	$(SRC)/stats/doc/adaptor.rst \
 	$(SRC)/stats/doc/aggregator.rst \
@@ -75,11 +92,11 @@ SOURCES = \
 	$(SRC)/stats/doc/data-collection.rst \
 	$(SRC)/stats/doc/probe.rst \
 	$(SRC)/stats/doc/scope-and-limitations.rst \
-	$(SRC)/stats/doc/statistics.rst \
 	$(SRC)/netanim/doc/animation.rst \
 	$(SRC)/flow-monitor/doc/flow-monitor.rst \
 	$(SRC)/wave/doc/wave.rst \
 	$(SRC)/sixlowpan/doc/sixlowpan.rst \
+	$(SRC)/lr-wpan/doc/lr-wpan.rst \
 
 # list all model library figure files that need to be copied to 
 # $SOURCETEMP/figures.  For each figure to be included in all
@@ -99,8 +116,11 @@ SOURCEFIGS = \
 	$(SRC)/internet/doc/internet-node-recv.dia \
 	$(SRC)/internet/doc/routing.dia \
 	$(SRC)/internet/doc/routing-specialization.dia \
-	$(SRC)/wifi/doc/WifiArchitecture.dia \
-	$(SRC)/wifi/doc/snir.dia \
+	$(SRC)/internet/doc/figures/tcp-state-machine.png \
+	$(SRC)/wifi/doc/source/figures/WifiArchitecture.dia \
+	$(SRC)/wifi/doc/source/figures/snir.dia \
+	$(SRC)/wifi/doc/source/figures/clear-channel.eps \
+	$(SRC)/wifi/doc/source/figures/nist-frame-success-rate.eps \
 	$(SRC)/wimax/doc/WimaxArchitecture.dia \
 	$(SRC)/lte/doc/source/figures/epc-ctrl-arch.dia \
 	$(SRC)/lte/doc/source/figures/epc-data-flow-dl.dia \
@@ -142,12 +162,12 @@ SOURCEFIGS = \
 	$(SRC)/lte/doc/source/figures/epcSimulationTime.eps \
 	$(SRC)/lte/doc/source/figures/epcEutranRunningTime.eps \
 	$(SRC)/lte/doc/source/figures/profiling-memory.eps \
-	$(SRC)/lte/doc/source/figures/lte-rlc-implementation-model.eps \
-	$(SRC)/lte/doc/source/figures/lte-rlc-data-txon-dl.eps \
-	$(SRC)/lte/doc/source/figures/lte-rlc-data-retx-dl.eps \
-	$(SRC)/lte/doc/source/figures/lte-rlc-data-txon-ul.eps \
-	$(SRC)/lte/doc/source/figures/lte-rlc-data-retx-ul.eps \
-	$(SRC)/lte/doc/source/figures/lte-epc-x2-entity-saps.eps \
+	$(SRC)/lte/doc/source/figures/lte-rlc-implementation-model.dia \
+	$(SRC)/lte/doc/source/figures/lte-rlc-data-txon-dl.dia \
+	$(SRC)/lte/doc/source/figures/lte-rlc-data-retx-dl.dia \
+	$(SRC)/lte/doc/source/figures/lte-rlc-data-txon-ul.dia \
+	$(SRC)/lte/doc/source/figures/lte-rlc-data-retx-ul.dia \
+	$(SRC)/lte/doc/source/figures/lte-epc-x2-entity-saps.dia \
 	$(SRC)/lte/doc/source/figures/lte-strongest-cell-handover-algorithm.eps \
 	$(SRC)/lte/doc/source/figures/lte-phy-interference.pdf \
 	$(SRC)/lte/doc/source/figures/lte-phy-interference.png \
@@ -175,6 +195,24 @@ SOURCEFIGS = \
 	$(SRC)/lte/doc/source/figures/fading_vehicular.png \
 	$(SRC)/lte/doc/source/figures/fading_urban_3kmph.pdf \
 	$(SRC)/lte/doc/source/figures/fading_urban_3kmph.png \
+	$(SRC)/lte/doc/source/figures/fr-enhanced-fractional-frequency-reuse-scheme.dia \
+	$(SRC)/lte/doc/source/figures/fr-full-frequency-reuse-scheme.dia \
+	$(SRC)/lte/doc/source/figures/fr-hard-frequency-reuse-scheme.dia \
+	$(SRC)/lte/doc/source/figures/fr-soft-fractional-frequency-reuse-scheme.dia \
+	$(SRC)/lte/doc/source/figures/fr-soft-frequency-reuse-scheme-v1.dia \
+	$(SRC)/lte/doc/source/figures/fr-soft-frequency-reuse-scheme-v2.dia \
+	$(SRC)/lte/doc/source/figures/fr-strict-frequency-reuse-scheme.dia \
+	$(SRC)/lte/doc/source/figures/ffr-distributed-scheme.dia \
+	$(SRC)/lte/doc/source/figures/lte-fr-soft-1-rem.png \
+	$(SRC)/lte/doc/source/figures/lte-fr-soft-1-rem.pdf \
+	$(SRC)/lte/doc/source/figures/lte-ffr-soft-2-spectrum-trace.png \
+	$(SRC)/lte/doc/source/figures/lte-ffr-soft-2-spectrum-trace.pdf \
+	$(SRC)/lte/doc/source/figures/lte-fr-hard-1-rem.png \
+	$(SRC)/lte/doc/source/figures/lte-fr-hard-1-rem.pdf \
+	$(SRC)/lte/doc/source/figures/lte-fr-hard-2-rem.png \
+	$(SRC)/lte/doc/source/figures/lte-fr-hard-2-rem.pdf \
+	$(SRC)/lte/doc/source/figures/lte-fr-hard-3-rem.png \
+	$(SRC)/lte/doc/source/figures/lte-fr-hard-3-rem.pdf \
 	$(SRC)/lte/doc/source/figures/MCS_1_4.pdf \
 	$(SRC)/lte/doc/source/figures/MCS_1_4.png \
 	$(SRC)/lte/doc/source/figures/MCS_5_8.pdf \
@@ -199,6 +237,8 @@ SOURCEFIGS = \
 	$(SRC)/lte/doc/source/figures/MCS_16_test.pdf \
 	$(SRC)/lte/doc/source/figures/miesm_scheme.pdf \
 	$(SRC)/lte/doc/source/figures/miesm_scheme.png \
+	$(SRC)/lte/doc/source/figures/lte-dl-power-control.dia \
+	$(SRC)/lte/doc/source/figures/lte-ffr-scheduling.dia \
 	$(SRC)/lte/doc/source/figures/lte-handover-campaign-rem.pdf \
 	$(SRC)/lte/doc/source/figures/lte-handover-campaign-rem.png \
 	$(SRC)/lte/doc/source/figures/lte-legacy-handover-algorithm.pdf \
@@ -213,28 +253,34 @@ SOURCEFIGS = \
 	$(SRC)/stats/doc/gnuplot-example.png \
 	$(SRC)/stats/doc/gnuplot-helper-example.png \
 	$(SRC)/stats/doc/seventh-packet-byte-count.png \
-	$(SRC)/netanim/doc/figures/Dumbbell.png \
-	$(SRC)/netanim/doc/figures/Dumbbell.pdf \
 	$(SRC)/netanim/doc/figures/PacketStatistics.png \
 	$(SRC)/netanim/doc/figures/PacketStatistics.pdf \
-	$(SRC)/netanim/doc/figures/FastForward.png \
-	$(SRC)/netanim/doc/figures/FastForward.pdf \
-	$(SRC)/netanim/doc/figures/Wireless.png \
-	$(SRC)/netanim/doc/figures/Wireless.pdf \
-	$(SRC)/netanim/doc/figures/Precision.png \
-	$(SRC)/netanim/doc/figures/Precision.pdf \
-	$(SRC)/netanim/doc/figures/Persist.png \
-	$(SRC)/netanim/doc/figures/Persist.pdf \
-	$(SRC)/netanim/doc/figures/SimTime.png \
-	$(SRC)/netanim/doc/figures/SimTime.pdf \
+	$(SRC)/netanim/doc/figures/NetAnim_3_105.png \
+	$(SRC)/netanim/doc/figures/NetAnim_3_105.pdf \
 	$(SRC)/netanim/doc/figures/Trajectory.png \
 	$(SRC)/netanim/doc/figures/Trajectory.pdf \
-	$(SRC)/netanim/doc/figures/UpdateRateInterval.png \
-	$(SRC)/netanim/doc/figures/UpdateRateInterval.pdf \
-	$(SRC)/netanim/doc/figures/WithoutPrecision.png \
-	$(SRC)/netanim/doc/figures/WithoutPrecision.pdf \
-	$(SRC)/netanim/doc/figures/WithPrecision.png \
-	$(SRC)/netanim/doc/figures/WithPrecision.pdf \
+	$(SRC)/netanim/doc/figures/NodeCountersChart.png \
+	$(SRC)/netanim/doc/figures/NodeCountersChart.pdf \
+	$(SRC)/netanim/doc/figures/NodeCountersTable.png \
+	$(SRC)/netanim/doc/figures/NodeCountersTable.pdf \
+	$(SRC)/netanim/doc/figures/RoutingTables.png \
+	$(SRC)/netanim/doc/figures/RoutingTables.pdf \
+	$(SRC)/netanim/doc/figures/PacketTimeline.png \
+	$(SRC)/netanim/doc/figures/PacketTimeline.pdf \
+	$(SRC)/spectrum/doc/spectrum-channel-phy-interface.png \
+	$(SRC)/spectrum/doc/spectrum-channel-phy-interface.pdf \
+	$(SRC)/spectrum/doc/spectrum-analyzer-example.eps \
+	$(SRC)/spectrum/doc/spectrum-tv-rand-geo-points.eps \
+	$(SRC)/spectrum/doc/spectrum-tv-8vsb.png \
+	$(SRC)/spectrum/doc/spectrum-tv-cofdm.png \
+	$(SRC)/traffic-control/doc/classful-queue-disc.dia \
+	$(SRC)/traffic-control/doc/multi-queue-aware-queue-disc.dia \
+	$(SRC)/lr-wpan/doc/lr-wpan-arch.dia \
+	$(SRC)/lr-wpan/doc/lr-wpan-data-example.dia \
+	$(SRC)/lr-wpan/doc/lr-wpan-primitives.dia \
+	$(SRC)/lr-wpan/doc/802-15-4-ber.eps \
+	$(SRC)/lr-wpan/doc/802-15-4-per-sens.eps \
+	$(SRC)/lr-wpan/doc/802-15-4-psr-distance.eps
 
 # specify figures from which .png and .pdf figures need to be
 # generated (all dia and eps figures)
@@ -264,6 +310,16 @@ IMAGES_EPS = \
 	$(FIGURES)/eutran-profiling-scenario.eps \
 	$(FIGURES)/ff-example.eps \
 	$(FIGURES)/ff-mac-saps.eps \
+	$(FIGURES)/lte-dl-power-control.eps \
+	$(FIGURES)/lte-ffr-scheduling.eps \
+	$(FIGURES)/fr-enhanced-fractional-frequency-reuse-scheme.eps \
+	$(FIGURES)/fr-full-frequency-reuse-scheme.eps \
+	$(FIGURES)/fr-hard-frequency-reuse-scheme.eps \
+	$(FIGURES)/fr-soft-fractional-frequency-reuse-scheme.eps \
+	$(FIGURES)/fr-soft-frequency-reuse-scheme-v1.eps \
+	$(FIGURES)/fr-soft-frequency-reuse-scheme-v2.eps \
+	$(FIGURES)/fr-strict-frequency-reuse-scheme.eps \
+	$(FIGURES)/ffr-distributed-scheme.eps \
 	$(FIGURES)/lte-arch-enb-data.eps \
 	$(FIGURES)/lte-arch-enb-ctrl.eps \
 	$(FIGURES)/lte-arch-ue-data.eps \
@@ -303,6 +359,18 @@ IMAGES_EPS = \
 	$(FIGURES)/lte-epc-x2-entity-saps.eps \
 	$(FIGURES)/lte-strongest-cell-handover-algorithm.eps \
 	$(FIGURES)/auvmobility-classes.eps \
+	$(FIGURES)/spectrum-analyzer-example.eps \
+	$(FIGURES)/spectrum-tv-rand-geo-points.eps \
+	$(FIGURES)/classful-queue-disc.eps \
+	$(FIGURES)/multi-queue-aware-queue-disc.eps \
+	$(FIGURES)/lr-wpan-primitives.eps \
+	$(FIGURES)/lr-wpan-data-example.eps \
+	$(FIGURES)/lr-wpan-arch.eps \
+	$(FIGURES)/802-15-4-ber.eps \
+	$(FIGURES)/802-15-4-per-sens.eps \
+	$(FIGURES)/802-15-4-psr-distance.eps \
+	$(FIGURES)/clear-channel.eps \
+	$(FIGURES)/nist-frame-success-rate.eps
 
 # rescale pdf figures as necessary
 $(FIGURES)/testbed.pdf_width = 5in
@@ -325,6 +393,16 @@ $(FIGURES)/lte-arch-data-rrc-pdcp-rlc.pdf_width = 3in
 $(FIGURES)/lte-epc-e2e-data-protocol-stack.pdf_width = 15cm
 $(FIGURES)/ff-mac-saps.pdf_width = 5in
 $(FIGURES)/ff-example.pdf_width = 5in
+$(FIGURES)/lte-dl-power-control.pdf_width = 8cm
+$(FIGURES)/lte-ffr-scheduling.pdf_width = 8cm
+$(FIGURES)/fr-enhanced-fractional-frequency-reuse-scheme.pdf_width = 8cm
+$(FIGURES)/fr-full-frequency-reuse-scheme.pdf_width = 8cm
+$(FIGURES)/fr-hard-frequency-reuse-scheme.pdf_width = 8cm
+$(FIGURES)/fr-soft-fractional-frequency-reuse-scheme.pdf_width = 8cm
+$(FIGURES)/fr-soft-frequency-reuse-scheme-v1.pdf_width = 8cm
+$(FIGURES)/fr-soft-frequency-reuse-scheme-v2.pdf_width = 8cm
+$(FIGURES)/fr-strict-frequency-reuse-scheme.pdf_width = 8cm
+$(FIGURES)/ffr-distributed-scheme.pdf_width = 8cm
 $(FIGURES)/lte-arch-enb-data.pdf_width = 6cm 
 $(FIGURES)/lte-arch-enb-ctrl.pdf_width = 10cm
 $(FIGURES)/lte-arch-ue-data.pdf_width = 6cm
@@ -332,13 +410,21 @@ $(FIGURES)/lte-arch-ue-ctrl.pdf_width = 10cm
 $(FIGURES)/lte-rlc-implementation-model.pdf_width = 20in
 $(FIGURES)/lte-rlc-data-txon-dl.pdf_width = 10cm
 $(FIGURES)/lte-rlc-data-txon-ul.pdf_width = 10cm
+$(FIGURES)/lte-rlc-data-retx-dl.pdf_width = 10cm
 $(FIGURES)/lte-rlc-data-retx-ul.pdf_width = 10cm
+$(FIGURES)/lte-epc-x2-entity-saps.pdf_width = 12cm
 $(FIGURES)/lte-phy-interference.pdf_width = 12cm
 $(FIGURES)/lte-subframe-structure.pdf_width = 2in
 $(FIGURES)/mac-random-access-contention.pdf_width = 10cm
 $(FIGURES)/mac-random-access-noncontention.pdf_width = 15cm
 $(FIGURES)/helpers.pdf_width = 8cm
 $(FIGURES)/auvmobility-classes.pdf_width = 10cm
+$(FIGURES)/spectrum-analyzer-example.pdf_width = 15cm
+$(FIGURES)/spectrum-tv-rand-geo-points.pdf_width = 8cm
+$(FIGURES)/lr-wpan-primitives.pdf_width = 3in
+$(FIGURES)/lr-wpan-arch.pdf_width = 2in
+$(FIGURES)/clear-channel.pdf_width = 12cm
+$(FIGURES)/nist-frame-success-rate.pdf_width = 12cm
 
 IMAGES_PNG = ${IMAGES_EPS:.eps=.png}
 IMAGES_PDF = ${IMAGES_EPS:.eps=.pdf}
@@ -347,11 +433,21 @@ IMAGES = $(IMAGES_EPS) $(IMAGES_PNG) $(IMAGES_PDF)
 
 RESCALE = ../../utils/rescale-pdf.sh
 
-%.eps : %.dia; $(DIA) -t eps $< -e $@
-%.png : %.dia; $(DIA) -t png $< -e $@
-%.png : %.eps; $(CONVERT) $< $@
+%.eps : %.dia
+	@echo dia $(notdir $<)
+	@$(DIA) -t eps $< -e $@ >/dev/null
+
+%.png : %.dia
+	@echo dia $(notdir $<)
+	@$(DIA) -t png $< -e $@ >/dev/null
+
+%.png : %.eps
+	@echo convert $(notdir $<)
+	@$(CONVERT) $< $@ >/dev/null
+
 %.pdf : %.eps
-	$(EPSTOPDF) $< -o=$@
+	@echo epstopdf $(notdir $<)
+	@$(EPSTOPDF) $< -o=$@ >/dev/null
 	@if test x$($@_width) != x; then $(RESCALE) $($@_width) $@ ; fi
 
 # You can set these variables from the command line.
@@ -389,11 +485,10 @@ help:
 	@echo "  doctest    to run all doctests embedded in the documentation (if enabled)"
 
 copy-sources:  $(SOURCES)
-	@rm -rf $(SOURCETEMP)
 	@mkdir -p $(SOURCETEMP) 
 	@mkdir -p $(FIGURES) 
-	@cp -r $(SOURCES) $(SOURCETEMP)
-	@cp -r $(SOURCEFIGS) $(FIGURES)
+	@cp -r -p $(SOURCES) $(SOURCETEMP)
+	@cp -r -p $(SOURCEFIGS) $(FIGURES)
 
 clean:
 	-rm -rf $(BUILDDIR)/*

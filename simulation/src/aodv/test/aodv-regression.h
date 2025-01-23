@@ -23,10 +23,10 @@
 
 #include "ns3/test.h"
 #include "ns3/nstime.h"
+#include "ns3/socket.h"
 #include "ns3/node-container.h"
 
-namespace ns3 {
-namespace aodv {
+using namespace ns3;
 
 /**
  * \ingroup aodv
@@ -178,6 +178,10 @@ private:
   const double m_step;
   /// ARP alive timeout
   const Time m_arpAliveTimeout;
+  /// Socket
+  Ptr<Socket> m_socket;
+  /// Sequence number
+  uint16_t m_seq;
 
   /// Create test topology
   void CreateNodes ();
@@ -187,9 +191,8 @@ private:
   void CheckResults ();
   /// Go
   void DoRun ();
+  /// Send one ping
+  void SendPing ();
 };
-
-}
-}
 
 #endif /* AODV_REGRESSION_H */

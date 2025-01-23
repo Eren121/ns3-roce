@@ -34,27 +34,53 @@
 #include <cstdlib>
 #endif
 
+/**
+ * \file
+ * \ingroup logging
+ * Debug message logging implementation.
+ */
+
+
 namespace ns3 {
 
-LogTimePrinter g_logTimePrinter = 0;
-LogNodePrinter g_logNodePrinter = 0;
+/**
+ * \ingroup logging
+ * The LogTimePrinter.
+ * This is private to the logging implementation.
+ */
+static LogTimePrinter g_logTimePrinter = 0;
+/**
+ * \ingroup logging
+ * The LogNodePrinter.
+ */
+static LogNodePrinter g_logNodePrinter = 0;
 
-typedef std::map<std::string, LogComponent *> ComponentList;
-typedef std::map<std::string, LogComponent *>::iterator ComponentListI;
-
-static class PrintList
+/**
+ * \ingroup logging
+ * Handler for \c print-list token in NS_LOG
+ * to print the list of log components.
+ * This is private to the logging implementation.
+ */
+class PrintList
 {
 public:
-  PrintList ();
-} g_printList;
+  PrintList ();  //<! Constructor, prints the list and exits.
+};
 
-static 
-ComponentList *GetComponentList (void)
+/**
+ * Invoke handler for \c print-list in NS_LOG environment variable.
+ * This is private to the logging implementation.
+ */
+static PrintList g_printList;
+
+  
+/* static */
+LogComponent::ComponentList *
+LogComponent::GetComponentList (void)
 {
-  static ComponentList components;
+  static LogComponent::ComponentList components;
   return &components;
 }
-
 
 
 PrintList::PrintList ()
@@ -84,13 +110,15 @@ PrintList::PrintList ()
 }
 
 
-LogComponent::LogComponent (const std::string & name)
-  : m_levels (0), m_name (name)
+LogComponent::LogComponent (const std::string & name,
+                            const std::string & file,
+                            const enum LogLevel mask /* = 0 */)
+  : m_levels (0), m_mask (mask), m_name (name), m_file (file)
 {
-  EnvVarCheck (name);
+  EnvVarCheck ();
 
-  ComponentList *components = GetComponentList ();
-  for (ComponentListI i = components->begin ();
+  LogComponent::ComponentList *components = GetComponentList ();
+  for (LogComponent::ComponentList::const_iterator i = components->begin ();
        i != components->end ();
        i++)
     {
@@ -103,7 +131,7 @@ LogComponent::LogComponent (const std::string & name)
 }
 
 void
-LogComponent::EnvVarCheck (const std::string & name)
+LogComponent::EnvVarCheck (void)
 {
 #ifdef HAVE_GETENV
   char *envVar = getenv ("NS_LOG");
@@ -112,7 +140,6 @@ LogComponent::EnvVarCheck (const std::string & name)
       return;
     }
   std::string env = envVar;
-  std::string myName = name;
 
   std::string::size_type cur = 0;
   std::string::size_type next = 0;
@@ -125,7 +152,7 @@ LogComponent::EnvVarCheck (const std::string & name)
       if (equal == std::string::npos)
         {
           component = tmp;
-          if (component == myName || component == "*" || component == "***")
+          if (component == m_name || component == "*" || component == "***")
             {
               int level = LOG_LEVEL_ALL | LOG_PREFIX_ALL;
               Enable ((enum LogLevel)level);
@@ -135,7 +162,7 @@ LogComponent::EnvVarCheck (const std::string & name)
       else
         {
           component = tmp.substr (0, equal);
-          if (component == myName || component == "*")
+          if (component == m_name || component == "*")
             {
               int level = 0;
               std::string::size_type cur_lev;
@@ -242,7 +269,7 @@ LogComponent::EnvVarCheck (const std::string & name)
 
 
 bool 
-LogComponent::IsEnabled (enum LogLevel level) const
+LogComponent::IsEnabled (const enum LogLevel level) const
 {
   //  LogComponentEnableEnvVar ();
   return (level & m_levels) ? 1 : 0;
@@ -254,14 +281,20 @@ LogComponent::IsNoneEnabled (void) const
   return m_levels == 0;
 }
 
-void 
-LogComponent::Enable (enum LogLevel level)
+void
+LogComponent::SetMask (const enum LogLevel level)
 {
-  m_levels |= level;
+  m_mask |= level;
 }
 
 void 
-LogComponent::Disable (enum LogLevel level)
+LogComponent::Enable (const enum LogLevel level)
+{
+  m_levels |= (level & ~m_mask);
+}
+
+void 
+LogComponent::Disable (const enum LogLevel level)
 {
   m_levels &= ~level;
 }
@@ -273,7 +306,14 @@ LogComponent::Name (void) const
 }
 
 std::string
-LogComponent::GetLevelLabel(const enum LogLevel level) const
+LogComponent::File (void) const
+{
+  return m_file;
+}
+
+/* static */
+std::string
+LogComponent::GetLevelLabel(const enum LogLevel level)
 {
   if (level == LOG_ERROR)
     {
@@ -310,8 +350,8 @@ LogComponent::GetLevelLabel(const enum LogLevel level) const
 void 
 LogComponentEnable (char const *name, enum LogLevel level)
 {
-  ComponentList *components = GetComponentList ();
-  ComponentListI i;
+  LogComponent::ComponentList *components = LogComponent::GetComponentList ();
+  LogComponent::ComponentList::const_iterator i;
   for (i = components->begin (); 
        i != components->end (); 
        i++)
@@ -334,8 +374,8 @@ LogComponentEnable (char const *name, enum LogLevel level)
 void 
 LogComponentEnableAll (enum LogLevel level)
 {
-  ComponentList *components = GetComponentList ();
-  for (ComponentListI i = components->begin ();
+  LogComponent::ComponentList *components = LogComponent::GetComponentList ();
+  for (LogComponent::ComponentList::const_iterator i = components->begin ();
        i != components->end ();
        i++)
     {
@@ -346,8 +386,8 @@ LogComponentEnableAll (enum LogLevel level)
 void 
 LogComponentDisable (char const *name, enum LogLevel level)
 {
-  ComponentList *components = GetComponentList ();
-  for (ComponentListI i = components->begin ();
+  LogComponent::ComponentList *components = LogComponent::GetComponentList ();
+  for (LogComponent::ComponentList::const_iterator i = components->begin ();
        i != components->end ();
        i++)
     {
@@ -362,8 +402,8 @@ LogComponentDisable (char const *name, enum LogLevel level)
 void 
 LogComponentDisableAll (enum LogLevel level)
 {
-  ComponentList *components = GetComponentList ();
-  for (ComponentListI i = components->begin ();
+  LogComponent::ComponentList *components = LogComponent::GetComponentList ();
+  for (LogComponent::ComponentList::const_iterator i = components->begin ();
        i != components->end ();
        i++)
     {
@@ -374,8 +414,8 @@ LogComponentDisableAll (enum LogLevel level)
 void 
 LogComponentPrintList (void)
 {
-  ComponentList *components = GetComponentList ();
-  for (ComponentListI i = components->begin ();
+  LogComponent::ComponentList *components = LogComponent::GetComponentList ();
+  for (LogComponent::ComponentList::const_iterator i = components->begin ();
        i != components->end ();
        i++)
     {
@@ -443,11 +483,19 @@ LogComponentPrintList (void)
     }
 }
 
+/**
+ * \ingroup logging
+ * Check if a log component exists.
+ * This is private to the logging implementation.
+ *
+ * \param [in] componentName The putative log component name.
+ * \returns \c true if \c componentName exists.
+ */
 static bool ComponentExists(std::string componentName) 
 {
   char const*name=componentName.c_str();
-  ComponentList *components = GetComponentList ();
-  ComponentListI i;
+  LogComponent::ComponentList *components = LogComponent::GetComponentList ();
+  LogComponent::ComponentList::const_iterator i;
   for (i = components->begin ();
        i != components->end ();
        i++)
@@ -462,6 +510,11 @@ static bool ComponentExists(std::string componentName)
   return false;    
 }
 
+/**
+ * \ingroup logging
+ * Parse the \c NS_LOG environment variable.
+ * This is private to the logging implementation.
+ */
 static void CheckEnvironmentVariables (void)
 {
 #ifdef HAVE_GETENV
@@ -580,9 +633,33 @@ LogNodePrinter LogGetNodePrinter (void)
 
 
 ParameterLogger::ParameterLogger (std::ostream &os)
-  : m_itemNumber (0),
+  : m_first (true),
     m_os (os)
 {
+}
+
+template<>
+ParameterLogger&
+ParameterLogger::operator<< <std::string>(const std::string param)
+{
+  if (m_first)
+    {
+      m_os << "\"" << param << "\"";
+      m_first = false;
+    }
+  else
+    {
+      m_os << ", \"" << param << "\"";
+    }
+  return *this;
+}
+
+template<>
+ParameterLogger&
+ParameterLogger::operator<< <const char *>(const char * param)
+{
+  (*this) << std::string (param);
+  return *this;
 }
 
 } // namespace ns3

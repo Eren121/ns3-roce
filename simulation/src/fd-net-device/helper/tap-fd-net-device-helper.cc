@@ -54,9 +54,9 @@
 
 #include <string>
 
-NS_LOG_COMPONENT_DEFINE ("TapFdNetDeviceHelper");
-
 namespace ns3 {
+
+NS_LOG_COMPONENT_DEFINE ("TapFdNetDeviceHelper");
 
 #define TAP_MAGIC 95549
 
@@ -64,9 +64,9 @@ TapFdNetDeviceHelper::TapFdNetDeviceHelper ()
 {
   m_deviceName = "";
   m_modePi = false;
-  m_tapIp4 = "";
-  m_tapMask4 = "";
-  m_tapIp6 = "";
+  m_tapIp4 = Ipv4Address::GetZero ();
+  m_tapMask4 = Ipv4Mask::GetZero ();
+  m_tapIp6 = Ipv6Address::GetZero ();
   m_tapPrefix6 = 64;
   m_tapMac = Mac48Address::Allocate ();
 }
@@ -112,7 +112,6 @@ TapFdNetDeviceHelper::InstallPriv (Ptr<Node> node) const
 {
   Ptr<NetDevice> d = FdNetDeviceHelper::InstallPriv (node);
   Ptr<FdNetDevice> device = d->GetObject<FdNetDevice> ();
-  Ptr<FdNetDevice> fdnd = device->GetObject<FdNetDevice> ();
 
   //
   // We need to explicitly set the encapsulation mode for the traffic
@@ -122,7 +121,7 @@ TapFdNetDeviceHelper::InstallPriv (Ptr<Node> node) const
   //
   if (m_modePi)
     {
-      fdnd->SetEncapsulationMode (FdNetDevice::DIXPI);
+      device->SetEncapsulationMode (FdNetDevice::DIXPI);
     }
 
   SetFileDescriptor (device);
@@ -228,19 +227,19 @@ TapFdNetDeviceHelper::CreateFileDescriptor (void) const
       ossMac << "-m" << m_tapMac;
 
       std::ostringstream ossIp4;
-      if (m_tapIp4 != "")
+      if (m_tapIp4 != Ipv4Address::GetZero ())
         {
           ossIp4 << "-i" << m_tapIp4;
         }
 
       std::ostringstream ossIp6;
-      if (m_tapIp6 != "")
+      if (m_tapIp6 != Ipv6Address::GetZero ())
         {
           ossIp6 << "-I" << m_tapIp6;
         }
 
       std::ostringstream ossNetmask4;
-      if (m_tapMask4 != "" )
+      if (m_tapMask4 != Ipv4Mask::GetZero () )
         {
           ossNetmask4 << "-n" << m_tapMask4;
         }

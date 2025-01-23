@@ -96,6 +96,7 @@ public:
   // Inherited methods:
   virtual void SetEnergyModelCallback (DeviceEnergyModel::ChangeStateCallback callback);
   virtual void EnergyDepletionHandler (void);
+  virtual void EnergyRechargeHandler (void);
   virtual void SendPacket (Ptr<Packet> pkt, uint32_t modeNum);
 
   /**
@@ -113,7 +114,7 @@ public:
   virtual void SetReceiveErrorCallback (RxErrCallback cb);
   virtual void SetRxGainDb (double gain);
   virtual void SetTxPowerDb (double txpwr);
-  virtual void SetRxThresholdDb (double thresh) NS_DEPRECATED;
+  NS_DEPRECATED virtual void SetRxThresholdDb (double thresh);
   virtual void SetCcaThresholdDb (double thresh);
   virtual double GetRxGainDb (void);
   virtual double GetTxPowerDb (void);
@@ -126,7 +127,7 @@ public:
   virtual bool IsStateTx (void);
   virtual bool IsStateCcaBusy (void);
   virtual Ptr<UanChannel> GetChannel (void) const;
-  virtual Ptr<UanNetDevice> GetDevice (void);
+  virtual Ptr<UanNetDevice> GetDevice (void) const;
   virtual void SetChannel (Ptr<UanChannel> channel);
   virtual void SetDevice (Ptr<UanNetDevice> device);
   virtual void SetMac (Ptr<UanMac> mac);
@@ -254,11 +255,11 @@ private:
   Ptr<UanPhy> m_phy2;
 
   /** A packet was received successfully. */
-  TracedCallback<Ptr<const Packet>, double, UanTxMode > m_rxOkLogger;
+  ns3::TracedCallback<Ptr<const Packet>, double, UanTxMode > m_rxOkLogger;
   /** A packet was received unsuccessfully. */
-  TracedCallback<Ptr<const Packet>, double, UanTxMode > m_rxErrLogger;
+  ns3::TracedCallback<Ptr<const Packet>, double, UanTxMode > m_rxErrLogger;
   /** A packet was sent from this Phy. */
-  TracedCallback<Ptr<const Packet>, double, UanTxMode > m_txLogger;
+  ns3::TracedCallback<Ptr<const Packet>, double, UanTxMode > m_txLogger;
   /** Callback when packet received without errors. */
   RxOkCallback m_recOkCb;
   /** Callback when packet received with errors. */

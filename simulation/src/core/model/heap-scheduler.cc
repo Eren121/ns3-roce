@@ -25,18 +25,24 @@
 #include "assert.h"
 #include "log.h"
 
-NS_LOG_COMPONENT_DEFINE ("HeapScheduler");
+/**
+ * \file
+ * \ingroup scheduler
+ * Implementation of ns3::HeapScheduler class.
+ */
 
 namespace ns3 {
 
-NS_OBJECT_ENSURE_REGISTERED (HeapScheduler)
-  ;
+NS_LOG_COMPONENT_DEFINE ("HeapScheduler");
+
+NS_OBJECT_ENSURE_REGISTERED (HeapScheduler);
 
 TypeId
 HeapScheduler::GetTypeId (void)
 {
   static TypeId tid = TypeId ("ns3::HeapScheduler")
     .SetParent<Scheduler> ()
+    .SetGroupName ("Core")
     .AddConstructor<HeapScheduler> ()
   ;
   return tid;

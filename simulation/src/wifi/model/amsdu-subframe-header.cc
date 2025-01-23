@@ -17,22 +17,23 @@
  *
  * Author: Mirko Banchi <mk.banchi@gmail.com>
  */
+
 #include "amsdu-subframe-header.h"
 #include "ns3/address-utils.h"
 #include "ns3/log.h"
 
-NS_LOG_COMPONENT_DEFINE ("AmsduSubframeHeader");
-
 namespace ns3 {
 
-NS_OBJECT_ENSURE_REGISTERED (AmsduSubframeHeader)
-  ;
+NS_LOG_COMPONENT_DEFINE ("AmsduSubframeHeader");
+
+NS_OBJECT_ENSURE_REGISTERED (AmsduSubframeHeader);
 
 TypeId
 AmsduSubframeHeader::GetTypeId ()
 {
   static TypeId tid = TypeId ("ns3::AmsduSubframeHeader")
     .SetParent<Header> ()
+    .SetGroupName ("Wifi")
     .AddConstructor<AmsduSubframeHeader> ()
   ;
   return tid;
@@ -131,4 +132,4 @@ AmsduSubframeHeader::GetLength (void) const
   return m_length;
 }
 
-} // namespace ns3
+} //namespace ns3

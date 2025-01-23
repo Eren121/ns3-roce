@@ -27,9 +27,9 @@
 #include "header.h"
 #include "trailer.h"
 
-NS_LOG_COMPONENT_DEFINE ("PacketMetadata");
-
 namespace ns3 {
+
+NS_LOG_COMPONENT_DEFINE ("PacketMetadata");
 
 bool PacketMetadata::m_enable = false;
 bool PacketMetadata::m_enableChecking = false;
@@ -447,12 +447,6 @@ PacketMetadata::AddBig (uint32_t next, uint32_t prev,
   return n;
 }
 
-/**
- * \param item the item data to write
- * \param extraItem the extra item data to write
- * \param available the number of bytes which can 
- *        be written without having to rewrite the buffer entirely.
- */
 void
 PacketMetadata::ReplaceTail (PacketMetadata::SmallItem *item, 
                              PacketMetadata::ExtraItem *extraItem,
@@ -530,12 +524,7 @@ PacketMetadata::ReplaceTail (PacketMetadata::SmallItem *item,
   *this = h;
 }
 
-/**
- * \param current the offset we should start reading the data from
- * \param item pointer to where we should store the data to return to the caller
- * \param extraItem pointer to where we should store the data to return to the caller
- * \returns the number of bytes read.
- */
+
 uint32_t
 PacketMetadata::ReadItems (uint16_t current, 
                            struct PacketMetadata::SmallItem *item,
@@ -1120,10 +1109,8 @@ PacketMetadata::ItemIterator::Next (void)
       item.type = PacketMetadata::Item::HEADER;
       if (!item.isFragment)
         {
-          ns3::Buffer tmp = m_buffer;
-          tmp.RemoveAtStart (m_offset);
-          tmp.RemoveAtEnd (tmp.GetSize () - item.currentSize);
-          item.current = tmp.Begin ();
+          item.current = m_buffer.Begin ();
+          item.current.Next (m_offset);
         }
     }
   else if (tid.IsChildOf (Trailer::GetTypeId ()))
@@ -1131,10 +1118,8 @@ PacketMetadata::ItemIterator::Next (void)
       item.type = PacketMetadata::Item::TRAILER;
       if (!item.isFragment)
         {
-          ns3::Buffer tmp = m_buffer;
-          tmp.RemoveAtEnd (tmp.GetSize () - (m_offset + smallItem.size));
-          tmp.RemoveAtStart (tmp.GetSize () - item.currentSize);
-          item.current = tmp.End ();
+          item.current = m_buffer.End ();
+          item.current.Prev (m_buffer.GetSize () - (m_offset + smallItem.size));
         }
     }
   else 

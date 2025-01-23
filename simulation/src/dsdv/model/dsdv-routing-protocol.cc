@@ -40,12 +40,13 @@
 #include "ns3/double.h"
 #include "ns3/uinteger.h"
 
-NS_LOG_COMPONENT_DEFINE ("DsdvRoutingProtocol");
-
 namespace ns3 {
+
+NS_LOG_COMPONENT_DEFINE ("DsdvRoutingProtocol");
+  
 namespace dsdv {
-NS_OBJECT_ENSURE_REGISTERED (RoutingProtocol)
-  ;
+  
+NS_OBJECT_ENSURE_REGISTERED (RoutingProtocol);
 
 /// UDP Port for DSDV control traffic
 const uint32_t RoutingProtocol::DSDV_PORT = 269;
@@ -65,7 +66,11 @@ struct DeferredRouteOutputTag : public Tag
   static TypeId
   GetTypeId ()
   {
-    static TypeId tid = TypeId ("ns3::dsdv::DeferredRouteOutputTag").SetParent<Tag> ();
+    static TypeId tid = TypeId ("ns3::dsdv::DeferredRouteOutputTag")
+      .SetParent<Tag> ()
+      .SetGroupName ("Dsdv")
+      .AddConstructor<DeferredRouteOutputTag> ()
+      ;
     return tid;
   }
 
@@ -105,6 +110,7 @@ RoutingProtocol::GetTypeId (void)
 {
   static TypeId tid = TypeId ("ns3::dsdv::RoutingProtocol")
     .SetParent<Ipv4RoutingProtocol> ()
+    .SetGroupName ("Dsdv")
     .AddConstructor<RoutingProtocol> ()
     .AddAttribute ("PeriodicUpdateInterval","Periodic interval between exchange of full routing tables among nodes. ",
                    TimeValue (Seconds (15)),
@@ -225,8 +231,13 @@ RoutingProtocol::DoDispose ()
 void
 RoutingProtocol::PrintRoutingTable (Ptr<OutputStreamWrapper> stream) const
 {
-  *stream->GetStream () << "Node: " << m_ipv4->GetObject<Node> ()->GetId () << " Time: " << Simulator::Now ().GetSeconds () << "s ";
+  *stream->GetStream () << "Node: " << m_ipv4->GetObject<Node> ()->GetId ()
+                        << ", Time: " << Now().As (Time::S)
+                        << ", Local time: " << GetObject<Node> ()->GetLocalTime ().As (Time::S)
+                        << ", DSDV Routing table" << std::endl;
+
   m_routingTable.Print (stream);
+  *stream->GetStream () << std::endl;
 }
 
 void
@@ -456,6 +467,15 @@ RoutingProtocol::RouteInput (Ptr<const Packet> p,
         }
       return true;
     }
+
+  // Check if input device supports IP forwarding
+  if (m_ipv4->IsForwarding (iif) == false)
+    {
+      NS_LOG_LOGIC ("Forwarding disabled for this interface");
+      ecb (p, header, Socket::ERROR_NOROUTETOHOST);
+      return true;
+    }
+
   RoutingTableEntry toDst;
   if (m_routingTable.LookupRoute (dst,toDst))
     {
@@ -956,8 +976,8 @@ RoutingProtocol::NotifyInterfaceUp (uint32_t i)
   Ptr<Socket> socket = Socket::CreateSocket (GetObject<Node> (),UdpSocketFactory::GetTypeId ());
   NS_ASSERT (socket != 0);
   socket->SetRecvCallback (MakeCallback (&RoutingProtocol::RecvDsdv,this));
-  socket->BindToNetDevice (l3->GetNetDevice (i));
   socket->Bind (InetSocketAddress (Ipv4Address::GetAny (), DSDV_PORT));
+  socket->BindToNetDevice (l3->GetNetDevice (i));
   socket->SetAllowBroadcast (true);
   socket->SetAttribute ("IpTtl",UintegerValue (1));
   m_socketAddresses.insert (std::make_pair (socket,iface));
@@ -1013,9 +1033,9 @@ RoutingProtocol::NotifyAddAddress (uint32_t i,
       Ptr<Socket> socket = Socket::CreateSocket (GetObject<Node> (),UdpSocketFactory::GetTypeId ());
       NS_ASSERT (socket != 0);
       socket->SetRecvCallback (MakeCallback (&RoutingProtocol::RecvDsdv,this));
-      socket->BindToNetDevice (l3->GetNetDevice (i));
       // Bind to any IP address so that broadcasts can be received
       socket->Bind (InetSocketAddress (Ipv4Address::GetAny (), DSDV_PORT));
+      socket->BindToNetDevice (l3->GetNetDevice (i));
       socket->SetAllowBroadcast (true);
       m_socketAddresses.insert (std::make_pair (socket,iface));
       Ptr<NetDevice> dev = m_ipv4->GetNetDevice (m_ipv4->GetInterfaceForAddress (iface.GetLocal ()));

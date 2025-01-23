@@ -27,7 +27,7 @@
 
 #define STATS_HAS_SQLITE3
 
-struct sqlite3;
+#include <sqlite3.h>
 
 namespace ns3 {
 
@@ -43,6 +43,12 @@ public:
   SqliteDataOutput();
   virtual ~SqliteDataOutput();
 
+  /**
+   * Register this type.
+   * \return The TypeId.
+   */
+  static TypeId GetTypeId (void);
+  
   virtual void Output (DataCollector &dc);
 
 protected:
@@ -62,6 +68,11 @@ public:
      * \param run experiment descriptor
      */
     SqliteOutputCallback(Ptr<SqliteDataOutput> owner, std::string run);
+
+    /**
+     * Destructor
+     */
+    ~SqliteOutputCallback ();
 
     /**
      * \brief Generates data statistics
@@ -126,6 +137,7 @@ public:
 private:
     Ptr<SqliteDataOutput> m_owner; //!< the instance this object belongs to
     std::string m_runLabel; //!< Run label
+    sqlite3_stmt *m_insertSingletonStatement; //!< Prepared singleton insert statement
 
     // end class SqliteOutputCallback
   };

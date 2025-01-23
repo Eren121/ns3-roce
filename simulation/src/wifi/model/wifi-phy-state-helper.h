@@ -17,6 +17,7 @@
  *
  * Author: Mathieu Lacage <mathieu.lacage@sophia.inria.fr>
  */
+
 #ifndef WIFI_PHY_STATE_HELPER_H
 #define WIFI_PHY_STATE_HELPER_H
 
@@ -57,6 +58,12 @@ public:
    * \param listener
    */
   void RegisterListener (WifiPhyListener *listener);
+  /**
+   * Remove WifiPhyListener from this WifiPhyStateHelper.
+   *
+   * \param listener
+   */
+  void UnregisterListener (WifiPhyListener *listener);
   /**
    * Return the current state of WifiPhy.
    *
@@ -100,6 +107,12 @@ public:
    */
   bool IsStateSwitching (void);
   /**
+   * Check whether the current state is SLEEP.
+   *
+   * \return true if the current state is SLEEP, false otherwise
+   */
+  bool IsStateSleep (void);
+  /**
    * Return the elapsed time of the current state.
    *
    * \return the elapsed time of the current state
@@ -123,11 +136,11 @@ public:
    *
    * \param txDuration the duration of the TX
    * \param packet the packet
-   * \param txMode the transmission mode of the packet
+   * \param txPowerDbm the nominal tx power in dBm
+   * \param txVector the tx vector of the packet
    * \param preamble the preamble of the packet
-   * \param txPower the transmission power
    */
-  void SwitchToTx (Time txDuration, Ptr<const Packet> packet, WifiMode txMode, WifiPreamble preamble, uint8_t txPower);
+  void SwitchToTx (Time txDuration, Ptr<const Packet> packet, double txPowerDbm, WifiTxVector txVector, WifiPreamble preamble);
   /**
    * Switch state to RX for the given duration.
    *
@@ -145,30 +158,87 @@ public:
    *
    * \param packet the successfully received packet
    * \param snr the SNR of the received packet
-   * \param mode the transmission mode of the packet
+   * \param txVector TXVECTOR of the packet
    * \param preamble the preamble of the received packet
    */
-  void SwitchFromRxEndOk (Ptr<Packet> packet, double snr, WifiMode mode, enum WifiPreamble preamble);
+  void SwitchFromRxEndOk (Ptr<Packet> packet, double snr, WifiTxVector txVector, enum WifiPreamble preamble);
   /**
    * Switch from RX after the reception failed.
    *
    * \param packet the packet that we failed to received
    * \param snr the SNR of the received packet
    */
-  void SwitchFromRxEndError (Ptr<const Packet> packet, double snr);
+  void SwitchFromRxEndError (Ptr<Packet> packet, double snr);
   /**
    * Switch to CCA busy.
    *
    * \param duration the duration of CCA busy state
    */
   void SwitchMaybeToCcaBusy (Time duration);
+  /**
+   * Switch to sleep mode.
+   */
+  void SwitchToSleep (void);
+  /**
+   * Switch from sleep mode.
+   *
+   * \param duration the duration of CCA busy state
+   */
+  void SwitchFromSleep (Time duration);
 
-  TracedCallback<Time,Time,enum WifiPhy::State> m_stateLogger;
+  /** \todo Why is this public? */
+  TracedCallback<Time, Time, enum WifiPhy::State> m_stateLogger;
+
+  /**
+   * TracedCallback signature for state changes.
+   *
+   * \param [in] start Time when the \p state started.
+   * \param [in] duration Amount of time we've been in (or will be in)
+   *             the \p state.
+   * \param [in] state The state.
+   */
+  typedef void (* StateTracedCallback)
+    (Time start, Time duration, WifiPhy::State state);
+
+  /**
+   * TracedCallback signature for receive end ok event.
+   *
+   * \param [in] packet The received packet.
+   * \param [in] snr    The SNR of the received packet.
+   * \param [in] mode   The transmission mode of the packet.
+   * \param [in] preamble The preamble of the packet.
+   */
+  typedef void (* RxOkTracedCallback)
+    (Ptr<const Packet> packet, double snr, WifiMode mode, WifiPreamble preamble);
+
+  /**
+   * TracedCallback signature for receive end error event.
+   *
+   * \param [in] packet       The received packet.
+   * \param [in] snr          The SNR of the received packet.
+   */
+  typedef void (* RxEndErrorTracedCallback)
+    (Ptr<const Packet> packet, double snr);
+
+  /**
+   * TracedCallback signature for transmit event.
+   *
+   * \param [in] packet The received packet.
+   * \param [in] mode   The transmission mode of the packet.
+   * \param [in] preamble The preamble of the packet.
+   * \param [in] power  The transmit power level.
+   */
+  typedef void (* TxTracedCallback)
+    (Ptr<const Packet> packet, WifiMode mode,
+     WifiPreamble preamble, uint8_t power);
+
+
 private:
   /**
    * typedef for a list of WifiPhyListeners
    */
   typedef std::vector<WifiPhyListener *> Listeners;
+  typedef std::vector<WifiPhyListener *>::iterator ListenersI;
 
   /**
    * Log the ideal and CCA states.
@@ -179,9 +249,9 @@ private:
    * Notify all WifiPhyListener that the transmission has started for the given duration.
    *
    * \param duration the duration of the transmission
+   * \param txPowerDbm the nominal tx power in dBm
    */
-  void NotifyTxStart (Time duration);
-  //void NotifyWakeup (void);
+  void NotifyTxStart (Time duration, double txPowerDbm);
   /**
    * Notify all WifiPhyListener that the reception has started for the given duration.
    *
@@ -210,11 +280,20 @@ private:
    */
   void NotifySwitchingStart (Time duration);
   /**
+   * Notify all WifiPhyListener that we are going to sleep
+   */
+  void NotifySleep (void);
+  /**
+   * Notify all WifiPhyListener that we woke up
+   */
+  void NotifyWakeup (void);
+  /**
    * Switch the state from RX.
    */
   void DoSwitchFromRx (void);
 
   bool m_rxing;
+  bool m_sleeping;
   Time m_endTx;
   Time m_endRx;
   Time m_endCcaBusy;
@@ -223,6 +302,7 @@ private:
   Time m_startRx;
   Time m_startCcaBusy;
   Time m_startSwitching;
+  Time m_startSleep;
   Time m_previousStateChangeTime;
 
   Listeners m_listeners;
@@ -233,6 +313,6 @@ private:
   WifiPhy::RxErrorCallback m_rxErrorCallback;
 };
 
-} // namespace ns3
+} //namespace ns3
 
 #endif /* WIFI_PHY_STATE_HELPER_H */

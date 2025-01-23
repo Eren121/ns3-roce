@@ -17,22 +17,23 @@
  *
  * Author: Mathieu Lacage <mathieu.lacage@sophia.inria.fr>
  */
+
 #include "dcf.h"
 #include "ns3/uinteger.h"
 #include "ns3/log.h"
 
-NS_LOG_COMPONENT_DEFINE ("Dcf");
-
 namespace ns3 {
 
-NS_OBJECT_ENSURE_REGISTERED (Dcf)
-  ;
+NS_LOG_COMPONENT_DEFINE ("Dcf");
+
+NS_OBJECT_ENSURE_REGISTERED (Dcf);
 
 TypeId
 Dcf::GetTypeId (void)
 {
   static TypeId tid = TypeId ("ns3::Dcf")
     .SetParent<Object> ()
+    .SetGroupName ("Wifi")
     .AddAttribute ("MinCw", "The minimum value of the contention window.",
                    UintegerValue (15),
                    MakeUintegerAccessor (&Dcf::SetMinCw,
@@ -48,8 +49,13 @@ Dcf::GetTypeId (void)
                    MakeUintegerAccessor (&Dcf::SetAifsn,
                                          &Dcf::GetAifsn),
                    MakeUintegerChecker<uint32_t> ())
+    .AddAttribute ("TxopLimit", "The TXOP limit: the default value conforms to simple DCA.",
+                   TimeValue (MilliSeconds (0)),
+                   MakeTimeAccessor (&Dcf::SetTxopLimit,
+                                     &Dcf::GetTxopLimit),
+                   MakeTimeChecker ())
   ;
   return tid;
 }
 
-} // namespace ns3
+} //namespace ns3

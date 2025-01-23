@@ -40,16 +40,16 @@
 #include <ns3/ff-mac-scheduler.h>
 #include <ns3/lte-handover-algorithm.h>
 #include <ns3/lte-anr.h>
+#include <ns3/lte-ffr-algorithm.h>
 #include <ns3/ipv4-l3-protocol.h>
 #include <ns3/abort.h>
 #include <ns3/log.h>
 
-NS_LOG_COMPONENT_DEFINE ("LteEnbNetDevice");
-
 namespace ns3 {
 
-NS_OBJECT_ENSURE_REGISTERED ( LteEnbNetDevice)
-  ;
+NS_LOG_COMPONENT_DEFINE ("LteEnbNetDevice");
+
+NS_OBJECT_ENSURE_REGISTERED ( LteEnbNetDevice);
 
 TypeId LteEnbNetDevice::GetTypeId (void)
 {
@@ -73,6 +73,11 @@ TypeId LteEnbNetDevice::GetTypeId (void)
                    PointerValue (),
                    MakePointerAccessor (&LteEnbNetDevice::m_anr),
                    MakePointerChecker <LteAnr> ())
+    .AddAttribute ("LteFfrAlgorithm",
+                   "The FFR algorithm associated to this EnbNetDevice",
+                   PointerValue (),
+                   MakePointerAccessor (&LteEnbNetDevice::m_ffrAlgorithm),
+                   MakePointerChecker <LteFfrAlgorithm> ())
     .AddAttribute ("LteEnbMac",
                    "The MAC associated to this EnbNetDevice",
                    PointerValue (),
@@ -170,6 +175,9 @@ LteEnbNetDevice::DoDispose ()
       m_anr->Dispose ();
       m_anr = 0;
     }
+
+  m_ffrAlgorithm->Dispose ();
+  m_ffrAlgorithm = 0;
 
   m_phy->Dispose ();
   m_phy = 0;
@@ -327,6 +335,8 @@ LteEnbNetDevice::DoInitialize (void)
     {
       m_anr->Initialize ();
     }
+
+  m_ffrAlgorithm->Initialize ();
 }
 
 

@@ -29,21 +29,22 @@
 
 #include <algorithm>
 
-NS_LOG_COMPONENT_DEFINE ("PacketSocket");
-
 namespace ns3 {
 
-NS_OBJECT_ENSURE_REGISTERED (PacketSocket)
-  ;
+NS_LOG_COMPONENT_DEFINE ("PacketSocket");
+
+NS_OBJECT_ENSURE_REGISTERED (PacketSocket);
 
 TypeId
 PacketSocket::GetTypeId (void)
 {
   static TypeId tid = TypeId ("ns3::PacketSocket")
     .SetParent<Socket> ()
+    .SetGroupName("Network")
     .AddConstructor<PacketSocket> ()
     .AddTraceSource ("Drop", "Drop packet due to receive buffer overflow",
-                     MakeTraceSourceAccessor (&PacketSocket::m_dropTrace))
+                     MakeTraceSourceAccessor (&PacketSocket::m_dropTrace),
+                     "ns3::Packet::TracedCallback")
     .AddAttribute ("RcvBufSize",
                    "PacketSocket maximum receive buffer size (bytes)",
                    UintegerValue (131072),
@@ -332,6 +333,14 @@ PacketSocket::SendTo (Ptr<Packet> p, uint32_t flags, const Address &address)
       return -1;
     }
 
+  uint8_t priority = GetPriority ();
+  if (priority)
+    {
+      SocketPriorityTag priorityTag;
+      priorityTag.SetPriority (priority);
+      p->ReplacePacketTag (priorityTag);
+    }
+
   bool error = false;
   Address dest = ad.GetPhysicalAddress ();
   if (ad.IsSingleDevice ())
@@ -396,12 +405,12 @@ PacketSocket::ForwardUp (Ptr<NetDevice> device, Ptr<const Packet> packet,
       PacketSocketTag pst;
       pst.SetPacketType (packetType);
       pst.SetDestAddress (to);
-      SocketAddressTag tag;
-      tag.SetAddress (address);
-      copy->AddPacketTag (tag); // Attach From Physical Address
       copy->AddPacketTag (pst); // Attach Packet Type and Dest Address
       copy->AddPacketTag (dnt); // Attach device source name
-      m_deliveryQueue.push (copy);
+      // in case the packet still has a priority tag, remove it
+      SocketPriorityTag priorityTag;
+      copy->RemovePacketTag (priorityTag);
+      m_deliveryQueue.push (std::make_pair (copy, address));
       m_rxAvailable += packet->GetSize ();
       NS_LOG_LOGIC ("UID is " << packet->GetUid () << " PacketSocket " << this);
       NotifyDataRecv ();
@@ -431,11 +440,24 @@ Ptr<Packet>
 PacketSocket::Recv (uint32_t maxSize, uint32_t flags)
 {
   NS_LOG_FUNCTION (this << maxSize << flags);
+
+  Address fromAddress;
+  Ptr<Packet> packet = RecvFrom (maxSize, flags, fromAddress);
+  return packet;
+}
+
+Ptr<Packet>
+PacketSocket::RecvFrom (uint32_t maxSize, uint32_t flags, Address &fromAddress)
+{
+  NS_LOG_FUNCTION (this << maxSize << flags);
+
   if (m_deliveryQueue.empty () )
     {
       return 0;
     }
-  Ptr<Packet> p = m_deliveryQueue.front ();
+  Ptr<Packet> p = m_deliveryQueue.front ().first;
+  fromAddress = m_deliveryQueue.front ().second;
+
   if (p->GetSize () <= maxSize)
     {
       m_deliveryQueue.pop ();
@@ -448,32 +470,16 @@ PacketSocket::Recv (uint32_t maxSize, uint32_t flags)
   return p;
 }
 
-Ptr<Packet>
-PacketSocket::RecvFrom (uint32_t maxSize, uint32_t flags, Address &fromAddress)
-{
-  NS_LOG_FUNCTION (this << maxSize << flags << fromAddress);
-  Ptr<Packet> packet = Recv (maxSize, flags);
-  if (packet != 0)
-    {
-      SocketAddressTag tag;
-      bool found;
-      found = packet->PeekPacketTag (tag);
-      NS_ASSERT (found);
-      fromAddress = tag.GetAddress ();
-    }
-  return packet;
-}
-
 int
 PacketSocket::GetSockName (Address &address) const
 {
   NS_LOG_FUNCTION (this << address);
-  PacketSocketAddress ad = PacketSocketAddress::ConvertFrom (address);
+  PacketSocketAddress ad;
 
   ad.SetProtocol (m_protocol);
   if (m_isSingleDevice)
     {
-      Ptr<NetDevice> device = m_node->GetDevice (ad.GetSingleDevice ());
+      Ptr<NetDevice> device = m_node->GetDevice (m_device);
       ad.SetPhysicalAddress (device->GetAddress ());
       ad.SetSingleDevice (m_device);
     }
@@ -483,6 +489,22 @@ PacketSocket::GetSockName (Address &address) const
       ad.SetAllDevices ();
     }
   address = ad;
+
+  return 0;
+}
+
+int
+PacketSocket::GetPeerName (Address &address) const
+{
+  NS_LOG_FUNCTION (this << address);
+
+  if (m_state != STATE_CONNECTED)
+    {
+      m_errno = ERROR_NOTCONN;
+      return -1;
+    }
+
+  address = m_destAddr;
 
   return 0;
 }
@@ -537,14 +559,14 @@ PacketSocketTag::GetDestAddress (void) const
   return m_destAddr;
 }
 
-NS_OBJECT_ENSURE_REGISTERED (PacketSocketTag)
-  ;
+NS_OBJECT_ENSURE_REGISTERED (PacketSocketTag);
 
 TypeId
 PacketSocketTag::GetTypeId (void)
 {
   static TypeId tid = TypeId ("ns3::PacketSocketTag")
     .SetParent<Tag> ()
+    .SetGroupName("Network")
     .AddConstructor<PacketSocketTag> ()
   ;
   return tid;
@@ -601,14 +623,14 @@ DeviceNameTag::GetDeviceName (void) const
   return m_deviceName;
 }
 
-NS_OBJECT_ENSURE_REGISTERED (DeviceNameTag)
-  ;
+NS_OBJECT_ENSURE_REGISTERED (DeviceNameTag);
 
 TypeId
 DeviceNameTag::GetTypeId (void)
 {
   static TypeId tid = TypeId ("ns3::DeviceNameTag")
     .SetParent<Tag> ()
+    .SetGroupName("Network")
     .AddConstructor<DeviceNameTag> ();
   return tid;
 }

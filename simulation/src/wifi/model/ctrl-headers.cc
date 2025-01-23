@@ -17,21 +17,20 @@
  *
  * Author: Mirko Banchi <mk.banchi@gmail.com>
  */
+
 #include "ns3/fatal-error.h"
 #include "ns3/log.h"
-
 #include "ctrl-headers.h"
 
-NS_LOG_COMPONENT_DEFINE ("CtrlHeaders");
-
 namespace ns3 {
+
+NS_LOG_COMPONENT_DEFINE ("CtrlHeaders");
 
 /***********************************
  *       Block ack request
  ***********************************/
 
-NS_OBJECT_ENSURE_REGISTERED (CtrlBAckRequestHeader)
-  ;
+NS_OBJECT_ENSURE_REGISTERED (CtrlBAckRequestHeader);
 
 CtrlBAckRequestHeader::CtrlBAckRequestHeader ()
   : m_barAckPolicy (false),
@@ -52,6 +51,7 @@ CtrlBAckRequestHeader::GetTypeId (void)
   NS_LOG_FUNCTION_NOARGS ();
   static TypeId tid = TypeId ("ns3::CtrlBAckRequestHeader")
     .SetParent<Header> ()
+    .SetGroupName ("Wifi")
     .AddConstructor<CtrlBAckRequestHeader> ()
   ;
   return tid;
@@ -275,12 +275,12 @@ CtrlBAckRequestHeader::IsMultiTid (void) const
   return (m_multiTid && m_compressed) ? true : false;
 }
 
+
 /***********************************
  *       Block ack response
  ***********************************/
 
-NS_OBJECT_ENSURE_REGISTERED (CtrlBAckResponseHeader)
-  ;
+NS_OBJECT_ENSURE_REGISTERED (CtrlBAckResponseHeader);
 
 CtrlBAckResponseHeader::CtrlBAckResponseHeader ()
   : m_baAckPolicy (false),
@@ -301,6 +301,7 @@ CtrlBAckResponseHeader::GetTypeId (void)
 {
   static TypeId tid = TypeId ("ns3::CtrlBAckResponseHeader")
     .SetParent<Header> ()
+    .SetGroupName ("Wifi")
     .AddConstructor<CtrlBAckResponseHeader> ()
   ;
   return tid;
@@ -784,4 +785,4 @@ CtrlBAckResponseHeader::ResetBitmap (void)
   memset (&bitmap, 0, sizeof (bitmap));
 }
 
-}  // namespace ns3
+}  //namespace ns3

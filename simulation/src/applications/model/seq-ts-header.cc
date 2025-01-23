@@ -24,12 +24,11 @@
 #include "ns3/simulator.h"
 #include "seq-ts-header.h"
 
-NS_LOG_COMPONENT_DEFINE ("SeqTsHeader");
-
 namespace ns3 {
 
-NS_OBJECT_ENSURE_REGISTERED (SeqTsHeader)
-  ;
+NS_LOG_COMPONENT_DEFINE ("SeqTsHeader");
+
+NS_OBJECT_ENSURE_REGISTERED (SeqTsHeader);
 
 SeqTsHeader::SeqTsHeader ()
   : m_seq (0),
@@ -63,6 +62,7 @@ SeqTsHeader::GetTypeId (void)
 {
   static TypeId tid = TypeId ("ns3::SeqTsHeader")
     .SetParent<Header> ()
+    .SetGroupName("Applications")
     .AddConstructor<SeqTsHeader> ()
   ;
   return tid;

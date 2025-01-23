@@ -23,8 +23,7 @@
 
 namespace ns3 {
 
-NS_OBJECT_ENSURE_REGISTERED (UanHeaderCommon)
-  ;
+NS_OBJECT_ENSURE_REGISTERED (UanHeaderCommon);
 
 UanHeaderCommon::UanHeaderCommon ()
 {
@@ -44,6 +43,7 @@ UanHeaderCommon::GetTypeId (void)
 {
   static TypeId tid = TypeId ("ns3::UanHeaderCommon")
     .SetParent<Header> ()
+    .SetGroupName ("Uan")
     .AddConstructor<UanHeaderCommon> ()
   ;
   return tid;

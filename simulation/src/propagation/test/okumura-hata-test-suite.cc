@@ -29,11 +29,9 @@
 #include <ns3/enum.h>
 
 
-namespace ns3 {
+using namespace ns3;
 
-NS_LOG_COMPONENT_DEFINE ("OkumuraHataPropagationLossModelTest")
-  ;
-
+NS_LOG_COMPONENT_DEFINE ("OkumuraHataPropagationLossModelTest");
 
 class OkumuraHataPropagationLossModelTestCase : public TestCase
 {
@@ -141,7 +139,3 @@ OkumuraHataPropagationLossModelTestSuite::OkumuraHataPropagationLossModelTestSui
 
 
 static OkumuraHataPropagationLossModelTestSuite g_okumuraHataTestSuite;
-
-
-
-}   // namespace ns3

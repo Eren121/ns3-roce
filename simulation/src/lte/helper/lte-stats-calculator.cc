@@ -29,8 +29,9 @@
 
 namespace ns3 {
 
-NS_LOG_COMPONENT_DEFINE ("LteStatsCalculator")
-  ;
+NS_LOG_COMPONENT_DEFINE ("LteStatsCalculator");
+
+NS_OBJECT_ENSURE_REGISTERED (LteStatsCalculator);
 
 LteStatsCalculator::LteStatsCalculator ()
   : m_dlOutputFilename (""),
@@ -51,6 +52,7 @@ LteStatsCalculator::GetTypeId (void)
 {
   static TypeId tid = TypeId ("ns3::LteStatsCalculator")
     .SetParent<Object> ()
+    .SetGroupName("Lte")
     .AddConstructor<LteStatsCalculator> ()
   ;
   return tid;

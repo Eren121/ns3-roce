@@ -24,40 +24,49 @@
 #include "ns3/log.h"
 #include "ns3/node.h"
 #include "ns3/trace-source-accessor.h"
+#include "ns3/names.h"
 
 #include "arp-cache.h"
 #include "arp-header.h"
 #include "ipv4-interface.h"
-
-NS_LOG_COMPONENT_DEFINE ("ArpCache");
+#include "ipv4-header.h"
 
 namespace ns3 {
 
-NS_OBJECT_ENSURE_REGISTERED (ArpCache)
-  ;
+NS_LOG_COMPONENT_DEFINE ("ArpCache");
+
+NS_OBJECT_ENSURE_REGISTERED (ArpCache);
 
 TypeId 
 ArpCache::GetTypeId (void)
 {
   static TypeId tid = TypeId ("ns3::ArpCache")
     .SetParent<Object> ()
+    .SetGroupName ("Internet")
     .AddAttribute ("AliveTimeout",
-                   "When this timeout expires, the matching cache entry needs refreshing",
+                   "When this timeout expires, "
+                   "the matching cache entry needs refreshing",
                    TimeValue (Seconds (120)),
                    MakeTimeAccessor (&ArpCache::m_aliveTimeout),
                    MakeTimeChecker ())
     .AddAttribute ("DeadTimeout",
-                   "When this timeout expires, a new attempt to resolve the matching entry is made",
+                   "When this timeout expires, "
+                   "a new attempt to resolve the matching entry is made",
                    TimeValue (Seconds (100)),
                    MakeTimeAccessor (&ArpCache::m_deadTimeout),
                    MakeTimeChecker ())
     .AddAttribute ("WaitReplyTimeout",
-                   "When this timeout expires, the cache entries will be scanned and entries in WaitReply state will resend ArpRequest unless MaxRetries has been exceeded, in which case the entry is marked dead",
+                   "When this timeout expires, "
+                   "the cache entries will be scanned and "
+                   "entries in WaitReply state will resend ArpRequest "
+                   "unless MaxRetries has been exceeded, "
+                   "in which case the entry is marked dead",
                    TimeValue (Seconds (1)),
                    MakeTimeAccessor (&ArpCache::m_waitReplyTimeout),
                    MakeTimeChecker ())
     .AddAttribute ("MaxRetries",
-                   "Number of retransmissions of ArpRequest before marking dead",
+                   "Number of retransmissions of ArpRequest "
+                   "before marking dead",
                    UintegerValue (3),
                    MakeUintegerAccessor (&ArpCache::m_maxRetries),
                    MakeUintegerChecker<uint32_t> ())
@@ -67,8 +76,10 @@ ArpCache::GetTypeId (void)
                    MakeUintegerAccessor (&ArpCache::m_pendingQueueSize),
                    MakeUintegerChecker<uint32_t> ())
     .AddTraceSource ("Drop",
-                     "Packet dropped due to ArpCache entry in WaitReply expiring.",
-                     MakeTraceSourceAccessor (&ArpCache::m_dropTrace))
+                     "Packet dropped due to ArpCache entry "
+                     "in WaitReply expiring.",
+                     MakeTraceSourceAccessor (&ArpCache::m_dropTrace),
+                     "ns3::Packet::TracedCallback")
   ;
   return tid;
 }
@@ -209,10 +220,12 @@ ArpCache::HandleWaitReplyTimeout (void)
                             entry->GetRetries ());
               entry->MarkDead ();
               entry->ClearRetries ();
-              Ptr<Packet> pending = entry->DequeuePending ();
-              while (pending != 0)
+              Ipv4PayloadHeaderPair pending = entry->DequeuePending ();
+              while (pending.first != 0)
                 {
-                  m_dropTrace (pending);
+                  // add the Ipv4 header for tracing purposes
+                  pending.first->AddHeader (pending.second);
+                  m_dropTrace (pending.first);
                   pending = entry->DequeuePending ();
                 }
             }
@@ -243,6 +256,64 @@ ArpCache::Flush (void)
     }
 }
 
+void
+ArpCache::PrintArpCache (Ptr<OutputStreamWrapper> stream)
+{
+  NS_LOG_FUNCTION (this << stream);
+  std::ostream* os = stream->GetStream ();
+
+  for (CacheI i = m_arpCache.begin (); i != m_arpCache.end (); i++)
+    {
+      *os << i->first << " dev ";
+      std::string found = Names::FindName (m_device);
+      if (Names::FindName (m_device) != "")
+        {
+          *os << found;
+        }
+      else
+        {
+          *os << static_cast<int> (m_device->GetIfIndex ());
+        }
+
+      *os << " lladdr " << i->second->GetMacAddress ();
+
+      if (i->second->IsAlive ())
+        {
+          *os << " REACHABLE\n";
+        }
+      else if (i->second->IsWaitReply ())
+        {
+          *os << " DELAY\n";
+        }
+      else if (i->second->IsPermanent ())
+	{
+	  *os << " PERMANENT\n";
+	}
+      else
+        {
+          *os << " STALE\n";
+        }
+    }
+}
+
+std::list<ArpCache::Entry *>
+ArpCache::LookupInverse (Address to)
+{
+  NS_LOG_FUNCTION (this << to);
+
+  std::list<ArpCache::Entry *> entryList;
+  for (CacheI i = m_arpCache.begin (); i != m_arpCache.end (); i++)
+    {
+      ArpCache::Entry *entry = (*i).second;
+      if (entry->GetMacAddress () == to)
+        {
+          entryList.push_back (entry);
+        }
+    }
+  return entryList;
+}
+
+
 ArpCache::Entry *
 ArpCache::Lookup (Ipv4Address to)
 {
@@ -265,6 +336,24 @@ ArpCache::Add (Ipv4Address to)
   m_arpCache[to] = entry;
   entry->SetIpv4Address (to);
   return entry;
+}
+
+void
+ArpCache::Remove (ArpCache::Entry *entry)
+{
+  NS_LOG_FUNCTION (this << entry);
+  
+  for (CacheI i = m_arpCache.begin (); i != m_arpCache.end (); i++)
+    {
+      if ((*i).second == entry)
+        {
+          m_arpCache.erase (i);
+          entry->ClearPendingPacket (); //clear the pending packets for entry's ipaddress
+          delete entry;
+          return;
+        }
+    }
+  NS_LOG_WARN ("Entry not found in this ARP Cache");
 }
 
 ArpCache::Entry::Entry (ArpCache *arp)
@@ -294,12 +383,19 @@ ArpCache::Entry::IsWaitReply (void)
   NS_LOG_FUNCTION (this);
   return (m_state == WAIT_REPLY) ? true : false;
 }
+bool
+ArpCache::Entry::IsPermanent (void)
+{
+  NS_LOG_FUNCTION (this);
+  return (m_state == PERMANENT) ? true : false;
+}
 
 
 void 
 ArpCache::Entry::MarkDead (void) 
 {
   NS_LOG_FUNCTION (this);
+  NS_ASSERT (m_state == ALIVE || m_state == WAIT_REPLY || m_state == DEAD);
   m_state = DEAD;
   ClearRetries ();
   UpdateSeen ();
@@ -314,11 +410,20 @@ ArpCache::Entry::MarkAlive (Address macAddress)
   ClearRetries ();
   UpdateSeen ();
 }
-
-bool
-ArpCache::Entry::UpdateWaitReply (Ptr<Packet> waiting)
+void
+ArpCache::Entry::MarkPermanent (void)
 {
-  NS_LOG_FUNCTION (this << waiting);
+  NS_LOG_FUNCTION (this << m_macAddress);
+  NS_ASSERT (!m_macAddress.IsInvalid ());
+
+  m_state = PERMANENT;
+  ClearRetries ();
+  UpdateSeen ();
+}
+bool
+ArpCache::Entry::UpdateWaitReply (Ipv4PayloadHeaderPair waiting)
+{
+  NS_LOG_FUNCTION (this << waiting.first);
   NS_ASSERT (m_state == WAIT_REPLY);
   /* We are already waiting for an answer so
    * we dump the previously waiting packet and
@@ -332,11 +437,13 @@ ArpCache::Entry::UpdateWaitReply (Ptr<Packet> waiting)
   return true;
 }
 void 
-ArpCache::Entry::MarkWaitReply (Ptr<Packet> waiting)
+ArpCache::Entry::MarkWaitReply (Ipv4PayloadHeaderPair waiting)
 {
-  NS_LOG_FUNCTION (this << waiting);
+  NS_LOG_FUNCTION (this << waiting.first);
   NS_ASSERT (m_state == ALIVE || m_state == DEAD);
   NS_ASSERT (m_pending.empty ());
+  NS_ASSERT_MSG (waiting.first, "Can not add a null packet to the ARP queue");
+
   m_state = WAIT_REPLY;
   m_pending.push_back (waiting);
   UpdateSeen ();
@@ -347,8 +454,13 @@ Address
 ArpCache::Entry::GetMacAddress (void) const
 {
   NS_LOG_FUNCTION (this);
-  NS_ASSERT (m_state == ALIVE);
   return m_macAddress;
+}
+void 
+ArpCache::Entry::SetMacAddresss (Address macAddress)
+{
+  NS_LOG_FUNCTION (this);
+  m_macAddress = macAddress;
 }
 Ipv4Address 
 ArpCache::Entry::GetIpv4Address (void) const
@@ -356,7 +468,7 @@ ArpCache::Entry::GetIpv4Address (void) const
   NS_LOG_FUNCTION (this);
   return m_ipv4Address;
 }
-void 
+void
 ArpCache::Entry::SetIpv4Address (Ipv4Address destination)
 {
   NS_LOG_FUNCTION (this << destination);
@@ -373,6 +485,8 @@ ArpCache::Entry::GetTimeout (void) const
       return m_arp->GetDeadTimeout ();
     case ArpCache::Entry::ALIVE:
       return m_arp->GetAliveTimeout ();
+    case ArpCache::Entry::PERMANENT:
+      return Time::Max ();
     default:
       NS_ASSERT (false);
       return Seconds (0);
@@ -392,20 +506,27 @@ ArpCache::Entry::IsExpired (void) const
     } 
   return false;
 }
-Ptr<Packet> 
+ArpCache::Ipv4PayloadHeaderPair
 ArpCache::Entry::DequeuePending (void)
 {
   NS_LOG_FUNCTION (this);
   if (m_pending.empty ())
     {
-      return 0;
+      Ipv4Header h;
+      return Ipv4PayloadHeaderPair (0, h);
     }
   else
     {
-      Ptr<Packet> p = m_pending.front ();
+      Ipv4PayloadHeaderPair p = m_pending.front ();
       m_pending.pop_front ();
       return p;
     }
+}
+void 
+ArpCache::Entry::ClearPendingPacket (void)
+{
+  NS_LOG_FUNCTION (this);
+  m_pending.clear ();
 }
 void 
 ArpCache::Entry::UpdateSeen (void)

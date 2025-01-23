@@ -320,7 +320,7 @@ How to add logging to your code
 Adding logging to your code is very simple:
 
 1. Invoke the ``NS_LOG_COMPONENT_DEFINE (...);`` macro
-   outside of ``namespace ns3``.
+   inside of ``namespace ns3``.
 
   Create a unique string identifier (usually based on the name of the file
   and/or class defined within the file) and register it with a macro call
@@ -328,9 +328,9 @@ Adding logging to your code is very simple:
 
   ::
 
-    NS_LOG_COMPONENT_DEFINE ("Ipv4L3Protocol");
-
     namespace ns3 {
+    
+    NS_LOG_COMPONENT_DEFINE ("Ipv4L3Protocol");
     ...
 
   This registers ``Ipv4L3Protocol`` as a log component.
@@ -424,6 +424,11 @@ Guidelines
   Run some example programs with all log components turned on (e.g. 
   ``NS_LOG="***"``).
 
+* Use an explicit cast for any variable of type uint8_t or int8_t, 
+  e.g., ``NS_LOG_LOGIC ("Variable i is " << static_cast<int> (i));``.
+  Without the cast, the integer is interpreted as a char, and the result
+  will be most likely not in line with the expectations.
+  This is a well documented C++ 'feature'.
 
 
 

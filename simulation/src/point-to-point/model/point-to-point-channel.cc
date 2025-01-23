@@ -23,26 +23,29 @@
 #include "ns3/simulator.h"
 #include "ns3/log.h"
 
-NS_LOG_COMPONENT_DEFINE ("PointToPointChannel");
-
 namespace ns3 {
 
-NS_OBJECT_ENSURE_REGISTERED (PointToPointChannel)
-  ;
+NS_LOG_COMPONENT_DEFINE ("PointToPointChannel");
+
+NS_OBJECT_ENSURE_REGISTERED (PointToPointChannel);
 
 TypeId 
 PointToPointChannel::GetTypeId (void)
 {
   static TypeId tid = TypeId ("ns3::PointToPointChannel")
     .SetParent<Channel> ()
+    .SetGroupName ("PointToPoint")
     .AddConstructor<PointToPointChannel> ()
-    .AddAttribute ("Delay", "Transmission delay through the channel",
+    .AddAttribute ("Delay", "Propagation delay through the channel",
                    TimeValue (Seconds (0)),
                    MakeTimeAccessor (&PointToPointChannel::m_delay),
                    MakeTimeChecker ())
     .AddTraceSource ("TxRxPointToPoint",
-                     "Trace source indicating transmission of packet from the PointToPointChannel, used by the Animation interface.",
-                     MakeTraceSourceAccessor (&PointToPointChannel::m_txrxPointToPoint))
+                     "Trace source indicating transmission of packet "
+                     "from the PointToPointChannel, used by the Animation "
+                     "interface.",
+                     MakeTraceSourceAccessor (&PointToPointChannel::m_txrxPointToPoint),
+                     "ns3::PointToPointChannel::TxRxAnimationCallback")
   ;
   return tid;
 }

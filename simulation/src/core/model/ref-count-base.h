@@ -25,6 +25,13 @@
 
 #include "simple-ref-count.h"
 
+/**
+ * \file
+ * \ingroup ptr
+ * ns3::RefCountBase declaration.
+ * \deprecated See \ref ns3::SimpleRefCount
+ */
+
 namespace ns3 {
 
 /**

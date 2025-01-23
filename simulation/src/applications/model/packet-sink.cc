@@ -34,27 +34,31 @@
 
 namespace ns3 {
 
-NS_LOG_COMPONENT_DEFINE ("PacketSink")
-  ;
-NS_OBJECT_ENSURE_REGISTERED (PacketSink)
-  ;
+NS_LOG_COMPONENT_DEFINE ("PacketSink");
+
+NS_OBJECT_ENSURE_REGISTERED (PacketSink);
 
 TypeId 
 PacketSink::GetTypeId (void)
 {
   static TypeId tid = TypeId ("ns3::PacketSink")
     .SetParent<Application> ()
+    .SetGroupName("Applications")
     .AddConstructor<PacketSink> ()
-    .AddAttribute ("Local", "The Address on which to Bind the rx socket.",
+    .AddAttribute ("Local",
+                   "The Address on which to Bind the rx socket.",
                    AddressValue (),
                    MakeAddressAccessor (&PacketSink::m_local),
                    MakeAddressChecker ())
-    .AddAttribute ("Protocol", "The type id of the protocol to use for the rx socket.",
+    .AddAttribute ("Protocol",
+                   "The type id of the protocol to use for the rx socket.",
                    TypeIdValue (UdpSocketFactory::GetTypeId ()),
                    MakeTypeIdAccessor (&PacketSink::m_tid),
                    MakeTypeIdChecker ())
-    .AddTraceSource ("Rx", "A packet has been received",
-                     MakeTraceSourceAccessor (&PacketSink::m_rxTrace))
+    .AddTraceSource ("Rx",
+                     "A packet has been received",
+                     MakeTraceSourceAccessor (&PacketSink::m_rxTrace),
+                     "ns3::Packet::AddressTracedCallback")
   ;
   return tid;
 }
@@ -71,7 +75,7 @@ PacketSink::~PacketSink()
   NS_LOG_FUNCTION (this);
 }
 
-uint32_t PacketSink::GetTotalRx () const
+uint64_t PacketSink::GetTotalRx () const
 {
   NS_LOG_FUNCTION (this);
   return m_totalRx;

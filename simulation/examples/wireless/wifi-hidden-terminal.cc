@@ -76,7 +76,7 @@ void experiment (bool enableCtsRts)
                                 "ControlMode",StringValue ("DsssRate1Mbps"));
   YansWifiPhyHelper wifiPhy =  YansWifiPhyHelper::Default ();
   wifiPhy.SetChannel (wifiChannel);
-  NqosWifiMacHelper wifiMac = NqosWifiMacHelper::Default ();
+  WifiMacHelper wifiMac;
   wifiMac.SetType ("ns3::AdhocWifiMac"); // use ad-hoc MAC
   NetDeviceContainer devices = wifi.Install (wifiPhy, wifiMac, nodes);
 
@@ -149,7 +149,7 @@ void experiment (bool enableCtsRts)
   // 10. Print per flow statistics
   monitor->CheckForLostPackets ();
   Ptr<Ipv4FlowClassifier> classifier = DynamicCast<Ipv4FlowClassifier> (flowmon.GetClassifier ());
-  std::map<FlowId, FlowMonitor::FlowStats> stats = monitor->GetFlowStats ();
+  FlowMonitor::FlowStatsContainer stats = monitor->GetFlowStats ();
   for (std::map<FlowId, FlowMonitor::FlowStats>::const_iterator i = stats.begin (); i != stats.end (); ++i)
     {
       // first 2 FlowIds are for ECHO apps, we don't want to display them
@@ -177,6 +177,9 @@ void experiment (bool enableCtsRts)
 
 int main (int argc, char **argv)
 {
+  CommandLine cmd;
+  cmd.Parse (argc, argv);
+  
   std::cout << "Hidden station experiment with RTS/CTS disabled:\n" << std::flush;
   experiment (false);
   std::cout << "------------------------------------------------\n";

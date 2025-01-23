@@ -37,12 +37,12 @@
 
 #include "ns3/lte-global-pathloss-database.h"
 
-#include "lte-test-sinr-chunk-processor.h"
+#include <ns3/lte-chunk-processor.h>
+
+
+using namespace ns3;
 
 NS_LOG_COMPONENT_DEFINE ("LteAntennaTest");
-
-namespace ns3 {
-
 
 
 class LteEnbAntennaTestCase : public TestCase
@@ -99,6 +99,10 @@ LteEnbAntennaTestCase::DoRun (void)
   Config::SetDefault ("ns3::LteSpectrumPhy::CtrlErrorModelEnabled", BooleanValue (false));
   Config::SetDefault ("ns3::LteSpectrumPhy::DataErrorModelEnabled", BooleanValue (false));
   Config::SetDefault ("ns3::LteHelper::UseIdealRrc", BooleanValue (true));
+
+  //Disable Uplink Power Control
+  Config::SetDefault ("ns3::LteUePhy::EnableUplinkPowerControl", BooleanValue (false));
+
   Ptr<LteHelper> lteHelper = CreateObject<LteHelper> ();
 
   // use 0dB Pathloss, since we are testing only the antenna gain
@@ -145,11 +149,15 @@ LteEnbAntennaTestCase::DoRun (void)
   // Use testing chunk processor in the PHY layer
   // It will be used to test that the SNR is as intended
   Ptr<LtePhy> uePhy = ueDevs.Get (0)->GetObject<LteUeNetDevice> ()->GetPhy ()->GetObject<LtePhy> ();
-  Ptr<LteTestSinrChunkProcessor> testDlSinr = Create<LteTestSinrChunkProcessor> (uePhy);
+  Ptr<LteChunkProcessor> testDlSinr = Create<LteChunkProcessor> ();
+  LteSpectrumValueCatcher dlSinrCatcher;
+  testDlSinr->AddCallback (MakeCallback (&LteSpectrumValueCatcher::ReportValue, &dlSinrCatcher));
   uePhy->GetDownlinkSpectrumPhy ()->AddDataSinrChunkProcessor (testDlSinr);
 
   Ptr<LtePhy> enbphy = enbDevs.Get (0)->GetObject<LteEnbNetDevice> ()->GetPhy ()->GetObject<LtePhy> ();
-  Ptr<LteTestSinrChunkProcessor> testUlSinr = Create<LteTestSinrChunkProcessor> (enbphy);
+  Ptr<LteChunkProcessor> testUlSinr = Create<LteChunkProcessor> ();
+  LteSpectrumValueCatcher ulSinrCatcher;
+  testUlSinr->AddCallback (MakeCallback (&LteSpectrumValueCatcher::ReportValue, &ulSinrCatcher));
   enbphy->GetUplinkSpectrumPhy ()->AddDataSinrChunkProcessor (testUlSinr);
 
 
@@ -172,17 +180,17 @@ LteEnbAntennaTestCase::DoRun (void)
   const double noisePowerDbm = ktDbm + 10 * std::log10 (25 * 180000); // corresponds to kT*bandwidth in linear units
   const double ueNoiseFigureDb = 9.0; // default UE noise figure
   const double enbNoiseFigureDb = 5.0; // default eNB noise figure
-  double tolerance = (m_antennaGainDb != 0) ? abs (m_antennaGainDb)*0.001 : 0.001;
+  double tolerance = (m_antennaGainDb != 0) ? std::abs (m_antennaGainDb) * 0.001 : 0.001;
 
-  // first test with SINR from LteTestSinrChunkProcessor
+  // first test with SINR from LteChunkProcessor
   // this can only be done for not-too-bad SINR otherwise the measurement won't be available
   double expectedSinrDl = enbTxPowerDbm + m_antennaGainDb - noisePowerDbm + ueNoiseFigureDb;
   if (expectedSinrDl > 0)
     {
       double calculatedSinrDbDl = -INFINITY;
-      if (testDlSinr->GetSinr () != 0)
+      if (dlSinrCatcher.GetValue () != 0)
         {
-          calculatedSinrDbDl = 10.0 * std::log10 (testDlSinr->GetSinr ()->operator[] (0));
+          calculatedSinrDbDl = 10.0 * std::log10 (dlSinrCatcher.GetValue ()->operator[] (0));
         }      
       // remember that propagation loss is 0dB
       double calculatedAntennaGainDbDl = - (enbTxPowerDbm - calculatedSinrDbDl - noisePowerDbm - ueNoiseFigureDb);      
@@ -192,9 +200,9 @@ LteEnbAntennaTestCase::DoRun (void)
   if (expectedSinrUl > 0)
     {      
       double calculatedSinrDbUl = -INFINITY;
-      if (testUlSinr->GetSinr () != 0)
+      if (ulSinrCatcher.GetValue () != 0)
         {
-          calculatedSinrDbUl = 10.0 * std::log10 (testUlSinr->GetSinr ()->operator[] (0));
+          calculatedSinrDbUl = 10.0 * std::log10 (ulSinrCatcher.GetValue ()->operator[] (0));
         }  
       double calculatedAntennaGainDbUl = - (ueTxPowerDbm - calculatedSinrDbUl - noisePowerDbm - enbNoiseFigureDb);
       NS_TEST_ASSERT_MSG_EQ_TOL (calculatedAntennaGainDbUl, m_antennaGainDb, tolerance, "Wrong UL antenna gain!");
@@ -256,7 +264,3 @@ LteAntennaTestSuite::LteAntennaTestSuite ()
 }
 
 static LteAntennaTestSuite lteAntennaTestSuite;
-
-
-} // namespace ns3
-

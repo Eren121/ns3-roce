@@ -22,7 +22,6 @@
 #include "object.h"
 #include "object-factory.h"
 #include "assert.h"
-#include "singleton.h"
 #include "attribute.h"
 #include "log.h"
 #include "string.h"
@@ -31,18 +30,21 @@
 #include <cstdlib>
 #include <cstring>
 
-
-
-NS_LOG_COMPONENT_DEFINE ("Object");
+/**
+ * \file
+ * \ingroup object
+ * ns3::Object class implementation.
+ */
 
 namespace ns3 {
+
+NS_LOG_COMPONENT_DEFINE ("Object");
 
 /*********************************************************************
  *         The Object implementation
  *********************************************************************/
 
-NS_OBJECT_ENSURE_REGISTERED (Object)
-  ;
+NS_OBJECT_ENSURE_REGISTERED (Object);
 
 Object::AggregateIterator::AggregateIterator ()
   : m_object (0),
@@ -85,6 +87,7 @@ Object::GetTypeId (void)
 {
   static TypeId tid = TypeId ("ns3::Object")
     .SetParent<ObjectBase> ()
+    .SetGroupName ("Core")
   ;
   return tid;
 }
@@ -201,6 +204,12 @@ restart:
         }
     }
 }
+bool
+Object::IsInitialized (void) const
+{
+  NS_LOG_FUNCTION (this);
+  return m_initialized;
+}
 void 
 Object::Dispose (void)
 {
@@ -248,13 +257,6 @@ Object::AggregateObject (Ptr<Object> o)
   NS_ASSERT (CheckLoose ());
   NS_ASSERT (o->CheckLoose ());
 
-  if (DoGetObject (o->GetInstanceTypeId ()))
-    {
-      NS_FATAL_ERROR ("Object::AggregateObject(): "
-                      "Multiple aggregation of objects of type " << 
-                      o->GetInstanceTypeId ().GetName ());
-    }
-
   Object *other = PeekPointer (o);
   // first create the new aggregate buffer.
   uint32_t total = m_aggregates->n + other->m_aggregates->n;
@@ -271,6 +273,14 @@ Object::AggregateObject (Ptr<Object> o)
   for (uint32_t i = 0; i < other->m_aggregates->n; i++)
     {
       aggregates->buffer[m_aggregates->n+i] = other->m_aggregates->buffer[i];
+      const TypeId typeId = other->m_aggregates->buffer[i]->GetInstanceTypeId ();
+      if (DoGetObject (typeId))
+        {
+          NS_FATAL_ERROR ("Object::AggregateObject(): "
+                          "Multiple aggregation of objects of type " <<
+                          other->GetInstanceTypeId () <<
+                          " on objects of type " << typeId);
+        }
       UpdateSortedArray (aggregates, m_aggregates->n + i);
     }
 
@@ -369,6 +379,7 @@ Object::CheckLoose (void) const
   for (uint32_t i = 0; i < n; i++)
     {
       Object *current = m_aggregates->buffer[i];
+      /// \todo Shortcircuit this loop.
       refcount += current->GetReferenceCount ();
     }
   return (refcount > 0);

@@ -18,6 +18,8 @@
  * Author: Mathieu Lacage <mathieu.lacage@sophia.inria.fr>
  */
 
+#define __STDC_LIMIT_MACROS
+
 #include "ns3/object.h"
 #include "ns3/log.h"
 #include "ns3/uinteger.h"
@@ -27,20 +29,24 @@
 #include "ns3/nstime.h"
 #include "tcp-socket.h"
 
-NS_LOG_COMPONENT_DEFINE ("TcpSocket");
-
 namespace ns3 {
 
-NS_OBJECT_ENSURE_REGISTERED (TcpSocket)
-  ;
+NS_LOG_COMPONENT_DEFINE ("TcpSocket");
 
-const char* const TcpSocket::TcpStateName[LAST_STATE] = { "CLOSED", "LISTEN", "SYN_SENT", "SYN_RCVD", "ESTABLISHED", "CLOSE_WAIT", "LAST_ACK", "FIN_WAIT_1", "FIN_WAIT_2", "CLOSING", "TIME_WAIT" };
+NS_OBJECT_ENSURE_REGISTERED (TcpSocket);
+
+const char* const
+TcpSocket::TcpStateName[TcpSocket::LAST_STATE] = { "CLOSED", "LISTEN", "SYN_SENT",
+                                        "SYN_RCVD", "ESTABLISHED", "CLOSE_WAIT",
+                                        "LAST_ACK", "FIN_WAIT_1", "FIN_WAIT_2",
+                                        "CLOSING", "TIME_WAIT" };
 
 TypeId
 TcpSocket::GetTypeId (void)
 {
   static TypeId tid = TypeId ("ns3::TcpSocket")
     .SetParent<Socket> ()
+    .SetGroupName ("Internet")
     .AddAttribute ("SndBufSize",
                    "TcpSocket maximum transmit buffer size (bytes)",
                    UintegerValue (131072), // 128k
@@ -59,11 +65,11 @@ TcpSocket::GetTypeId (void)
                    MakeUintegerAccessor (&TcpSocket::GetSegSize,
                                          &TcpSocket::SetSegSize),
                    MakeUintegerChecker<uint32_t> ())
-    .AddAttribute ("SlowStartThreshold",
-                   "TCP slow start threshold (bytes)",
-                   UintegerValue (0xffff),
-                   MakeUintegerAccessor (&TcpSocket::GetSSThresh,
-                                         &TcpSocket::SetSSThresh),
+    .AddAttribute ("InitialSlowStartThreshold",
+                   "TCP initial slow start threshold (bytes)",
+                   UintegerValue (UINT32_MAX),
+                   MakeUintegerAccessor (&TcpSocket::GetInitialSSThresh,
+                                         &TcpSocket::SetInitialSSThresh),
                    MakeUintegerChecker<uint32_t> ())
     .AddAttribute ("InitialCwnd",
                    "TCP initial congestion window size (segments)",
@@ -78,10 +84,17 @@ TcpSocket::GetTypeId (void)
                                      &TcpSocket::SetConnTimeout),
                    MakeTimeChecker ())
     .AddAttribute ("ConnCount",
-                   "Number of connection attempts (SYN retransmissions) before returning failure",
+                   "Number of connection attempts (SYN retransmissions) before "
+                   "returning failure",
                    UintegerValue (6),
-                   MakeUintegerAccessor (&TcpSocket::GetConnCount,
-                                         &TcpSocket::SetConnCount),
+                   MakeUintegerAccessor (&TcpSocket::GetSynRetries,
+                                         &TcpSocket::SetSynRetries),
+                   MakeUintegerChecker<uint32_t> ())
+    .AddAttribute ("DataRetries",
+                   "Number of data retransmission attempts",
+                   UintegerValue (6),
+                   MakeUintegerAccessor (&TcpSocket::GetDataRetries,
+                                         &TcpSocket::SetDataRetries),
                    MakeUintegerChecker<uint32_t> ())
     .AddAttribute ("DelAckTimeout",
                    "Timeout value for TCP delayed acks, in seconds",

@@ -37,12 +37,11 @@
 #include <mpi.h>
 #endif
 
-NS_LOG_COMPONENT_DEFINE ("DistributedSimulatorImpl");
-
 namespace ns3 {
 
-NS_OBJECT_ENSURE_REGISTERED (DistributedSimulatorImpl)
-  ;
+NS_LOG_COMPONENT_DEFINE ("DistributedSimulatorImpl");
+
+NS_OBJECT_ENSURE_REGISTERED (DistributedSimulatorImpl);
 
 LbtsMessage::~LbtsMessage ()
 {
@@ -77,13 +76,14 @@ LbtsMessage::IsFinished ()
   return m_isFinished;
 }
 
-Time DistributedSimulatorImpl::m_lookAhead = Seconds (0);
+Time DistributedSimulatorImpl::m_lookAhead = Seconds (-1);
 
 TypeId
 DistributedSimulatorImpl::GetTypeId (void)
 {
   static TypeId tid = TypeId ("ns3::DistributedSimulatorImpl")
-    .SetParent<Object> ()
+    .SetParent<SimulatorImpl> ()
+    .SetGroupName ("Mpi")
     .AddConstructor<DistributedSimulatorImpl> ()
   ;
   return tid;
@@ -115,7 +115,7 @@ DistributedSimulatorImpl::DistributedSimulatorImpl ()
   // before ::Run is entered, the m_currentUid will be zero
   m_currentUid = 0;
   m_currentTs = 0;
-  m_currentContext = 0xffffffff;
+  m_currentContext = Simulator::NO_CONTEXT;
   m_unscheduledEvents = 0;
   m_events = 0;
 }
@@ -168,14 +168,15 @@ DistributedSimulatorImpl::CalculateLookAhead (void)
 #ifdef NS3_MPI
   if (MpiInterface::GetSize () <= 1)
     {
-      DistributedSimulatorImpl::m_lookAhead = Seconds (0);
-      m_grantedTime = Seconds (0);
+      m_lookAhead = Seconds (0);
     }
   else
     {
-      DistributedSimulatorImpl::m_lookAhead = GetMaximumSimulationTime ();
-
-      m_grantedTime = GetMaximumSimulationTime ();
+      if (m_lookAhead == Seconds (-1))
+        {
+          m_lookAhead = GetMaximumSimulationTime ();
+        }
+      // else it was already set by SetLookAhead
 
       NodeContainer c = NodeContainer::GetGlobal ();
       for (NodeContainer::Iterator iter = c.Begin (); iter != c.End (); ++iter)
@@ -222,14 +223,16 @@ DistributedSimulatorImpl::CalculateLookAhead (void)
               TimeValue delay;
               channel->GetAttribute ("Delay", delay);
 
-              if (delay.Get ().GetSeconds () < DistributedSimulatorImpl::m_lookAhead.GetSeconds ())
+              if (delay.Get () < m_lookAhead)
                 {
-                  DistributedSimulatorImpl::m_lookAhead = delay.Get ();
-                  m_grantedTime = delay.Get ();
+                  m_lookAhead = delay.Get ();
                 }
             }
         }
     }
+
+  // m_lookAhead is now set
+  m_grantedTime = m_lookAhead;
 
   /*
    * Compute the maximum inter-task latency and use that value
@@ -276,6 +279,20 @@ DistributedSimulatorImpl::CalculateLookAhead (void)
 #else
   NS_FATAL_ERROR ("Can't use distributed simulator without MPI compiled in");
 #endif
+}
+
+void
+DistributedSimulatorImpl::SetMaximumLookAhead (const Time lookAhead)
+{
+  if (lookAhead > 0)
+    {
+      NS_LOG_FUNCTION (this << lookAhead);
+      m_lookAhead = lookAhead;
+    }
+  else
+    {
+      NS_LOG_WARN ("attempted to set look ahead negative: " << lookAhead);
+    }
 }
 
 void
@@ -445,22 +462,22 @@ DistributedSimulatorImpl::Stop (void)
 }
 
 void
-DistributedSimulatorImpl::Stop (Time const &time)
+DistributedSimulatorImpl::Stop (Time const &delay)
 {
-  NS_LOG_FUNCTION (this << time.GetTimeStep ());
+  NS_LOG_FUNCTION (this << delay.GetTimeStep ());
 
-  Simulator::Schedule (time, &Simulator::Stop);
+  Simulator::Schedule (delay, &Simulator::Stop);
 }
 
 //
 // Schedule an event for a _relative_ time in the future.
 //
 EventId
-DistributedSimulatorImpl::Schedule (Time const &time, EventImpl *event)
+DistributedSimulatorImpl::Schedule (Time const &delay, EventImpl *event)
 {
-  NS_LOG_FUNCTION (this << time.GetTimeStep () << event);
+  NS_LOG_FUNCTION (this << delay.GetTimeStep () << event);
 
-  Time tAbsolute = time + TimeStep (m_currentTs);
+  Time tAbsolute = delay + TimeStep (m_currentTs);
 
   NS_ASSERT (tAbsolute.IsPositive ());
   NS_ASSERT (tAbsolute >= TimeStep (m_currentTs));
@@ -476,13 +493,13 @@ DistributedSimulatorImpl::Schedule (Time const &time, EventImpl *event)
 }
 
 void
-DistributedSimulatorImpl::ScheduleWithContext (uint32_t context, Time const &time, EventImpl *event)
+DistributedSimulatorImpl::ScheduleWithContext (uint32_t context, Time const &delay, EventImpl *event)
 {
-  NS_LOG_FUNCTION (this << context << time.GetTimeStep () << m_currentTs << event);
+  NS_LOG_FUNCTION (this << context << delay.GetTimeStep () << m_currentTs << event);
 
   Scheduler::Event ev;
   ev.impl = event;
-  ev.key.m_ts = m_currentTs + time.GetTimeStep ();
+  ev.key.m_ts = m_currentTs + delay.GetTimeStep ();
   ev.key.m_context = context;
   ev.key.m_uid = m_uid;
   m_uid++;
@@ -579,30 +596,30 @@ DistributedSimulatorImpl::Cancel (const EventId &id)
 }
 
 bool
-DistributedSimulatorImpl::IsExpired (const EventId &ev) const
+DistributedSimulatorImpl::IsExpired (const EventId &id) const
 {
-  if (ev.GetUid () == 2)
+  if (id.GetUid () == 2)
     {
-      if (ev.PeekEventImpl () == 0
-          || ev.PeekEventImpl ()->IsCancelled ())
+      if (id.PeekEventImpl () == 0
+          || id.PeekEventImpl ()->IsCancelled ())
         {
           return true;
         }
       // destroy events.
       for (DestroyEvents::const_iterator i = m_destroyEvents.begin (); i != m_destroyEvents.end (); i++)
         {
-          if (*i == ev)
+          if (*i == id)
             {
               return false;
             }
         }
       return true;
     }
-  if (ev.PeekEventImpl () == 0
-      || ev.GetTs () < m_currentTs
-      || (ev.GetTs () == m_currentTs
-          && ev.GetUid () <= m_currentUid)
-      || ev.PeekEventImpl ()->IsCancelled ())
+  if (id.PeekEventImpl () == 0
+      || id.GetTs () < m_currentTs
+      || (id.GetTs () == m_currentTs
+          && id.GetUid () <= m_currentUid)
+      || id.PeekEventImpl ()->IsCancelled ())
     {
       return true;
     }

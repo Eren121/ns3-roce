@@ -31,18 +31,18 @@
 #include "ns3/tcp-socket-factory.h"
 #include "bulk-send-application.h"
 
-NS_LOG_COMPONENT_DEFINE ("BulkSendApplication");
-
 namespace ns3 {
 
-NS_OBJECT_ENSURE_REGISTERED (BulkSendApplication)
-  ;
+NS_LOG_COMPONENT_DEFINE ("BulkSendApplication");
+
+NS_OBJECT_ENSURE_REGISTERED (BulkSendApplication);
 
 TypeId
 BulkSendApplication::GetTypeId (void)
 {
   static TypeId tid = TypeId ("ns3::BulkSendApplication")
     .SetParent<Application> ()
+    .SetGroupName("Applications") 
     .AddConstructor<BulkSendApplication> ()
     .AddAttribute ("SendSize", "The amount of data to send each time.",
                    UintegerValue (512),
@@ -59,13 +59,14 @@ BulkSendApplication::GetTypeId (void)
                    "that there is no limit.",
                    UintegerValue (0),
                    MakeUintegerAccessor (&BulkSendApplication::m_maxBytes),
-                   MakeUintegerChecker<uint32_t> ())
+                   MakeUintegerChecker<uint64_t> ())
     .AddAttribute ("Protocol", "The type of protocol to use.",
                    TypeIdValue (TcpSocketFactory::GetTypeId ()),
                    MakeTypeIdAccessor (&BulkSendApplication::m_tid),
                    MakeTypeIdChecker ())
     .AddTraceSource ("Tx", "A new packet is created and is sent",
-                     MakeTraceSourceAccessor (&BulkSendApplication::m_txTrace))
+                     MakeTraceSourceAccessor (&BulkSendApplication::m_txTrace),
+                     "ns3::Packet::TracedCallback")
   ;
   return tid;
 }
@@ -85,7 +86,7 @@ BulkSendApplication::~BulkSendApplication ()
 }
 
 void
-BulkSendApplication::SetMaxBytes (uint32_t maxBytes)
+BulkSendApplication::SetMaxBytes (uint64_t maxBytes)
 {
   NS_LOG_FUNCTION (this << maxBytes);
   m_maxBytes = maxBytes;
@@ -174,12 +175,17 @@ void BulkSendApplication::SendData (void)
 
   while (m_maxBytes == 0 || m_totBytes < m_maxBytes)
     { // Time to send more
-      uint32_t toSend = m_sendSize;
+
+      // uint64_t to allow the comparison later.
+      // the result is in a uint32_t range anyway, because
+      // m_sendSize is uint32_t.
+      uint64_t toSend = m_sendSize;
       // Make sure we don't send too many
       if (m_maxBytes > 0)
         {
-          toSend = std::min (m_sendSize, m_maxBytes - m_totBytes);
+          toSend = std::min (toSend, m_maxBytes - m_totBytes);
         }
+
       NS_LOG_LOGIC ("sending packet at " << Simulator::Now ());
       Ptr<Packet> packet = Create<Packet> (toSend);
       m_txTrace (packet);
@@ -224,7 +230,7 @@ void BulkSendApplication::DataSend (Ptr<Socket>, uint32_t)
 
   if (m_connected)
     { // Only send new data if the connection has completed
-      Simulator::ScheduleNow (&BulkSendApplication::SendData, this);
+      SendData ();
     }
 }
 

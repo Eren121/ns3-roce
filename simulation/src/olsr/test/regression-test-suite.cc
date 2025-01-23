@@ -22,13 +22,13 @@
 #include "tc-regression-test.h"
 #include "bug780-test.h"
 
-namespace ns3 {
-namespace olsr {
+using namespace ns3;
+using namespace olsr;
 
 class RegressionTestSuite : public TestSuite
 {
 public:
-  RegressionTestSuite () : TestSuite ("routing-olsr-regression", SYSTEM) 
+  RegressionTestSuite () : TestSuite ("routing-olsr-regression", SYSTEM)
   {
     SetDataDir (NS_TEST_SOURCEDIR);
     AddTestCase (new HelloRegressionTest, TestCase::QUICK);
@@ -36,6 +36,3 @@ public:
     AddTestCase (new Bug780Test, TestCase::QUICK);
   }
 } g_olsrRegressionTestSuite;
-
-}
-}

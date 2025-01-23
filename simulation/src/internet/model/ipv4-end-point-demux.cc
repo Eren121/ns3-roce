@@ -20,12 +20,13 @@
 
 #include "ipv4-end-point-demux.h"
 #include "ipv4-end-point.h"
+#include "ipv4-interface-address.h"
 #include "ns3/log.h"
+
 
 namespace ns3 {
 
-NS_LOG_COMPONENT_DEFINE ("Ipv4EndPointDemux")
-  ;
+NS_LOG_COMPONENT_DEFINE ("Ipv4EndPointDemux");
 
 Ipv4EndPointDemux::Ipv4EndPointDemux ()
   : m_ephemeral (49152), m_portLast (65535), m_portFirst (49152)
@@ -208,10 +209,19 @@ Ipv4EndPointDemux::Lookup (Ipv4Address daddr, uint16_t dport,
   for (EndPointsI i = m_endPoints.begin (); i != m_endPoints.end (); i++) 
     {
       Ipv4EndPoint* endP = *i;
+
       NS_LOG_DEBUG ("Looking at endpoint dport=" << endP->GetLocalPort ()
                                                  << " daddr=" << endP->GetLocalAddress ()
                                                  << " sport=" << endP->GetPeerPort ()
                                                  << " saddr=" << endP->GetPeerAddress ());
+
+      if (!endP->IsRxEnabled ())
+        {
+          NS_LOG_LOGIC ("Skipping endpoint " << &endP
+                        << " because endpoint can not receive packets");
+          continue;
+        }
+
       if (endP->GetLocalPort () != dport) 
         {
           NS_LOG_LOGIC ("Skipping endpoint " << &endP

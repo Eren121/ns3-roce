@@ -30,7 +30,9 @@ namespace ns3 {
 class SPFVertex;
 
 /**
- * \brief A Candidate Queue used in static routing.
+ * \ingroup globalrouting
+ *
+ * \brief A Candidate Queue used in routing calculations.
  *
  * The CandidateQueue is used in the OSPF shortest path computations.  It
  * is a priority queue used to store candidates for the shortest path to a
@@ -51,16 +53,14 @@ class CandidateQueue
 public:
 /**
  * @brief Create an empty SPF Candidate Queue.
- * @internal
  *
  * @see SPFVertex
  */
   CandidateQueue ();
 
 /**
- * @internal Destroy an SPF Candidate Queue and release any resources held 
+ * @brief Destroy an SPF Candidate Queue and release any resources held 
  * by the contents.
- * @internal
  *
  * @see SPFVertex
  */
@@ -69,7 +69,6 @@ public:
 /**
  * @brief Empty the Candidate Queue and release all of the resources 
  * associated with the Shortest Path First Vertex pointers in the queue.
- * @internal
  *
  * @see SPFVertex
  */
@@ -78,7 +77,6 @@ public:
 /**
  * @brief Push a Shortest Path First Vertex pointer onto the queue according
  * to the priority scheme.
- * @internal
  * 
  * On completion, the top of the queue will hold the Shortest Path First
  * Vertex pointer that points to a vertex having lowest value of the field
@@ -92,7 +90,6 @@ public:
 
 /**
  * @brief Pop the Shortest Path First Vertex pointer at the top of the queue.
- * @internal
  *
  * The caller is given the responsibility for releasing the resources 
  * associated with the vertex.
@@ -106,7 +103,6 @@ public:
 /**
  * @brief Return the Shortest Path First Vertex pointer at the top of the 
  * queue.
- * @internal
  *
  * This method does not pop the SPFVertex* off of the queue, it simply 
  * returns the pointer.
@@ -119,7 +115,6 @@ public:
 
 /**
  * @brief Test the Candidate Queue to determine if it is empty.
- * @internal
  *
  * @returns True if the queue is empty, false otherwise.
  */
@@ -128,7 +123,6 @@ public:
 /**
  * @brief Return the number of Shortest Path First Vertex pointers presently
  * stored in the Candidate Queue.
- * @internal
  *
  * @see SPFVertex
  * @returns The number of SPFVertex* pointers in the Candidate Queue.
@@ -138,7 +132,6 @@ public:
 /**
  * @brief Searches the Candidate Queue for a Shortest Path First Vertex 
  * pointer that points to a vertex having the given IP address.
- * @internal
  *
  * @see SPFVertex
  * @param addr The IP address to search for.
@@ -148,7 +141,6 @@ public:
 
 /**
  * @brief Reorders the Candidate Queue according to the priority scheme.
- * @internal
  * 
  * On completion, the top of the queue will hold the Shortest Path First
  * Vertex pointer that points to a vertex having lowest value of the field

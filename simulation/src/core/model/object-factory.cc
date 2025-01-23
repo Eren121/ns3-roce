@@ -21,10 +21,15 @@
 #include "log.h"
 #include <sstream>
 
+/**
+ * \file
+ * \ingroup object
+ * ns3::ObjectFactory class implementation.
+ */
+
 namespace ns3 {
 
-NS_LOG_COMPONENT_DEFINE("ObjectFactory")
-  ;
+NS_LOG_COMPONENT_DEFINE("ObjectFactory");
 
 ObjectFactory::ObjectFactory ()
 {
@@ -183,6 +188,7 @@ std::istream & operator >> (std::istream &is, ObjectFactory &factory)
             }
         }
     }
+  NS_ABORT_MSG_IF (is.bad (), "Failure to parse " << parameters);
   return is;
 }
 

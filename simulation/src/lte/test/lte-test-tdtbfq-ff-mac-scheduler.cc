@@ -58,9 +58,9 @@
 
 #include "lte-test-tdtbfq-ff-mac-scheduler.h"
 
-NS_LOG_COMPONENT_DEFINE ("LenaTestTdTbfqFfMacScheduler");
+using namespace ns3;
 
-namespace ns3 {
+NS_LOG_COMPONENT_DEFINE ("LenaTestTdTbfqFfMacScheduler");
 
 LenaTestTdTbfqFfMacSchedulerSuite::LenaTestTdTbfqFfMacSchedulerSuite ()
   : TestSuite ("lte-tdtbfq-ff-mac-scheduler", SYSTEM)
@@ -693,10 +693,3 @@ LenaTdTbfqFfMacSchedulerTestCase2::DoRun (void)
   Simulator::Destroy ();
 
 }
-
-
-} // namespace ns3
-
-
-
-

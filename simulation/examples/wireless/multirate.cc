@@ -64,9 +64,9 @@
 #include <iostream>
 #include <fstream>
 
-NS_LOG_COMPONENT_DEFINE ("multirate");
-
 using namespace ns3;
+
+NS_LOG_COMPONENT_DEFINE ("multirate");
 
 class Experiment
 {
@@ -75,7 +75,7 @@ public:
   Experiment ();
   Experiment (std::string name);
   Gnuplot2dDataset Run (const WifiHelper &wifi, const YansWifiPhyHelper &wifiPhy,
-                        const NqosWifiMacHelper &wifiMac, const YansWifiChannelHelper &wifiChannel, const MobilityHelper &mobility);
+                        const WifiMacHelper &wifiMac, const YansWifiChannelHelper &wifiChannel, const MobilityHelper &mobility);
 
   bool CommandSetup (int argc, char **argv);
   bool IsRouting () { return (enableRouting == 1) ? 1 : 0; }
@@ -371,7 +371,7 @@ Experiment::ApplicationSetup (Ptr<Node> client, Ptr<Node> server, double start, 
 
 Gnuplot2dDataset
 Experiment::Run (const WifiHelper &wifi, const YansWifiPhyHelper &wifiPhy,
-                 const NqosWifiMacHelper &wifiMac, const YansWifiChannelHelper &wifiChannel, const MobilityHelper &mobility)
+                 const WifiMacHelper &wifiMac, const YansWifiChannelHelper &wifiChannel, const MobilityHelper &mobility)
 {
 
 
@@ -382,7 +382,7 @@ Experiment::Run (const WifiHelper &wifi, const YansWifiPhyHelper &wifiPhy,
   YansWifiPhyHelper phy = wifiPhy;
   phy.SetChannel (wifiChannel.Create ());
 
-  NqosWifiMacHelper mac = wifiMac;
+  WifiMacHelper mac = wifiMac;
   NetDeviceContainer devices = wifi.Install (phy, mac, c);
 
 
@@ -508,12 +508,11 @@ Experiment::Run (const WifiHelper &wifi, const YansWifiPhyHelper &wifiPhy,
       phy.EnableAsciiAll (ascii.CreateFileStream (GetOutputFileName () + ".tr"));
     }
 
-  Ptr<FlowMonitor> flowmon;
   FlowMonitorHelper flowmonHelper;
 
   if (enableFlowMon)
     {
-      flowmon = flowmonHelper.InstallAll ();
+      flowmonHelper.InstallAll ();
     }
 
   Simulator::Stop (Seconds (totalTime));
@@ -521,7 +520,7 @@ Experiment::Run (const WifiHelper &wifi, const YansWifiPhyHelper &wifiPhy,
 
   if (enableFlowMon)
     {
-      flowmon->SerializeToXmlFile ((GetOutputFileName () + ".flomon"), false, false);
+      flowmonHelper.SerializeToXmlFile ((GetOutputFileName () + ".flomon"), false, false);
     }
 
   Simulator::Destroy ();
@@ -577,8 +576,8 @@ int main (int argc, char *argv[])
   Gnuplot gnuplot;
   Gnuplot2dDataset dataset;
 
-  WifiHelper wifi = WifiHelper::Default ();
-  NqosWifiMacHelper wifiMac = NqosWifiMacHelper::Default ();
+  WifiHelper wifi;
+  WifiMacHelper wifiMac;
   YansWifiPhyHelper wifiPhy = YansWifiPhyHelper::Default ();
   YansWifiChannelHelper wifiChannel = YansWifiChannelHelper::Default ();
   Ssid ssid = Ssid ("Testbed");

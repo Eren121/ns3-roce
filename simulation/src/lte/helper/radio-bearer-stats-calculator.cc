@@ -26,14 +26,11 @@
 #include <vector>
 #include <algorithm>
 
-namespace ns3
-{
+namespace ns3 {
 
-NS_LOG_COMPONENT_DEFINE ("RadioBearerStatsCalculator")
-  ;
+NS_LOG_COMPONENT_DEFINE ("RadioBearerStatsCalculator");
 
-NS_OBJECT_ENSURE_REGISTERED ( RadioBearerStatsCalculator)
-  ;
+NS_OBJECT_ENSURE_REGISTERED ( RadioBearerStatsCalculator);
 
 RadioBearerStatsCalculator::RadioBearerStatsCalculator ()
   : m_firstWrite (true),
@@ -62,6 +59,7 @@ RadioBearerStatsCalculator::GetTypeId (void)
   static TypeId tid =
     TypeId ("ns3::RadioBearerStatsCalculator")
     .SetParent<LteStatsCalculator> ().AddConstructor<RadioBearerStatsCalculator> ()
+    .SetGroupName("Lte")
     .AddAttribute ("StartTime", "Start time of the on going epoch.", 
                    TimeValue (Seconds (0.)),
                    MakeTimeAccessor (&RadioBearerStatsCalculator::SetStartTime,

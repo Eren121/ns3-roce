@@ -31,9 +31,9 @@
 #include <vector>
 #include <string>
 
-NS_LOG_COMPONENT_DEFINE ("EnergyExample");
-
 using namespace ns3;
+
+NS_LOG_COMPONENT_DEFINE ("EnergyExample");
 
 static inline std::string
 PrintReceivedPacket (Address& from)
@@ -189,8 +189,8 @@ main (int argc, char *argv[])
   wifiPhy.SetChannel (wifiChannelPtr);
 
   /** MAC layer **/
-  // Add a non-QoS upper MAC, and disable rate control
-  NqosWifiMacHelper wifiMac = NqosWifiMacHelper::Default ();
+  // Add a MAC and disable rate control
+  WifiMacHelper wifiMac;
   wifi.SetRemoteStationManager ("ns3::ConstantRateWifiManager", "DataMode",
                                 StringValue (phyMode), "ControlMode",
                                 StringValue (phyMode));

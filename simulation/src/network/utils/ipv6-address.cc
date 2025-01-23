@@ -52,9 +52,9 @@
 #include "mac64-address.h"
 #include "ipv6-address.h"
 
-NS_LOG_COMPONENT_DEFINE ("Ipv6Address");
-
 namespace ns3 {
+
+NS_LOG_COMPONENT_DEFINE ("Ipv6Address");
 
 #ifdef __cplusplus
 extern "C"
@@ -154,7 +154,7 @@ static bool AsciiToIpv6Host (const char *address, uint8_t addr[16])
   static const char xdigits_u[] = "0123456789ABCDEF";
   unsigned char tmp[16];
   unsigned char* tp = tmp;
-  unsigned char* endp = 0;
+  unsigned char* const endp = tp + 16;
   unsigned char* colonp = 0;
   const char* xdigits = 0;
 #if 0
@@ -165,7 +165,6 @@ static bool AsciiToIpv6Host (const char *address, uint8_t addr[16])
   unsigned int val = 0;
 
   memset (tp, 0x00, 16);
-  endp = tp + 16;
 
   /* Leading :: requires some special handling. */
   if (*address == ':')
@@ -212,7 +211,7 @@ static bool AsciiToIpv6Host (const char *address, uint8_t addr[16])
               continue;
             }
 
-          if (tp + 2 > endp)
+          if (endp - tp < 2)
             {
               return (0);
             }
@@ -226,7 +225,7 @@ static bool AsciiToIpv6Host (const char *address, uint8_t addr[16])
 
       /* \todo Handle IPv4 mapped address (2001::192.168.0.1) */
 #if 0
-      if (ch == '.' && ((tp + 4 /*NS_INADDRSZ*/) <= endp) &&
+      if (ch == '.' && (endp - tp > 3 /* NS_INADDRSZ - 1 */)) &&
           inet_pton4 (curtok, tp) > 0)
         {
           tp += 4 /*NS_INADDRSZ*/;
@@ -239,7 +238,7 @@ static bool AsciiToIpv6Host (const char *address, uint8_t addr[16])
 
   if (seen_xdigits)
     {
-      if (tp + 2 > endp)
+      if ( endp - tp < 2)
         {
           return (0);
         }
@@ -672,15 +671,20 @@ bool Ipv6Address::IsSolicitedMulticast () const
 bool Ipv6Address::IsAllNodesMulticast () const
 {
   NS_LOG_FUNCTION (this);
-  static Ipv6Address allnodes ("ff02::1");
-  return (*this == allnodes);
+  static Ipv6Address allNodesI ("ff01::1");
+  static Ipv6Address allNodesL ("ff02::1");
+  static Ipv6Address allNodesR ("ff03::1");
+  return (*this == allNodesI || *this == allNodesL || *this == allNodesR);
 }
 
 bool Ipv6Address::IsAllRoutersMulticast () const
 {
   NS_LOG_FUNCTION (this);
-  static Ipv6Address allrouters ("ff02::2");
-  return (*this == allrouters);
+  static Ipv6Address allroutersI ("ff01::2");
+  static Ipv6Address allroutersL ("ff02::2");
+  static Ipv6Address allroutersR ("ff03::2");
+  static Ipv6Address allroutersS ("ff05::2");
+  return (*this == allroutersI || *this == allroutersL || *this == allroutersR || *this == allroutersS);
 }
 
 bool Ipv6Address::IsAllHostsMulticast () const
@@ -1011,8 +1015,8 @@ size_t Ipv6AddressHash::operator () (Ipv6Address const &x) const
   return lookuphash (buf, sizeof (buf), 0);
 }
 
-ATTRIBUTE_HELPER_CPP (Ipv6Address); /// Macro to make help make class an ns-3 attribute
-ATTRIBUTE_HELPER_CPP (Ipv6Prefix);  /// Macro to make help make class an ns-3 attribute
+ATTRIBUTE_HELPER_CPP (Ipv6Address);
+ATTRIBUTE_HELPER_CPP (Ipv6Prefix);
 
 } /* namespace ns3 */
 

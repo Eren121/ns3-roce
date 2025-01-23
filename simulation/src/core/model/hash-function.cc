@@ -21,11 +21,16 @@
 #include "log.h"
 #include "hash-function.h"
 
+/**
+ * \file
+ * \ingroup hash
+ * \brief ns3::Hash::Implementation::GetHash64 defaul implementation.
+ */
+
 
 namespace ns3 {
 
-NS_LOG_COMPONENT_DEFINE ("HashFunction")
-  ;
+NS_LOG_COMPONENT_DEFINE ("HashFunction");
 
 namespace Hash {
 

@@ -25,19 +25,24 @@
 #include <string>
 #include "assert.h"
 
-NS_LOG_COMPONENT_DEFINE ("ListScheduler");
+/**
+ * \file
+ * \ingroup scheduler
+ * Implementation of ns3::ListScheduler class.
+ */
 
 namespace ns3 {
 
+NS_LOG_COMPONENT_DEFINE ("ListScheduler");
 
-NS_OBJECT_ENSURE_REGISTERED (ListScheduler)
-  ;
+NS_OBJECT_ENSURE_REGISTERED (ListScheduler);
 
 TypeId
 ListScheduler::GetTypeId (void)
 {
   static TypeId tid = TypeId ("ns3::ListScheduler")
     .SetParent<Scheduler> ()
+    .SetGroupName ("Core")
     .AddConstructor<ListScheduler> ()
   ;
   return tid;

@@ -22,7 +22,6 @@
 #include "ns3/pointer.h"
 #include "ns3/log.h"
 #include "ns3/string.h"
-#include "ns3/qos-tag.h"
 #include "ns3/mac-low.h"
 #include "ns3/dcf-manager.h"
 #include "ns3/mac-rx-middle.h"
@@ -32,9 +31,9 @@
 #include "vendor-specific-action.h"
 #include "higher-tx-tag.h"
 
-NS_LOG_COMPONENT_DEFINE ("OcbWifiMac");
-
 namespace ns3 {
+
+NS_LOG_COMPONENT_DEFINE ("OcbWifiMac");
 
 NS_OBJECT_ENSURE_REGISTERED (OcbWifiMac);
 
@@ -45,6 +44,7 @@ OcbWifiMac::GetTypeId (void)
 {
   static TypeId tid = TypeId ("ns3::OcbWifiMac")
     .SetParent<RegularWifiMac> ()
+    .SetGroupName ("Wave")
     .AddConstructor<OcbWifiMac> ()
   ;
   return tid;
@@ -53,17 +53,6 @@ OcbWifiMac::GetTypeId (void)
 OcbWifiMac::OcbWifiMac (void)
 {
   NS_LOG_FUNCTION (this);
-
-  // use WaveMacLow instead of MacLow
-  m_low = CreateObject<WaveMacLow> ();
-  m_low->SetRxCallback (MakeCallback (&MacRxMiddle::Receive, m_rxMiddle));
-  m_dcfManager->SetupLowListener (m_low);
-  m_dca->SetLow (m_low);
-  for (EdcaQueues::iterator i = m_edca.begin (); i != m_edca.end (); ++i)
-    {
-      i->second->SetLow (m_low);
-    }
-
   // Let the lower layers know that we are acting as an OCB node
   SetTypeOfStation (OCB);
   // BSSID is still needed in the low part of MAC
@@ -125,7 +114,7 @@ OcbWifiMac::SetSsid (Ssid ssid)
 Ssid
 OcbWifiMac::GetSsid (void) const
 {
-  NS_FATAL_ERROR ("in OCB mode we should not call GetSsid");
+  NS_LOG_WARN ("in OCB mode we should not call GetSsid");
   // we really do not want to return ssid, however we have to provide
   return RegularWifiMac::GetSsid ();
 }
@@ -134,13 +123,13 @@ OcbWifiMac::GetSsid (void) const
 void
 OcbWifiMac::SetBssid (Mac48Address bssid)
 {
-  NS_FATAL_ERROR ("in OCB mode we should not call SetBsid");
+  NS_LOG_WARN ("in OCB mode we should not call SetBsid");
 }
 
 Mac48Address
 OcbWifiMac::GetBssid (void) const
 {
-  NS_FATAL_ERROR ("in OCB mode we should not call GetBssid");
+  NS_LOG_WARN ("in OCB mode we should not call GetBssid");
   return WILDCARD_BSSID;
 }
 
@@ -170,12 +159,18 @@ OcbWifiMac::Enqueue (Ptr<const Packet> packet, Mac48Address to)
   NS_LOG_FUNCTION (this << packet << to);
   if (m_stationManager->IsBrandNew (to))
     {
-      // In ocb mode, we assume that every destination supports all
-      // the rates we support.
-      for (uint32_t i = 0; i < m_phy->GetNModes (); i++)
+      //In ad hoc mode, we assume that every destination supports all
+      //the rates we support.
+      if (m_htSupported || m_vhtSupported)
         {
-          m_stationManager->AddSupportedMode (to, m_phy->GetMode (i));
+          m_stationManager->AddAllSupportedMcs (to);
+          m_stationManager->AddStationHtCapabilities (to, GetHtCapabilities());
         }
+      if (m_vhtSupported)
+        {
+          m_stationManager->AddStationVhtCapabilities (to, GetVhtCapabilities());
+        }
+      m_stationManager->AddAllSupportedModes (to);
       m_stationManager->RecordDisassociated (to);
     }
 
@@ -203,7 +198,7 @@ OcbWifiMac::Enqueue (Ptr<const Packet> packet, Mac48Address to)
       // Any value greater than 7 is invalid and likely indicates that
       // the packet had no QoS tag, so we revert to zero, which'll
       // mean that AC_BE is used.
-      if (tid >= 7)
+      if (tid > 7)
         {
           tid = 0;
         }
@@ -214,6 +209,10 @@ OcbWifiMac::Enqueue (Ptr<const Packet> packet, Mac48Address to)
       hdr.SetTypeData ();
     }
 
+  if (m_htSupported || m_vhtSupported)
+    {
+      hdr.SetNoOrder ();
+    }
   hdr.SetAddr1 (to);
   hdr.SetAddr2 (GetAddress ());
   hdr.SetAddr3 (WILDCARD_BSSID);
@@ -245,6 +244,23 @@ OcbWifiMac::Receive (Ptr<Packet> packet, const WifiMacHeader *hdr)
 
   Mac48Address from = hdr->GetAddr2 ();
   Mac48Address to = hdr->GetAddr1 ();
+
+  if (m_stationManager->IsBrandNew (from))
+    {
+      //In ad hoc mode, we assume that every destination supports all
+      //the rates we support.
+      if (m_htSupported || m_vhtSupported)
+        {
+          m_stationManager->AddAllSupportedMcs (from);
+          m_stationManager->AddStationHtCapabilities (from, GetHtCapabilities());
+        }
+      if (m_vhtSupported)
+        {
+          m_stationManager->AddStationVhtCapabilities (from, GetVhtCapabilities());
+        }
+      m_stationManager->AddAllSupportedModes (from);
+      m_stationManager->RecordDisassociated (from);
+    }
 
   if (hdr->IsData ())
     {
@@ -308,6 +324,7 @@ OcbWifiMac::Receive (Ptr<Packet> packet, const WifiMacHeader *hdr)
 void
 OcbWifiMac::ConfigureEdca (uint32_t cwmin, uint32_t cwmax, uint32_t aifsn, enum AcIndex ac)
 {
+  NS_LOG_FUNCTION (this << cwmin << cwmax << aifsn << ac);
   Ptr<Dcf> dcf;
   switch (ac)
     {
@@ -350,6 +367,7 @@ OcbWifiMac::ConfigureEdca (uint32_t cwmin, uint32_t cwmax, uint32_t aifsn, enum 
 void
 OcbWifiMac::FinishConfigureStandard (enum WifiPhyStandard standard)
 {
+  NS_LOG_FUNCTION (this << standard);
   NS_ASSERT ((standard == WIFI_PHY_STANDARD_80211_10MHZ)
              || (standard == WIFI_PHY_STANDARD_80211a));
 
@@ -367,6 +385,65 @@ OcbWifiMac::FinishConfigureStandard (enum WifiPhyStandard standard)
   ConfigureEdca (cwmin, cwmax, 3, AC_VI);
   ConfigureEdca (cwmin, cwmax, 6, AC_BE);
   ConfigureEdca (cwmin, cwmax, 9, AC_BK);
+}
 
+
+void
+OcbWifiMac::Suspend (void)
+{
+  NS_LOG_FUNCTION (this);
+  m_dcfManager->NotifySleepNow ();
+  m_low->NotifySleepNow ();
+}
+
+void
+OcbWifiMac::Resume (void)
+{
+  NS_LOG_FUNCTION (this);
+  // wake-up operation is not required in m_low object
+  m_dcfManager->NotifyWakeupNow ();
+}
+
+void
+OcbWifiMac::MakeVirtualBusy (Time duration)
+{
+  NS_LOG_FUNCTION (this << duration);
+  m_dcfManager->NotifyMaybeCcaBusyStartNow (duration);
+}
+
+void
+OcbWifiMac::CancleTx (enum AcIndex ac)
+{
+  NS_LOG_FUNCTION (this << ac);
+  Ptr<EdcaTxopN> queue = m_edca.find (ac)->second;
+  NS_ASSERT (queue != 0);
+  // reset and flush queue
+  queue->NotifyChannelSwitching ();
+}
+
+void
+OcbWifiMac::Reset (void)
+{
+  NS_LOG_FUNCTION (this);
+  // The switching event is used to notify MAC entity reset its operation.
+  m_dcfManager->NotifySwitchingStartNow (Time (0));
+  m_low->NotifySwitchingStartNow (Time (0));
+}
+
+void
+OcbWifiMac::EnableForWave (Ptr<WaveNetDevice> device)
+{
+  NS_LOG_FUNCTION (this << device);
+  // To extend current OcbWifiMac for WAVE 1609.4, we shall use WaveMacLow instead of MacLow
+  m_low = CreateObject<WaveMacLow> ();
+  (DynamicCast<WaveMacLow> (m_low))->SetWaveNetDevice (device);
+  m_low->SetRxCallback (MakeCallback (&MacRxMiddle::Receive, m_rxMiddle));
+  m_dcfManager->SetupLowListener (m_low);
+  m_dca->SetLow (m_low);
+  for (EdcaQueues::iterator i = m_edca.begin (); i != m_edca.end (); ++i)
+    {
+      i->second->SetLow (m_low);
+      i->second->CompleteConfig ();
+    }
 }
 } // namespace ns3

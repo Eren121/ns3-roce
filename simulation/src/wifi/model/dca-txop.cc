@@ -25,7 +25,6 @@
 #include "ns3/node.h"
 #include "ns3/uinteger.h"
 #include "ns3/pointer.h"
-
 #include "dca-txop.h"
 #include "dcf-manager.h"
 #include "mac-low.h"
@@ -35,12 +34,12 @@
 #include "wifi-mac.h"
 #include "random-stream.h"
 
-NS_LOG_COMPONENT_DEFINE ("DcaTxop");
-
 #undef NS_LOG_APPEND_CONTEXT
 #define NS_LOG_APPEND_CONTEXT if (m_low != 0) { std::clog << "[mac=" << m_low->GetAddress () << "] "; }
 
 namespace ns3 {
+
+NS_LOG_COMPONENT_DEFINE ("DcaTxop");
 
 class DcaTxop::Dcf : public DcfState
 {
@@ -48,6 +47,10 @@ public:
   Dcf (DcaTxop * txop)
     : m_txop (txop)
   {
+  }
+  virtual bool IsEdca (void) const
+  {
+    return false;
   }
 private:
   virtual void DoNotifyAccessGranted (void)
@@ -66,8 +69,18 @@ private:
   {
     m_txop->NotifyChannelSwitching ();
   }
+  virtual void DoNotifySleep (void)
+  {
+    m_txop->NotifySleep ();
+  }
+  virtual void DoNotifyWakeUp (void)
+  {
+    m_txop->NotifyWakeUp ();
+  }
+
   DcaTxop *m_txop;
 };
+
 
 /**
  * Listener for MacLow events. Forwards to DcaTxop.
@@ -82,10 +95,13 @@ public:
    */
   TransmissionListener (DcaTxop * txop)
     : MacLowTransmissionListener (),
-      m_txop (txop) {
+      m_txop (txop)
+  {
   }
 
-  virtual ~TransmissionListener () {}
+  virtual ~TransmissionListener ()
+  {
+  }
 
   virtual void GotCts (double snr, WifiMode txMode)
   {
@@ -103,9 +119,12 @@ public:
   {
     m_txop->MissedAck ();
   }
+  virtual void StartNextFragment (void)
+  {
+    m_txop->StartNextFragment ();
+  }
   virtual void StartNext (void)
   {
-    m_txop->StartNext ();
   }
   virtual void Cancel (void)
   {
@@ -120,14 +139,14 @@ private:
   DcaTxop *m_txop;
 };
 
-NS_OBJECT_ENSURE_REGISTERED (DcaTxop)
-  ;
+NS_OBJECT_ENSURE_REGISTERED (DcaTxop);
 
 TypeId
 DcaTxop::GetTypeId (void)
 {
   static TypeId tid = TypeId ("ns3::DcaTxop")
-    .SetParent (ns3::Dcf::GetTypeId ())
+    .SetParent<ns3::Dcf> ()
+    .SetGroupName ("Wifi")
     .AddConstructor<DcaTxop> ()
     .AddAttribute ("Queue", "The WifiMacQueue object",
                    PointerValue (),
@@ -146,7 +165,6 @@ DcaTxop::DcaTxop ()
   m_dcf = new DcaTxop::Dcf (this);
   m_queue = CreateObject<WifiMacQueue> ();
   m_rng = new RealRandomStream ();
-  m_txMiddle = new MacTxMiddle ();
 }
 
 DcaTxop::~DcaTxop ()
@@ -164,7 +182,6 @@ DcaTxop::DoDispose (void)
   delete m_transmissionListener;
   delete m_dcf;
   delete m_rng;
-  delete m_txMiddle;
   m_transmissionListener = 0;
   m_dcf = 0;
   m_rng = 0;
@@ -179,24 +196,32 @@ DcaTxop::SetManager (DcfManager *manager)
   m_manager->Add (m_dcf);
 }
 
+void DcaTxop::SetTxMiddle (MacTxMiddle *txMiddle)
+{
+  m_txMiddle = txMiddle;
+}
+
 void
 DcaTxop::SetLow (Ptr<MacLow> low)
 {
   NS_LOG_FUNCTION (this << low);
   m_low = low;
 }
+
 void
 DcaTxop::SetWifiRemoteStationManager (Ptr<WifiRemoteStationManager> remoteManager)
 {
   NS_LOG_FUNCTION (this << remoteManager);
   m_stationManager = remoteManager;
 }
+
 void
 DcaTxop::SetTxOkCallback (TxOk callback)
 {
   NS_LOG_FUNCTION (this << &callback);
   m_txOkCallback = callback;
 }
+
 void
 DcaTxop::SetTxFailedCallback (TxFailed callback)
 {
@@ -217,30 +242,42 @@ DcaTxop::SetMinCw (uint32_t minCw)
   NS_LOG_FUNCTION (this << minCw);
   m_dcf->SetCwMin (minCw);
 }
+
 void
 DcaTxop::SetMaxCw (uint32_t maxCw)
 {
   NS_LOG_FUNCTION (this << maxCw);
   m_dcf->SetCwMax (maxCw);
 }
+
 void
 DcaTxop::SetAifsn (uint32_t aifsn)
 {
   NS_LOG_FUNCTION (this << aifsn);
   m_dcf->SetAifsn (aifsn);
 }
+
+void
+DcaTxop::SetTxopLimit (Time txopLimit)
+{
+  NS_LOG_FUNCTION (this << txopLimit);
+  m_dcf->SetTxopLimit (txopLimit);
+}
+
 uint32_t
 DcaTxop::GetMinCw (void) const
 {
   NS_LOG_FUNCTION (this);
   return m_dcf->GetCwMin ();
 }
+
 uint32_t
 DcaTxop::GetMaxCw (void) const
 {
   NS_LOG_FUNCTION (this);
   return m_dcf->GetCwMax ();
 }
+
 uint32_t
 DcaTxop::GetAifsn (void) const
 {
@@ -248,14 +285,19 @@ DcaTxop::GetAifsn (void) const
   return m_dcf->GetAifsn ();
 }
 
+Time
+DcaTxop::GetTxopLimit (void) const
+{
+  NS_LOG_FUNCTION (this);
+  return m_dcf->GetTxopLimit ();
+}
+
 void
 DcaTxop::Queue (Ptr<const Packet> packet, const WifiMacHeader &hdr)
 {
   NS_LOG_FUNCTION (this << packet << &hdr);
   WifiMacTrailer fcs;
-  uint32_t fullPacketSize = hdr.GetSerializedSize () + packet->GetSize () + fcs.GetSerializedSize ();
-  m_stationManager->PrepareForQueue (hdr.GetAddr1 (), &hdr,
-                                     packet, fullPacketSize);
+  m_stationManager->PrepareForQueue (hdr.GetAddr1 (), &hdr, packet);
   m_queue->Enqueue (packet, hdr);
   StartAccessIfNeeded ();
 }
@@ -292,20 +334,11 @@ DcaTxop::StartAccessIfNeeded (void)
     }
 }
 
-
 Ptr<MacLow>
 DcaTxop::Low (void)
 {
   NS_LOG_FUNCTION (this);
   return m_low;
-}
-
-bool
-DcaTxop::NeedRts (Ptr<const Packet> packet, const WifiMacHeader *header)
-{
-  NS_LOG_FUNCTION (this << packet << header);
-  return m_stationManager->NeedRts (header->GetAddr1 (), header,
-                                    packet);
 }
 
 void
@@ -316,6 +349,7 @@ DcaTxop::DoInitialize ()
   m_dcf->StartBackoffNow (m_rng->GetNext (0, m_dcf->GetCw ()));
   ns3::Dcf::DoInitialize ();
 }
+
 bool
 DcaTxop::NeedRtsRetransmission (void)
 {
@@ -331,6 +365,7 @@ DcaTxop::NeedDataRetransmission (void)
   return m_stationManager->NeedDataRetransmission (m_currentHdr.GetAddr1 (), &m_currentHdr,
                                                    m_currentPacket);
 }
+
 bool
 DcaTxop::NeedFragmentation (void)
 {
@@ -353,6 +388,7 @@ DcaTxop::GetFragmentSize (void)
   return m_stationManager->GetFragmentSize (m_currentHdr.GetAddr1 (), &m_currentHdr,
                                             m_currentPacket, m_fragmentNumber);
 }
+
 bool
 DcaTxop::IsLastFragment (void)
 {
@@ -419,6 +455,7 @@ DcaTxop::NotifyAccessGranted (void)
       NS_ASSERT (m_currentPacket != 0);
       uint16_t sequence = m_txMiddle->GetNextSequenceNumberfor (&m_currentHdr);
       m_currentHdr.SetSequenceNumber (sequence);
+      m_stationManager->UpdateFragmentationThreshold ();
       m_currentHdr.SetFragmentNumber (0);
       m_currentHdr.SetNoMoreFragments ();
       m_currentHdr.SetNoRetry ();
@@ -448,14 +485,6 @@ DcaTxop::NotifyAccessGranted (void)
         {
           WifiMacHeader hdr;
           Ptr<Packet> fragment = GetFragmentPacket (&hdr);
-          if (NeedRts (fragment, &hdr))
-            {
-              params.EnableRts ();
-            }
-          else
-            {
-              params.DisableRts ();
-            }
           if (IsLastFragment ())
             {
               NS_LOG_DEBUG ("fragmenting last fragment size=" << fragment->GetSize ());
@@ -471,16 +500,6 @@ DcaTxop::NotifyAccessGranted (void)
         }
       else
         {
-          if (NeedRts (m_currentPacket, &m_currentHdr))
-            {
-              params.EnableRts ();
-              NS_LOG_DEBUG ("tx unicast rts");
-            }
-          else
-            {
-              params.DisableRts ();
-              NS_LOG_DEBUG ("tx unicast");
-            }
           params.DisableNextData ();
           Low ()->StartTransmission (m_currentPacket, &m_currentHdr,
                                      params, m_transmissionListener);
@@ -494,11 +513,11 @@ DcaTxop::NotifyInternalCollision (void)
   NS_LOG_FUNCTION (this);
   NotifyCollision ();
 }
+
 void
 DcaTxop::NotifyCollision (void)
 {
   NS_LOG_FUNCTION (this);
-  NS_LOG_DEBUG ("collision");
   m_dcf->StartBackoffNow (m_rng->GetNext (0, m_dcf->GetCw ()));
   RestartAccessIfNeeded ();
 }
@@ -512,11 +531,30 @@ DcaTxop::NotifyChannelSwitching (void)
 }
 
 void
+DcaTxop::NotifySleep (void)
+{
+  NS_LOG_FUNCTION (this);
+  if (m_currentPacket != 0)
+    {
+      m_queue->PushFront (m_currentPacket, m_currentHdr);
+      m_currentPacket = 0;
+    }
+}
+
+void
+DcaTxop::NotifyWakeUp (void)
+{
+  NS_LOG_FUNCTION (this);
+  RestartAccessIfNeeded ();
+}
+
+void
 DcaTxop::GotCts (double snr, WifiMode txMode)
 {
   NS_LOG_FUNCTION (this << snr << txMode);
   NS_LOG_DEBUG ("got cts");
 }
+
 void
 DcaTxop::MissedCts (void)
 {
@@ -530,7 +568,7 @@ DcaTxop::MissedCts (void)
         {
           m_txFailedCallback (m_currentHdr);
         }
-      // to reset the dcf.
+      //to reset the dcf.
       m_currentPacket = 0;
       m_dcf->ResetCw ();
     }
@@ -541,6 +579,7 @@ DcaTxop::MissedCts (void)
   m_dcf->StartBackoffNow (m_rng->GetNext (0, m_dcf->GetCw ()));
   RestartAccessIfNeeded ();
 }
+
 void
 DcaTxop::GotAck (double snr, WifiMode txMode)
 {
@@ -567,6 +606,7 @@ DcaTxop::GotAck (double snr, WifiMode txMode)
       NS_LOG_DEBUG ("got ack. tx not done, size=" << m_currentPacket->GetSize ());
     }
 }
+
 void
 DcaTxop::MissedAck (void)
 {
@@ -580,7 +620,7 @@ DcaTxop::MissedAck (void)
         {
           m_txFailedCallback (m_currentHdr);
         }
-      // to reset the dcf.
+      //to reset the dcf.
       m_currentPacket = 0;
       m_dcf->ResetCw ();
     }
@@ -593,8 +633,9 @@ DcaTxop::MissedAck (void)
   m_dcf->StartBackoffNow (m_rng->GetNext (0, m_dcf->GetCw ()));
   RestartAccessIfNeeded ();
 }
+
 void
-DcaTxop::StartNext (void)
+DcaTxop::StartNextFragment (void)
 {
   NS_LOG_FUNCTION (this);
   NS_LOG_DEBUG ("start next packet fragment");
@@ -660,4 +701,4 @@ DcaTxop::EndTxNoAck (void)
   StartAccessIfNeeded ();
 }
 
-} // namespace ns3
+} //namespace ns3

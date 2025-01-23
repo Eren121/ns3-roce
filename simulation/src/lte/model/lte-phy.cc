@@ -28,13 +28,11 @@
 #include "lte-phy.h"
 #include "lte-net-device.h"
 
-NS_LOG_COMPONENT_DEFINE ("LtePhy");
-
 namespace ns3 {
 
+NS_LOG_COMPONENT_DEFINE ("LtePhy");
 
-NS_OBJECT_ENSURE_REGISTERED (LtePhy)
-  ;
+NS_OBJECT_ENSURE_REGISTERED (LtePhy);
 
 
 LtePhy::LtePhy ()
@@ -62,6 +60,7 @@ LtePhy::GetTypeId (void)
 {
   static TypeId tid = TypeId ("ns3::LtePhy")
     .SetParent<Object> ()
+    .SetGroupName("Lte")
   ;
   return tid;
 }
@@ -95,7 +94,7 @@ LtePhy::SetDevice (Ptr<LteNetDevice> d)
 
 
 Ptr<LteNetDevice>
-LtePhy::GetDevice ()
+LtePhy::GetDevice () const
 {
   NS_LOG_FUNCTION (this);
   return m_netDevice;

@@ -30,7 +30,8 @@ namespace ns3
 
 /**
  * \ingroup address
- * \class Ipv6InterfaceAddress
+ * \ingroup ipv6
+ *
  * \brief IPv6 address associated with an interface.
  */
 class Ipv6InterfaceAddress
@@ -132,6 +133,13 @@ public:
    * \return scope
    */
   Ipv6InterfaceAddress::Scope_e GetScope () const;
+
+  /**
+   * \brief Checks if the address is in the same subnet.
+   * \param b the address to check
+   * \return true if the address is in the same subnet.
+   */
+  bool IsInSameSubnet (Ipv6Address b) const;
 
   /**
    * \brief Set the latest DAD probe packet UID.

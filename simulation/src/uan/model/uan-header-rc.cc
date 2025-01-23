@@ -25,16 +25,11 @@
 
 namespace ns3 {
 
-NS_OBJECT_ENSURE_REGISTERED (UanHeaderRcData)
-  ;
-NS_OBJECT_ENSURE_REGISTERED (UanHeaderRcRts)
-  ;
-NS_OBJECT_ENSURE_REGISTERED (UanHeaderRcCtsGlobal)
-  ;
-NS_OBJECT_ENSURE_REGISTERED (UanHeaderRcCts)
-  ;
-NS_OBJECT_ENSURE_REGISTERED (UanHeaderRcAck)
-  ;
+NS_OBJECT_ENSURE_REGISTERED (UanHeaderRcData);
+NS_OBJECT_ENSURE_REGISTERED (UanHeaderRcRts);
+NS_OBJECT_ENSURE_REGISTERED (UanHeaderRcCtsGlobal);
+NS_OBJECT_ENSURE_REGISTERED (UanHeaderRcCts);
+NS_OBJECT_ENSURE_REGISTERED (UanHeaderRcAck);
 
 UanHeaderRcData::UanHeaderRcData ()
   : Header (),
@@ -60,6 +55,7 @@ UanHeaderRcData::GetTypeId ()
 {
   static TypeId tid = TypeId ("ns3::UanHeaderRcData")
     .SetParent<Header> ()
+    .SetGroupName ("Uan")
     .AddConstructor<UanHeaderRcData> ()
   ;
   return tid;
@@ -157,6 +153,7 @@ UanHeaderRcRts::GetTypeId ()
 {
   static TypeId tid = TypeId ("ns3::UanHeaderRcRts")
     .SetParent<Header> ()
+    .SetGroupName ("Uan")
     .AddConstructor<UanHeaderRcRts> ()
   ;
   return tid;
@@ -294,6 +291,7 @@ UanHeaderRcCtsGlobal::GetTypeId ()
 {
   static TypeId tid = TypeId ("ns3::UanHeaderRcCtsGlobal")
     .SetParent<Header> ()
+    .SetGroupName ("Uan")
     .AddConstructor<UanHeaderRcCtsGlobal> ()
   ;
   return tid;
@@ -419,6 +417,7 @@ UanHeaderRcCts::GetTypeId ()
 {
   static TypeId tid = TypeId ("ns3::UanHeaderRcCts")
     .SetParent<Header> ()
+    .SetGroupName ("Uan")
     .AddConstructor<UanHeaderRcCts> ()
   ;
   return tid;
@@ -542,6 +541,7 @@ UanHeaderRcAck::GetTypeId ()
 {
   static TypeId tid = TypeId ("ns3::UanHeaderRcAck")
     .SetParent<Header> ()
+    .SetGroupName ("Uan")
     .AddConstructor<UanHeaderRcAck> ()
   ;
   return tid;

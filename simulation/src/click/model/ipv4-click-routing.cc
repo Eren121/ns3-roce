@@ -36,17 +36,16 @@
 #include <cstdlib>
 #include <cstdarg>
 
-NS_LOG_COMPONENT_DEFINE ("Ipv4ClickRouting");
-
 namespace ns3 {
+
+NS_LOG_COMPONENT_DEFINE ("Ipv4ClickRouting");
 
 // Values from nsclick ExtRouter implementation
 #define INTERFACE_ID_KERNELTAP 0
 #define INTERFACE_ID_FIRST 1
 #define INTERFACE_ID_FIRST_DROP 33
 
-NS_OBJECT_ENSURE_REGISTERED (Ipv4ClickRouting)
-  ;
+NS_OBJECT_ENSURE_REGISTERED (Ipv4ClickRouting);
 
 std::map < simclick_node_t *, Ptr<Ipv4ClickRouting> > Ipv4ClickRouting::m_clickInstanceFromSimNode;
 
@@ -56,6 +55,7 @@ Ipv4ClickRouting::GetTypeId (void)
   static TypeId tid = TypeId ("ns3::Ipv4ClickRouting")
     .SetParent<Ipv4RoutingProtocol> ()
     .AddConstructor<Ipv4ClickRouting> ()
+    .SetGroupName ("Click")
   ;
 
   return tid;
@@ -483,12 +483,26 @@ Ipv4ClickRouting::RouteOutput (Ptr<Packet> p, const Ipv4Header &header, Ptr<NetD
   header.GetDestination ().Print (addr);
   // Probe the Click Routing Table for the required IP
   // This returns a string of the form "InterfaceID GatewayAddr"
+  NS_LOG_DEBUG ("Probe click routing table for " << addr.str ());
   std::string s = ReadHandler (m_clickRoutingTableElement, addr.str ());
+  NS_LOG_DEBUG ("string from click routing table: " << s);
 
-  int pos = s.find (" ");
-
-  int interfaceId = atoi (s.substr (0, pos).c_str ());
-  Ipv4Address destination (s.substr (pos + 1).c_str ());
+  size_t pos = s.find (" ");
+  Ipv4Address destination;
+  int interfaceId;
+  if (pos == std::string::npos)
+    {
+      // Only an interface ID is found
+      destination = Ipv4Address ("0.0.0.0");
+      interfaceId = atoi (s.c_str ());
+      NS_LOG_DEBUG ("case 1:  destination " << destination << " interfaceId " << interfaceId);
+    }
+  else
+    {
+      interfaceId = atoi (s.substr (0, pos).c_str ());
+      Ipv4Address destination (s.substr (pos + 1).c_str ());
+      NS_LOG_DEBUG ("case 2:  destination " << destination << " interfaceId " << interfaceId);
+    }
 
   if (interfaceId != -1)
     {
@@ -569,6 +583,8 @@ Ipv4ClickRouting::NotifyRemoveAddress (uint32_t interface, Ipv4InterfaceAddress 
 
 
 } // namespace ns3
+
+using ns3::g_log;
 
 static int simstrlcpy (char *buf, int len, const std::string &s)
 {

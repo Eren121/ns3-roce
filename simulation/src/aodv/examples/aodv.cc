@@ -54,8 +54,8 @@ public:
   void Report (std::ostream & os);
 
 private:
-  ///\name parameters
-  //\{
+
+  // parameters
   /// Number of nodes
   uint32_t size;
   /// Distance between nodes, meters
@@ -66,14 +66,11 @@ private:
   bool pcap;
   /// Print routes if true
   bool printRoutes;
-  //\}
 
-  ///\name network
-  //\{
+  // network
   NodeContainer nodes;
   NetDeviceContainer devices;
   Ipv4InterfaceContainer interfaces;
-  //\}
 
 private:
   void CreateNodes ();
@@ -171,12 +168,12 @@ AodvExample::CreateNodes ()
 void
 AodvExample::CreateDevices ()
 {
-  NqosWifiMacHelper wifiMac = NqosWifiMacHelper::Default ();
+  WifiMacHelper wifiMac;
   wifiMac.SetType ("ns3::AdhocWifiMac");
   YansWifiPhyHelper wifiPhy = YansWifiPhyHelper::Default ();
   YansWifiChannelHelper wifiChannel = YansWifiChannelHelper::Default ();
   wifiPhy.SetChannel (wifiChannel.Create ());
-  WifiHelper wifi = WifiHelper::Default ();
+  WifiHelper wifi;
   wifi.SetRemoteStationManager ("ns3::ConstantRateWifiManager", "DataMode", StringValue ("OfdmRate6Mbps"), "RtsCtsThreshold", UintegerValue (0));
   devices = wifi.Install (wifiPhy, wifiMac, nodes); 
 

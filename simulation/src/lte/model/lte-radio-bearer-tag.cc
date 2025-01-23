@@ -25,14 +25,14 @@
 
 namespace ns3 {
 
-NS_OBJECT_ENSURE_REGISTERED (LteRadioBearerTag)
-  ;
+NS_OBJECT_ENSURE_REGISTERED (LteRadioBearerTag);
 
 TypeId
 LteRadioBearerTag::GetTypeId (void)
 {
   static TypeId tid = TypeId ("ns3::LteRadioBearerTag")
     .SetParent<Tag> ()
+    .SetGroupName("Lte")
     .AddConstructor<LteRadioBearerTag> ()
     .AddAttribute ("rnti", "The rnti that indicates the UE to which packet belongs",
                    UintegerValue (0),

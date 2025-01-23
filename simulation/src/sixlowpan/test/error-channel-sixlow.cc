@@ -24,19 +24,18 @@
 #include "ns3/node.h"
 #include "ns3/log.h"
 
-NS_LOG_COMPONENT_DEFINE ("ErrorChannelSixlow")
-  ;
-
 namespace ns3 {
 
-NS_OBJECT_ENSURE_REGISTERED (ErrorChannelSixlow)
-  ;
+NS_LOG_COMPONENT_DEFINE ("ErrorChannelSixlow");
+
+NS_OBJECT_ENSURE_REGISTERED (ErrorChannelSixlow);
 
 TypeId
 ErrorChannelSixlow::GetTypeId (void)
 {
   static TypeId tid = TypeId ("ns3::ErrorChannelSixlow")
-    .SetParent<Channel> ()
+    .SetParent<SimpleChannel> ()
+    .SetGroupName ("SixLowPan")
     .AddConstructor<ErrorChannelSixlow> ()
   ;
   return tid;
@@ -146,13 +145,13 @@ ErrorChannelSixlow::GetDevice (uint32_t i) const
   return m_devices[i];
 }
 
-NS_OBJECT_ENSURE_REGISTERED (BinaryErrorSixlowModel)
-  ;
+NS_OBJECT_ENSURE_REGISTERED (BinaryErrorSixlowModel);
 
 TypeId BinaryErrorSixlowModel::GetTypeId (void)
 {
   static TypeId tid = TypeId ("ns3::BinaryErrorSixlowModel")
     .SetParent<ErrorModel> ()
+    .SetGroupName ("SixLowPan")
     .AddConstructor<BinaryErrorSixlowModel> ()
   ;
   return tid;

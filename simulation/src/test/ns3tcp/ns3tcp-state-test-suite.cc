@@ -26,6 +26,7 @@
 #include "ns3/config.h"
 #include "ns3/string.h"
 #include "ns3/uinteger.h"
+#include "ns3/boolean.h"
 #include "ns3/data-rate.h"
 #include "ns3/inet-socket-address.h"
 #include "ns3/point-to-point-helper.h"
@@ -39,18 +40,29 @@
 #include "ns3/error-model.h"
 #include "ns3/pointer.h"
 #include "ns3tcp-socket-writer.h"
+#include "ns3/tcp-header.h"
 
 using namespace ns3;
 
 NS_LOG_COMPONENT_DEFINE ("Ns3TcpStateTest");
 
+// The below boolean constants should only be changed to 'true' 
+// during test debugging (i.e. do not commit the value 'true')
+
+// set to 'true' to have the test suite overwrite the response vectors
+// stored in the test directory.  This should only be done if you are
+// convinced through other means (e.g. pcap tracing or logging) that the
+// revised vectors are the correct ones.  In other words, don't simply
+// enable this to true to clear a failing test without looking at the
+// results closely.  
 const bool WRITE_VECTORS = false;           // set to true to write response vectors
+const bool WRITE_PCAP = false;              // set to true to write out pcap
 const bool WRITE_LOGGING = false;           // set to true to write logging
 const uint32_t PCAP_LINK_TYPE = 1187373554; // Some large random number -- we use to verify data was written by this program
 const uint32_t PCAP_SNAPLEN   = 64;         // Don't bother to save much data
 
 // ===========================================================================
-// Tests of TCP implementation loss behavior
+// Tests of TCP implementation state machine behavior
 // ===========================================================================
 //
 
@@ -90,7 +102,7 @@ Ns3TcpStateTestCase::Ns3TcpStateTestCase ()
     m_totalTxBytes (20000),
     m_currentTxBytes (0),
     m_writeVectors (WRITE_VECTORS),
-    m_writeResults (false),
+    m_writeResults (WRITE_PCAP),
     m_writeLogging (WRITE_LOGGING),
     m_needToClose (true)
 {
@@ -102,7 +114,7 @@ Ns3TcpStateTestCase::Ns3TcpStateTestCase (uint32_t testCase)
     m_totalTxBytes (20000),
     m_currentTxBytes (0),
     m_writeVectors (WRITE_VECTORS),
-    m_writeResults (false),
+    m_writeResults (WRITE_PCAP),
     m_writeLogging (WRITE_LOGGING),
     m_needToClose (true)
 {
@@ -113,11 +125,12 @@ Ns3TcpStateTestCase::DoSetup (void)
 {
   //
   // We expect there to be a file called ns3tcp-state-response-vectors.pcap in
-  // response-vectors/ of this directory
+  // the data directory
   //
   std::ostringstream oss;
-  oss << "/response-vectors/ns3tcp-state" << m_testCase << "-response-vectors.pcap";
-  m_pcapFilename = static_cast<std::string> (NS_TEST_SOURCEDIR) + oss.str ();
+  oss << "ns3tcp-state" << m_testCase << "-response-vectors.pcap";
+  m_pcapFilename = CreateDataDirFilename (oss.str ());
+  std::cout << "m_pcapFilename=" << m_pcapFilename << std::endl;
 
   if (m_writeVectors)
     {
@@ -127,7 +140,9 @@ Ns3TcpStateTestCase::DoSetup (void)
   else
     {
       m_pcapFile.Open (m_pcapFilename, std::ios::in|std::ios::binary);
-      NS_ABORT_MSG_UNLESS (m_pcapFile.GetDataLinkType () == PCAP_LINK_TYPE, "Wrong response vectors in directory");
+      NS_ABORT_MSG_UNLESS (m_pcapFile.GetDataLinkType () == PCAP_LINK_TYPE,
+                           "Wrong response vectors in directory: opening " <<
+                           m_pcapFilename);
     }
 }
 
@@ -148,6 +163,13 @@ Ns3TcpStateTestCase::Ipv4L3Tx (std::string context, Ptr<const Packet> packet, Pt
   Ipv4Header ipHeader;
   p->RemoveHeader (ipHeader);
 
+  if (g_log.IsEnabled (ns3::LOG_DEBUG))
+    {
+      TcpHeader th;
+      p->PeekHeader (th);
+      std::clog << Simulator::Now ().GetSeconds () << " TCP header " << th << std::endl;
+    }
+
   //
   // What is left is the TCP header and any data that may be sent.  We aren't
   // sending any TCP data, so we expect what remains is only TCP header, which
@@ -161,15 +183,9 @@ Ns3TcpStateTestCase::Ipv4L3Tx (std::string context, Ptr<const Packet> packet, Pt
       Time tNow = Simulator::Now ();
       int64_t tMicroSeconds = tNow.GetMicroSeconds ();
 
-      uint32_t size = p->GetSize ();
-      uint8_t *buf = new uint8_t[size];
-      p->CopyData (buf, size);
-
       m_pcapFile.Write (uint32_t (tMicroSeconds / 1000000), 
                         uint32_t (tMicroSeconds % 1000000), 
-                        buf, 
-                        size);
-      delete [] buf;
+                        p);
     }
   else
     {
@@ -272,17 +288,15 @@ Ns3TcpStateTestCase::DoRun (void)
   Config::SetDefault ("ns3::TcpL4Protocol::SocketType", StringValue (tcpModel));
   Config::SetDefault ("ns3::TcpSocket::SegmentSize", UintegerValue (1000));
   Config::SetDefault ("ns3::TcpSocket::DelAckCount", UintegerValue (1));
-  Config::SetDefault ("ns3::DropTailQueue::MaxPackets", UintegerValue (20));
+  Config::SetDefault ("ns3::Queue::MaxPackets", UintegerValue (20));
+  Config::SetDefault ("ns3::TcpSocketBase::Timestamp", BooleanValue (false));
 
   if (m_writeLogging)
     {
       LogComponentEnableAll (LOG_PREFIX_FUNC);
-      LogComponentEnable ("TcpTestCases", LOG_LEVEL_ALL);
       LogComponentEnable ("ErrorModel", LOG_LEVEL_DEBUG);
-      LogComponentEnable ("TcpTestCases", LOG_LEVEL_ALL);
-      LogComponentEnable ("TcpNewReno", LOG_LEVEL_INFO);
-      LogComponentEnable ("TcpReno", LOG_LEVEL_INFO);
-      LogComponentEnable ("TcpTahoe", LOG_LEVEL_INFO);
+      LogComponentEnable ("Ns3TcpStateTest", LOG_LEVEL_DEBUG);
+      LogComponentEnable ("TcpCongestionOps", LOG_LEVEL_INFO);
       LogComponentEnable ("TcpSocketBase", LOG_LEVEL_INFO);
     }
 
@@ -448,7 +462,10 @@ public:
 Ns3TcpStateTestSuite::Ns3TcpStateTestSuite ()
   : TestSuite ("ns3-tcp-state", SYSTEM)
 {
+  // We can't use NS_TEST_SOURCEDIR variable here because we use subdirectories
+  SetDataDir ("src/test/ns3tcp/response-vectors");
   Packet::EnablePrinting ();  // Enable packet metadata for all test cases
+  
   AddTestCase (new Ns3TcpStateTestCase (0), TestCase::QUICK);
   AddTestCase (new Ns3TcpStateTestCase (1), TestCase::QUICK);
   AddTestCase (new Ns3TcpStateTestCase (2), TestCase::QUICK);

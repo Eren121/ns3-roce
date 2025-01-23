@@ -17,6 +17,7 @@
  *
  * Author: Mathieu Lacage <mathieu.lacage@sophia.inria.fr>
  */
+
 #ifndef AARF_WIFI_MANAGER_H
 #define AARF_WIFI_MANAGER_H
 
@@ -32,6 +33,10 @@ namespace ns3 {
  * was initially described in <i>IEEE 802.11 Rate Adaptation:
  * A Practical Approach</i>, by M. Lacage, M.H. Manshaei, and
  * T. Turletti.
+ *
+ * This RAA does not support HT or VHT modes and will error exit
+ * if the user tries to configure this RAA with a Wi-Fi MAC that
+ * has VhtSupported or HtSupported set.
  */
 class AarfWifiManager : public WifiRemoteStationManager
 {
@@ -39,8 +44,12 @@ public:
   static TypeId GetTypeId (void);
   AarfWifiManager ();
   virtual ~AarfWifiManager ();
+
+  // Inherited from WifiRemoteStationManager
+  virtual void SetHtSupported (bool enable);
+  virtual void SetVhtSupported (bool enable);
 private:
-  // overriden from base class
+  //overriden from base class
   virtual WifiRemoteStation * DoCreateStation (void) const;
   virtual void DoReportRxOk (WifiRemoteStation *station,
                              double rxSnr, WifiMode txMode);
@@ -52,7 +61,7 @@ private:
                                double ackSnr, WifiMode ackMode, double dataSnr);
   virtual void DoReportFinalRtsFailed (WifiRemoteStation *station);
   virtual void DoReportFinalDataFailed (WifiRemoteStation *station);
-  virtual WifiTxVector DoGetDataTxVector (WifiRemoteStation *station, uint32_t size);
+  virtual WifiTxVector DoGetDataTxVector (WifiRemoteStation *station);
   virtual WifiTxVector DoGetRtsTxVector (WifiRemoteStation *station);
   virtual bool IsLowLatency (void) const;
 
@@ -63,7 +72,6 @@ private:
   double m_timerK;
 };
 
-} // namespace ns3
-
+} //namespace ns3
 
 #endif /* AARF_WIFI_MANAGER_H */

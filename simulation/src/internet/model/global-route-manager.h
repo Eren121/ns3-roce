@@ -22,11 +22,11 @@
 #ifndef GLOBAL_ROUTE_MANAGER_H
 #define GLOBAL_ROUTE_MANAGER_H
 
-#include "ns3/deprecated.h"
-
 namespace ns3 {
 
 /**
+ * \ingroup globalrouting
+ *
  * @brief A global global router
  *
  * This singleton object can query interface each node in the system
@@ -55,15 +55,12 @@ public:
 /**
  * @brief Build the routing database by gathering Link State Advertisements
  * from each node exporting a GlobalRouter interface.
- * @internal
- *
  */
   static void BuildGlobalRoutingDatabase ();
 
 /**
  * @brief Compute routes using a Dijkstra SPF computation and populate
  * per-node forwarding tables
- * @internal
  */
   static void InitializeRoutes ();
 
@@ -72,12 +69,16 @@ private:
  * @brief Global Route Manager copy construction is disallowed.  There's no 
  * need for it and a compiler provided shallow copy would be wrong.
  *
+ * @param srm object to copy from
  */
   GlobalRouteManager (GlobalRouteManager& srm);
 
 /**
  * @brief Global Router copy assignment operator is disallowed.  There's no 
  * need for it and a compiler provided shallow copy would be wrong.
+ *
+ * @param srm object to copy from
+ * @returns the copied object
  */
   GlobalRouteManager& operator= (GlobalRouteManager& srm);
 };

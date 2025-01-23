@@ -35,6 +35,7 @@
 #include <sstream>
 
 NS_LOG_COMPONENT_DEFINE ("PyViz");
+
 #define NUM_LAST_PACKETS 10
 
 static
@@ -84,6 +85,7 @@ PyVizPacketTag::GetTypeId (void)
 {
   static TypeId tid = TypeId ("ns3::PyVizPacketTag")
     .SetParent<Tag> ()
+    .SetGroupName ("Visualizer")
     .AddConstructor<PyVizPacketTag> ()
   ;
   return tid;
@@ -321,7 +323,7 @@ PyViz::SimulatorRunUntil (Time time)
   NS_LOG_LOGIC ("Schedule dummy callback to be called in " << (time - Simulator::Now ()));
   m_runUntil = time;
   m_stop = false;
-  Simulator::ScheduleWithContext (0xffffffff, time - Simulator::Now (), &PyViz::CallbackStopSimulation, this);
+  Simulator::ScheduleWithContext (Simulator::NO_CONTEXT, time - Simulator::Now (), &PyViz::CallbackStopSimulation, this);
 
   Ptr<SimulatorImpl> impl = Simulator::GetImplementation ();
   Ptr<VisualSimulatorImpl> visualImpl = DynamicCast<VisualSimulatorImpl> (impl);

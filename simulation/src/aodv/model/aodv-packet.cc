@@ -34,8 +34,7 @@ namespace ns3
 namespace aodv
 {
 
-NS_OBJECT_ENSURE_REGISTERED (TypeHeader)
-  ;
+NS_OBJECT_ENSURE_REGISTERED (TypeHeader);
 
 TypeHeader::TypeHeader (MessageType t) :
   m_type (t), m_valid (true)
@@ -47,6 +46,7 @@ TypeHeader::GetTypeId ()
 {
   static TypeId tid = TypeId ("ns3::aodv::TypeHeader")
     .SetParent<Header> ()
+    .SetGroupName("Aodv")
     .AddConstructor<TypeHeader> ()
   ;
   return tid;
@@ -147,14 +147,14 @@ RreqHeader::RreqHeader (uint8_t flags, uint8_t reserved, uint8_t hopCount, uint3
 {
 }
 
-NS_OBJECT_ENSURE_REGISTERED (RreqHeader)
-  ;
+NS_OBJECT_ENSURE_REGISTERED (RreqHeader);
 
 TypeId
 RreqHeader::GetTypeId ()
 {
   static TypeId tid = TypeId ("ns3::aodv::RreqHeader")
     .SetParent<Header> ()
+    .SetGroupName("Aodv")
     .AddConstructor<RreqHeader> ()
   ;
   return tid;
@@ -287,14 +287,14 @@ RrepHeader::RrepHeader (uint8_t prefixSize, uint8_t hopCount, Ipv4Address dst,
   m_lifeTime = uint32_t (lifeTime.GetMilliSeconds ());
 }
 
-NS_OBJECT_ENSURE_REGISTERED (RrepHeader)
-  ;
+NS_OBJECT_ENSURE_REGISTERED (RrepHeader);
 
 TypeId
 RrepHeader::GetTypeId ()
 {
   static TypeId tid = TypeId ("ns3::aodv::RrepHeader")
     .SetParent<Header> ()
+    .SetGroupName("Aodv")
     .AddConstructor<RrepHeader> ()
   ;
   return tid;
@@ -430,14 +430,14 @@ RrepAckHeader::RrepAckHeader () :
 {
 }
 
-NS_OBJECT_ENSURE_REGISTERED (RrepAckHeader)
-  ;
+NS_OBJECT_ENSURE_REGISTERED (RrepAckHeader);
   
 TypeId
 RrepAckHeader::GetTypeId ()
 {
   static TypeId tid = TypeId ("ns3::aodv::RrepAckHeader")
     .SetParent<Header> ()
+    .SetGroupName("Aodv")
     .AddConstructor<RrepAckHeader> ()
   ;
   return tid;
@@ -497,14 +497,14 @@ RerrHeader::RerrHeader () :
 {
 }
 
-NS_OBJECT_ENSURE_REGISTERED (RerrHeader)
-  ;
+NS_OBJECT_ENSURE_REGISTERED (RerrHeader);
 
 TypeId
 RerrHeader::GetTypeId ()
 {
   static TypeId tid = TypeId ("ns3::aodv::RerrHeader")
     .SetParent<Header> ()
+    .SetGroupName("Aodv")
     .AddConstructor<RerrHeader> ()
   ;
   return tid;

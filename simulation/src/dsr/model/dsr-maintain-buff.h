@@ -55,12 +55,18 @@ struct LinkKey
    * Compare maintain Buffer entries
    * \param o
    * \return true if equal
-   */
-  bool operator < (LinkKey const & o) const
+   */ 
+  bool operator < (const LinkKey & o) const
   {
-    return ((m_source < o.m_source) && (m_destination < o.m_destination)
-            && (m_ourAdd < o.m_nextHop) && (m_nextHop < o.m_nextHop)
-            );
+      if (m_source < o.m_source) return true;
+      if (o.m_source < m_source) return false;
+      if (m_destination < o.m_destination) return true;
+      if (o.m_destination < m_destination) return false;
+      if (m_ourAdd < o.m_ourAdd) return true;
+      if (o.m_ourAdd < m_ourAdd) return false;
+      if (m_nextHop < o.m_nextHop) return true;
+      if (o.m_nextHop < m_nextHop) return false;
+      return false;
   }
 };
 
@@ -77,11 +83,19 @@ struct NetworkKey
    * \param o
    * \return true if equal
    */
-  bool operator < (NetworkKey const & o) const
+  bool operator < (const NetworkKey & o) const
   {
-    return ((m_ackId < o.m_ackId) && (m_ourAdd < o.m_ourAdd) && (m_nextHop < o.m_nextHop) && (m_source < o.m_source)
-            && (m_destination < o.m_destination)
-            );
+      if (m_ackId < o.m_ackId) return true;
+      if (o.m_ackId < m_ackId) return false;
+      if (m_source < o.m_source) return true;
+      if (o.m_source < m_source) return false;
+      if (m_destination < o.m_destination) return true;
+      if (o.m_destination < m_destination) return false;
+      if (m_ourAdd < o.m_ourAdd) return true;
+      if (o.m_ourAdd < m_ourAdd) return false;
+      if (m_nextHop < o.m_nextHop) return true;
+      if (o.m_nextHop < m_nextHop) return false;
+      return false;
   }
 };
 
@@ -97,11 +111,17 @@ struct PassiveKey
    * \param o
    * \return true if equal
    */
-  bool operator < (PassiveKey const & o) const
+  bool operator < (const PassiveKey & o) const
   {
-    return ((m_ackId < o.m_ackId) && (m_source < o.m_source)
-            && (m_destination < o.m_destination) && (m_segsLeft < o.m_segsLeft)
-            );
+      if (m_ackId < o.m_ackId) return true;
+      if (o.m_ackId < m_ackId) return false;
+      if (m_source < o.m_source) return true;
+      if (o.m_source < m_source) return false;
+      if (m_destination < o.m_destination) return true;
+      if (o.m_destination < m_destination) return false;
+      if (m_segsLeft < o.m_segsLeft) return true;
+      if (o.m_segsLeft < m_segsLeft) return false;
+      return false;
   }
 };
 
@@ -109,11 +129,11 @@ struct PassiveKey
  * \ingroup dsr
  * \brief DSR Maintain Buffer Entry
  */
-class MaintainBuffEntry
+class DsrMaintainBuffEntry
 {
 public:
   /**
-   * Construct a MaintainBuffEntry with the given parameters
+   * Construct a DsrMaintainBuffEntry with the given parameters
    *
    * \param pa packet
    * \param us our IPv4 address
@@ -124,7 +144,7 @@ public:
    * \param segs number of segments left
    * \param exp expiration time
    */
-  MaintainBuffEntry (Ptr<const Packet> pa = 0, Ipv4Address us = Ipv4Address (),
+  DsrMaintainBuffEntry (Ptr<const Packet> pa = 0, Ipv4Address us = Ipv4Address (),
                      Ipv4Address n = Ipv4Address (), Ipv4Address s = Ipv4Address (), Ipv4Address dst = Ipv4Address (),
                      uint16_t ackId = 0, uint8_t segs = 0, Time exp = Simulator::Now ())
     : m_packet (pa),
@@ -138,8 +158,7 @@ public:
   {
   }
 
-  ///\name Fields
-  // \{
+  // Fields
   Ptr<const Packet> GetPacket () const
   {
     return m_packet;
@@ -204,7 +223,7 @@ public:
   {
     return m_expire - Simulator::Now ();
   }
-  // \}
+
 private:
   /// Data packet
   Ptr<const Packet> m_packet;
@@ -228,27 +247,27 @@ private:
  * \brief DSR maintain buffer
  */
 /************************************************************************************************************************/
-class MaintainBuffer
+class DsrMaintainBuffer
 {
 public:
   /**
    * Default constructor
    */
-  MaintainBuffer ()
+  DsrMaintainBuffer ()
   {
   }
   /// Push entry in queue, if there is no entry with the same packet and destination address in queue.
-  bool Enqueue (MaintainBuffEntry & entry);
+  bool Enqueue (DsrMaintainBuffEntry & entry);
   /// Return first found (the earliest) entry for given destination
-  bool Dequeue (Ipv4Address dst, MaintainBuffEntry & entry);
+  bool Dequeue (Ipv4Address dst, DsrMaintainBuffEntry & entry);
   /// Remove all packets with destination IP address dst
   void DropPacketWithNextHop (Ipv4Address nextHop);
   /// Finds whether a packet with destination dst exists in the queue
   bool Find (Ipv4Address nextHop);
   /// Number of entries
   uint32_t GetSize ();
-  ///\name Fields
-  // \{
+
+  // Fields
   uint32_t GetMaxQueueLen () const
   {
     return m_maxLen;
@@ -266,18 +285,17 @@ public:
     m_maintainBufferTimeout = t;
   }
   /// Verify if all the elements in the maintainence buffer entry is the same
-  bool AllEqual (MaintainBuffEntry & entry);
+  bool AllEqual (DsrMaintainBuffEntry & entry);
   /// Verify if the maintain buffer entry is the same in every field for link ack
-  bool LinkEqual (MaintainBuffEntry & entry);
+  bool LinkEqual (DsrMaintainBuffEntry & entry);
   /// Verify if the maintain buffer entry is the same in every field for network ack
-  bool NetworkEqual (MaintainBuffEntry & entry);
+  bool NetworkEqual (DsrMaintainBuffEntry & entry);
   /// Verify if the maintain buffer entry is the same in every field for promiscuous ack
-  bool PromiscEqual (MaintainBuffEntry & entry);
-  // \}
+  bool PromiscEqual (DsrMaintainBuffEntry & entry);
 
 private:
   /// The vector of maintain buffer entries
-  std::vector<MaintainBuffEntry> m_maintainBuffer;
+  std::vector<DsrMaintainBuffEntry> m_maintainBuffer;
   std::vector<NetworkKey> m_allNetworkKey;
   /// Remove all expired entries
   void Purge ();
@@ -286,7 +304,7 @@ private:
   /// The maximum period of time that a routing protocol is allowed to buffer a packet for, seconds.
   Time m_maintainBufferTimeout;
   /// Verify if the maintain buffer is equal or not
-  static bool IsEqual (MaintainBuffEntry en, const Ipv4Address nextHop)
+  static bool IsEqual (DsrMaintainBuffEntry en, const Ipv4Address nextHop)
   {
     return (en.GetNextHop () == nextHop);
   }

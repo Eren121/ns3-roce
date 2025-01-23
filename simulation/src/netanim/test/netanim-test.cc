@@ -30,7 +30,7 @@
 #include "ns3/basic-energy-source.h"
 #include "ns3/simple-device-energy-model.h"
 
-namespace ns3 {
+using namespace ns3;
 
 class AbstractAnimationInterfaceTestCase : public TestCase
 {
@@ -166,7 +166,7 @@ AnimationInterfaceTestCase::PrepareNetwork (void)
 void
 AnimationInterfaceTestCase::CheckLogic (void)
 {
-  NS_TEST_ASSERT_MSG_EQ (m_anim->GetTracePktCount (), 32, "Expected 32 packets traced");
+  NS_TEST_ASSERT_MSG_EQ (m_anim->GetTracePktCount (), 16, "Expected 16 packets traced");
 }
 
 class AnimationRemainingEnergyTestCase : public AbstractAnimationInterfaceTestCase
@@ -238,5 +238,3 @@ public:
     AddTestCase (new AnimationRemainingEnergyTestCase (), TestCase::QUICK);
   }
 } g_animationInterfaceTestSuite;
-
-} // namespace ns3

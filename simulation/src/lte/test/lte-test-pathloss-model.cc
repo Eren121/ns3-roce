@@ -25,7 +25,7 @@
 #include "ns3/spectrum-test.h"
 
 #include "ns3/lte-phy-tag.h"
-#include "ns3/lte-sinr-chunk-processor.h"
+#include "ns3/lte-chunk-processor.h"
 
 
 #include <ns3/hybrid-buildings-propagation-loss-model.h>
@@ -36,6 +36,7 @@
 #include <ns3/single-model-spectrum-channel.h>
 #include "ns3/string.h"
 #include "ns3/double.h"
+#include <ns3/boolean.h>
 #include <ns3/building.h>
 #include <ns3/enum.h>
 #include <ns3/net-device-container.h>
@@ -46,14 +47,12 @@
 #include <ns3/lte-enb-phy.h>
 #include <ns3/lte-ue-phy.h>
 
-#include "lte-test-sinr-chunk-processor.h"
 #include "lte-test-ue-phy.h"
 #include "lte-test-pathloss-model.h"
 
+using namespace ns3;
+
 NS_LOG_COMPONENT_DEFINE ("LtePathlossModelTest");
-
-namespace ns3 {
-
 
 /**
  * Test 1.1 Pathloss compound test
@@ -205,6 +204,8 @@ LtePathlossModelSystemTestCase::DoRun (void)
   /**
   * Simulation Topology
   */
+  //Disable Uplink Power Control
+  Config::SetDefault ("ns3::LteUePhy::EnableUplinkPowerControl", BooleanValue (false));
 
   Ptr<LteHelper> lteHelper = CreateObject<LteHelper> ();
   //   lteHelper->EnableLogComponents ();
@@ -269,7 +270,9 @@ LtePathlossModelSystemTestCase::DoRun (void)
   // Use testing chunk processor in the PHY layer
   // It will be used to test that the SNR is as intended
   //Ptr<LtePhy> uePhy = ueDevs.Get (0)->GetObject<LteUeNetDevice> ()->GetPhy ()->GetObject<LtePhy> ();
-  Ptr<LteTestSinrChunkProcessor> testSinr = Create<LteTestSinrChunkProcessor> (uePhy);
+  Ptr<LteChunkProcessor> testSinr = Create<LteChunkProcessor> ();
+  LteSpectrumValueCatcher sinrCatcher;
+  testSinr->AddCallback (MakeCallback (&LteSpectrumValueCatcher::ReportValue, &sinrCatcher));
   uePhy->GetDownlinkSpectrumPhy ()->AddCtrlSinrChunkProcessor (testSinr);
    
 //   Config::Connect ("/NodeList/0/DeviceList/0/LteEnbMac/DlScheduling",
@@ -278,7 +281,7 @@ LtePathlossModelSystemTestCase::DoRun (void)
   Simulator::Stop (Seconds (0.035));
   Simulator::Run ();
   
-  double calculatedSinrDb = 10.0 * std::log10 (testSinr->GetSinr ()->operator[] (0));
+  double calculatedSinrDb = 10.0 * std::log10 (sinrCatcher.GetValue ()->operator[] (0));
   NS_LOG_INFO ("Distance " << m_distance << " Calculated SINR " << calculatedSinrDb << " ref " << m_snrDb);
   Simulator::Destroy ();
   NS_TEST_ASSERT_MSG_EQ_TOL (calculatedSinrDb, m_snrDb, 0.001, "Wrong SINR !");
@@ -306,7 +309,3 @@ LtePathlossModelSystemTestCase::DlScheduling (uint32_t frameNo, uint32_t subfram
     NS_TEST_ASSERT_MSG_EQ ((uint16_t)mcsTb1, m_mcsIndex, "Wrong MCS index");
   }
 }
-                                         
-
-} // namespace ns3
-

@@ -316,20 +316,19 @@ IePreq::GetInformationFieldSize () const
 void
 IePreq::Print (std::ostream &os) const
 {
-  os << std::endl << "<information_element id=" << ElementId () << ">" << std::endl;
-  os << " originator address  = " << m_originatorAddress << std::endl;
-  os << " TTL                 = " << (uint16_t) m_ttl << std::endl;
-  os << " hop count           = " << (uint16_t) m_hopCount << std::endl;
-  os << " metric              = " << m_metric << std::endl;
-  os << " seqno               = " << m_originatorSeqNumber << std::endl;
-  os << " lifetime            = " << m_lifetime << std::endl;
-  os << " preq ID             = " << m_preqId << std::endl;
-  os << " Destinations are:" << std::endl;
+  os << "PREQ=(originator address=" << m_originatorAddress
+     << ", TTL=" << (uint16_t) m_ttl
+     << ", hop count=" << (uint16_t) m_hopCount
+     << ", metric=" << m_metric
+     << ", seqno=" << m_originatorSeqNumber
+     << ", lifetime=" << m_lifetime
+     << ", preq ID=" << m_preqId
+     << ", Destinations=(";
   for (int j = 0; j < m_destCount; j++)
     {
-      os << "    " << m_destinations[j]->GetDestinationAddress () << std::endl;
+      os << m_destinations[j]->GetDestinationAddress ();
     }
-  os << "</information_element>" << std::endl;
+  os << ")";
 }
 std::vector<Ptr<DestinationAddressUnit> >
 IePreq::GetDestinationList ()
@@ -423,7 +422,8 @@ IePreq::MayAddAddress (Mac48Address originator)
     {
       return false;
     }
-  if ((GetInformationFieldSize () + 11) > 255)
+  // -fstrict-overflow sensitive, see bug 1868
+  if ( GetInformationFieldSize () > 255 - 11 )
     {
       return false;
     }
@@ -432,7 +432,8 @@ IePreq::MayAddAddress (Mac48Address originator)
 bool
 IePreq::IsFull () const
 {
-  return ((GetInformationFieldSize () + 11) > 255);
+  // -fstrict-overflow sensitive, see bug 1868
+  return ( GetInformationFieldSize () > 255 - 11 );
 }
 std::ostream &
 operator << (std::ostream &os, const IePreq &a)

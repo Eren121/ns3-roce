@@ -25,6 +25,17 @@ cpp_examples = [
     ("wifi-simple-infra", "True", "True"),
     ("wifi-simple-interference", "True", "True"),
     ("wifi-wired-bridging", "True", "True"),
+    ("power-adaptation-distance --manager=ns3::ParfWifiManager --outputFileName=parf --steps=5 --stepsSize=10", "True", "True"),
+    ("power-adaptation-distance --manager=ns3::AparfWifiManager --outputFileName=aparf --steps=5 --stepsSize=10", "True", "True"),
+    ("ofdm-ht-validation", "True", "True"),
+    ("ofdm-validation", "True", "True"),
+    ("ofdm-vht-validation", "True", "True"),
+    ("mixed-bg-network", "True", "True"),
+    ("wifi-tcp", "True", "True"),
+    ("wifi-spectrum-per-example --distance=52 --index=3 --wifiType=ns3::SpectrumWifiPhy --simulationTime=1", "True", "True"),
+    ("wifi-spectrum-per-example --distance=24 --index=31 --wifiType=ns3::YansWifiPhy --simulationTime=1", "True", "True"),
+    ("wifi-spectrum-per-interference --distance=24 --index=31 --simulationTime=1 --waveformPower=0.1", "True", "True"),
+    ("wifi-spectrum-saturation-example --simulationTime=1 --index=63", "True", "True"),
 ]
 
 # A list of Python examples to run in order to ensure that they remain

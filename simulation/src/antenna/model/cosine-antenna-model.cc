@@ -27,12 +27,11 @@
 #include "cosine-antenna-model.h"
 
 
-NS_LOG_COMPONENT_DEFINE ("CosineAntennaModel");
-
 namespace ns3 {
 
-NS_OBJECT_ENSURE_REGISTERED (CosineAntennaModel)
-  ;
+NS_LOG_COMPONENT_DEFINE ("CosineAntennaModel");
+
+NS_OBJECT_ENSURE_REGISTERED (CosineAntennaModel);
 
 
 TypeId 
@@ -40,6 +39,7 @@ CosineAntennaModel::GetTypeId ()
 {
   static TypeId tid = TypeId ("ns3::CosineAntennaModel")
     .SetParent<AntennaModel> ()
+    .SetGroupName("Antenna")
     .AddConstructor<CosineAntennaModel> ()
     .AddAttribute ("Beamwidth",
                    "The 3dB beamwidth (degrees)",

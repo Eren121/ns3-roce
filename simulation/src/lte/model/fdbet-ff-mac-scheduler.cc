@@ -31,11 +31,11 @@
 #include <set>
 #include <cfloat>
 
-NS_LOG_COMPONENT_DEFINE ("FdBetFfMacScheduler");
-
 namespace ns3 {
 
-int FdBetType0AllocationRbg[4] = {
+NS_LOG_COMPONENT_DEFINE ("FdBetFfMacScheduler");
+
+static const int FdBetType0AllocationRbg[4] = {
   10,       // RGB size 1
   26,       // RGB size 2
   63,       // RGB size 3
@@ -43,8 +43,7 @@ int FdBetType0AllocationRbg[4] = {
 };  // see table 7.1.6.1-1 of 36.213
 
 
-NS_OBJECT_ENSURE_REGISTERED (FdBetFfMacScheduler)
-  ;
+NS_OBJECT_ENSURE_REGISTERED (FdBetFfMacScheduler);
 
 
 
@@ -250,6 +249,7 @@ FdBetFfMacScheduler::GetTypeId (void)
 {
   static TypeId tid = TypeId ("ns3::FdBetFfMacScheduler")
     .SetParent<FfMacScheduler> ()
+    .SetGroupName("Lte")
     .AddConstructor<FdBetFfMacScheduler> ()
     .AddAttribute ("CqiTimerThreshold",
                    "The number of TTIs a CQI is valid (default 1000 - 1 sec.)",
@@ -294,6 +294,18 @@ FfMacSchedSapProvider*
 FdBetFfMacScheduler::GetFfMacSchedSapProvider ()
 {
   return m_schedSapProvider;
+}
+
+void
+FdBetFfMacScheduler::SetLteFfrSapProvider (LteFfrSapProvider* s)
+{
+  m_ffrSapProvider = s;
+}
+
+LteFfrSapUser*
+FdBetFfMacScheduler::GetLteFfrSapUser ()
+{
+  return m_ffrSapUser;
 }
 
 void
@@ -407,7 +419,7 @@ void
 FdBetFfMacScheduler::DoCschedUeReleaseReq (const struct FfMacCschedSapProvider::CschedUeReleaseReqParameters& params)
 {
   NS_LOG_FUNCTION (this);
-  
+
   m_uesTxMode.erase (params.m_rnti);
   m_dlHarqCurrentProcessId.erase (params.m_rnti);
   m_dlHarqProcessesStatus.erase  (params.m_rnti);
@@ -602,14 +614,14 @@ FdBetFfMacScheduler::RefreshHarqProcesses ()
   NS_LOG_FUNCTION (this);
 
   std::map <uint16_t, DlHarqProcessesTimer_t>::iterator itTimers;
-  for (itTimers = m_dlHarqProcessesTimer.begin (); itTimers != m_dlHarqProcessesTimer.end (); itTimers ++)
+  for (itTimers = m_dlHarqProcessesTimer.begin (); itTimers != m_dlHarqProcessesTimer.end (); itTimers++)
     {
       for (uint16_t i = 0; i < HARQ_PROC_NUM; i++)
         {
           if ((*itTimers).second.at (i) == HARQ_DL_TIMEOUT)
             {
               // reset HARQ process
-              
+
               NS_LOG_DEBUG (this << " Reset HARQ proc " << i << " for RNTI " << (*itTimers).first);
               std::map <uint16_t, DlHarqProcessesStatus_t>::iterator itStat = m_dlHarqProcessesStatus.find ((*itTimers).first);
               if (itStat == m_dlHarqProcessesStatus.end ())
@@ -625,7 +637,7 @@ FdBetFfMacScheduler::RefreshHarqProcesses ()
             }
         }
     }
-  
+
 }
 
 
@@ -698,7 +710,6 @@ FdBetFfMacScheduler::DoSchedDlTriggerReq (const struct FfMacSchedSapProvider::Sc
         {
           m_rachAllocationMap.at (i) = (*itRach).m_rnti;
         }
-      rbStart = rbStart + rbLen;
 
       if (m_harqOn == true)
         {
@@ -738,6 +749,7 @@ FdBetFfMacScheduler::DoSchedDlTriggerReq (const struct FfMacSchedSapProvider::Sc
           (*itDci).second.at (harqId) = uldci;
         }
 
+      rbStart = rbStart + rbLen;
       ret.m_buildRarList.push_back (newRar);
     }
   m_rachList.clear ();
@@ -883,7 +895,7 @@ FdBetFfMacScheduler::DoSchedDlTriggerReq (const struct FfMacSchedSapProvider::Sc
                       dciRbg.at (j) = rbgId;
                       j++;
                     }
-                  rbgId++;
+                  rbgId = (rbgId + 1) % rbgNum;
                 }
               if (j == dciRbg.size ())
                 {
@@ -901,7 +913,7 @@ FdBetFfMacScheduler::DoSchedDlTriggerReq (const struct FfMacSchedSapProvider::Sc
               else
                 {
                   // HARQ retx cannot be performed on this TTI -> store it
-                  dlInfoListUntxed.push_back (params.m_dlInfoList.at (i));
+                  dlInfoListUntxed.push_back (m_dlInfoListBuffered.at (i));
                   NS_LOG_INFO (this << " No resource for this retx -> buffer it");
                 }
             }
@@ -1030,7 +1042,7 @@ FdBetFfMacScheduler::DoSchedDlTriggerReq (const struct FfMacSchedSapProvider::Sc
               NS_LOG_DEBUG (this << " RNTI discared for HARQ id" << (uint16_t)(*itFlow).first);
             }
           continue;
-       }
+        }
 
       estAveThr.insert (std::pair <uint16_t, double> ((*itFlow).first, (*itFlow).second.lastAveragedThroughput));
     }
@@ -1048,8 +1060,8 @@ FdBetFfMacScheduler::DoSchedDlTriggerReq (const struct FfMacSchedSapProvider::Sc
             }
           rbgPerRntiLog.insert (std::pair<uint16_t, int> ((*it).first, 1));
         }
-      
-    
+
+
       // The scheduler tries the best to achieve the equal throughput among all UEs
       int i = 0;
       do 
@@ -1070,7 +1082,7 @@ FdBetFfMacScheduler::DoSchedDlTriggerReq (const struct FfMacSchedSapProvider::Sc
                 {
                   (*itMap).second.push_back (i);
                 }
-          
+
               // caculate expected throughput for current UE
               std::map <uint16_t,uint8_t>::iterator itCqi;
               itCqi = m_p10CqiRxed.find ((*itMax).first);
@@ -1093,7 +1105,7 @@ FdBetFfMacScheduler::DoSchedDlTriggerReq (const struct FfMacSchedSapProvider::Sc
                       mcs.push_back (m_amc->GetMcsFromCqi ((*itCqi).second));
                     }
                 }
-          
+
               std::map <uint16_t,int>::iterator itRbgPerRntiLog;
               itRbgPerRntiLog = rbgPerRntiLog.find ((*itMax).first);
               std::map <uint16_t, fdbetsFlowPerf_t>::iterator itPastAveThr;
@@ -1105,12 +1117,12 @@ FdBetFfMacScheduler::DoSchedDlTriggerReq (const struct FfMacSchedSapProvider::Sc
                   bytesTxed += tbSize;
                 }
               double expectedAveThr = ((1.0 - (1.0 / m_timeWindow)) * (*itPastAveThr).second.lastAveragedThroughput) + ((1.0 / m_timeWindow) * (double)(bytesTxed / 0.001));
-          
+
               int rbgPerRnti = (*itRbgPerRntiLog).second;
               rbgPerRnti++;
-              rbgPerRntiLog[(*itMax).first] = rbgPerRnti;   
+              rbgPerRntiLog[(*itMax).first] = rbgPerRnti;
               estAveThr[(*itMax).first] = expectedAveThr;
-          
+
               // find new UE with largest priority metric
               metricMax = 0.0;
               for (it = estAveThr.begin (); it != estAveThr.end (); it++)
@@ -1122,13 +1134,13 @@ FdBetFfMacScheduler::DoSchedDlTriggerReq (const struct FfMacSchedSapProvider::Sc
                       metricMax = metric;
                     }
                 } // end for estAveThr
-        
+
               rbgMap.at (i) = true;
-    
-          } // end for free RBGs
-    
+
+            } // end for free RBGs
+
           i++;
-      
+
         } 
       while ( i < rbgNum ); // end for RBGs
 
@@ -1241,6 +1253,8 @@ FdBetFfMacScheduler::DoSchedDlTriggerReq (const struct FfMacSchedSapProvider::Sc
           newDci.m_rv.push_back (0);
         }
 
+      newDci.m_tpc = 1; //1 is mapped to 0 in Accumulated Mode and to -1 in Absolute Mode
+
       newEl.m_dci = newDci;
 
       if (m_harqOn == true)
@@ -1308,7 +1322,7 @@ FdBetFfMacScheduler::DoSchedDlRachInfoReq (const struct FfMacSchedSapProvider::S
   NS_LOG_FUNCTION (this);
 
   m_rachList = params.m_rachList;
-  
+
   return;
 }
 
@@ -1321,7 +1335,7 @@ FdBetFfMacScheduler::DoSchedDlCqiInfoReq (const struct FfMacSchedSapProvider::Sc
     {
       if ( params.m_cqiList.at (i).m_cqiType == CqiListElement_s::P10 )
         {
-          // wideband CQI reporting
+          NS_LOG_LOGIC ("wideband CQI " <<  (uint32_t) params.m_cqiList.at (i).m_wbCqi.at (0) << " reported");
           std::map <uint16_t,uint8_t>::iterator it;
           uint16_t rnti = params.m_cqiList.at (i).m_rnti;
           it = m_p10CqiRxed.find (rnti);
@@ -1387,7 +1401,7 @@ FdBetFfMacScheduler::EstimateUlSinr (uint16_t rnti, uint16_t rb)
     {
       // take the average SINR value among the available
       double sinrSum = 0;
-      int sinrNum = 0;
+      unsigned int sinrNum = 0;
       for (uint32_t i = 0; i < m_cschedCellConfig.m_ulBandwidth; i++)
         {
           double sinr = (*itCqi).second.at (i);
@@ -1439,7 +1453,7 @@ FdBetFfMacScheduler::DoSchedUlTriggerReq (const struct FfMacSchedSapProvider::Sc
     {
       //   Process UL HARQ feedback
       for (uint16_t i = 0; i < params.m_ulInfoList.size (); i++)
-        {        
+        {
           if (params.m_ulInfoList.at (i).m_receptionStatus == UlInfoListElement_s::NotOk)
             {
               // retx correspondent block: retrieve the UL-DCI
@@ -1502,7 +1516,7 @@ FdBetFfMacScheduler::DoSchedUlTriggerReq (const struct FfMacSchedSapProvider::Sc
               ret.m_dciList.push_back (dci);
               rntiAllocated.insert (dci.m_rnti);
             }
-            else
+          else
             {
               NS_LOG_INFO (this << " HARQ-ACK feedback from RNTI " << params.m_ulInfoList.at (i).m_rnti);
             }
@@ -1526,9 +1540,10 @@ FdBetFfMacScheduler::DoSchedUlTriggerReq (const struct FfMacSchedSapProvider::Sc
     {
       if (ret.m_dciList.size () > 0)
         {
+          m_allocationMaps.insert (std::pair <uint16_t, std::vector <uint16_t> > (params.m_sfnSf, rbgAllocationMap));
           m_schedSapUser->SchedUlConfigInd (ret);
         }
-        
+
       return;  // no flows to be scheduled
     }
 
@@ -1584,7 +1599,7 @@ FdBetFfMacScheduler::DoSchedUlTriggerReq (const struct FfMacSchedSapProvider::Sc
           if (rbPerFlow < 3)
             {
               // terminate allocation
-              rbPerFlow = 0;      
+              rbPerFlow = 0;
             }
         }
 
@@ -1593,7 +1608,7 @@ FdBetFfMacScheduler::DoSchedUlTriggerReq (const struct FfMacSchedSapProvider::Sc
       uldci.m_rbLen = rbPerFlow;
       bool allocated = false;
       NS_LOG_INFO (this << " RB Allocated " << rbAllocated << " rbPerFlow " << rbPerFlow << " flows " << nflows);
-      while ((!allocated)&&((rbAllocated + rbPerFlow - 1) < m_cschedCellConfig.m_ulBandwidth) && (rbPerFlow != 0))
+      while ((!allocated)&&((rbAllocated + rbPerFlow - m_cschedCellConfig.m_ulBandwidth) < 1) && (rbPerFlow != 0))
         {
           // check availability
           bool free = true;
@@ -1628,7 +1643,7 @@ FdBetFfMacScheduler::DoSchedUlTriggerReq (const struct FfMacSchedSapProvider::Sc
               if (rbPerFlow < 3)
                 {
                   // terminate allocation
-                  rbPerFlow = 0;                 
+                  rbPerFlow = 0;
                 }
             }
         }
@@ -1676,8 +1691,8 @@ FdBetFfMacScheduler::DoSchedUlTriggerReq (const struct FfMacSchedSapProvider::Sc
 
           // translate SINR -> cqi: WILD ACK: same as DL
           double s = log2 ( 1 + (
-                                 std::pow (10, minSinr / 10 )  /
-                                 ( (-std::log (5.0 * 0.00005 )) / 1.5) ));
+                              std::pow (10, minSinr / 10 )  /
+                              ( (-std::log (5.0 * 0.00005 )) / 1.5) ));
           cqi = m_amc->GetCqiFromSpectralEfficiency (s);
           if (cqi == 0)
             {
@@ -1730,6 +1745,13 @@ FdBetFfMacScheduler::DoSchedUlTriggerReq (const struct FfMacSchedSapProvider::Sc
               NS_FATAL_ERROR ("Unable to find RNTI entry in UL DCI HARQ buffer for RNTI " << uldci.m_rnti);
             }
           (*itDci).second.at (harqId) = uldci;
+          // Update HARQ process status (RV 0)
+          std::map <uint16_t, UlHarqProcessesStatus_t>::iterator itStat = m_ulHarqProcessesStatus.find (uldci.m_rnti);
+          if (itStat == m_ulHarqProcessesStatus.end ())
+            {
+              NS_LOG_ERROR ("No info find in HARQ buffer for UE (might change eNB) " << uldci.m_rnti);
+            }
+          (*itStat).second.at (harqId) = 0;
         }
 
       NS_LOG_INFO (this << " UE Allocation RNTI " << (*it).first << " startPRB " << (uint32_t)uldci.m_rbStart << " nPRB " << (uint32_t)uldci.m_rbLen << " CQI " << cqi << " MCS " << (uint32_t)uldci.m_mcs << " TBsize " << uldci.m_tbSize << " RbAlloc " << rbAllocated << " harqId " << (uint16_t)harqId);
@@ -1817,7 +1839,7 @@ FdBetFfMacScheduler::DoSchedUlMacCtrlInfoReq (const struct FfMacSchedSapProvider
               uint8_t bsrId = params.m_macCeList.at (i).m_macCeValue.m_bufferStatus.at (lcg);
               buffer += BufferSizeLevelBsr::BsrId2BufferSize (bsrId);
             }
-          
+
           uint16_t rnti = params.m_macCeList.at (i).m_rnti;
           NS_LOG_LOGIC (this << "RNTI=" << rnti << " buffer=" << buffer);
           it = m_ceBsrRxed.find (rnti);
@@ -2081,7 +2103,7 @@ FdBetFfMacScheduler::UpdateDlRlcBufferInfo (uint16_t rnti, uint8_t lcid, uint16_
       // Update status queue
       if (((*it).second.m_rlcStatusPduSize > 0) && (size >= (*it).second.m_rlcStatusPduSize))
         {
-           (*it).second.m_rlcStatusPduSize = 0;
+          (*it).second.m_rlcStatusPduSize = 0;
         }
       else if (((*it).second.m_rlcRetransmissionQueueSize > 0) && (size >= (*it).second.m_rlcRetransmissionQueueSize))
         {
@@ -2096,7 +2118,7 @@ FdBetFfMacScheduler::UpdateDlRlcBufferInfo (uint16_t rnti, uint8_t lcid, uint16_
               // overestimate RLC overhead rather than
               // underestimate it and risk unneeded
               // segmentation which increases delay 
-              rlcOverhead = 4;                                  
+              rlcOverhead = 4;
             }
           else
             {
@@ -2109,7 +2131,7 @@ FdBetFfMacScheduler::UpdateDlRlcBufferInfo (uint16_t rnti, uint8_t lcid, uint16_
               (*it).second.m_rlcTransmissionQueueSize = 0;
             }
           else
-            {                    
+            {
               (*it).second.m_rlcTransmissionQueueSize -= size - rlcOverhead;
             }
         }

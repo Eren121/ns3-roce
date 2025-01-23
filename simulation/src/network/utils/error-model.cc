@@ -73,17 +73,17 @@
 #include "ns3/string.h"
 #include "ns3/pointer.h"
 
-NS_LOG_COMPONENT_DEFINE ("ErrorModel");
-
 namespace ns3 {
 
-NS_OBJECT_ENSURE_REGISTERED (ErrorModel)
-  ;
+NS_LOG_COMPONENT_DEFINE ("ErrorModel");
+
+NS_OBJECT_ENSURE_REGISTERED (ErrorModel);
 
 TypeId ErrorModel::GetTypeId (void)
 { 
   static TypeId tid = TypeId ("ns3::ErrorModel")
     .SetParent<Object> ()
+    .SetGroupName("Network")
     .AddAttribute ("IsEnabled", "Whether this ErrorModel is enabled or not.",
                    BooleanValue (true),
                    MakeBooleanAccessor (&ErrorModel::m_enable),
@@ -146,13 +146,13 @@ ErrorModel::IsEnabled (void) const
 // RateErrorModel
 //
 
-NS_OBJECT_ENSURE_REGISTERED (RateErrorModel)
-  ;
+NS_OBJECT_ENSURE_REGISTERED (RateErrorModel);
 
 TypeId RateErrorModel::GetTypeId (void)
 { 
   static TypeId tid = TypeId ("ns3::RateErrorModel")
     .SetParent<ErrorModel> ()
+    .SetGroupName("Network")
     .AddConstructor<RateErrorModel> ()
     .AddAttribute ("ErrorUnit", "The error unit",
                    EnumValue (ERROR_UNIT_BYTE),
@@ -286,13 +286,13 @@ RateErrorModel::DoReset (void)
 // BurstErrorModel
 //
 
-NS_OBJECT_ENSURE_REGISTERED (BurstErrorModel)
-  ;
+NS_OBJECT_ENSURE_REGISTERED (BurstErrorModel);
 
 TypeId BurstErrorModel::GetTypeId (void)
 {
   static TypeId tid = TypeId ("ns3::BurstErrorModel")
     .SetParent<ErrorModel> ()
+    .SetGroupName("Network")
     .AddConstructor<BurstErrorModel> ()
     .AddAttribute ("ErrorRate", "The burst error event.",
                    DoubleValue (0.0),
@@ -415,13 +415,13 @@ BurstErrorModel::DoReset (void)
 // ListErrorModel
 //
 
-NS_OBJECT_ENSURE_REGISTERED (ListErrorModel)
-  ;
+NS_OBJECT_ENSURE_REGISTERED (ListErrorModel);
 
 TypeId ListErrorModel::GetTypeId (void)
 { 
   static TypeId tid = TypeId ("ns3::ListErrorModel")
     .SetParent<ErrorModel> ()
+    .SetGroupName("Network")
     .AddConstructor<ListErrorModel> ()
   ;
   return tid;
@@ -485,13 +485,13 @@ ListErrorModel::DoReset (void)
 // ReceiveListErrorModel
 //
 
-NS_OBJECT_ENSURE_REGISTERED (ReceiveListErrorModel)
-  ;
+NS_OBJECT_ENSURE_REGISTERED (ReceiveListErrorModel);
 
 TypeId ReceiveListErrorModel::GetTypeId (void)
 { 
   static TypeId tid = TypeId ("ns3::ReceiveListErrorModel")
     .SetParent<ErrorModel> ()
+    .SetGroupName("Network")
     .AddConstructor<ReceiveListErrorModel> ()
   ;
   return tid;

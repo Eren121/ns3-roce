@@ -47,8 +47,17 @@ class DcfState
 {
 public:
   DcfState ();
-
   virtual ~DcfState ();
+
+  /**
+   * \return whether this DCF state is an EDCA state
+   *
+   * This method, which must be overridden in derived classes,
+   * indicates whether DCF or EDCAF rules should be used for this
+   * channel access function. This affects the behavior of DcfManager
+   * when dealing with this instance. 
+   */
+  virtual bool IsEdca (void) const = 0;
 
   /**
    * \param aifsn the number of slots which make up an AIFS for a specific DCF.
@@ -70,6 +79,12 @@ public:
    */
   void SetCwMax (uint32_t maxCw);
   /**
+   * Set the TXOP limit.
+   *
+   * \param txopLimit the TXOP limit
+   */
+  void SetTxopLimit (Time txopLimit);
+  /**
    * Return the number of slots that make up an AIFS.
    *
    * \return the number of slots that make up an AIFS
@@ -87,6 +102,13 @@ public:
    * \return the maximum congestion window size
    */
   uint32_t GetCwMax (void) const;
+  /**
+   * Return the TXOP limit.
+   *
+   * \return the TXOP limit
+   */
+  Time GetTxopLimit (void) const;
+
   /**
    * Update the value of the CW variable to take into account
    * a transmission success or a transmission abort (stop transmission
@@ -117,6 +139,7 @@ public:
    *          has not been granted already, false otherwise.
    */
   bool IsAccessRequested (void) const;
+
 
 private:
   friend class DcfManager;
@@ -160,7 +183,14 @@ private:
    * Notify that the device is switching channel.
    */
   void NotifyChannelSwitching (void);
-
+  /**
+   * Notify that the device has started to sleep.
+   */
+  void NotifySleep (void);
+  /**
+   * Notify that the device has started to wake up
+   */
+  void NotifyWakeUp (void);
 
   /**
    * Called by DcfManager to notify a DcfState subclass
@@ -185,6 +215,9 @@ private:
    * that a normal collision occured, that is, that
    * the medium was busy when access was requested.
    *
+   * This may also be called if the request for access occurred within
+   * the DIFS or AIFS between two frames.
+   *
    * The subclass is expected to start a new backoff by
    * calling DcfState::StartBackoffNow and DcfManager::RequestAccess
    * is access is still needed.
@@ -194,22 +227,39 @@ private:
   * Called by DcfManager to notify a DcfState subclass
   * that a channel switching occured.
   *
-  * The subclass is expected to flush the queue of
-  * packets.
+  * The subclass is expected to flush the queue of packets.
   */
-  virtual void DoNotifyChannelSwitching () = 0;
+  virtual void DoNotifyChannelSwitching (void) = 0;
+  /**
+  * Called by DcfManager to notify a DcfState subclass that the device has
+  * begun to sleep.
+  *
+  * The subclass is expected to re-insert the pending packet into the queue
+  */
+  virtual void DoNotifySleep (void) = 0;
+  /**
+  * Called by DcfManager to notify a DcfState subclass that the device
+  * has begun to wake up.
+  *
+  * The subclass is expected to restart a new backoff by
+  * calling DcfState::StartBackoffNow and DcfManager::RequestAccess
+  * is access is still needed.
+  */
+  virtual void DoNotifyWakeUp (void) = 0;
 
   uint32_t m_aifsn;
   uint32_t m_backoffSlots;
-  // the backoffStart variable is used to keep track of the
-  // time at which a backoff was started or the time at which
-  // the backoff counter was last updated.
+  //the backoffStart variable is used to keep track of the
+  //time at which a backoff was started or the time at which
+  //the backoff counter was last updated.
   Time m_backoffStart;
   uint32_t m_cwMin;
   uint32_t m_cwMax;
   uint32_t m_cw;
+  Time m_txopLimit;
   bool m_accessRequested;
 };
+
 
 /**
  * \brief Manage a set of ns3::DcfState
@@ -239,6 +289,12 @@ public:
    */
   void SetupPhyListener (Ptr<WifiPhy> phy);
   /**
+   * Remove current registered listener for Phy events.
+   *
+   * \param phy
+   */
+  void RemovePhyListener (Ptr<WifiPhy> phy);
+  /**
    * Set up listener for MacLow events.
    *
    * \param low
@@ -259,7 +315,6 @@ public:
    * one of the Notify methods has been invoked.
    */
   void SetSifs (Time sifs);
-
   /**
    * \param eifsNoDifs the duration of a EIFS minus the duration of DIFS.
    *
@@ -335,6 +390,14 @@ public:
    */
   void NotifySwitchingStartNow (Time duration);
   /**
+   * Notify the DCF that the device has been put in sleep mode.
+   */
+  void NotifySleepNow (void);
+  /**
+   * Notify the DCF that the device has been resumed from sleep mode.
+   */
+  void NotifyWakeupNow (void);
+  /**
    * \param duration the value of the received NAV.
    *
    * Called at end of rx
@@ -366,6 +429,8 @@ public:
    * Notify that CTS timer has resetted.
    */
   void NotifyCtsTimeoutResetNow ();
+
+
 private:
   /**
    * Update backoff slots for all DcfStates.
@@ -376,6 +441,7 @@ private:
    *
    * \param a
    * \param b
+   *
    * \return the most recent time
    */
   Time MostRecent (Time a, Time b) const;
@@ -385,6 +451,7 @@ private:
    * \param a
    * \param b
    * \param c
+   *
    * \return the most recent time
    */
   Time MostRecent (Time a, Time b, Time c) const;
@@ -395,6 +462,7 @@ private:
    * \param b
    * \param c
    * \param d
+   *
    * \return the most recent time
    */
   Time MostRecent (Time a, Time b, Time c, Time d) const;
@@ -407,6 +475,7 @@ private:
    * \param d
    * \param e
    * \param f
+   *
    * \return the most recent time
    */
   Time MostRecent (Time a, Time b, Time c, Time d, Time e, Time f) const;
@@ -420,6 +489,7 @@ private:
    * \param e
    * \param f
    * \param g
+   *
    * \return the most recent time
    */
   Time MostRecent (Time a, Time b, Time c, Time d, Time e, Time f, Time g) const;
@@ -427,8 +497,7 @@ private:
    * Access will never be granted to the medium _before_
    * the time returned by this method.
    *
-   * \returns the absolute time at which access could start to
-   * be granted
+   * \returns the absolute time at which access could start to be granted
    */
   Time GetAccessGrantStart (void) const;
   /**
@@ -436,6 +505,7 @@ private:
    * started for the given DcfState.
    *
    * \param state
+   *
    * \return the time when the backoff procedure started
    */
   Time GetBackoffStartFor (DcfState *state);
@@ -444,10 +514,13 @@ private:
    * ended (or will ended) for the given DcfState.
    *
    * \param state
+   *
    * \return the time when the backoff procedure ended (or will ended)
    */
   Time GetBackoffEndFor (DcfState *state);
+
   void DoRestartAccessTimeoutIfNeeded (void);
+
   /**
    * Called when access timeout should occur
    * (e.g. backoff procedure expired).
@@ -459,12 +532,20 @@ private:
   void DoGrantAccess (void);
   /**
    * Check if the device is busy sending or receiving,
-   * or NAV busy.
+   * or NAV or CCA busy.
    *
    * \return true if the device is busy,
    *         false otherwise
    */
   bool IsBusy (void) const;
+  /**
+   * Check if the device is between frames (in DIFS or AIFS interval)
+   *
+   * \param state the state to check
+   * \return true if the device is within AIFS,
+   *         false otherwise
+   */
+  bool IsWithinAifs (DcfState* state) const;
 
   /**
    * typedef for a vector of DcfStates
@@ -487,6 +568,7 @@ private:
   Time m_lastSwitchingStart;
   Time m_lastSwitchingDuration;
   bool m_rxing;
+  bool m_sleeping;
   Time m_eifsNoDifs;
   EventId m_accessTimeout;
   uint32_t m_slotTimeUs;
@@ -495,6 +577,6 @@ private:
   LowDcfListener* m_lowListener;
 };
 
-} // namespace ns3
+} //namespace ns3
 
 #endif /* DCF_MANAGER_H */

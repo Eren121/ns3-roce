@@ -42,12 +42,7 @@ class Ipv6RoutingTableEntry;
 class Ipv6MulticastRoutingTableEntry;
 
 /**
- * \ingroup internet
- * \defgroup ipv6StaticRouting Ipv6StaticRouting
- */
-/**
- * \ingroup ipv6StaticRouting
- * \class Ipv6StaticRouting
+ * \ingroup ipv6Routing
  *
  * \brief Static routing protocol for IP version 6 stacks.
  *
@@ -291,14 +286,6 @@ private:
    * \return Ipv6MulticastRoute to route the packet to reach dest address
    */
   Ptr<Ipv6MulticastRoute> LookupStatic (Ipv6Address origin, Ipv6Address group, uint32_t ifIndex);
-
-  /**
-   * \brief Choose the source address to use with destination address.
-   * \param interface interface index
-   * \param dest IPv6 destination address
-   * \return IPv6 source address to use
-   */
-  Ipv6Address SourceAddressSelection (uint32_t interface, Ipv6Address dest);
 
   /**
    * \brief the forwarding table for network.

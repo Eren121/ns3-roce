@@ -25,11 +25,9 @@
 
 namespace ns3 {
 
-NS_LOG_COMPONENT_DEFINE ("MacStatsCalculator")
-  ;
+NS_LOG_COMPONENT_DEFINE ("MacStatsCalculator");
 
-NS_OBJECT_ENSURE_REGISTERED (MacStatsCalculator)
-  ;
+NS_OBJECT_ENSURE_REGISTERED (MacStatsCalculator);
 
 MacStatsCalculator::MacStatsCalculator ()
   : m_dlFirstWrite (true),
@@ -49,6 +47,7 @@ MacStatsCalculator::GetTypeId (void)
 {
   static TypeId tid = TypeId ("ns3::MacStatsCalculator")
     .SetParent<LteStatsCalculator> ()
+    .SetGroupName("Lte")
     .AddConstructor<MacStatsCalculator> ()
     .AddAttribute ("DlOutputFilename",
                    "Name of the file where the downlink results will be saved.",

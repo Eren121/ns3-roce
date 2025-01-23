@@ -21,8 +21,10 @@
 #define SIMPLE_CHANNEL_H
 
 #include "ns3/channel.h"
+#include "ns3/nstime.h"
 #include "mac48-address.h"
 #include <vector>
+#include <map>
 
 namespace ns3 {
 
@@ -31,11 +33,23 @@ class Packet;
 
 /**
  * \ingroup channel
- * \brief A simple channel, for simple things and testing
+ * \brief A simple channel, for simple things and testing.
+ *
+ * This channel doesn't check for packet collisions and it
+ * does not introduce any error.
+ * By default, it does not add any delay to the packets.
+ * Furthermore, it assumes that the associated NetDevices
+ * are using 48-bit MAC addresses.
+ *
+ * This channel is meant to be used by ns3::SimpleNetDevices.
  */
 class SimpleChannel : public Channel
 {
 public:
+  /**
+   * \brief Get the type ID.
+   * \return the object TypeId
+   */
   static TypeId GetTypeId (void);
   SimpleChannel ();
 
@@ -61,12 +75,32 @@ public:
    */ 
   virtual void Add (Ptr<SimpleNetDevice> device);
 
+  /**
+   * Blocks the communications from a NetDevice to another NetDevice.
+   * The block is unidirectional
+   *
+   * \param from the device to BlackList
+   * \param to the device wanting to block the other one
+   */
+  virtual void BlackList (Ptr<SimpleNetDevice> from, Ptr<SimpleNetDevice> to);
+
+  /**
+   * Un-Blocks the communications from a NetDevice to another NetDevice.
+   * The block is unidirectional
+   *
+   * \param from the device to BlackList
+   * \param to the device wanting to block the other one
+   */
+  virtual void UnBlackList (Ptr<SimpleNetDevice> from, Ptr<SimpleNetDevice> to);
+
   // inherited from ns3::Channel
   virtual uint32_t GetNDevices (void) const;
   virtual Ptr<NetDevice> GetDevice (uint32_t i) const;
 
 private:
-  std::vector<Ptr<SimpleNetDevice> > m_devices;
+  Time m_delay; //!< The assigned speed-of-light delay of the channel
+  std::vector<Ptr<SimpleNetDevice> > m_devices; //!< devices connected by the channel
+  std::map<Ptr<SimpleNetDevice>, std::vector<Ptr<SimpleNetDevice> > > m_blackListedDevices; //!< devices blocked on a device
 };
 
 } // namespace ns3

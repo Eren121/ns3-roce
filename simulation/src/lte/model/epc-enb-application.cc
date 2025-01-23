@@ -33,9 +33,7 @@
 
 namespace ns3 {
 
-NS_LOG_COMPONENT_DEFINE ("EpcEnbApplication")
-  ;
-
+NS_LOG_COMPONENT_DEFINE ("EpcEnbApplication");
 
 EpcEnbApplication::EpsFlowId_t::EpsFlowId_t ()
 {
@@ -64,7 +62,8 @@ TypeId
 EpcEnbApplication::GetTypeId (void)
 {
   static TypeId tid = TypeId ("ns3::EpcEnbApplication")
-    .SetParent<Object> ();
+    .SetParent<Object> ()
+    .SetGroupName("Lte");
   return tid;
 }
 
@@ -244,11 +243,6 @@ EpcEnbApplication::RecvFromLteSocket (Ptr<Socket> socket)
   NS_ASSERT (socket == m_lteSocket);
   Ptr<Packet> packet = socket->Recv ();
 
-  /// \internal
-  /// Workaround for \bugid{231}
-  SocketAddressTag satag;
-  packet->RemovePacketTag (satag);
-
   EpsBearerTag tag;
   bool found = packet->RemovePacketTag (tag);
   NS_ASSERT (found);
@@ -281,11 +275,6 @@ EpcEnbApplication::RecvFromS1uSocket (Ptr<Socket> socket)
   std::map<uint32_t, EpsFlowId_t>::iterator it = m_teidRbidMap.find (teid);
   NS_ASSERT (it != m_teidRbidMap.end ());
 
-  /// \internal
-  /// Workaround for \bugid{231}
-  SocketAddressTag tag;
-  packet->RemovePacketTag (tag);
-  
   SendToLteSocket (packet, it->second.m_rnti, it->second.m_bid);
 }
 
@@ -311,8 +300,18 @@ EpcEnbApplication::SendToS1uSocket (Ptr<Packet> packet, uint32_t teid)
   gtpu.SetLength (packet->GetSize () + gtpu.GetSerializedSize () - 8);  
   packet->AddHeader (gtpu);
   uint32_t flags = 0;
-  m_s1uSocket->SendTo (packet, flags, InetSocketAddress(m_sgwS1uAddress, m_gtpuUdpPort));
+  m_s1uSocket->SendTo (packet, flags, InetSocketAddress (m_sgwS1uAddress, m_gtpuUdpPort));
 }
 
-
-}; // namespace ns3
+void
+EpcEnbApplication::DoReleaseIndication (uint64_t imsi, uint16_t rnti, uint8_t bearerId)
+{
+  NS_LOG_FUNCTION (this << bearerId );
+  std::list<EpcS1apSapMme::ErabToBeReleasedIndication> erabToBeReleaseIndication;
+  EpcS1apSapMme::ErabToBeReleasedIndication erab;
+  erab.erabId = bearerId;
+  erabToBeReleaseIndication.push_back (erab);
+  //From 3GPP TS 23401-950 Section 5.4.4.2, enB sends EPS bearer Identity in Bearer Release Indication message to MME
+  m_s1apSapMme->ErabReleaseIndication (imsi, rnti, erabToBeReleaseIndication);
+}
+}  // namespace ns3

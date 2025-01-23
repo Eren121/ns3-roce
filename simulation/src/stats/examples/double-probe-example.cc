@@ -38,6 +38,10 @@ NS_LOG_COMPONENT_DEFINE ("DoubleProbeExample");
 class Emitter : public Object
 {
 public:
+  /**
+   * Register this type.
+   * \return The TypeId.
+   */
   static TypeId GetTypeId (void);
   Emitter ();
 private:
@@ -50,18 +54,19 @@ private:
 
 };
 
-NS_OBJECT_ENSURE_REGISTERED (Emitter)
-  ;
+NS_OBJECT_ENSURE_REGISTERED (Emitter);
 
 TypeId
 Emitter::GetTypeId (void)
 {
   static TypeId tid = TypeId ("ns3::Emitter")
-    .AddConstructor<Emitter> ()
     .SetParent<Object> ()
+    .SetGroupName ("Stats")
+    .AddConstructor<Emitter> ()
     .AddTraceSource ("Counter",
                      "sample counter",
-                     MakeTraceSourceAccessor (&Emitter::m_counter))
+                     MakeTraceSourceAccessor (&Emitter::m_counter),
+                     "ns3::TracedValueCallback::Double")
   ;
   return tid;
 }

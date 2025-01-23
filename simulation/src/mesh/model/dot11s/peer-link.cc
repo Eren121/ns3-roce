@@ -26,19 +26,20 @@
 #include "ns3/simulator.h"
 #include "ns3/traced-value.h"
 
-NS_LOG_COMPONENT_DEFINE ("Dot11sPeerManagementProtocol");
-
 namespace ns3 {
+
+NS_LOG_COMPONENT_DEFINE ("Dot11sPeerManagementProtocol");
+  
 namespace dot11s {
 
-NS_OBJECT_ENSURE_REGISTERED ( PeerLink)
-  ;
+NS_OBJECT_ENSURE_REGISTERED ( PeerLink);
 
 TypeId
 PeerLink::GetTypeId ()
 {
   static TypeId tid = TypeId ("ns3::dot11s::PeerLink")
     .SetParent<Object> ()
+    .SetGroupName ("Mesh")
     .AddConstructor<PeerLink> ()
     .AddAttribute ( "RetryTimeout",
                     "Retry timeout",

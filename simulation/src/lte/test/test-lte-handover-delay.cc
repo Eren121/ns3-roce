@@ -44,10 +44,9 @@
 #include <ns3/position-allocator.h>
 
 
+using namespace ns3;
+
 NS_LOG_COMPONENT_DEFINE("LteHandoverDelayTest");
-
-namespace ns3 {
-
 
 /*
  * HANDOVER DELAY TEST CASE
@@ -290,7 +289,3 @@ public:
       }
   }
 } g_lteHandoverDelayTestSuite;
-
-
-
-} // end of namespace ns3

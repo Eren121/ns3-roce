@@ -29,21 +29,18 @@
 #include "non-communicating-net-device.h"
 
 
-NS_LOG_COMPONENT_DEFINE ("NonCommunicatingNetDevice");
-
-
 namespace ns3 {
 
+NS_LOG_COMPONENT_DEFINE ("NonCommunicatingNetDevice");
 
-
-NS_OBJECT_ENSURE_REGISTERED (NonCommunicatingNetDevice)
-  ;
+NS_OBJECT_ENSURE_REGISTERED (NonCommunicatingNetDevice);
 
 TypeId
 NonCommunicatingNetDevice::GetTypeId (void)
 {
   static TypeId tid = TypeId ("ns3::NonCommunicatingNetDevice")
     .SetParent<NetDevice> ()
+    .SetGroupName ("Spectrum")
     .AddConstructor<NonCommunicatingNetDevice> ()
     .AddAttribute ("Phy", "The PHY layer attached to this device.",
                    PointerValue (),

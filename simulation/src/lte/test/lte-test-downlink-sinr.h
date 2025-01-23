@@ -27,9 +27,7 @@
 
 #include "ns3/test.h"
 
-
-namespace ns3 {
-
+using namespace ns3;
 
 /**
  * Test 1.1 SINR calculation in downlink
@@ -52,7 +50,7 @@ private:
 
   Ptr<SpectrumValue> m_sv;
   Ptr<const SpectrumModel> m_sm;
-  Ptr<SpectrumValue> m_sinr;
+  Ptr<SpectrumValue> m_expectedSinr;
 };
 
 
@@ -61,15 +59,13 @@ class LteDownlinkCtrlSinrTestCase : public TestCase
   public:
     LteDownlinkCtrlSinrTestCase (Ptr<SpectrumValue> sv, Ptr<SpectrumValue> sinr, std::string name);
     virtual ~LteDownlinkCtrlSinrTestCase ();
-    
-  private:
-    virtual void DoRun (void);
-    
-    Ptr<SpectrumValue> m_sv;
-    Ptr<const SpectrumModel> m_sm;
-    Ptr<SpectrumValue> m_sinr;
+  
+private:
+  virtual void DoRun (void);
+  
+  Ptr<SpectrumValue> m_sv;
+  Ptr<const SpectrumModel> m_sm;
+  Ptr<SpectrumValue> m_expectedSinr;
 };
-
-} // namespace ns3
 
 #endif /* LTE_TEST_DOWNLINK_SINR_H */

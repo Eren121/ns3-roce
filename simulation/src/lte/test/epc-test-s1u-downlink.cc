@@ -41,12 +41,9 @@
 #include "ns3/eps-bearer.h"
 #include "lte-test-entities.h"
 
-namespace ns3 {
+using namespace ns3;
 
-
-NS_LOG_COMPONENT_DEFINE ("EpcTestS1uDownlink")
-  ;
-
+NS_LOG_COMPONENT_DEFINE ("EpcTestS1uDownlink");
 
 
 struct UeDlTestData
@@ -311,8 +308,3 @@ EpcS1uDlTestSuite::EpcS1uDlTestSuite ()
   v8.push_back (e8);
   AddTestCase (new EpcS1uDlTestCase ("1 eNB, 100 pkts 15000 bytes each", v8), TestCase::QUICK);
 }
-
-
-
-}  // namespace ns3
-

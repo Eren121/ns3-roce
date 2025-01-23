@@ -24,8 +24,7 @@
 
 namespace ns3 {
 
-NS_LOG_COMPONENT_DEFINE ("Ipv6EndPointDemux")
-  ;
+NS_LOG_COMPONENT_DEFINE ("Ipv6EndPointDemux");
 
 Ipv6EndPointDemux::Ipv6EndPointDemux ()
   : m_ephemeral (49152),
@@ -183,10 +182,19 @@ Ipv6EndPointDemux::EndPoints Ipv6EndPointDemux::Lookup (Ipv6Address daddr, uint1
   for (EndPointsI i = m_endPoints.begin (); i != m_endPoints.end (); i++)
     {
       Ipv6EndPoint* endP = *i;
+
       NS_LOG_DEBUG ("Looking at endpoint dport=" << endP->GetLocalPort ()
                                                  << " daddr=" << endP->GetLocalAddress ()
                                                  << " sport=" << endP->GetPeerPort ()
                                                  << " saddr=" << endP->GetPeerAddress ());
+
+      if (!endP->IsRxEnabled ())
+        {
+          NS_LOG_LOGIC ("Skipping endpoint " << &endP
+                        << " because endpoint can not receive packets");
+          continue;
+        }
+
       if (endP->GetLocalPort () != dport)
         {
           NS_LOG_LOGIC ("Skipping endpoint " << &endP
@@ -198,6 +206,10 @@ Ipv6EndPointDemux::EndPoints Ipv6EndPointDemux::Lookup (Ipv6Address daddr, uint1
 
       if (endP->GetBoundNetDevice ())
         {
+          if (!incomingInterface)
+            {
+              continue;
+            }
           if (endP->GetBoundNetDevice () != incomingInterface->GetDevice ())
             {
               NS_LOG_LOGIC ("Skipping endpoint " << &endP

@@ -30,8 +30,7 @@
 
 namespace ns3 {
 
-NS_LOG_COMPONENT_DEFINE ("BuildingList")
-  ;
+NS_LOG_COMPONENT_DEFINE ("BuildingList");
 
 /**
  * \brief private implementation detail of the BuildingList API.
@@ -58,14 +57,14 @@ private:
   std::vector<Ptr<Building> > m_buildings;
 };
 
-NS_OBJECT_ENSURE_REGISTERED (BuildingListPriv)
-  ;
+NS_OBJECT_ENSURE_REGISTERED (BuildingListPriv);
 
 TypeId
 BuildingListPriv::GetTypeId (void)
 {
   static TypeId tid = TypeId ("ns3::BuildingListPriv")
     .SetParent<Object> ()
+    .SetGroupName ("Buildings")
     .AddAttribute ("BuildingList", "The list of all buildings created during the simulation.",
                    ObjectVectorValue (),
                    MakeObjectVectorAccessor (&BuildingListPriv::m_buildings),

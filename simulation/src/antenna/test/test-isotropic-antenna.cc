@@ -26,7 +26,7 @@
 #include <iostream>
 #include <sstream>
 
-namespace ns3 {
+using namespace ns3;
 
 class IsotropicAntennaModelTestCase : public TestCase
 {
@@ -60,7 +60,7 @@ IsotropicAntennaModelTestCase::IsotropicAntennaModelTestCase (Angles a, double e
 void
 IsotropicAntennaModelTestCase::DoRun ()
 {
-  Ptr<IsotropicAntennaModel> a = Create<IsotropicAntennaModel> ();
+  Ptr<IsotropicAntennaModel> a = CreateObject<IsotropicAntennaModel> ();
   double actualGain = a->GetGainDb (m_a);
   NS_TEST_EXPECT_MSG_EQ_TOL (actualGain, m_expectedGain, 0.01, "wrong value of the radiation pattern");
 }
@@ -90,8 +90,3 @@ IsotropicAntennaModelTestSuite::IsotropicAntennaModelTestSuite ()
 };
 
 static IsotropicAntennaModelTestSuite staticIsotropicAntennaModelTestSuiteInstance;
-
-
-
-
-} // namespace ns3

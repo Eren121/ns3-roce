@@ -22,8 +22,7 @@ public:
   int16_t m_int16;
 };
 
-NS_OBJECT_ENSURE_REGISTERED (ConfigExample)
-  ;
+NS_OBJECT_ENSURE_REGISTERED (ConfigExample);
 
 // Assign a new default value to A::TestInt16 (-5)
 // Configure a TestInt16 value for a special instance of A (to -3)
@@ -31,6 +30,9 @@ NS_OBJECT_ENSURE_REGISTERED (ConfigExample)
 // 
 int main (int argc, char *argv[])
 {
+  CommandLine cmd;
+  cmd.Parse (argc, argv);
+  
   Config::SetDefault ("ns3::ConfigExample::TestInt16", IntegerValue (-5));
 
   Ptr<ConfigExample> a_obj = CreateObject<ConfigExample> ();

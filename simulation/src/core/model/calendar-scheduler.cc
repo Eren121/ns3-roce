@@ -26,19 +26,24 @@
 #include "assert.h"
 #include "log.h"
 
+/**
+ * \file
+ * \ingroup scheduler
+ * Implementation of ns3::CalendarScheduler class.
+ */
+
 namespace ns3 {
 
-NS_LOG_COMPONENT_DEFINE ("CalendarScheduler")
-  ;
+NS_LOG_COMPONENT_DEFINE ("CalendarScheduler");
 
-NS_OBJECT_ENSURE_REGISTERED (CalendarScheduler)
-  ;
+NS_OBJECT_ENSURE_REGISTERED (CalendarScheduler);
 
 TypeId
 CalendarScheduler::GetTypeId (void)
 {
   static TypeId tid = TypeId ("ns3::CalendarScheduler")
     .SetParent<Scheduler> ()
+    .SetGroupName ("Core")
     .AddConstructor<CalendarScheduler> ()
   ;
   return tid;

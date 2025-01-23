@@ -40,12 +40,11 @@
 #include "ipv6-l3-protocol.h"
 #include "udp-socket-impl.h"
 
-NS_LOG_COMPONENT_DEFINE ("UdpL4Protocol");
-
 namespace ns3 {
 
-NS_OBJECT_ENSURE_REGISTERED (UdpL4Protocol)
-  ;
+NS_LOG_COMPONENT_DEFINE ("UdpL4Protocol");
+
+NS_OBJECT_ENSURE_REGISTERED (UdpL4Protocol);
 
 /* see http://www.iana.org/assignments/protocol-numbers */
 const uint8_t UdpL4Protocol::PROT_NUMBER = 17;
@@ -55,6 +54,7 @@ UdpL4Protocol::GetTypeId (void)
 {
   static TypeId tid = TypeId ("ns3::UdpL4Protocol")
     .SetParent<IpL4Protocol> ()
+    .SetGroupName ("Internet")
     .AddConstructor<UdpL4Protocol> ()
     .AddAttribute ("SocketList", "The list of sockets associated to this protocol.",
                    ObjectVectorValue (),
@@ -92,7 +92,7 @@ UdpL4Protocol::NotifyNewAggregate ()
   NS_LOG_FUNCTION (this);
   Ptr<Node> node = this->GetObject<Node> ();
   Ptr<Ipv4> ipv4 = this->GetObject<Ipv4> ();
-  Ptr<Ipv6L3Protocol> ipv6 = node->GetObject<Ipv6L3Protocol> ();
+  Ptr<Ipv6> ipv6 = node->GetObject<Ipv6> ();
 
   if (m_node == 0)
     {
@@ -118,9 +118,9 @@ UdpL4Protocol::NotifyNewAggregate ()
   if (ipv6 != 0 && m_downTarget6.IsNull())
     {
       ipv6->Insert (this);
-      this->SetDownTarget6 (MakeCallback (&Ipv6L3Protocol::Send, ipv6));
+      this->SetDownTarget6 (MakeCallback (&Ipv6::Send, ipv6));
     }
-  Object::NotifyNewAggregate ();
+  IpL4Protocol::NotifyNewAggregate ();
 }
 
 int 

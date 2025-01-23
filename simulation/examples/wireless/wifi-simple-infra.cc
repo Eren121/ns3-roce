@@ -64,13 +64,16 @@
 #include <vector>
 #include <string>
 
-NS_LOG_COMPONENT_DEFINE ("WifiSimpleInfra");
-
 using namespace ns3;
+
+NS_LOG_COMPONENT_DEFINE ("WifiSimpleInfra");
 
 void ReceivePacket (Ptr<Socket> socket)
 {
-  NS_LOG_UNCOND ("Received one packet!");
+  while (socket->Recv ())
+    {
+      NS_LOG_UNCOND ("Received one packet!");
+    }
 }
 
 static void GenerateTraffic (Ptr<Socket> socket, uint32_t pktSize, 
@@ -144,18 +147,17 @@ int main (int argc, char *argv[])
   wifiChannel.AddPropagationLoss ("ns3::FixedRssLossModel","Rss",DoubleValue (rss));
   wifiPhy.SetChannel (wifiChannel.Create ());
 
-  // Add a non-QoS upper mac, and disable rate control
-  NqosWifiMacHelper wifiMac = NqosWifiMacHelper::Default ();
+  // Add a mac and disable rate control
+  WifiMacHelper wifiMac;
   wifi.SetRemoteStationManager ("ns3::ConstantRateWifiManager",
                                 "DataMode",StringValue (phyMode),
                                 "ControlMode",StringValue (phyMode));
 
-  // Setup the rest of the upper mac
+  // Setup the rest of the mac
   Ssid ssid = Ssid ("wifi-default");
   // setup sta.
   wifiMac.SetType ("ns3::StaWifiMac",
-                   "Ssid", SsidValue (ssid),
-                   "ActiveProbing", BooleanValue (false));
+                   "Ssid", SsidValue (ssid));
   NetDeviceContainer staDevice = wifi.Install (wifiPhy, wifiMac, c.Get (0));
   NetDeviceContainer devices = staDevice;
   // setup ap.

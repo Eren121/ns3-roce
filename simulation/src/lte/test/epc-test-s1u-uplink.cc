@@ -48,12 +48,9 @@
 #include "ns3/config.h"
 #include "lte-test-entities.h"
 
-namespace ns3 {
+using namespace ns3;
 
-
-
-NS_LOG_COMPONENT_DEFINE ("EpcTestS1uUplink")
-  ;
+NS_LOG_COMPONENT_DEFINE ("EpcTestS1uUplink");
 
 /*
  * A Udp client. Sends UDP packet carrying sequence number and time
@@ -402,8 +399,8 @@ EpcS1uUlTestCase::DoRun ()
           Ptr<ArpCache> ueArpCache = ueLteIpv4Iface->GetArpCache (); 
           ueArpCache->SetAliveTimeout (Seconds (1000));          
           ArpCache::Entry* arpCacheEntry = ueArpCache->Add (gwAddr);
-          arpCacheEntry->MarkWaitReply(0);
-          arpCacheEntry->MarkAlive (Mac48Address::GetBroadcast ()); 
+          arpCacheEntry->SetMacAddresss (Mac48Address::GetBroadcast ());
+          arpCacheEntry->MarkPermanent ();
   
           
           PacketSinkHelper packetSinkHelper ("ns3::UdpSocketFactory", 
@@ -538,8 +535,3 @@ EpcS1uUlTestSuite::EpcS1uUlTestSuite ()
   AddTestCase (new EpcS1uUlTestCase ("1 eNB, 100 pkts 15000 bytes each", v8), TestCase::QUICK);
   
 }
-
-
-
-}  // namespace ns3
-

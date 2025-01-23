@@ -57,6 +57,9 @@ class AcousticModemEnergyModel : public DeviceEnergyModel
 public:
   /** Callback type for energy depletion handling. */
   typedef Callback<void> AcousticModemEnergyDepletionCallback;
+  
+  /** Callback type for energy recharge handling. */
+  typedef Callback<void> AcousticModemEnergyRechargeCallback;
 
 public:  
   /**
@@ -156,9 +159,16 @@ public:
    * Sets callback for energy depletion handling.
    */
   void SetEnergyDepletionCallback (AcousticModemEnergyDepletionCallback callback);
+  
+  /**
+   * \param callback Callback function.
+   *
+   * Sets callback for energy recharge handling.
+   */
+  void SetEnergyRechargeCallback (AcousticModemEnergyRechargeCallback callback);
 
   /**
-   * Changes state of the AcousticModemEnergyModel..
+   * Changes state of the AcousticModemEnergyModel.
    *
    * \param newState New state the modem is in.
    */
@@ -168,6 +178,13 @@ public:
    * Handles energy depletion.
    */
   virtual void HandleEnergyDepletion (void);
+
+  /**
+   * \brief Handles energy recharged.
+   *
+   * Not implemented
+   */
+  virtual void HandleEnergyRecharged (void);
 
 
 private:
@@ -213,6 +230,9 @@ private:
 
   /** Energy depletion callback. */
   AcousticModemEnergyDepletionCallback m_energyDepletionCallback;
+  
+  /** Energy recharge callback. */
+  AcousticModemEnergyRechargeCallback m_energyRechargeCallback;
 
 };  // class AcousticModemEnergyModel
 

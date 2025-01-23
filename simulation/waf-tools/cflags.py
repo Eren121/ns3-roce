@@ -19,7 +19,7 @@ class GccTraits(CompilerTraits):
 	def __init__(self):
 		super(GccTraits, self).__init__()
 		# cumulative list of warnings per level
-		self.warnings_flags = [['-Wall'], [], ['-Wextra']]
+		self.warnings_flags = [['-Wall'], ['-Werror'], ['-Wextra']]
 
 	def get_warnings_flags(self, level):
 		warnings = []
@@ -131,6 +131,8 @@ compiler_mapping = {
 	'msvc': msvc,
 	'icc': icc,
 	'icpc': icc,
+	'clang': gcc,
+	'clang++': gcc,
 }
 
 profiles = {
@@ -150,11 +152,13 @@ def options(opt):
 		       help=("Specify the build profile.  "
 			     "Build profiles control the default compilation flags"
 			     " used for C/C++ programs, if CCFLAGS/CXXFLAGS are not"
-			     " set set in the environment. [Allowed Values: %s]"
-			     % ", ".join([repr(p) for p in profiles.keys()])),
-		       choices=profiles.keys(),
+			     " set in the environment. [Allowed Values: %s]"
+			     % ", ".join([repr(p) for p in list(profiles.keys())])),
+		       choices=list(profiles.keys()),
 		       dest='build_profile')
-
+	opt.add_option('--check-profile',
+		       help=('print out current build profile'),
+		       default=False, dest='check_profile', action="store_true")
 def configure(conf):
 	cc = conf.env['COMPILER_CC'] or None
 	cxx = conf.env['COMPILER_CXX'] or None

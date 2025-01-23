@@ -28,10 +28,9 @@
 #include "ns3/lte-rlc-sap.h"
 // #include "ff-mac-sched-sap.h"
 
-NS_LOG_COMPONENT_DEFINE ("LteRlc");
-
 namespace ns3 {
 
+NS_LOG_COMPONENT_DEFINE ("LteRlc");
 
 
 ///////////////////////////////////////
@@ -81,8 +80,7 @@ LteRlcSpecificLteMacSapUser::ReceivePdu (Ptr<Packet> p)
 
 ///////////////////////////////////////
 
-NS_OBJECT_ENSURE_REGISTERED (LteRlc)
-  ;
+NS_OBJECT_ENSURE_REGISTERED (LteRlc);
 
 LteRlc::LteRlc ()
   : m_rlcSapUser (0),
@@ -104,12 +102,15 @@ TypeId LteRlc::GetTypeId (void)
 {
   static TypeId tid = TypeId ("ns3::LteRlc")
     .SetParent<Object> ()
+    .SetGroupName("Lte")
     .AddTraceSource ("TxPDU",
                      "PDU transmission notified to the MAC.",
-                     MakeTraceSourceAccessor (&LteRlc::m_txPdu))
+                     MakeTraceSourceAccessor (&LteRlc::m_txPdu),
+                     "ns3::LteRlc::NotifyTxTracedCallback")
     .AddTraceSource ("RxPDU",
                      "PDU received.",
-                     MakeTraceSourceAccessor (&LteRlc::m_rxPdu))
+                     MakeTraceSourceAccessor (&LteRlc::m_rxPdu),
+                     "ns3::LteRlc::ReceiveTracedCallback")
     ;
   return tid;
 }
@@ -168,8 +169,7 @@ LteRlc::GetLteMacSapUser ()
 
 ////////////////////////////////////////
 
-NS_OBJECT_ENSURE_REGISTERED (LteRlcSm)
-  ;
+NS_OBJECT_ENSURE_REGISTERED (LteRlcSm);
 
 LteRlcSm::LteRlcSm ()
 {
@@ -186,6 +186,7 @@ LteRlcSm::GetTypeId (void)
 {
   static TypeId tid = TypeId ("ns3::LteRlcSm")
     .SetParent<LteRlc> ()
+    .SetGroupName("Lte")
     .AddConstructor<LteRlcSm> ()
     ;
   return tid;
@@ -218,10 +219,9 @@ LteRlcSm::DoReceivePdu (Ptr<Packet> p)
   // RLC Performance evaluation
   RlcTag rlcTag;
   Time delay;
-  if (p->FindFirstMatchingByteTag(rlcTag))
-    {
-      delay = Simulator::Now() - rlcTag.GetSenderTimestamp ();
-    }
+  NS_ASSERT_MSG (p->PeekPacketTag (rlcTag), "RlcTag is missing");
+  p->RemovePacketTag (rlcTag);
+  delay = Simulator::Now() - rlcTag.GetSenderTimestamp ();
   NS_LOG_LOGIC (" RNTI=" << m_rnti 
                 << " LCID=" << (uint32_t) m_lcid 
                 << " size=" << p->GetSize () 
@@ -242,7 +242,7 @@ LteRlcSm::DoNotifyTxOpportunity (uint32_t bytes, uint8_t layer, uint8_t harqId)
 
   // RLC Performance evaluation
   RlcTag tag (Simulator::Now());
-  params.pdu->AddByteTag (tag);
+  params.pdu->AddPacketTag (tag);
   NS_LOG_LOGIC (" RNTI=" << m_rnti 
                 << " LCID=" << (uint32_t) m_lcid 
                 << " size=" << bytes);

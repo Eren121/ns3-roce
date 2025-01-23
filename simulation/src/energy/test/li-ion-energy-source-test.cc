@@ -25,10 +25,9 @@
 #include "ns3/node.h"
 #include "ns3/simulator.h"
 
-namespace ns3 {
+using namespace ns3;
 
-NS_LOG_COMPONENT_DEFINE ("LiIonEnergySourceTestSuite")
-  ;
+NS_LOG_COMPONENT_DEFINE ("LiIonEnergySourceTestSuite");
 
 class LiIonEnergyTestCase : public TestCase
 {
@@ -38,7 +37,6 @@ public:
 
   void DoRun (void);
 
-  double m_simTime;
   Ptr<Node> m_node;
 };
 
@@ -93,5 +91,3 @@ LiIonEnergySourceTestSuite::LiIonEnergySourceTestSuite ()
 
 // create an instance of the test suite
 static LiIonEnergySourceTestSuite g_liIonEnergySourceTestSuite;
-
-} // namespace ns3

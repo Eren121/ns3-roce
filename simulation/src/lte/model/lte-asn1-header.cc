@@ -25,18 +25,18 @@
 #include <sstream>
 #include <cmath>
 
-NS_LOG_COMPONENT_DEFINE ("Asn1Header");
-
 namespace ns3 {
 
-NS_OBJECT_ENSURE_REGISTERED (Asn1Header)
-  ;
+NS_LOG_COMPONENT_DEFINE ("Asn1Header");
+
+NS_OBJECT_ENSURE_REGISTERED (Asn1Header);
 
 TypeId
 Asn1Header::GetTypeId (void)
 {
   static TypeId tid = TypeId ("ns3::Asn1Header")
     .SetParent<Header> ()
+    .SetGroupName("Lte")
   ;
   return tid;
 }

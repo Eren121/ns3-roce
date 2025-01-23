@@ -27,18 +27,19 @@
 #include "hwmp-rtable.h"
 
 namespace ns3 {
-namespace dot11s {
 
 NS_LOG_COMPONENT_DEFINE ("HwmpRtable");
 
-NS_OBJECT_ENSURE_REGISTERED (HwmpRtable)
-  ;
+namespace dot11s {
+  
+NS_OBJECT_ENSURE_REGISTERED (HwmpRtable);
 
 TypeId
 HwmpRtable::GetTypeId ()
 {
   static TypeId tid = TypeId ("ns3::dot11s::HwmpRtable")
     .SetParent<Object> ()
+    .SetGroupName ("Mesh")
     .AddConstructor<HwmpRtable> ();
   return tid;
 }

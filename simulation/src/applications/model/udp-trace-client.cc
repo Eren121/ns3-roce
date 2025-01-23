@@ -37,10 +37,9 @@
 
 namespace ns3 {
 
-NS_LOG_COMPONENT_DEFINE ("UdpTraceClient")
-  ;
-NS_OBJECT_ENSURE_REGISTERED (UdpTraceClient)
-  ;
+NS_LOG_COMPONENT_DEFINE ("UdpTraceClient");
+
+NS_OBJECT_ENSURE_REGISTERED (UdpTraceClient);
 
 /**
  * \brief Default trace to send
@@ -63,6 +62,7 @@ UdpTraceClient::GetTypeId (void)
 {
   static TypeId tid = TypeId ("ns3::UdpTraceClient")
     .SetParent<Application> ()
+    .SetGroupName("Applications")
     .AddConstructor<UdpTraceClient> ()
     .AddAttribute ("RemoteAddress",
                    "The destination Address of the outbound packets",
@@ -131,21 +131,11 @@ UdpTraceClient::SetRemote (Address ip, uint16_t port)
 }
 
 void
-UdpTraceClient::SetRemote (Ipv4Address ip, uint16_t port)
+UdpTraceClient::SetRemote (Address addr)
 {
-  NS_LOG_FUNCTION (this << ip << port);
+  NS_LOG_FUNCTION (this << addr);
   m_entries.clear ();
-  m_peerAddress = Address (ip);
-  m_peerPort = port;
-}
-
-void
-UdpTraceClient::SetRemote (Ipv6Address ip, uint16_t port)
-{
-  NS_LOG_FUNCTION (this << ip << port);
-  m_entries.clear ();
-  m_peerAddress = Address (ip);
-  m_peerPort = port;
+  m_peerAddress = addr;
 }
 
 void
@@ -188,8 +178,7 @@ void
 UdpTraceClient::LoadTrace (std::string filename)
 {
   NS_LOG_FUNCTION (this << filename);
-  uint32_t time, index, prevTime = 0;
-  uint16_t size;
+  uint32_t time, index, size, prevTime = 0;
   char frameType;
   TraceEntry entry;
   std::ifstream ifTraceFile;
@@ -261,8 +250,23 @@ UdpTraceClient::StartApplication (void)
           m_socket->Bind6 ();
           m_socket->Connect (Inet6SocketAddress (Ipv6Address::ConvertFrom (m_peerAddress), m_peerPort));
         }
+      else if (InetSocketAddress::IsMatchingType (m_peerAddress) == true)
+        {
+          m_socket->Bind ();
+          m_socket->Connect (m_peerAddress);
+        }
+      else if (Inet6SocketAddress::IsMatchingType (m_peerAddress) == true)
+        {
+          m_socket->Bind6 ();
+          m_socket->Connect (m_peerAddress);
+        }
+      else
+        {
+          NS_ASSERT_MSG (false, "Incompatible address type: " << m_peerAddress);
+        }
     }
   m_socket->SetRecvCallback (MakeNullCallback<void, Ptr<Socket> > ());
+  m_socket->SetAllowBroadcast (true);
   m_sendEvent = Simulator::Schedule (Seconds (0.0), &UdpTraceClient::Send, this);
 }
 
@@ -329,7 +333,7 @@ UdpTraceClient::Send (void)
   struct TraceEntry *entry = &m_entries[m_currentEntry];
   do
     {
-      for (int i = 0; i < entry->packetSize / m_maxPacketSize; i++)
+      for (uint32_t i = 0; i < entry->packetSize / m_maxPacketSize; i++)
         {
           SendPacket (m_maxPacketSize);
         }

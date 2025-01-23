@@ -27,12 +27,11 @@
 #include "ns3/pointer.h"
 
 
-NS_LOG_COMPONENT_DEFINE ("UanTransducerHd");
-
 namespace ns3 {
 
-NS_OBJECT_ENSURE_REGISTERED (UanTransducerHd)
-  ;
+NS_LOG_COMPONENT_DEFINE ("UanTransducerHd");
+
+NS_OBJECT_ENSURE_REGISTERED (UanTransducerHd);
   
 UanTransducerHd::UanTransducerHd ()
   : UanTransducer (),
@@ -89,7 +88,8 @@ TypeId
 UanTransducerHd::GetTypeId ()
 {
   static TypeId tid = TypeId ("ns3::UanTransducerHd")
-    .SetParent<Object> ()
+    .SetParent<UanTransducer> ()
+    .SetGroupName ("Uan")
     .AddConstructor<UanTransducerHd> ()
   ;
   return tid;

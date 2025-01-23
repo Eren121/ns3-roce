@@ -32,16 +32,13 @@
 #include "lte-enb-net-device.h"
 #include "lte-ue-net-device.h"
 
-NS_LOG_COMPONENT_DEFINE ("LteRrcProtocolReal");
-
-
 namespace ns3 {
 
+NS_LOG_COMPONENT_DEFINE ("LteRrcProtocolReal");
 
 const Time RRC_REAL_MSG_DELAY = MilliSeconds (0); 
 
-NS_OBJECT_ENSURE_REGISTERED (LteUeRrcProtocolReal)
-  ;
+NS_OBJECT_ENSURE_REGISTERED (LteUeRrcProtocolReal);
 
 LteUeRrcProtocolReal::LteUeRrcProtocolReal ()
   :  m_ueRrcSapProvider (0),
@@ -71,6 +68,7 @@ LteUeRrcProtocolReal::GetTypeId (void)
 {
   static TypeId tid = TypeId ("ns3::LteUeRrcProtocolReal")
     .SetParent<Object> ()
+    .SetGroupName("Lte")
     .AddConstructor<LteUeRrcProtocolReal> ()
   ;
   return tid;
@@ -351,8 +349,7 @@ LteUeRrcProtocolReal::DoReceivePdcpSdu (LtePdcpSapUser::ReceivePdcpSduParameters
     }
 }
 
-NS_OBJECT_ENSURE_REGISTERED (LteEnbRrcProtocolReal)
-  ;
+NS_OBJECT_ENSURE_REGISTERED (LteEnbRrcProtocolReal);
 
 LteEnbRrcProtocolReal::LteEnbRrcProtocolReal ()
   :  m_enbRrcSapProvider (0)
@@ -387,6 +384,7 @@ LteEnbRrcProtocolReal::GetTypeId (void)
 {
   static TypeId tid = TypeId ("ns3::LteEnbRrcProtocolReal")
     .SetParent<Object> ()
+    .SetGroupName("Lte")
     .AddConstructor<LteEnbRrcProtocolReal> ()
   ;
   return tid;

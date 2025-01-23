@@ -28,17 +28,16 @@
 #include "ns3/boolean.h"
 #include "ns3/lte-phy-tag.h"
 #include "lte-test-ue-phy.h"
-#include "lte-test-sinr-chunk-processor.h"
 #include "ns3/lte-spectrum-signal-parameters.h"
 
 #include "lte-test-downlink-sinr.h"
 #include <ns3/lte-control-messages.h>
 #include "ns3/lte-helper.h"
+#include <ns3/lte-chunk-processor.h>
+
+using namespace ns3;
 
 NS_LOG_COMPONENT_DEFINE ("LteDownlinkSinrTest");
-
-namespace ns3 {
-
 
 /**
  * Test 1.1 SINR calculation in downlink
@@ -113,7 +112,7 @@ LteDownlinkDataSinrTestCase::LteDownlinkDataSinrTestCase (Ptr<SpectrumValue> sv,
   : TestCase ("SINR calculation in downlink Data frame: " + name),
     m_sv (sv),
     m_sm (sv->GetSpectrumModel ()),
-    m_sinr (sinr)
+    m_expectedSinr (sinr)
 {
   NS_LOG_INFO ("Creating LenaDownlinkSinrTestCase");
 }
@@ -121,6 +120,7 @@ LteDownlinkDataSinrTestCase::LteDownlinkDataSinrTestCase (Ptr<SpectrumValue> sv,
 LteDownlinkDataSinrTestCase::~LteDownlinkDataSinrTestCase ()
 {
 }
+
 
 void
 LteDownlinkDataSinrTestCase::DoRun (void)
@@ -136,7 +136,9 @@ LteDownlinkDataSinrTestCase::DoRun (void)
   dlPhy->SetCellId (cellId);
   ulPhy->SetCellId (cellId);
 
-  Ptr<LteTestSinrChunkProcessor> chunkProcessor = Create<LteTestSinrChunkProcessor> (uePhy->GetObject<LtePhy> ());
+  Ptr<LteChunkProcessor> chunkProcessor = Create<LteChunkProcessor> ();
+  LteSpectrumValueCatcher actualSinrCatcher;
+  chunkProcessor->AddCallback (MakeCallback (&LteSpectrumValueCatcher::ReportValue, &actualSinrCatcher));
   dlPhy->AddDataSinrChunkProcessor (chunkProcessor);
 
   /**
@@ -261,16 +263,10 @@ LteDownlinkDataSinrTestCase::DoRun (void)
   Simulator::Stop (Seconds (5.0));
   Simulator::Run ();
 
-  /**
-   * Check that the values passed to LteSinrChunkProcessor::EvaluateSinrChunk () correspond
-   * to known values which have been calculated offline (with octave) for the generated signals
-   */
-  Ptr<SpectrumValue> calculatedSinr = chunkProcessor->GetSinr ();
-
-  NS_LOG_INFO ("Data Frame - Theoretical SINR: " << *m_sinr);
-  NS_LOG_INFO ("Data Frame - Calculated SINR: " << *calculatedSinr);
+  NS_LOG_INFO ("Data Frame - Theoretical SINR: " << *m_expectedSinr);
+  NS_LOG_INFO ("Data Frame - Calculated SINR: " << *(actualSinrCatcher.GetValue ()));
  
-  NS_TEST_ASSERT_MSG_SPECTRUM_VALUE_EQ_TOL(*calculatedSinr, *m_sinr, 0.0000001, "Data Frame - Wrong SINR !");
+  NS_TEST_ASSERT_MSG_SPECTRUM_VALUE_EQ_TOL(*(actualSinrCatcher.GetValue ()), *m_expectedSinr, 0.0000001, "Data Frame - Wrong SINR !");
   dlPhy->Dispose ();
   Simulator::Destroy ();
 }
@@ -285,7 +281,7 @@ LteDownlinkCtrlSinrTestCase::LteDownlinkCtrlSinrTestCase (Ptr<SpectrumValue> sv,
 : TestCase ("SINR calculation in downlink Ctrl Frame: " + name),
 m_sv (sv),
 m_sm (sv->GetSpectrumModel ()),
-m_sinr (sinr)
+m_expectedSinr (sinr)
 {
   NS_LOG_INFO ("Creating LenaDownlinkCtrlSinrTestCase");
 }
@@ -308,9 +304,11 @@ LteDownlinkCtrlSinrTestCase::DoRun (void)
   dlPhy->SetCellId (cellId);
   ulPhy->SetCellId (cellId);
   
-  Ptr<LteTestSinrChunkProcessor> chunkProcessor = Create<LteTestSinrChunkProcessor> (uePhy->GetObject<LtePhy> ());
+  Ptr<LteChunkProcessor> chunkProcessor = Create<LteChunkProcessor> ();
+  LteSpectrumValueCatcher actualSinrCatcher;
+  chunkProcessor->AddCallback (MakeCallback (&LteSpectrumValueCatcher::ReportValue, &actualSinrCatcher));
   dlPhy->AddCtrlSinrChunkProcessor (chunkProcessor);
-  
+
   /**
   * Generate several calls to LteSpectrumPhy::StartRx corresponding to several signals. One will be the signal of interest, i.e., the
   *  LteSpectrumSignalParametersDlCtrlFrame of the first signal will have the
@@ -433,19 +431,10 @@ LteDownlinkCtrlSinrTestCase::DoRun (void)
   Simulator::Stop (Seconds (5.0));
   Simulator::Run ();
   
-  /**
-  * Check that the values passed to LteSinrChunkProcessor::EvaluateSinrChunk () correspond
-  * to known values which have been calculated offline (with octave) for the generated signals
-  */
-  Ptr<SpectrumValue> calculatedSinr = chunkProcessor->GetSinr ();
+  NS_LOG_INFO ("Ctrl Frame - Theoretical SINR: " << *m_expectedSinr);
+  NS_LOG_INFO ("Ctrl Frame - Calculated SINR: " << *(actualSinrCatcher.GetValue ()));
   
-  NS_LOG_INFO ("Ctrl Frame - Theoretical SINR: " << *m_sinr);
-  NS_LOG_INFO ("Ctrl Frame - Calculated SINR: " << *calculatedSinr);
-  
-  NS_TEST_ASSERT_MSG_SPECTRUM_VALUE_EQ_TOL(*calculatedSinr, *m_sinr, 0.0000001, "Data Frame - Wrong SINR !");
+  NS_TEST_ASSERT_MSG_SPECTRUM_VALUE_EQ_TOL(*(actualSinrCatcher.GetValue ()), *m_expectedSinr, 0.0000001, "Data Frame - Wrong SINR !");
   dlPhy->Dispose ();
   Simulator::Destroy ();
 }
-
-
-} // namespace

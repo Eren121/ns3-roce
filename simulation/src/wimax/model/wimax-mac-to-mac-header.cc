@@ -24,8 +24,7 @@
 #include "ns3/log.h"
 namespace ns3 {
 
-NS_OBJECT_ENSURE_REGISTERED (WimaxMacToMacHeader)
-  ;
+NS_OBJECT_ENSURE_REGISTERED (WimaxMacToMacHeader);
 
 WimaxMacToMacHeader::WimaxMacToMacHeader (void)
   : m_len (0)
@@ -47,7 +46,11 @@ TypeId
 WimaxMacToMacHeader::GetTypeId (void)
 {
   static TypeId tid =
-    TypeId ("ns3::WimaxMacToMacHeader").SetParent<Header> ().AddConstructor<WimaxMacToMacHeader> ();
+    TypeId ("ns3::WimaxMacToMacHeader")
+    .SetParent<Header> ()
+    .SetGroupName("Wimax")
+    .AddConstructor<WimaxMacToMacHeader> ()
+    ;
   return tid;
 }
 

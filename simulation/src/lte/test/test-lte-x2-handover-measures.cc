@@ -27,10 +27,9 @@
 #include <ns3/applications-module.h>
 #include <ns3/point-to-point-module.h>
 
+using namespace ns3;
+
 NS_LOG_COMPONENT_DEFINE ("LteX2HandoverMeasuresTest");
-
-namespace ns3 {
-
 
 struct CheckPointEvent
 {
@@ -197,6 +196,8 @@ LteX2HandoverMeasuresTestCase::DoRun ()
   Config::SetDefault ("ns3::LteEnbRrc::HandoverJoiningTimeoutDuration", TimeValue (MilliSeconds (200)));
   Config::SetDefault ("ns3::LteEnbPhy::TxPower", DoubleValue (20));
 
+  //Disable Uplink Power Control
+  Config::SetDefault ("ns3::LteUePhy::EnableUplinkPowerControl", BooleanValue (false));
 
   int64_t stream = 1;
 
@@ -709,8 +710,3 @@ LteX2HandoverMeasuresTestSuite::LteX2HandoverMeasuresTestSuite ()
 } // end of LteX2HandoverMeasuresTestSuite ()
 
 static LteX2HandoverMeasuresTestSuite g_lteX2HandoverMeasuresTestSuiteInstance;
-
-
-
-} // namespace ns3
-

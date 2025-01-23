@@ -92,18 +92,23 @@
 #include <vector>
 #include <string>
 
-NS_LOG_COMPONENT_DEFINE ("WifiSimpleInterference");
-
 using namespace ns3;
+
+NS_LOG_COMPONENT_DEFINE ("WifiSimpleInterference");
 
 static inline std::string PrintReceivedPacket (Ptr<Socket> socket)
 {
   Address addr;
-  socket->GetSockName (addr);
-  InetSocketAddress iaddr = InetSocketAddress::ConvertFrom (addr);
 
   std::ostringstream oss;
-  oss << "Received one packet!  Socket: " << iaddr.GetIpv4 () << " port: " << iaddr.GetPort ();
+
+  while (socket->Recv ())
+    {
+      socket->GetSockName (addr);
+      InetSocketAddress iaddr = InetSocketAddress::ConvertFrom (addr);
+
+      oss << "Received one packet!  Socket: " << iaddr.GetIpv4 () << " port: " << iaddr.GetPort ();
+    }
 
   return oss.str ();
 }
@@ -195,8 +200,8 @@ int main (int argc, char *argv[])
   wifiChannel.AddPropagationLoss ("ns3::LogDistancePropagationLossModel");
   wifiPhy.SetChannel (wifiChannel.Create ());
 
-  // Add a non-QoS upper mac, and disable rate control
-  NqosWifiMacHelper wifiMac = NqosWifiMacHelper::Default ();
+  // Add a mac and disable rate control
+  WifiMacHelper wifiMac;
   wifi.SetRemoteStationManager ("ns3::ConstantRateWifiManager",
                                 "DataMode",StringValue (phyMode),
                                 "ControlMode",StringValue (phyMode));

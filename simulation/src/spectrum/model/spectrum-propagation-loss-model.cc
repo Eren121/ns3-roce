@@ -22,12 +22,11 @@
 #include "spectrum-propagation-loss-model.h"
 #include <ns3/log.h>
 
-NS_LOG_COMPONENT_DEFINE ("SpectrumPropagationLossModel");
-
 namespace ns3 {
 
-NS_OBJECT_ENSURE_REGISTERED (SpectrumPropagationLossModel)
-  ;
+NS_LOG_COMPONENT_DEFINE ("SpectrumPropagationLossModel");
+
+NS_OBJECT_ENSURE_REGISTERED (SpectrumPropagationLossModel);
 
 SpectrumPropagationLossModel::SpectrumPropagationLossModel ()
   : m_next (0)
@@ -49,6 +48,7 @@ SpectrumPropagationLossModel::GetTypeId (void)
 {
   static TypeId tid = TypeId ("ns3::SpectrumPropagationLossModel")
     .SetParent<Object> ()
+    .SetGroupName ("Spectrum")
   ;
   return tid;
 }

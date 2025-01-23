@@ -17,6 +17,7 @@
  *
  * Author: Mathieu Lacage, <mathieu.lacage@sophia.inria.fr>
  */
+
 #include "ns3/packet.h"
 #include "ns3/simulator.h"
 #include "ns3/mobility-model.h"
@@ -31,20 +32,20 @@
 #include "ns3/propagation-loss-model.h"
 #include "ns3/propagation-delay-model.h"
 
-NS_LOG_COMPONENT_DEFINE ("WifiChannel");
-
 namespace ns3 {
 
-NS_OBJECT_ENSURE_REGISTERED (WifiChannel)
-  ;
+NS_LOG_COMPONENT_DEFINE ("WifiChannel");
+
+NS_OBJECT_ENSURE_REGISTERED (WifiChannel);
 
 TypeId
 WifiChannel::GetTypeId (void)
 {
   static TypeId tid = TypeId ("ns3::WifiChannel")
     .SetParent<Channel> ()
+    .SetGroupName ("Wifi")
   ;
   return tid;
 }
 
-} // namespace ns3
+} //namespace ns3

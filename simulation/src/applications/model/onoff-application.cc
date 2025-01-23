@@ -42,18 +42,18 @@
 #include "ns3/string.h"
 #include "ns3/pointer.h"
 
-NS_LOG_COMPONENT_DEFINE ("OnOffApplication");
-
 namespace ns3 {
 
-NS_OBJECT_ENSURE_REGISTERED (OnOffApplication)
-  ;
+NS_LOG_COMPONENT_DEFINE ("OnOffApplication");
+
+NS_OBJECT_ENSURE_REGISTERED (OnOffApplication);
 
 TypeId
 OnOffApplication::GetTypeId (void)
 {
   static TypeId tid = TypeId ("ns3::OnOffApplication")
     .SetParent<Application> ()
+    .SetGroupName("Applications")
     .AddConstructor<OnOffApplication> ()
     .AddAttribute ("DataRate", "The data rate in on state.",
                    DataRateValue (DataRate ("500kb/s")),
@@ -81,13 +81,14 @@ OnOffApplication::GetTypeId (void)
                    "that there is no limit.",
                    UintegerValue (0),
                    MakeUintegerAccessor (&OnOffApplication::m_maxBytes),
-                   MakeUintegerChecker<uint32_t> ())
+                   MakeUintegerChecker<uint64_t> ())
     .AddAttribute ("Protocol", "The type of protocol to use.",
                    TypeIdValue (UdpSocketFactory::GetTypeId ()),
                    MakeTypeIdAccessor (&OnOffApplication::m_tid),
                    MakeTypeIdChecker ())
     .AddTraceSource ("Tx", "A new packet is created and is sent",
-                     MakeTraceSourceAccessor (&OnOffApplication::m_txTrace))
+                     MakeTraceSourceAccessor (&OnOffApplication::m_txTrace),
+                     "ns3::Packet::TracedCallback")
   ;
   return tid;
 }
@@ -109,7 +110,7 @@ OnOffApplication::~OnOffApplication()
 }
 
 void 
-OnOffApplication::SetMaxBytes (uint32_t maxBytes)
+OnOffApplication::SetMaxBytes (uint64_t maxBytes)
 {
   NS_LOG_FUNCTION (this << maxBytes);
   m_maxBytes = maxBytes;

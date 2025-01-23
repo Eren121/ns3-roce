@@ -53,10 +53,9 @@
 
 #include "lte-test-phy-error-model.h"
 
+using namespace ns3;
+
 NS_LOG_COMPONENT_DEFINE ("LteTestPhyErrorModel");
-
-namespace ns3 {
-
 
 LenaTestPhyErrorModelSuite::LenaTestPhyErrorModelSuite ()
   : TestSuite ("lte-phy-error-model", SYSTEM)
@@ -168,6 +167,9 @@ LenaDataPhyErrorModelTestCase::DoRun (void)
   Config::SetDefault ("ns3::LteSpectrumPhy::DataErrorModelEnabled", BooleanValue (true));
   Config::SetDefault ("ns3::RrFfMacScheduler::HarqEnabled", BooleanValue (false));
   Config::SetGlobal ("RngRun", IntegerValue (m_rngRun));
+
+  //Disable Uplink Power Control
+  Config::SetDefault ("ns3::LteUePhy::EnableUplinkPowerControl", BooleanValue (false));
 
   /*
    * Initialize Simulation Scenario: 1 eNB and m_nUser UEs
@@ -322,6 +324,9 @@ LenaDlCtrlPhyErrorModelTestCase::DoRun (void)
   Config::SetDefault ("ns3::RrFfMacScheduler::HarqEnabled", BooleanValue (false));
   Config::SetGlobal ("RngRun", IntegerValue (m_rngRun));
 
+  //Disable Uplink Power Control
+  Config::SetDefault ("ns3::LteUePhy::EnableUplinkPowerControl", BooleanValue (false));
+
   /*
    * Initialize Simulation Scenario: 1 eNB and m_nUser UEs
    */
@@ -433,6 +438,3 @@ LenaDlCtrlPhyErrorModelTestCase::DoRun (void)
   
   Simulator::Destroy ();
 }
-
-
-} // namespace

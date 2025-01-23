@@ -42,11 +42,9 @@
 
 namespace ns3 {
 
-NS_LOG_COMPONENT_DEFINE ("PointToPointEpcHelper")
-  ;
+NS_LOG_COMPONENT_DEFINE ("PointToPointEpcHelper");
 
-NS_OBJECT_ENSURE_REGISTERED (PointToPointEpcHelper)
-  ;
+NS_OBJECT_ENSURE_REGISTERED (PointToPointEpcHelper);
 
 
 PointToPointEpcHelper::PointToPointEpcHelper () 
@@ -114,6 +112,7 @@ PointToPointEpcHelper::GetTypeId (void)
 {
   static TypeId tid = TypeId ("ns3::PointToPointEpcHelper")
     .SetParent<EpcHelper> ()
+    .SetGroupName("Lte")
     .AddConstructor<PointToPointEpcHelper> ()
     .AddAttribute ("S1uLinkDataRate", 
                    "The data rate to be used for the next S1-U link to be created",
@@ -294,7 +293,7 @@ PointToPointEpcHelper::AddUe (Ptr<NetDevice> ueDevice, uint64_t imsi)
 
 }
 
-void
+uint8_t
 PointToPointEpcHelper::ActivateEpsBearer (Ptr<NetDevice> ueDevice, uint64_t imsi, Ptr<EpcTft> tft, EpsBearer bearer)
 {
   NS_LOG_FUNCTION (this << ueDevice << imsi);
@@ -311,12 +310,13 @@ PointToPointEpcHelper::ActivateEpsBearer (Ptr<NetDevice> ueDevice, uint64_t imsi
   Ipv4Address ueAddr = ueIpv4->GetAddress (interface, 0).GetLocal ();
   NS_LOG_LOGIC (" UE IP address: " << ueAddr);  m_sgwPgwApp->SetUeAddress (imsi, ueAddr);
   
-  m_mme->AddBearer (imsi, tft, bearer);
+  uint8_t bearerId = m_mme->AddBearer (imsi, tft, bearer);
   Ptr<LteUeNetDevice> ueLteDevice = ueDevice->GetObject<LteUeNetDevice> ();
   if (ueLteDevice)
     {
       ueLteDevice->GetNas ()->ActivateEpsBearer (bearer, tft);
     }
+  return bearerId;
 }
 
 

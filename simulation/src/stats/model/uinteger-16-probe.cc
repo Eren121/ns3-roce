@@ -27,22 +27,23 @@
 #include "ns3/config.h"
 #include "ns3/trace-source-accessor.h"
 
-NS_LOG_COMPONENT_DEFINE ("Uinteger16Probe");
-
 namespace ns3 {
 
-NS_OBJECT_ENSURE_REGISTERED (Uinteger16Probe)
-  ;
+NS_LOG_COMPONENT_DEFINE ("Uinteger16Probe");
+
+NS_OBJECT_ENSURE_REGISTERED (Uinteger16Probe);
 
 TypeId
 Uinteger16Probe::GetTypeId ()
 {
   static TypeId tid = TypeId ("ns3::Uinteger16Probe")
     .SetParent<Probe> ()
+    .SetGroupName ("Stats")
     .AddConstructor<Uinteger16Probe> ()
     .AddTraceSource ( "Output",
                       "The uint16_t that serves as output for this probe",
-                      MakeTraceSourceAccessor (&Uinteger16Probe::m_output))
+                      MakeTraceSourceAccessor (&Uinteger16Probe::m_output),
+                     "ns3::TracedValueCallback::Uint16")
   ;
   return tid;
 }

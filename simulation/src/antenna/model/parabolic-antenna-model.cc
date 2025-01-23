@@ -27,12 +27,11 @@
 #include "parabolic-antenna-model.h"
 
 
-NS_LOG_COMPONENT_DEFINE ("ParabolicAntennaModel");
-
 namespace ns3 {
 
-NS_OBJECT_ENSURE_REGISTERED (ParabolicAntennaModel)
-  ;
+NS_LOG_COMPONENT_DEFINE ("ParabolicAntennaModel");
+
+NS_OBJECT_ENSURE_REGISTERED (ParabolicAntennaModel);
 
 
 TypeId 
@@ -40,6 +39,7 @@ ParabolicAntennaModel::GetTypeId ()
 {
   static TypeId tid = TypeId ("ns3::ParabolicAntennaModel")
     .SetParent<AntennaModel> ()
+    .SetGroupName("Antenna")
     .AddConstructor<ParabolicAntennaModel> ()
     .AddAttribute ("Beamwidth",
                    "The 3dB beamwidth (degrees)",

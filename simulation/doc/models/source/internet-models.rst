@@ -1,5 +1,5 @@
-Internet Models
----------------
+Internet Models (IP, TCP, Routing, UDP, Internet Applications)
+---------------------------------------------------------------------
 
 .. toctree::
 
@@ -8,3 +8,4 @@ Internet Models
    ipv6
    routing-overview
    tcp
+   internet-apps

@@ -26,21 +26,32 @@ using namespace ns3;
 
 NS_LOG_COMPONENT_DEFINE ("DataOutputInterface");
 
-
 //--------------------------------------------------------------
 //----------------------------------------------
 DataOutputInterface::DataOutputInterface()
 {
-  NS_LOG_FUNCTION_NOARGS ();
+  NS_LOG_FUNCTION (this);
 }
 DataOutputInterface::~DataOutputInterface()
 {
-  NS_LOG_FUNCTION_NOARGS ();
+  NS_LOG_FUNCTION (this);
 }
+/* static */
+TypeId
+DataOutputInterface::GetTypeId (void)
+{
+  static TypeId tid = TypeId ("ns3::DataOutputInterface")
+    .SetParent<Object> ()
+    .SetGroupName ("Stats")
+    // No AddConstructor because this is an abstract class.
+    ;
+  return tid;
+}
+  
 void
 DataOutputInterface::DoDispose ()
 {
-  NS_LOG_FUNCTION_NOARGS ();
+  NS_LOG_FUNCTION (this);
 
   Object::DoDispose ();
   // end DataOutputInterface::DoDispose
@@ -49,11 +60,15 @@ DataOutputInterface::DoDispose ()
 void
 DataOutputInterface::SetFilePrefix (const std::string prefix)
 {
+  NS_LOG_FUNCTION (this << prefix);
+
   m_filePrefix = prefix;
 }
 
 std::string
 DataOutputInterface::GetFilePrefix () const
 {
+  NS_LOG_FUNCTION (this);
+
   return m_filePrefix;
 }

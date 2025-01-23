@@ -31,16 +31,16 @@
 
 namespace ns3 {
 
-NS_LOG_COMPONENT_DEFINE ("UdpEchoClientApplication")
-  ;
-NS_OBJECT_ENSURE_REGISTERED (UdpEchoClient)
-  ;
+NS_LOG_COMPONENT_DEFINE ("UdpEchoClientApplication");
+
+NS_OBJECT_ENSURE_REGISTERED (UdpEchoClient);
 
 TypeId
 UdpEchoClient::GetTypeId (void)
 {
   static TypeId tid = TypeId ("ns3::UdpEchoClient")
     .SetParent<Application> ()
+    .SetGroupName("Applications")
     .AddConstructor<UdpEchoClient> ()
     .AddAttribute ("MaxPackets", 
                    "The maximum number of packets the application will send",
@@ -68,7 +68,8 @@ UdpEchoClient::GetTypeId (void)
                                          &UdpEchoClient::GetDataSize),
                    MakeUintegerChecker<uint32_t> ())
     .AddTraceSource ("Tx", "A new packet is created and is sent",
-                     MakeTraceSourceAccessor (&UdpEchoClient::m_txTrace))
+                     MakeTraceSourceAccessor (&UdpEchoClient::m_txTrace),
+                     "ns3::Packet::TracedCallback")
   ;
   return tid;
 }
@@ -102,19 +103,10 @@ UdpEchoClient::SetRemote (Address ip, uint16_t port)
 }
 
 void 
-UdpEchoClient::SetRemote (Ipv4Address ip, uint16_t port)
+UdpEchoClient::SetRemote (Address addr)
 {
-  NS_LOG_FUNCTION (this << ip << port);
-  m_peerAddress = Address (ip);
-  m_peerPort = port;
-}
-
-void 
-UdpEchoClient::SetRemote (Ipv6Address ip, uint16_t port)
-{
-  NS_LOG_FUNCTION (this << ip << port);
-  m_peerAddress = Address (ip);
-  m_peerPort = port;
+  NS_LOG_FUNCTION (this << addr);
+  m_peerAddress = addr;
 }
 
 void
@@ -143,10 +135,24 @@ UdpEchoClient::StartApplication (void)
           m_socket->Bind6();
           m_socket->Connect (Inet6SocketAddress (Ipv6Address::ConvertFrom(m_peerAddress), m_peerPort));
         }
+      else if (InetSocketAddress::IsMatchingType (m_peerAddress) == true)
+        {
+          m_socket->Bind ();
+          m_socket->Connect (m_peerAddress);
+        }
+      else if (Inet6SocketAddress::IsMatchingType (m_peerAddress) == true)
+        {
+          m_socket->Bind6 ();
+          m_socket->Connect (m_peerAddress);
+        }
+      else
+        {
+          NS_ASSERT_MSG (false, "Incompatible address type: " << m_peerAddress);
+        }
     }
 
   m_socket->SetRecvCallback (MakeCallback (&UdpEchoClient::HandleRead, this));
-
+  m_socket->SetAllowBroadcast (true);
   ScheduleTransmit (Seconds (0.));
 }
 
@@ -322,6 +328,16 @@ UdpEchoClient::Send (void)
     {
       NS_LOG_INFO ("At time " << Simulator::Now ().GetSeconds () << "s client sent " << m_size << " bytes to " <<
                    Ipv6Address::ConvertFrom (m_peerAddress) << " port " << m_peerPort);
+    }
+  else if (InetSocketAddress::IsMatchingType (m_peerAddress))
+    {
+      NS_LOG_INFO ("At time " << Simulator::Now ().GetSeconds () << "s client sent " << m_size << " bytes to " <<
+                   InetSocketAddress::ConvertFrom (m_peerAddress).GetIpv4 () << " port " << InetSocketAddress::ConvertFrom (m_peerAddress).GetPort ());
+    }
+  else if (Inet6SocketAddress::IsMatchingType (m_peerAddress))
+    {
+      NS_LOG_INFO ("At time " << Simulator::Now ().GetSeconds () << "s client sent " << m_size << " bytes to " <<
+                   Inet6SocketAddress::ConvertFrom (m_peerAddress).GetIpv6 () << " port " << Inet6SocketAddress::ConvertFrom (m_peerAddress).GetPort ());
     }
 
   if (m_sent < m_count) 

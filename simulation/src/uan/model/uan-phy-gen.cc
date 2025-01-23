@@ -28,6 +28,7 @@
 #include "ns3/ptr.h"
 #include "ns3/trace-source-accessor.h"
 #include "ns3/double.h"
+#include "ns3/string.h"
 #include "ns3/log.h"
 #include "ns3/uan-tx-mode.h"
 #include "ns3/node.h"
@@ -36,20 +37,15 @@
 #include "ns3/acoustic-modem-energy-model.h"
 
 
-NS_LOG_COMPONENT_DEFINE ("UanPhyGen");
-
 namespace ns3 {
 
-NS_OBJECT_ENSURE_REGISTERED (UanPhyGen)
-  ;
-NS_OBJECT_ENSURE_REGISTERED (UanPhyPerGenDefault)
-  ;
-NS_OBJECT_ENSURE_REGISTERED (UanPhyCalcSinrDefault)
-  ;
-NS_OBJECT_ENSURE_REGISTERED (UanPhyCalcSinrFhFsk)
-  ;
-NS_OBJECT_ENSURE_REGISTERED (UanPhyPerUmodem)
-  ;
+NS_LOG_COMPONENT_DEFINE ("UanPhyGen");
+
+NS_OBJECT_ENSURE_REGISTERED (UanPhyGen);
+NS_OBJECT_ENSURE_REGISTERED (UanPhyPerGenDefault);
+NS_OBJECT_ENSURE_REGISTERED (UanPhyCalcSinrDefault);
+NS_OBJECT_ENSURE_REGISTERED (UanPhyCalcSinrFhFsk);
+NS_OBJECT_ENSURE_REGISTERED (UanPhyPerUmodem);
 
 
 /*************** UanPhyCalcSinrDefault definition *****************/
@@ -66,7 +62,8 @@ TypeId
 UanPhyCalcSinrDefault::GetTypeId (void)
 {
   static TypeId tid = TypeId ("ns3::UanPhyCalcSinrDefault")
-    .SetParent<Object> ()
+    .SetParent<UanPhyCalcSinr> ()
+    .SetGroupName ("Uan")
     .AddConstructor<UanPhyCalcSinrDefault> ()
   ;
   return tid;
@@ -113,7 +110,8 @@ TypeId
 UanPhyCalcSinrFhFsk::GetTypeId (void)
 {
   static TypeId tid = TypeId ("ns3::UanPhyCalcSinrFhFsk")
-    .SetParent<Object> ()
+    .SetParent<UanPhyCalcSinr> ()
+    .SetGroupName ("Uan")
     .AddConstructor<UanPhyCalcSinrFhFsk> ()
     .AddAttribute ("NumberOfHops",
                    "Number of frequencies in hopping pattern.",
@@ -219,7 +217,8 @@ TypeId
 UanPhyPerGenDefault::GetTypeId (void)
 {
   static TypeId tid = TypeId ("ns3::UanPhyPerGenDefault")
-    .SetParent<Object> ()
+    .SetParent<UanPhyPer> ()
+    .SetGroupName ("Uan")
     .AddConstructor<UanPhyPerGenDefault> ()
     .AddAttribute ("Threshold", "SINR cutoff for good packet reception.",
                    DoubleValue (8),
@@ -257,7 +256,8 @@ UanPhyPerUmodem::~UanPhyPerUmodem ()
 TypeId UanPhyPerUmodem::GetTypeId (void)
 {
   static TypeId tid = TypeId ("ns3::UanPhyPerUmodem")
-    .SetParent<Object> ()
+    .SetParent<UanPhyPer> ()
+    .SetGroupName ("Uan")
     .AddConstructor<UanPhyPerUmodem> ()
   ;
   return tid;
@@ -358,8 +358,8 @@ UanPhyGen::UanPhyGen ()
     m_rxThreshDb (0),
     m_ccaThreshDb (0),
     m_pktRx (0),
-    m_cleared (false),
-    m_disabled (false)
+    m_pktTx (0),
+    m_cleared (false)
 {
   m_pg = CreateObject<UniformRandomVariable> ();
 
@@ -435,6 +435,7 @@ UanPhyGen::GetTypeId (void)
 
   static TypeId tid = TypeId ("ns3::UanPhyGen")
     .SetParent<UanPhy> ()
+    .SetGroupName ("Uan")
     .AddConstructor<UanPhyGen> ()
     .AddAttribute ("CcaThreshold",
                    "Aggregate energy of incoming signals to move to CCA Busy state dB.",
@@ -463,23 +464,26 @@ UanPhyGen::GetTypeId (void)
                    MakeUanModesListChecker () )
     .AddAttribute ("PerModel",
                    "Functor to calculate PER based on SINR and TxMode.",
-                   PointerValue (CreateObject<UanPhyPerGenDefault> ()),
+                   StringValue ("ns3::UanPhyPerGenDefault"),
                    MakePointerAccessor (&UanPhyGen::m_per),
                    MakePointerChecker<UanPhyPer> ())
     .AddAttribute ("SinrModel",
                    "Functor to calculate SINR based on pkt arrivals and modes.",
-                   PointerValue (CreateObject<UanPhyCalcSinrDefault> ()),
+                   StringValue ("ns3::UanPhyCalcSinrDefault"),
                    MakePointerAccessor (&UanPhyGen::m_sinr),
                    MakePointerChecker<UanPhyCalcSinr> ())
     .AddTraceSource ("RxOk",
                      "A packet was received successfully.",
-                     MakeTraceSourceAccessor (&UanPhyGen::m_rxOkLogger))
+                     MakeTraceSourceAccessor (&UanPhyGen::m_rxOkLogger),
+                     "ns3::UanPhy::TracedCallback")
     .AddTraceSource ("RxError",
                      "A packet was received unsuccessfully.",
-                     MakeTraceSourceAccessor (&UanPhyGen::m_rxErrLogger))
+                     MakeTraceSourceAccessor (&UanPhyGen::m_rxErrLogger),
+                     "ns3::UanPhy::TracedCallback")
     .AddTraceSource ("Tx",
                      "Packet transmission beginning.",
-                     MakeTraceSourceAccessor (&UanPhyGen::m_txLogger))
+                     MakeTraceSourceAccessor (&UanPhyGen::m_txLogger),
+                     "ns3::UanPhy::TracedCallback")
   ;
   return tid;
 
@@ -509,15 +513,37 @@ UanPhyGen::EnergyDepletionHandler ()
   NS_LOG_FUNCTION (this);
   NS_LOG_DEBUG ("Energy depleted at node " << m_device->GetNode ()->GetId () <<
                 ", stopping rx/tx activities");
+  
+  m_state = DISABLED;
+  if(m_txEndEvent.IsRunning ())
+    {
+      Simulator::Cancel (m_txEndEvent);
+      NotifyTxDrop (m_pktTx);
+      m_pktTx = 0;
+    }
+  if(m_rxEndEvent.IsRunning ())
+    {
+      Simulator::Cancel (m_rxEndEvent);
+      NotifyRxDrop (m_pktRx);
+      m_pktRx = 0;
+    }
+}
 
-  m_disabled = true;
+void
+UanPhyGen::EnergyRechargeHandler ()
+{
+  NS_LOG_FUNCTION (this);
+  NS_LOG_DEBUG ("Energy recharged at node " << m_device->GetNode ()->GetId () <<
+                ", restoring rx/tx activities");
+
+  m_state = IDLE;
 }
 
 void
 UanPhyGen::SendPacket (Ptr<Packet> pkt, uint32_t modeNum)
 {
   NS_LOG_DEBUG ("PHY " << m_mac->GetAddress () << ": Transmitting packet");
-  if (m_disabled)
+  if (m_state == DISABLED)
     {
       NS_LOG_DEBUG ("Energy depleted, node cannot transmit any packet. Dropping.");
       return;
@@ -546,7 +572,8 @@ UanPhyGen::SendPacket (Ptr<Packet> pkt, uint32_t modeNum)
   m_state = TX;
   UpdatePowerConsumption (TX);
   double txdelay = pkt->GetSize () * 8.0 / txMode.GetDataRateBps ();
-  Simulator::Schedule (Seconds (txdelay), &UanPhyGen::TxEndEvent, this);
+  m_pktTx = pkt;
+  m_txEndEvent = Simulator::Schedule (Seconds (txdelay), &UanPhyGen::TxEndEvent, this);
   NS_LOG_DEBUG ("PHY " << m_mac->GetAddress () << " notifying listeners");
   NotifyListenersTxStart (Seconds (txdelay));
   m_txLogger (pkt, m_txPwrDb, txMode);
@@ -555,7 +582,7 @@ UanPhyGen::SendPacket (Ptr<Packet> pkt, uint32_t modeNum)
 void
 UanPhyGen::TxEndEvent ()
 {
-  if (m_state == SLEEP || m_disabled == true)
+  if (m_state == SLEEP || m_state == DISABLED)
     {
       NS_LOG_DEBUG ("Transmission ended but node sleeping or dead");
       return;
@@ -584,15 +611,12 @@ UanPhyGen::RegisterListener (UanPhyListener *listener)
 void
 UanPhyGen::StartRxPacket (Ptr<Packet> pkt, double rxPowerDb, UanTxMode txMode, UanPdp pdp)
 {
-  if (m_disabled)
+  switch (m_state)
     {
+    case DISABLED:
       NS_LOG_DEBUG ("Energy depleted, node cannot receive any packet. Dropping.");
       NotifyRxDrop(pkt);    // traced source netanim
       return;
-    }
-
-  switch (m_state)
-    {
     case TX:
       NotifyRxDrop(pkt);    // traced source netanim
       NS_ASSERT (false);
@@ -640,7 +664,7 @@ UanPhyGen::StartRxPacket (Ptr<Packet> pkt, double rxPowerDb, UanTxMode txMode, U
             m_pktRxMode = txMode;
             m_pktRxPdp = pdp;
             double txdelay = pkt->GetSize () * 8.0 / txMode.GetDataRateBps ();
-            Simulator::Schedule (Seconds (txdelay), &UanPhyGen::RxEndEvent, this, pkt, rxPowerDb, txMode);
+            m_rxEndEvent = Simulator::Schedule (Seconds (txdelay), &UanPhyGen::RxEndEvent, this, pkt, rxPowerDb, txMode);
             NotifyListenersRxStart ();
           }
 
@@ -668,7 +692,7 @@ UanPhyGen::RxEndEvent (Ptr<Packet> pkt, double rxPowerDb, UanTxMode txMode)
       return;
     }
 
-  if (m_disabled || m_state == SLEEP)
+  if (m_state == DISABLED || m_state == SLEEP)
     {
       NS_LOG_DEBUG ("Sleep mode or dead. Dropping packet");
       m_pktRx = 0;
@@ -805,7 +829,7 @@ UanPhyGen::GetChannel (void) const
 }
 
 Ptr<UanNetDevice>
-UanPhyGen::GetDevice (void)
+UanPhyGen::GetDevice (void) const
 {
   return m_device;
 }

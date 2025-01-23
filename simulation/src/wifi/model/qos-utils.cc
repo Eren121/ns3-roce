@@ -15,17 +15,19 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * Author: Mirko Banchi <mk.banchi@gmail.com>
- * Author: Cecchi Niccolò <insa@igeek.it>
+ * Authors: Mirko Banchi <mk.banchi@gmail.com>
+ *          Cecchi Niccolò <insa@igeek.it>
  */
+
 #include "qos-utils.h"
-#include "qos-tag.h"
+#include "ns3/socket.h"
 
 namespace ns3 {
 
 AcIndex
 QosUtilsMapTidToAc (uint8_t tid)
 {
+  NS_ASSERT_MSG (tid < 8, "Tid " << (uint16_t) tid << " out of range");
   switch (tid)
     {
     case 0:
@@ -59,13 +61,13 @@ QosUtilsMapTidToAc (uint8_t tid)
 uint8_t
 QosUtilsGetTidForPacket (Ptr<const Packet> packet)
 {
-  QosTag qos;
+  SocketPriorityTag qos;
   uint8_t tid = 8;
   if (packet->PeekPacketTag (qos))
     {
-      if (qos.GetTid () < 8)
+      if (qos.GetPriority () < 8)
         {
-          tid = qos.GetTid ();
+          tid = qos.GetPriority ();
         }
     }
   return tid;
@@ -91,4 +93,4 @@ QosUtilsIsOldPacket (uint16_t startingSeq, uint16_t seqNumber)
   return (distance >= 2048);
 }
 
-} // namespace ns3
+} //namespace ns3

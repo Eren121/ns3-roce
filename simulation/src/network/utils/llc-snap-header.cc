@@ -23,12 +23,11 @@
 #include "ns3/log.h"
 #include <string>
 
-NS_LOG_COMPONENT_DEFINE ("LlcSnalHeader");
-
 namespace ns3 {
 
-NS_OBJECT_ENSURE_REGISTERED (LlcSnapHeader)
-  ;
+NS_LOG_COMPONENT_DEFINE ("LlcSnalHeader");
+
+NS_OBJECT_ENSURE_REGISTERED (LlcSnapHeader);
 
 LlcSnapHeader::LlcSnapHeader ()
 {
@@ -60,6 +59,7 @@ LlcSnapHeader::GetTypeId (void)
 {
   static TypeId tid = TypeId ("ns3::LlcSnapHeader")
     .SetParent<Header> ()
+    .SetGroupName("Network")
     .AddConstructor<LlcSnapHeader> ()
   ;
   return tid;

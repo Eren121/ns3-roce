@@ -30,10 +30,9 @@
 #include "ns3/log.h"
 #include <cstring>
 
-NS_LOG_COMPONENT_DEFINE ("PacketTagList")
-  ;
-
 namespace ns3 {
+
+NS_LOG_COMPONENT_DEFINE ("PacketTagList");
 
 bool
 PacketTagList::COWTraverse (Tag & tag, PacketTagList::COWWriter Writer)
@@ -248,7 +247,7 @@ PacketTagList::Add (const Tag &tag) const
   // ensure this id was not yet added
   for (struct TagData *cur = m_next; cur != 0; cur = cur->next) 
     {
-      NS_ASSERT (cur->tid != tag.GetInstanceTypeId ());
+      NS_ASSERT_MSG (cur->tid != tag.GetInstanceTypeId (), "Error: cannot add the same kind of tag twice.");
     }
   struct TagData * head = new struct TagData ();
   head->count = 1;

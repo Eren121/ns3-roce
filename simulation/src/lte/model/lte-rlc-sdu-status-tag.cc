@@ -22,8 +22,7 @@
 
 namespace ns3 {
 
-NS_OBJECT_ENSURE_REGISTERED (LteRlcSduStatusTag)
-  ;
+NS_OBJECT_ENSURE_REGISTERED (LteRlcSduStatusTag);
 
 LteRlcSduStatusTag::LteRlcSduStatusTag ()
 {
@@ -46,6 +45,7 @@ LteRlcSduStatusTag::GetTypeId (void)
 {
   static TypeId tid = TypeId ("ns3::LteRlcSduStatusTag")
     .SetParent<Tag> ()
+    .SetGroupName("Lte")
     .AddConstructor<LteRlcSduStatusTag> ()
   ;
   return tid;

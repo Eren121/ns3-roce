@@ -17,6 +17,7 @@
  *
  * Author: Mathieu Lacage <mathieu.lacage@sophia.inria.fr>
  */
+
 #ifndef ARF_WIFI_MANAGER_H
 #define ARF_WIFI_MANAGER_H
 
@@ -38,6 +39,10 @@ namespace ns3 {
  * in XXX (I cannot find back the original paper which described how
  * the time-based timer could be easily replaced with a packet-based
  * timer.)
+ *
+ * This RAA does not support HT or VHT modes and will error exit
+ * if the user tries to configure this RAA with a Wi-Fi MAC that
+ * has VhtSupported or HtSupported set.
  */
 class ArfWifiManager : public WifiRemoteStationManager
 {
@@ -46,8 +51,12 @@ public:
   ArfWifiManager ();
   virtual ~ArfWifiManager ();
 
+  // Inherited from WifiRemoteStationManager
+  virtual void SetHtSupported (bool enable);
+  virtual void SetVhtSupported (bool enable);
+
 private:
-  // overriden from base class
+  //overriden from base class
   virtual WifiRemoteStation * DoCreateStation (void) const;
   virtual void DoReportRxOk (WifiRemoteStation *station,
                              double rxSnr, WifiMode txMode);
@@ -59,7 +68,7 @@ private:
                                double ackSnr, WifiMode ackMode, double dataSnr);
   virtual void DoReportFinalRtsFailed (WifiRemoteStation *station);
   virtual void DoReportFinalDataFailed (WifiRemoteStation *station);
-  virtual WifiTxVector DoGetDataTxVector (WifiRemoteStation *station, uint32_t size);
+  virtual WifiTxVector DoGetDataTxVector (WifiRemoteStation *station);
   virtual WifiTxVector DoGetRtsTxVector (WifiRemoteStation *station);
   virtual bool IsLowLatency (void) const;
 
@@ -67,6 +76,6 @@ private:
   uint32_t m_successThreshold;
 };
 
-} // namespace ns3
+} //namespace ns3
 
 #endif /* ARF_WIFI_MANAGER_H */

@@ -27,12 +27,11 @@
 #include "ns3/config.h"
 #include "ns3/test.h"
 
-NS_LOG_COMPONENT_DEFINE ("WaypointMobilityModel");
-
 namespace ns3 {
 
-NS_OBJECT_ENSURE_REGISTERED (WaypointMobilityModel)
-  ;
+NS_LOG_COMPONENT_DEFINE ("WaypointMobilityModel");
+
+NS_OBJECT_ENSURE_REGISTERED (WaypointMobilityModel);
 
 
 TypeId
@@ -96,7 +95,7 @@ WaypointMobilityModel::AddWaypoint (const Waypoint &waypoint)
 
   if ( !m_lazyNotify )
     {
-      Simulator::Schedule (waypoint.time, &WaypointMobilityModel::Update, this);
+      Simulator::Schedule (waypoint.time - Simulator::Now (), &WaypointMobilityModel::Update, this);
     }
 }
 Waypoint

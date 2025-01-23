@@ -17,6 +17,7 @@
  *
  * Author: Mathieu Lacage <mathieu.lacage@sophia.inria.fr>
  */
+
 #ifndef AMRR_WIFI_MANAGER_H
 #define AMRR_WIFI_MANAGER_H
 
@@ -35,6 +36,10 @@ struct AmrrWifiRemoteStation;
  * was initially described in <i>IEEE 802.11 Rate Adaptation:
  * A Practical Approach</i>, by M. Lacage, M.H. Manshaei, and
  * T. Turletti.
+ *
+ * This RAA does not support HT or VHT modes and will error exit
+ * if the user tries to configure this RAA with a Wi-Fi MAC that
+ * has VhtSupported or HtSupported set.
  */
 class AmrrWifiManager : public WifiRemoteStationManager
 {
@@ -43,8 +48,12 @@ public:
 
   AmrrWifiManager ();
 
+  // Inherited from WifiRemoteStationManager
+  virtual void SetHtSupported (bool enable);
+  virtual void SetVhtSupported (bool enable);
+
 private:
-  // overriden from base class
+  //overriden from base class
   virtual WifiRemoteStation * DoCreateStation (void) const;
   virtual void DoReportRxOk (WifiRemoteStation *station,
                              double rxSnr, WifiMode txMode);
@@ -56,7 +65,7 @@ private:
                                double ackSnr, WifiMode ackMode, double dataSnr);
   virtual void DoReportFinalRtsFailed (WifiRemoteStation *station);
   virtual void DoReportFinalDataFailed (WifiRemoteStation *station);
-  virtual WifiTxVector DoGetDataTxVector (WifiRemoteStation *station, uint32_t size);
+  virtual WifiTxVector DoGetDataTxVector (WifiRemoteStation *station);
   virtual WifiTxVector DoGetRtsTxVector (WifiRemoteStation *station);
   virtual bool IsLowLatency (void) const;
 
@@ -90,6 +99,7 @@ private:
    * minimum rate.
    *
    * \param station
+   *
    * \return true if the current rate is the minimum rate,
    *         false otherwise
    */
@@ -99,6 +109,7 @@ private:
    * maximum rate.
    *
    * \param station
+   *
    * \return true if the current rate is the maximum rate,
    *         false otherwise
    */
@@ -108,6 +119,7 @@ private:
    * is less than the number of successful transmission (times ratio).
    *
    * \param station
+   *
    * \return true if the number of retransmission and transmission error
    *              is less than the number of successful transmission
    *              (times ratio), false otherwise
@@ -118,6 +130,7 @@ private:
    * is greater than the number of successful transmission (times ratio).
    *
    * \param station
+   *
    * \return true if the number of retransmission and transmission error
    *              is less than the number of successful transmission
    *              (times ratio), false otherwise
@@ -141,6 +154,6 @@ private:
   uint32_t m_minSuccessThreshold;
 };
 
-} // namespace ns3
+} //namespace ns3
 
 #endif /* AMRR_WIFI_MANAGER_H */

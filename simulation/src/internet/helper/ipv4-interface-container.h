@@ -1,3 +1,23 @@
+/* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
+/*
+ * Copyright (c) 2008 INRIA
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation;
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *
+ * Author: Mathieu Lacage <mathieu.lacage@cutebugs.net>
+ */
+
 #ifndef IPV4_INTERFACE_CONTAINER_H
 #define IPV4_INTERFACE_CONTAINER_H
 
@@ -9,6 +29,8 @@
 namespace ns3 {
 
 /**
+ * \ingroup ipv4
+ *
  * \brief holds a vector of std::pair of Ptr<Ipv4> and interface index.
  *
  * Typically ns-3 Ipv4Interfaces are installed on devices using an Ipv4 address
@@ -46,7 +68,7 @@ public:
    * Concatenate the entries in the other container with ours.
    * \param other container
    */
-  void Add (Ipv4InterfaceContainer other);
+  void Add (const Ipv4InterfaceContainer& other);
 
   /**
    * \brief Get an iterator which refers to the first pair in the 
@@ -180,13 +202,11 @@ public:
 
 private:
   /**
-   * \internal
    * \brief Container for pairs of Ipv4 smart pointer / Interface Index.
    */
   typedef std::vector<std::pair<Ptr<Ipv4>,uint32_t> > InterfaceVector;
 
   /**
-   * \internal
    * \brief List of IPv4 stack and interfaces index.
    */
   InterfaceVector m_interfaces;

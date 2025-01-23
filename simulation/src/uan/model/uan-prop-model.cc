@@ -204,7 +204,8 @@ UanPdp::SumTapsFromMaxC (Time delay, Time duration) const
       NS_ASSERT_MSG (GetNTaps () == 1, "Attempted to sum taps over time interval in "
                      "UanPdp with resolution 0 and multiple taps");
 
-      return m_taps[0].GetAmp ();
+      if (delay.IsZero ()) return m_taps[0].GetAmp ();
+      return std::complex<double> (0.0, 0.0);
     }
 
   uint32_t numTaps =  static_cast<uint32_t> (duration.GetSeconds () / m_resolution.GetSeconds () + 0.5);
@@ -236,7 +237,8 @@ UanPdp::SumTapsFromMaxNc (Time delay, Time duration) const
       NS_ASSERT_MSG (GetNTaps () == 1, "Attempted to sum taps over time interval in "
                      "UanPdp with resolution 0 and multiple taps");
 
-      return std::abs (m_taps[0].GetAmp ());
+      if (delay.IsZero ()) return std::abs (m_taps[0].GetAmp ());
+      return 0;
     }
 
   uint32_t numTaps =  static_cast<uint32_t> (duration.GetSeconds () / m_resolution.GetSeconds () + 0.5);
@@ -336,13 +338,14 @@ UanPdp::CreateImpulsePdp (void)
   return pdp;
 }
 
-NS_OBJECT_ENSURE_REGISTERED (UanPropModel)
-  ;
+NS_OBJECT_ENSURE_REGISTERED (UanPropModel);
 
 TypeId UanPropModel::GetTypeId (void)
 {
   static TypeId tid = TypeId ("ns3::UanPropModel")
-    .SetParent<Object> ();
+    .SetParent<Object> ()
+    .SetGroupName ("Uan")
+  ;
   return tid;
 }
 

@@ -43,10 +43,9 @@
 #include <ns3/lte-ue-rrc.h>
 #include <ns3/lte-enb-net-device.h>
 
+using namespace ns3;
+
 NS_LOG_COMPONENT_DEFINE ("LteCellSelectionTest");
-
-namespace ns3 {
-
 
 /*
  * Test Suite
@@ -425,7 +424,3 @@ LteCellSelectionTestCase::ConnectionEstablishedCallback (
 {
   NS_LOG_FUNCTION (this << imsi << cellId << rnti);
 }
-
-
-
-} // end of namespace ns3

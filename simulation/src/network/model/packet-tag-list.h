@@ -75,7 +75,7 @@ class Tag;
  *          T2:n -> T1:l ;
  *          T1:n -> NULL ;
  *        };
- *      };
+ *      }
  * \enddot
  *
  *   - Tags are stored in serialized form in a tree of TagData
@@ -102,7 +102,7 @@ class Tag;
  *     any other #PacketTagList's, hence this is a \c const function.
  *
  *   - Copy constructor (PacketTagList(const PacketTagList & o))
- *     and assignment (#operator=(const PacketTagList & o)
+ *     and assignment (#operator=(const PacketTagList & o))
  *     simply join the tree at the same place as the original
  *     PacketTagList \c o, incrementing the \c count.
  *     For assignment, the old branch is deleted, up to
@@ -158,7 +158,7 @@ public:
      */
     enum TagData_e
     {
-      MAX_SIZE = 20           /**< Size of serialization buffer #data */
+      MAX_SIZE = 21           /**< Size of serialization buffer #data */
   };
 
     uint8_t data[MAX_SIZE];   /**< Serialization buffer */
@@ -184,6 +184,7 @@ public:
    * Assignment
    *
    * \param [in] o The PacketTagList to copy.
+   * \returns the copied object
    *
    * This makes a light-weight copy by #RemoveAll, then
    * pointing to the same \ref TagData as \pname{o}.

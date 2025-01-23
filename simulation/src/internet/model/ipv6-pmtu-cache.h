@@ -33,6 +33,7 @@ namespace ns3 {
 
 /**
  * \ingroup ipv6
+ *
  * \brief This class implements the Path MTU cache, as defined by \RFC{1981}.
  *
  * The Path MTU is stored according to the destination address, and it is
@@ -111,7 +112,7 @@ private:
   /**
    * \brief Container of the IPv6 PMTU data (Ipv6 destination address and expiration event).
    */
-  typedef std::map<Ipv6Address, EventId> ::iterator pathMtuTimerIter;
+  typedef std::map<Ipv6Address, EventId>::iterator pathMtuTimerIter;
 
   /**
    * \brief Path MTU Expiration table
