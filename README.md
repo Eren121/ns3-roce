@@ -7,6 +7,13 @@ New features:
 - Add support for RDMA unreliable datagram (UD).
 - Add support for multicast.
 
+## Build
+
+Refer to the `Makefile` for building the project.
+1. Build docker image: `make build_image`
+1. Run example: `make configure_release && make build && make run`
+3. Build netanim: `make build_netanim`. Output is `netanim/NetAnim`.
+
 ## Changes
 
 1. Updated to a more recent version of ns3.
