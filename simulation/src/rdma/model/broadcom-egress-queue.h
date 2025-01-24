@@ -30,10 +30,12 @@ namespace ns3 {
 
 	class TraceContainer;
 
+	/**
+	 * @brief Merge multiple queues into one (multi-queue).
+	 */
 	class BEgressQueue : public Queue {
 	public:
 		static TypeId GetTypeId(void);
-		static const unsigned fCnt = 128; //max number of queues, 128 for NICs
 		static const unsigned qCnt = 8; //max number of queues, 8 for switches
 		BEgressQueue();
 		~BEgressQueue() override;
@@ -63,7 +65,7 @@ namespace ns3 {
 		Ptr<QueueItem> DoDequeue(void) override;
 		Ptr<const QueueItem> DoPeek(void) const override;
   		Ptr<QueueItem> DoRemove (void) override;
-		uint32_t m_bytesInQueue[fCnt];
+		uint32_t m_bytesInQueue[qCnt];
 		uint32_t m_bytesInQueueTotal;
 		uint32_t m_rrlast;
 		uint32_t m_qlast;

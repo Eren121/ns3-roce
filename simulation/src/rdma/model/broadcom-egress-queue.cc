@@ -51,7 +51,7 @@ namespace ns3 {
 		NS_LOG_FUNCTION_NOARGS();
 		m_bytesInQueueTotal = 0;
 		m_rrlast = 0;
-		for (uint32_t i = 0; i < fCnt; i++)
+		for (uint32_t i = 0; i < qCnt; i++)
 		{
 			m_bytesInQueue[i] = 0;
 			m_queues.push_back(CreateObject<DropTailQueue>());
