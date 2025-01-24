@@ -48,6 +48,15 @@ namespace ns3 {
 
 	private:
 		bool DoEnqueue(Ptr<Packet> p, uint32_t qIndex);
+
+		/**
+		 * @brief Dequeue a packet from one of the queues.
+		 * @param paused `paused[i]` says whether the i-th queue is paused.
+		 * 
+		 * It is round-robin, that means if the last dequeued packet was from queue `i`,
+		 * it will check first queue `i+1`, then `i+2`, ..., and the first queue to not be empty will be dequeued.
+		 * The exception is the queue zero, which has highest priority over all the other queues.
+		 */
 		Ptr<Packet> DoDequeueRR(bool paused[]);
 		//for compatibility
 		bool DoEnqueue(Ptr<QueueItem> p) override;
