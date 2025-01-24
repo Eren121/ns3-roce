@@ -86,7 +86,7 @@ void CustomHeader::Print (std::ostream &os) const{
 uint32_t CustomHeader::GetSerializedSize (void) const{
 	uint32_t len = 0;
 	if (headerType & L2_Header)
-		len += 14;
+		len += 2;
 	if (headerType & L3_Header)
 		len += 5*4;
 	if (headerType & L4_Header){
