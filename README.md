@@ -1,9 +1,34 @@
-# HPCC simulation
-[Project page of HPCC](https://hpcc-group.github.io/) includes latest news of HPCC and extensive evaluation results using this simulator.
+# ns3-roce
 
-This is the simulator for [HPCC: High Precision Congestion Control (SIGCOMM' 2019)](https://rmiao.github.io/publications/hpcc-li.pdf). It also includes the implementation of DCQCN, TIMELY, DCTCP, PFC, ECN and Broadcom shared buffer switch.
+RoCE simulation in ns-3.
+Based on HPCC, which is based on ns3-coneweave, wich is based on ns3-rdma.
 
-We have update this simulator to support HPCC-PINT, which reduces the INT header overhead to 1 to 2 byte. This improves the long flow completion time. See [PINT: Probabilistic In-band Network Telemetry (SIGCOMM' 2020)](https://liyuliang001.github.io/publications/pint.pdf).
+New features:
+- Add support for RDMA unreliable datagram (UD).
+- Add support for multicast.
+
+## Changes
+
+1. Updated to a more recent version of ns3.
+1. Fix some bugs.
+1. Refactor code.
+1. Add netanim support.
+1. Add Docker image.
+
+The original project is still on ns-3.16, which causes problems on recent compilers: Now, a `gcc` version greather than 6 is working properly. This version upgrades the code to ns-3.26. Upgrading the version permits also to generate XML traces compatible with netanim, as the original version was producing traces with netanim-3.101, which we did not found online.
+
+Some bugs were fixed:
+
+- ACK interval is not ignored anymore.
+- Disabling ACK interval with (AckInterval=0) is now working properly.
+- Traffic is now properly seen in netanim XML trace. 
+- Other minor bugs.
+
+Refactoring:
+
+- Now all new files are grouped in a `rdma` module, under `simulation/rdma` folder, which makes more easy to identify the changes.
+- Remove most of the changes of the original project to ns3 source code to make more easy to upgrade to newer versions of ns3.
+- Configuration is now in Json.
 
 ## NS-3 simulation
 The ns-3 simulation is under `simulation/`. Refer to the README.md under it for more details.
@@ -15,8 +40,8 @@ The traffic generator is under `traffic_gen/`. Refer to the README.md under it f
 We provide a few analysis scripts under `analysis/` to view the packet-level events, and analyzing the fct in the same way as [HPCC](https://liyuliang001.github.io/publications/hpcc.pdf) Figure 11.
 Refer to the README.md under it for more details.
 
-## Questions
-For technical questions, please create an issue in this repo, so other people can benefit from your questions. 
-You may also check the issue list first to see if people have already asked the questions you have :)
+## Original authors
 
-For other questions, please contact Rui Miao (miao.rui@alibaba-inc.com).
+HPCC:
+
+- Rui Miao (miao.rui@alibaba-inc.com).
