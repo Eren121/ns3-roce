@@ -67,8 +67,8 @@ namespace ns3 {
   		Ptr<QueueItem> DoRemove (void) override;
 		uint32_t m_bytesInQueue[qCnt];
 		uint32_t m_bytesInQueueTotal;
-		uint32_t m_rrlast;
-		uint32_t m_qlast;
+		uint32_t m_rrlast; //!< Like `m_qlast`, but is not updated when the popped index is zero.
+		uint32_t m_qlast;  //!< Last popped queue index.
 		std::vector<Ptr<Queue> > m_queues; // uc queues
 	};
 
