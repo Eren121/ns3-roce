@@ -9,5 +9,5 @@ else
 fi
 
 cd netanim
-hg up netanim-3.106
+hg up netanim-3.107
 qmake NetAnim.pro && make clean && make
