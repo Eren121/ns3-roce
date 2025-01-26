@@ -162,14 +162,15 @@ struct SimConfig
 
 
 struct ScheduledFlow {
-	uint32_t src;
-	uint32_t dst;
-	uint16_t dst_port;
-	uint64_t size;
-	double start_time;
-	uint32_t priority;
-	bool reliable;
-	NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(ScheduledFlow, src, dst, dst_port, size, start_time, priority, reliable);
+	uint32_t src = 0;
+	uint32_t dst = 1;
+	uint16_t dst_port = 1000;
+	uint64_t size = 100;
+	double start_time = 0;
+	uint32_t priority = 3;
+	bool reliable = true;
+	bool multicast = false;
+	NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(ScheduledFlow, src, dst, dst_port, size, start_time, priority, reliable, multicast);
 };
 
 class FlowsConfig
@@ -943,27 +944,35 @@ int main(int argc, char *argv[])
 	// schedule buffer monitor
 	FILE* qlen_output = fopen(simConfig.qlen_mon_file.c_str(), "w");
 	Simulator::Schedule(NanoSeconds(simConfig.qlen_mon_start), &monitor_buffer, qlen_output, &simConfig, &n);
-
-  	MobilityHelper mobility;
+	
+	MobilityHelper mobility;
   	mobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
-  	mobility.Install (n);
-
+  	mobility.Install (n); // Before instanciation of AnimationInterface
+	
+  	AnimationInterface anim("anim.xml");
+	// High polling interval; the nodes never move. Reduces XML size.
+	anim.SetMobilityPollInterval(Seconds(1e9));
+	
 	for(int i = 0; i < n.GetN(); i++) {
 		Ptr<Node> node = n.Get(i);
-		
+		const uint32_t id = node->GetId();
+		const uint32_t num_nodes = n.GetN();
+
 		Ptr<ConstantPositionMobilityModel> mob = node->GetObject<ConstantPositionMobilityModel> ();
-		Vector p;
-		p.x =  GenRandomDouble(0, 100);
-		p.y = GenRandomDouble(0, 100);
-		p.z = 0;
+		Vector3D p = {};
+		
+		if(id != 0) {
+			p.x = std::cos(2 * M_PI / num_nodes * i);
+			p.y = std::sin(2 * M_PI / num_nodes * i);
+			anim.UpdateNodeColor(node, 1.0, 0.0, 0.0);
+		}
+		else {
+			anim.UpdateNodeColor(node, 1.0, 1.0, 0.0);
+		}
 		mob->SetPosition(p);
 	}
 
-	AnimationInterface anim("anim.xml");
-
-	//
 	// Now, do the actual simulation.
-	//
 	std::cout << "Running Simulation.\n";
 	fflush(stdout);
 	NS_LOG_INFO("Run Simulation.");
