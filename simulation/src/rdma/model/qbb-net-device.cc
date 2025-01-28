@@ -104,7 +104,7 @@ namespace ns3 {
 		uint32_t min_finish_id = 0xffffffff;
 		for (qIndex = 1; qIndex <= fcount; qIndex++){
 			uint32_t idx = (qIndex + m_rrlast) % fcount;
-			Ptr<RdmaQueuePair> qp = m_qpGrp->Get(idx);
+			Ptr<RdmaTxQueuePair> qp = m_qpGrp->Get(idx);
 			if (!paused[qp->m_pg] && qp->GetBytesLeft() > 0 && !qp->IsWinBound()){
 				if (m_qpGrp->Get(idx)->m_nextAvail.GetTimeStep() > Simulator::Now().GetTimeStep()) //not available now
 					continue;
@@ -136,7 +136,7 @@ namespace ns3 {
 		return m_qpGrp->GetN();
 	}
 
-	Ptr<RdmaQueuePair> RdmaEgressQueue::GetQp(uint32_t i){
+	Ptr<RdmaTxQueuePair> RdmaEgressQueue::GetQp(uint32_t i){
 		return m_qpGrp->Get(i);
 	}
  
@@ -262,7 +262,7 @@ namespace ns3 {
 					return;
 				}
 				// a qp dequeue a packet
-				Ptr<RdmaQueuePair> lastQp = m_rdmaEQ->GetQp(qIndex);
+				Ptr<RdmaTxQueuePair> lastQp = m_rdmaEQ->GetQp(qIndex);
 				p = m_rdmaEQ->DequeueQindex(qIndex);
 
 				// transmit
@@ -275,7 +275,7 @@ namespace ns3 {
 				NS_LOG_INFO("PAUSE prohibits send at node " << m_node->GetId());
 				Time t = Simulator::GetMaximumSimulationTime();
 				for (uint32_t i = 0; i < m_rdmaEQ->GetFlowCount(); i++){
-					Ptr<RdmaQueuePair> qp = m_rdmaEQ->GetQp(i);
+					Ptr<RdmaTxQueuePair> qp = m_rdmaEQ->GetQp(i);
 					if (qp->GetBytesLeft() == 0)
 						continue;
 					t = Min(qp->m_nextAvail, t);
@@ -312,7 +312,7 @@ namespace ns3 {
 				if (!IsSwitchNode(m_node) && m_qcnEnabled){ //nothing to send, possibly due to qcn flow control, if so reschedule sending
 					Time t = Simulator::GetMaximumSimulationTime();
 					for (uint32_t i = 0; i < m_rdmaEQ->GetFlowCount(); i++){
-						Ptr<RdmaQueuePair> qp = m_rdmaEQ->GetQp(i);
+						Ptr<RdmaTxQueuePair> qp = m_rdmaEQ->GetQp(i);
 						if (qp->GetBytesLeft() == 0)
 							continue;
 						t = Min(qp->m_nextAvail, t);
@@ -459,11 +459,11 @@ namespace ns3 {
 		return m_channel;
 	}
 
-   void QbbNetDevice::NewQp(Ptr<RdmaQueuePair> qp){
+   void QbbNetDevice::NewQp(Ptr<RdmaTxQueuePair> qp){
 	   qp->m_nextAvail = Simulator::Now();
 	   DequeueAndTransmit();
    }
-   void QbbNetDevice::ReassignedQp(Ptr<RdmaQueuePair> qp){
+   void QbbNetDevice::ReassignedQp(Ptr<RdmaTxQueuePair> qp){
 	   DequeueAndTransmit();
    }
    void QbbNetDevice::TriggerTransmit(void){

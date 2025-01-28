@@ -396,7 +396,7 @@ void QbbHelper::PhyRxDropDetailCallback(FILE* file, Ptr<QbbNetDevice> dev, Ptr<c
   PacketEventCallback(file, dev, p, 0, Drop, true);
 }
 
-void QbbHelper::QpDequeueCallback(FILE *file, Ptr<QbbNetDevice> dev, Ptr<const Packet> p, Ptr<RdmaQueuePair> qp){
+void QbbHelper::QpDequeueCallback(FILE *file, Ptr<QbbNetDevice> dev, Ptr<const Packet> p, Ptr<RdmaTxQueuePair> qp){
 	TraceFormat tr;
 	GetTraceFromPacket(tr, dev, p, qp->m_pg, Dequ, true);
 	tr.Serialize(file);

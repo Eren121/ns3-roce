@@ -435,7 +435,7 @@ uint32_t ip_to_node_id(Ipv4Address ip){
 	return (ip.Get() >> 8) & 0xffff;
 }
 
-void qp_finish(FILE* fout, const SimConfig* simConfig, Ptr<RdmaQueuePair> q){
+void qp_finish(FILE* fout, const SimConfig* simConfig, Ptr<RdmaTxQueuePair> q){
 	if(q->dip.Get() < 1000) { // Quick dirty test to check if it is multicast address
 		return; // Stop since the `ip_to_node_id()` doesn't work with multicast
 	}

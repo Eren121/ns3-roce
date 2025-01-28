@@ -12,7 +12,7 @@
 
 namespace ns3 {
 
-class RdmaQueuePair : public Object {
+class RdmaTxQueuePair : public Object {
 public:
 	Time startTime;
 	Ipv4Address sip, dip;
@@ -85,7 +85,7 @@ public:
 	 * methods
 	 **********/
 	static TypeId GetTypeId (void);
-	RdmaQueuePair(uint16_t pg, Ipv4Address _sip, Ipv4Address _dip, uint16_t _sport, uint16_t _dport);
+	RdmaTxQueuePair(uint16_t pg, Ipv4Address _sip, Ipv4Address _dip, uint16_t _sport, uint16_t _dport);
 	void SetSize(uint64_t size);
 	void SetWin(uint32_t win);
 	void SetBaseRtt(uint64_t baseRtt);
@@ -125,16 +125,16 @@ public:
 };
 
 /**
- * @brief Simple wrapper around `std::vector<Ptr<RdmaQueuePair>>`.
+ * @brief Simple wrapper around `std::vector<Ptr<RdmaTxQueuePair>>`.
  */
-class RdmaQueuePairGroup : public Object
+class RdmaTxQueuePairGroup : public Object
 {
 public:
 	static TypeId GetTypeId();
 	uint32_t GetN();
-	Ptr<RdmaQueuePair> Get(uint32_t idx);
-	Ptr<RdmaQueuePair> operator[](uint32_t idx);
-	void AddQp(Ptr<RdmaQueuePair> qp);
+	Ptr<RdmaTxQueuePair> Get(uint32_t idx);
+	Ptr<RdmaTxQueuePair> operator[](uint32_t idx);
+	void AddQp(Ptr<RdmaTxQueuePair> qp);
 	void Clear();
 
 	/**
@@ -146,7 +146,7 @@ public:
 	void RemoveFinished(int begin, int last, int& res);
 
 private:
-	std::vector<Ptr<RdmaQueuePair>> m_qps;
+	std::vector<Ptr<RdmaTxQueuePair>> m_qps;
 };
 
 }

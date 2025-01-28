@@ -42,10 +42,10 @@ public:
 	int m_qlast;
 	uint32_t m_rrlast;
 	Ptr<DropTailQueue> m_ackQ; // highest priority queue
-	Ptr<RdmaQueuePairGroup> m_qpGrp; // queue pairs
+	Ptr<RdmaTxQueuePairGroup> m_qpGrp; // queue pairs
 
 	// callback for get next packet
-	typedef Callback<Ptr<Packet>, Ptr<RdmaQueuePair> > RdmaGetNxtPkt;
+	typedef Callback<Ptr<Packet>, Ptr<RdmaTxQueuePair> > RdmaGetNxtPkt;
 	RdmaGetNxtPkt m_rdmaGetNxtPkt;
 
 	static TypeId GetTypeId (void);
@@ -55,7 +55,7 @@ public:
 	int GetLastQueue();
 	uint32_t GetNBytes(uint32_t qIndex);
 	uint32_t GetFlowCount(void);
-	Ptr<RdmaQueuePair> GetQp(uint32_t i);
+	Ptr<RdmaTxQueuePair> GetQp(uint32_t i);
 	void RecoverQueue(uint32_t i);
 	void EnqueueHighPrioQ(Ptr<Packet> p);
 	void CleanHighPrio(TracedCallback<Ptr<const Packet>, uint32_t> dropCb);
@@ -122,8 +122,8 @@ public:
 
    void SetQueue (Ptr<BEgressQueue> q);
    Ptr<BEgressQueue> GetQueue ();
-   void NewQp(Ptr<RdmaQueuePair> qp);
-   void ReassignedQp(Ptr<RdmaQueuePair> qp);
+   void NewQp(Ptr<RdmaTxQueuePair> qp);
+   void ReassignedQp(Ptr<RdmaTxQueuePair> qp);
    void TriggerTransmit(void);
 
 	void SendPfc(uint32_t qIndex, uint32_t type); // type: 0 = pause, 1 = resume
@@ -207,14 +207,14 @@ public:
 	typedef Callback<void, Ptr<QbbNetDevice> > RdmaLinkDownCb;
 	RdmaLinkDownCb m_rdmaLinkDownCb;
 	// callback for sent a packet
-	typedef Callback<void, Ptr<RdmaQueuePair>, Ptr<Packet>, Time> RdmaPktSent;
+	typedef Callback<void, Ptr<RdmaTxQueuePair>, Ptr<Packet>, Time> RdmaPktSent;
 	RdmaPktSent m_rdmaPktSent;
 
 	Ptr<RdmaEgressQueue> GetRdmaQueue();
 	void TakeDown(); // take down this device
 	void UpdateNextAvail(Time t);
 
-	TracedCallback<Ptr<const Packet>, Ptr<RdmaQueuePair> > m_traceQpDequeue; // the trace for printing dequeue
+	TracedCallback<Ptr<const Packet>, Ptr<RdmaTxQueuePair> > m_traceQpDequeue; // the trace for printing dequeue
 };
 
 bool IsQbb(Ptr<const NetDevice> self);
