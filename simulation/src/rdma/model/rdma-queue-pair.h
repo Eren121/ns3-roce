@@ -93,7 +93,6 @@ public:
 	void SetAppNotifyCallback(Callback<void> notifyAppFinish);
 
 	uint64_t GetBytesLeft();
-	uint32_t GetHash(void);
 	void Acknowledge(uint64_t ack);
 	uint64_t GetOnTheFly();
 	bool IsWinBound();
@@ -113,8 +112,8 @@ public:
 		ECNAccount() { memset(this, 0, sizeof(ECNAccount));}
 	};
 	ECNAccount m_ecn_source;
-	uint32_t sip, dip;
-	uint16_t sport, dport;
+	uint32_t m_local_ip;
+	uint16_t m_local_port;
 	uint16_t m_ipid;
 	uint32_t ReceiverNextExpectedSeq;
 	Time m_nackTimer;
@@ -123,7 +122,6 @@ public:
 
 	static TypeId GetTypeId (void);
 	RdmaRxQueuePair();
-	uint32_t GetHash(void);
 };
 
 /**

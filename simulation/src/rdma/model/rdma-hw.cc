@@ -210,20 +210,13 @@ void RdmaHw::Setup()
 }
 
 uint64_t RdmaHw::GetQpKey(uint32_t dip, uint16_t sport, uint16_t pg){
-	return ((uint64_t)dip << 32) | ((uint64_t)sport << 16) | (uint64_t)pg;
+	return sport;
 }
 
 uint64_t RdmaHw::GetRxQpKey(uint32_t dip, uint16_t dport, uint16_t pg){
-	return ((uint64_t)dip << 32) | ((uint64_t)pg << 16) | (uint64_t)dport;
+	return dport;
 }
 
-Ptr<RdmaQueuePair> RdmaHw::GetQp(uint32_t dip, uint16_t sport, uint16_t pg){
-	uint64_t key = GetQpKey(dip, sport, pg);
-	auto it = m_qpMap.find(key);
-	if (it != m_qpMap.end())
-		return it->second;
-	return NULL;
-}
 void RdmaHw::AddQueuePair(uint64_t size, bool reliable, uint16_t pg, Ipv4Address sip, Ipv4Address dip, uint16_t sport, uint16_t dport, uint32_t win, uint64_t baseRtt, bool multicast, Callback<void> notifyAppFinish){
 	// create qp
 	Ptr<RdmaQueuePair> qp = CreateObject<RdmaQueuePair>(pg, sip, dip, sport, dport);
@@ -272,16 +265,15 @@ void RdmaHw::DeleteQueuePair(Ptr<RdmaQueuePair> qp){
 Ptr<RdmaRxQueuePair> RdmaHw::GetRxQp(uint32_t sip, uint32_t dip, uint16_t sport, uint16_t dport, uint16_t pg, bool create){
 	uint64_t key = GetRxQpKey(dip, dport, pg);
 	auto it = m_rxQpMap.find(key);
+	NS_ASSERT_MSG(it != m_rxQpMap.end(), "Cannot find the destination RQ");
 	if (it != m_rxQpMap.end())
 		return it->second;
 	if (create){
 		// create new rx qp
 		Ptr<RdmaRxQueuePair> q = CreateObject<RdmaRxQueuePair>();
 		// init the qp
-		q->sip = sip;
-		q->dip = dip;
-		q->sport = sport;
-		q->dport = dport;
+		q->m_local_ip = sip;
+		q->m_local_port = sport;
 		q->m_ecn_source.qIndex = pg;
 		// store in map
 		m_rxQpMap[key] = q;
@@ -369,7 +361,7 @@ int RdmaHw::ReceiveUdp(Ptr<Packet> p, CustomHeader &ch){
 		newp->AddHeader(head);
 		AddHeader(newp, 0x800);	// Attach PPP header
 		// send
-		uint32_t nic_idx = ResolveIface(Ipv4Address(rxQp->dip));
+		uint32_t nic_idx = ResolveIface(Ipv4Address(rxQp->m_local_ip));
 		m_nic[nic_idx].GetDevice()->RdmaEnqueueHighPrioQ(newp);
 		m_nic[nic_idx].GetDevice()->TriggerTransmit();
 	}
@@ -393,7 +385,7 @@ int RdmaHw::ReceiveCnp(Ptr<Packet> p, CustomHeader &ch){
 
 	uint32_t i;
 	// get qp
-	Ptr<RdmaQueuePair> qp = GetQp(ch.sip, udpport, qIndex);
+	Ptr<RdmaQueuePair> qp = m_qpMap[udpport];
 	if (qp == NULL)
 		std::cout << "ERROR: QCN NIC cannot find the flow\n";
 	// get nic
@@ -439,7 +431,7 @@ int RdmaHw::ReceiveAck(Ptr<Packet> p, CustomHeader &ch){
 	uint8_t cnp = (ch.ack.flags >> qbbHeader::FLAG_CNP) & 1;
 	const bool nack = (ch.l3Prot == 0xFD);
 	int i;
-	Ptr<RdmaQueuePair> qp = GetQp(ch.sip, port, qIndex);
+	Ptr<RdmaQueuePair> qp = m_qpMap[port];
 	if (qp == NULL){
 		std::cout << "ERROR: " << "node:" << m_node->GetId() << ' ' << (ch.l3Prot == 0xFC ? "ACK" : "NACK") << " NIC cannot find the flow\n";
 		return 0;

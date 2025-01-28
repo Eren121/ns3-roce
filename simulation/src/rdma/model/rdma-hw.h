@@ -46,7 +46,6 @@ public:
 private:
 	static uint64_t GetQpKey(uint32_t dip, uint16_t sport, uint16_t pg); // get the lookup key for m_qpMap
 	static uint64_t GetRxQpKey(uint32_t dip, uint16_t dport, uint16_t pg); // get the lookup key for m_rxQpMap
-	Ptr<RdmaQueuePair> GetQp(uint32_t dip, uint16_t sport, uint16_t pg); // get the qp
 	uint32_t ResolveIface(Ipv4Address ip); //!< Get the interface connected to this IP.
 	void DeleteQueuePair(Ptr<RdmaQueuePair> qp);
 

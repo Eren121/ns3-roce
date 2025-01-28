@@ -94,21 +94,6 @@ uint64_t RdmaQueuePair::GetBytesLeft(){
 	return m_size >= snd_nxt ? m_size - snd_nxt : 0;
 }
 
-uint32_t RdmaQueuePair::GetHash(void){
-	union{
-		struct {
-			uint32_t sip, dip;
-			uint16_t sport, dport;
-		};
-		char c[12];
-	} buf;
-	buf.sip = sip.Get();
-	buf.dip = dip.Get();
-	buf.sport = sport;
-	buf.dport = dport;
-	return Hash32(buf.c, 12);
-}
-
 void RdmaQueuePair::Acknowledge(uint64_t ack){
 	if (ack > snd_una){
 		snd_una = ack;
@@ -171,26 +156,12 @@ TypeId RdmaRxQueuePair::GetTypeId (void)
 }
 
 RdmaRxQueuePair::RdmaRxQueuePair(){
-	sip = dip = sport = dport = 0;
+	m_local_ip = 0;
+	m_local_port = 0;
 	m_ipid = 0;
 	ReceiverNextExpectedSeq = 0;
 	m_nackTimer = Time(0);
 	m_lastNACK = 0;
-}
-
-uint32_t RdmaRxQueuePair::GetHash(void){
-	union{
-		struct {
-			uint32_t sip, dip;
-			uint16_t sport, dport;
-		};
-		char c[12];
-	} buf;
-	buf.sip = sip;
-	buf.dip = dip;
-	buf.sport = sport;
-	buf.dport = dport;
-	return Hash32(buf.c, 12);
 }
 
 /*********************
