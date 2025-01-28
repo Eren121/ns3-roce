@@ -93,6 +93,11 @@ RdmaClient::GetTypeId()
                    UintegerValue (0),
                    MakeUintegerAccessor (&RdmaClient::m_baseRtt),
                    MakeUintegerChecker<uint64_t> ())
+    .AddAttribute ("Multicast",
+                   "Whether to treat destination as a multicast address.",
+                   BooleanValue(false),
+                   MakeBooleanAccessor(&RdmaClient::m_multicast),
+                   MakeBooleanChecker())
     .AddAttribute("OnFlowFinished",
                   "Callback when the flow finishes",
                   CallbackValue(),
@@ -146,7 +151,7 @@ void RdmaClient::StartApplication()
   // get RDMA driver and add up queue pair
   Ptr<Node> node = GetNode();
   Ptr<RdmaDriver> rdma = node->GetObject<RdmaDriver>();
-  rdma->AddQueuePair(m_size, m_reliable, m_pg, m_sip, m_dip, m_sport, m_dport, m_win, m_baseRtt, MakeCallback(&RdmaClient::StopApplication, this));
+  rdma->AddQueuePair(m_size, m_reliable, m_pg, m_sip, m_dip, m_sport, m_dport, m_win, m_baseRtt, m_multicast, MakeCallback(&RdmaClient::StopApplication, this));
 }
 
 void RdmaClient::StopApplication()

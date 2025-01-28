@@ -13,6 +13,11 @@ TypeId RdmaBTH::GetTypeId()
 				BooleanValue(true),
 				MakeBooleanAccessor(&RdmaBTH::m_reliable),
 				MakeBooleanChecker())
+		.AddAttribute("Multicast",
+				"Whether the destination is a multicast address",
+				BooleanValue(false),
+				MakeBooleanAccessor(&RdmaBTH::m_multicast),
+				MakeBooleanChecker())
 		.AddAttribute("AckReq",
 				"Whether to request for an ACK.",
 				BooleanValue(false),
@@ -34,19 +39,24 @@ void RdmaBTH::Print(std::ostream &os) const
 
 uint32_t RdmaBTH::GetSerializedSize() const
 {
-	return 2;
+	return 1;
 }
 
 void RdmaBTH::Serialize(TagBuffer start) const
 {
-	start.WriteU8(m_reliable);
-	start.WriteU8(m_ack_req);
+	const uint8_t payload = m_reliable
+		| (m_multicast << 1)
+		| (m_ack_req << 2);
+
+	start.WriteU8(payload);
 }
 
 void RdmaBTH::Deserialize(TagBuffer start)
 {
-	m_reliable = start.ReadU8();
-	m_ack_req = start.ReadU8();
+	const uint8_t payload = start.ReadU8();
+	m_reliable  = payload & 1;
+	m_multicast = payload & 2;
+	m_ack_req   = payload & 4;
 }
 
 bool RdmaBTH::GetReliable() const
@@ -67,6 +77,16 @@ bool RdmaBTH::GetAckReq() const
 void RdmaBTH::SetAckReq(bool ack_req)
 {
 	m_ack_req = ack_req;
+}
+
+bool RdmaBTH::GetMulticast() const
+{
+	return m_multicast;
+}
+
+void RdmaBTH::SetMulticast(bool multicast)
+{
+	m_multicast = multicast;
 }
 
 }

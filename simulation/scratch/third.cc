@@ -375,8 +375,8 @@ void RunFlow(ScheduledFlow flow)
 {
 	constexpr uint32_t first_src_port = 10000; // each host pair use port number from 10000
 	const uint32_t src_port = first_src_port + (portNumder[flow.src][flow.dst]++); // get a new port number
-	const Ipv4Address sip = serverAddress[flow.src];
-	const Ipv4Address dip = serverAddress[flow.dst];
+	Ipv4Address sip = serverAddress[flow.src];
+	Ipv4Address dip = serverAddress[flow.dst];
 	uint32_t win;
 	uint64_t baseRtt;
 
@@ -399,8 +399,14 @@ void RunFlow(ScheduledFlow flow)
 		win = 0;
 	}
 
+	if(flow.multicast) {
+		// We use IP as an index for the multicsat group (simpler than using real multicast address)
+		dip = Ipv4Address(flow.dst);
+	}
+
 	RdmaClientHelper clientHelper(flow.priority, sip, dip, src_port, flow.dst_port, flow.size, win, baseRtt);
 	clientHelper.SetAttribute("Reliable", BooleanValue(flow.reliable));
+	clientHelper.SetAttribute("Multicast", BooleanValue(flow.multicast));
 	ApplicationContainer appCon = clientHelper.Install(n.Get(flow.src));
 	appCon.Start(Time(0));
 	std::cout << "Running flow " << Simulator::Now() << json(flow) << std::endl;
@@ -412,7 +418,11 @@ void ScheduleFlowInputs()
 	while(flowsConfig.GetNextFlow(flow)) {
 		
 		const Time when = Seconds(flow.start_time) - Simulator::Now();
-		NS_ABORT_UNLESS(!IsSwitchNode(n.Get(flow.src)) && !IsSwitchNode(n.Get(flow.dst)));
+		NS_ABORT_IF(IsSwitchNode(n.Get(flow.src)));
+		if(!flow.multicast) {
+			NS_ABORT_IF(IsSwitchNode(n.Get(flow.dst)));
+		}
+
 		Simulator::Schedule(when, RunFlow, flow);
 	}
 }
@@ -426,7 +436,13 @@ uint32_t ip_to_node_id(Ipv4Address ip){
 }
 
 void qp_finish(FILE* fout, const SimConfig* simConfig, Ptr<RdmaQueuePair> q){
-	uint32_t sid = ip_to_node_id(q->sip), did = ip_to_node_id(q->dip);
+	if(q->dip.Get() < 1000) { // Quick dirty test to check if it is multicast address
+		return; // Stop since the `ip_to_node_id()` doesn't work with multicast
+	}
+
+	const uint32_t sid = ip_to_node_id(q->sip);
+	const uint32_t did = ip_to_node_id(q->dip);
+	
 	uint64_t base_rtt = pairRtt[sid][did], b = pairBw[sid][did];
 	uint32_t total_bytes = q->m_size + ((q->m_size-1) / simConfig->packet_payload_size + 1) * (CustomHeader::GetStaticWholeHeaderSize() - IntHeader::GetStaticSize()); // translate to the minimum bytes required (with header but no INT)
 	uint64_t standalone_fct = base_rtt + total_bytes * 8000000000lu / b;
@@ -941,6 +957,22 @@ int main(int argc, char *argv[])
 		MCastConfig mcastConfig;
 		mcastConfig.ParseFromFile(simConfig.groups_file);
 		MCastNetwork mcastNet(mcastConfig);
+
+		for(const MCastConfig::Group& group : mcastConfig.groups) {
+			for(uint32_t node_id : group.nodes) {
+				// To make simple, don't support ECMP
+				// Assume the node has only one NIC and one link
+				Ptr<Node> node = n.Get(node_id);
+				NS_ASSERT(!IsSwitchNode(node));
+				
+				const int nic_iface = 1;
+				Ptr<QbbNetDevice> qbb = DynamicCast<QbbNetDevice>(node->GetDevice(nic_iface));
+				qbb->AddGroup(group.id);
+
+				const Ipv4Address mcast_addr(group.id);
+				node->GetObject<RdmaDriver>()->m_rdma->AddTableEntry(mcast_addr, nic_iface);
+			}
+		}
 	}
 
 	NS_LOG_INFO("Create Applications.");
@@ -960,21 +992,20 @@ int main(int argc, char *argv[])
 	FILE* qlen_output = fopen(simConfig.qlen_mon_file.c_str(), "w");
 	Simulator::Schedule(NanoSeconds(simConfig.qlen_mon_start), &monitor_buffer, qlen_output, &simConfig, &n);
 	
-	
-	// Save trace for animation
-	AnimationInterface anim("anim.xml");
-	// High polling interval; the nodes never move. Reduces XML size.
-	anim.SetMobilityPollInterval(Seconds(1e9));
-	
 	for (uint32_t i = 0; i < node_num; i++){
 		const TopoConfig::Node& node_config = topo.nodes[i];
 		Ptr<Node> node = n.Get(i);
 		Vector3D p = {};
 		p.x = node_config.pos.x;
 		p.y = node_config.pos.y;
-		anim.SetConstantPosition(node, p.x, p.y, p.z);
+		AnimationInterface::SetConstantPosition(node, p.x, p.y, p.z);
 	}
 
+	// Save trace for animation
+	AnimationInterface anim("anim.xml");
+	// High polling interval; the nodes never move. Reduces XML size.
+	anim.SetMobilityPollInterval(Seconds(1e9));
+	
 	// Now, do the actual simulation.
 	std::cout << "Running Simulation.\n";
 	fflush(stdout);

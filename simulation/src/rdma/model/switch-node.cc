@@ -8,6 +8,7 @@
 #include "ns3/double.h"
 #include "switch-node.h"
 #include "qbb-net-device.h"
+#include "rdma-bth.h"
 #include "ns3/rdma-random.h"
 #include "ns3/ppp-header.h"
 #include "ns3/int-header.h"
@@ -126,6 +127,47 @@ void SwitchNode::CheckAndSendResume(uint32_t inDev, uint32_t qIndex){
 	}
 }
 
+void SwitchNode::SendMultiToDevs(Ptr<Packet> packet, CustomHeader& ch, int in_iface) {
+	auto iface_it = m_ogroups.find(ch.dip);
+	if(iface_it == m_ogroups.end()) {
+		std::cerr << "ERROR: Cannot find ports for multicast group " << ch.dip << std::endl;
+		return;
+	}
+	for(int idx : iface_it->second) {
+		if(idx == in_iface) {
+			continue;
+		}
+
+		NS_ASSERT_MSG(GetDevice(idx)->IsLinkUp(), "The routing table look up should return link that is up");
+
+		Ptr<Packet> p = packet->Copy();
+		// determine the qIndex
+		uint32_t qIndex;
+		if (ch.l3Prot == 0xFF || ch.l3Prot == 0xFE || (m_ackHighPrio && (ch.l3Prot == 0xFD || ch.l3Prot == 0xFC))){  //QCN or PFC or NACK, go highest priority
+			qIndex = 0;
+		}else{
+			qIndex = (ch.l3Prot == 0x06 ? 1 : ch.udp.pg); // if TCP, put to queue 1
+		}
+
+		// admission control
+		FlowIdTag t;
+		p->PeekPacketTag(t);
+		uint32_t inDev = t.GetFlowId();
+		if (qIndex != 0){ //not highest priority
+			if (m_mmu->CheckIngressAdmission(inDev, qIndex, p->GetSize()) && m_mmu->CheckEgressAdmission(idx, qIndex, p->GetSize())){			// Admission control
+				m_mmu->UpdateIngressAdmission(inDev, qIndex, p->GetSize());
+				m_mmu->UpdateEgressAdmission(idx, qIndex, p->GetSize());
+			}
+			else{
+				continue; // Drop
+			}
+			CheckAndSendPfc(inDev, qIndex);
+		}
+		m_bytes[inDev][idx][qIndex] += p->GetSize();
+		SwitchSend(GetDevice(idx), qIndex, p);
+	}
+}
+
 void SwitchNode::SendToDev(Ptr<Packet>p, CustomHeader &ch){
 	int idx = GetOutDev(p, ch);
 	if (idx >= 0){
@@ -153,7 +195,7 @@ void SwitchNode::SendToDev(Ptr<Packet>p, CustomHeader &ch){
 			CheckAndSendPfc(inDev, qIndex);
 		}
 		m_bytes[inDev][idx][qIndex] += p->GetSize();
-		SwitchSend(GetDevice(idx), qIndex, p, ch);
+		SwitchSend(GetDevice(idx), qIndex, p);
 	}else {
 		std::cerr << "ERROR: Cannot find output device for packet" << std::endl;
 		return; // Drop
@@ -213,7 +255,21 @@ void SwitchNode::ClearTable(){
 
 // This function can only be called in switch mode
 bool SwitchNode::SwitchReceiveFromDevice(Ptr<NetDevice> device, Ptr<Packet> packet, CustomHeader &ch){
-	SendToDev(packet, ch);
+	bool multicast = false;
+	{
+		RdmaBTH bth;
+		if(packet->PeekPacketTag(bth)) {
+			multicast = bth.GetMulticast();
+		}
+	}
+
+	if(multicast) {
+		SendMultiToDevs(packet, ch, device->GetIfIndex());
+	}
+	else {
+		SendToDev(packet, ch);
+	}
+
 	return true;
 }
 
@@ -365,11 +421,11 @@ NodeType GetNodeType(Ptr<Node> node)
 	return IsSwitchNode(node) ? NT_SWITCH : NT_SERVER;
 }
 
-bool SwitchSend(Ptr<NetDevice> self, uint32_t qIndex, Ptr<Packet> packet, CustomHeader &ch)
+bool SwitchSend(Ptr<NetDevice> self, uint32_t qIndex, Ptr<Packet> packet)
 {
 	Ptr<QbbNetDevice> qbb = DynamicCast<QbbNetDevice>(self);
 	NS_ASSERT(qbb);
-	return qbb->SwitchSend(qIndex, packet, ch);
+	return qbb->SwitchSend(qIndex, packet);
 }
 
 void SwitchNotifyDequeue(Ptr<Node> self, uint32_t ifIndex, uint32_t qIndex, Ptr<Packet> p)

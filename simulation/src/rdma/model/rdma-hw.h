@@ -52,7 +52,7 @@ public:
 	static uint64_t GetRxQpKey(uint32_t dip, uint16_t dport, uint16_t pg); // get the lookup key for m_rxQpMap
 	Ptr<RdmaQueuePair> GetQp(uint32_t dip, uint16_t sport, uint16_t pg); // get the qp
 	uint32_t GetNicIdxOfQp(Ptr<RdmaQueuePair> qp); // get the NIC index of the qp
-	void AddQueuePair(uint64_t size, bool reliable, uint16_t pg, Ipv4Address _sip, Ipv4Address _dip, uint16_t _sport, uint16_t _dport, uint32_t win, uint64_t baseRtt, Callback<void> notifyAppFinish); // add a new qp (new send)
+	void AddQueuePair(uint64_t size, bool reliable, uint16_t pg, Ipv4Address _sip, Ipv4Address _dip, uint16_t _sport, uint16_t _dport, uint32_t win, uint64_t baseRtt, bool multicast, Callback<void> notifyAppFinish); // add a new qp (new send)
 	void DeleteQueuePair(Ptr<RdmaQueuePair> qp);
 
 	Ptr<RdmaRxQueuePair> GetRxQp(uint32_t sip, uint32_t dip, uint16_t sport, uint16_t dport, uint16_t pg, bool create); // get a rxQp
@@ -75,7 +75,7 @@ public:
 	void SetLinkDown(Ptr<QbbNetDevice> dev);
 
 	// call this function after the NIC is setup
-	void AddTableEntry(Ipv4Address &dstAddr, uint32_t intf_idx);
+	void AddTableEntry(const Ipv4Address &dstAddr, uint32_t intf_idx);
 	void ClearTable();
 	void RedistributeQp();
 

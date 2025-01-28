@@ -227,10 +227,11 @@ Ptr<RdmaQueuePair> RdmaHw::GetQp(uint32_t dip, uint16_t sport, uint16_t pg){
 		return it->second;
 	return NULL;
 }
-void RdmaHw::AddQueuePair(uint64_t size, bool reliable, uint16_t pg, Ipv4Address sip, Ipv4Address dip, uint16_t sport, uint16_t dport, uint32_t win, uint64_t baseRtt, Callback<void> notifyAppFinish){
+void RdmaHw::AddQueuePair(uint64_t size, bool reliable, uint16_t pg, Ipv4Address sip, Ipv4Address dip, uint16_t sport, uint16_t dport, uint32_t win, uint64_t baseRtt, bool multicast, Callback<void> notifyAppFinish){
 	// create qp
 	Ptr<RdmaQueuePair> qp = CreateObject<RdmaQueuePair>(pg, sip, dip, sport, dport);
 	qp->m_reliable = reliable;
+	qp->m_multicast = multicast;
 	qp->SetSize(size);
 	qp->SetWin(win);
 	qp->SetBaseRtt(baseRtt);
@@ -320,9 +321,13 @@ int RdmaHw::ReceiveUdp(Ptr<Packet> p, CustomHeader &ch){
 		std::cout << "WARNING: BTH tag not present in received UDP packet" << std::endl;
 	}
 	if(reliable) {
+		NS_ASSERT_MSG(!bth.GetMulticast(), "Multicast cannot be reliable");
 		rxQp = GetRxQp(ch.dip, ch.sip, ch.udp.dport, ch.udp.sport, ch.udp.pg, true);
 	}
 	else {
+		NS_ASSERT_MSG(!bth.GetAckReq(), "Unreliable packets cannot be ACKed");
+		// UD QPs can receive from any sender (n-to-1),
+		// so don't put the source in the hash of the QP key.
 		rxQp = GetRxQp(ch.dip, 0, ch.udp.dport, 0, ch.udp.pg, true);
 	}
 	if (ecnbits != 0){
@@ -595,7 +600,7 @@ void RdmaHw::SetLinkDown(Ptr<QbbNetDevice> dev){
 	printf("RdmaHw: node:%u a link down\n", m_node->GetId());
 }
 
-void RdmaHw::AddTableEntry(Ipv4Address &dstAddr, uint32_t intf_idx){
+void RdmaHw::AddTableEntry(const Ipv4Address &dstAddr, uint32_t intf_idx){
 	uint32_t dip = dstAddr.Get();
 	m_rtTable[dip].push_back(intf_idx);
 }
@@ -654,6 +659,7 @@ Ptr<Packet> RdmaHw::GetNxtPacket(Ptr<RdmaQueuePair> qp){
 	// add bth
 	RdmaBTH bth;
 	bth.SetReliable(qp->m_reliable);
+	bth.SetMulticast(qp->m_multicast);
 	bth.SetAckReq(SenderShouldReqAck(qp, payload_size));
 	p->AddPacketTag(bth);
 	// update state

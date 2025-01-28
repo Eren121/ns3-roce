@@ -6,15 +6,19 @@
             "priority": 3,
             "dst_port": 100,
             "size": 200000,
-            "start_time": 1.1
+            "start_time": 1.1,
+            "multicast": false,
+            "reliable": true
         },
         {
             "src": 5,
-            "dst": 6,
+            "dst": 1,
             "priority": 3,
             "dst_port": 100,
             "size": 200000,
-            "start_time": 2
+            "start_time": 2,
+            "multicast": true,
+            "reliable": false
         }
     ]
 }

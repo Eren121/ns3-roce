@@ -41,6 +41,7 @@ RdmaClientHelper::RdmaClientHelper (uint16_t pg, Ipv4Address sip, Ipv4Address di
 	SetAttribute ("Window", UintegerValue (win));
 	SetAttribute ("BaseRtt", UintegerValue (baseRtt));
 	SetAttribute ("Reliable", BooleanValue(true));
+	SetAttribute ("Multicast", BooleanValue(false));
 }
 
 void

@@ -67,6 +67,7 @@ protected:
 private:
 	int GetOutDev(Ptr<const Packet>, CustomHeader &ch);
 	void SendToDev(Ptr<Packet>p, CustomHeader &ch);
+	void SendMultiToDevs(Ptr<Packet> p, CustomHeader& ch, int in_inface);
 	static uint32_t EcmpHash(const uint8_t* key, size_t len, uint32_t seed);
 	void CheckAndSendPfc(uint32_t inDev, uint32_t qIndex);
 	void CheckAndSendResume(uint32_t inDev, uint32_t qIndex);
@@ -99,7 +100,7 @@ enum NodeType {
 
 bool IsSwitchNode(Ptr<Node> self);
 NodeType GetNodeType(Ptr<Node> self);
-bool SwitchSend(Ptr<NetDevice> self, uint32_t qIndex, Ptr<Packet> packet, CustomHeader &ch);
+bool SwitchSend(Ptr<NetDevice> self, uint32_t qIndex, Ptr<Packet> packet);
 void SwitchNotifyDequeue(Ptr<Node> self, uint32_t ifIndex, uint32_t qIndex, Ptr<Packet> p);
 bool SwitchReceiveFromDevice(Ptr<Node> self, Ptr<NetDevice> device, Ptr<Packet> packet, CustomHeader &ch);
 	

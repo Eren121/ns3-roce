@@ -22,6 +22,7 @@ public:
 	uint16_t m_pg;
 	uint16_t m_ipid;
 	bool m_reliable;
+	bool m_multicast;
 	uint32_t m_win; // bound of on-the-fly packets
 	uint64_t m_baseRtt; // base RTT of this qp
 	DataRate m_max_rate; // max rate

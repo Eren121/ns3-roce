@@ -23,11 +23,14 @@ public:
 	void SetReliable(bool reliable);
 	bool GetAckReq() const;
 	void SetAckReq(bool ack_req);
+	bool GetMulticast() const;
+	void SetMulticast(bool multicast);
 
 private:
 	// true: RC, false: UD.
 	bool m_reliable{true};
 	bool m_ack_req{false}; //<! When true, the sender requests explicitly an ACK.
+	bool m_multicast{false}; //<! When `true`, the destination is a multicast group.
 };
 
 }

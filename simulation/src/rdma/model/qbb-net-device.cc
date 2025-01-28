@@ -397,7 +397,7 @@ namespace ns3 {
 		return false;
 	}
 
-	bool QbbNetDevice::SwitchSend (uint32_t qIndex, Ptr<Packet> packet, CustomHeader &ch){
+	bool QbbNetDevice::SwitchSend (uint32_t qIndex, Ptr<Packet> packet){
 		m_macTxTrace(packet);
 		m_traceEnqueue(packet, qIndex);
 		m_queue->Enqueue(packet, qIndex);
@@ -420,7 +420,7 @@ namespace ns3 {
 		AddHeader(p, 0x800);
 		CustomHeader ch(CustomHeader::L2_Header | CustomHeader::L3_Header | CustomHeader::L4_Header);
 		p->PeekHeader(ch);
-		SwitchSend(0, p, ch);
+		SwitchSend(0, p);
 	}
 
 	bool

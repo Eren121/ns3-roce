@@ -95,6 +95,7 @@ private:
 
   uint64_t m_size;            //!< Count of bytes to write.
   bool m_reliable;            //!< `true` for RC, `false` for UD.
+  bool m_multicast;           //<! `true` if `m_dip` is a multicast group, and `false` for unicast.
   uint16_t m_pg;              //!< Priority group.
   Ipv4Address m_sip, m_dip;
   uint16_t m_sport, m_dport;

@@ -31,6 +31,7 @@ RdmaQueuePair::RdmaQueuePair(uint16_t pg, Ipv4Address _sip, Ipv4Address _dip, ui
 	m_pg = pg;
 	m_ipid = 0;
 	m_reliable = true;
+	m_multicast = false;
 	m_win = 0;
 	m_baseRtt = 0;
 	m_max_rate = 0;
