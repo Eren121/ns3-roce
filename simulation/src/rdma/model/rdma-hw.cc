@@ -192,7 +192,7 @@ void RdmaHw::Setup(QpCompleteCallback cb){
 		if (dev == NULL)
 			continue;
 		// share data with NIC
-		dev->m_rdmaEQ->m_qpGrp = m_nic[i].GetQPs();
+		dev->m_rdmaEQ->m_qpGrp = &m_nic[i];
 		// setup callback
 		dev->m_rdmaReceiveCb = MakeCallback(&RdmaHw::Receive, this);
 		dev->m_rdmaLinkDownCb = MakeCallback(&RdmaHw::SetLinkDown, this);
@@ -240,7 +240,7 @@ void RdmaHw::AddQueuePair(uint64_t size, bool reliable, uint16_t pg, Ipv4Address
 
 	// add qp
 	uint32_t nic_idx = GetNicIdxOfQp(qp);
-	m_nic[nic_idx].GetQPs()->AddQp(qp);
+	m_nic[nic_idx].AddQp(qp);
 	uint64_t key = GetQpKey(dip.Get(), sport, pg);
 	m_qpMap[key] = qp;
 
@@ -614,14 +614,14 @@ void RdmaHw::RedistributeQp(){
 	for (uint32_t i = 0; i < m_nic.size(); i++){
 		if (m_nic[i].GetDevice() == NULL)
 			continue;
-		m_nic[i].GetQPs()->Clear();
+		m_nic[i].Clear();
 	}
 
 	// redistribute qp
 	for (auto &it : m_qpMap){
 		Ptr<RdmaQueuePair> qp = it.second;
 		uint32_t nic_idx = GetNicIdxOfQp(qp);
-		m_nic[nic_idx].GetQPs()->AddQp(qp);
+		m_nic[nic_idx].AddQp(qp);
 		// Notify Nic
 		m_nic[nic_idx].GetDevice()->ReassignedQp(qp);
 	}
