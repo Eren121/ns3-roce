@@ -75,7 +75,7 @@
     ],
 
     "buffer_size":                     32,
-    "qlen_mon_file":                   "mix/my/myqlen.txt",
+    "qlen_mon_file":                   "mix/my/out/qlen.txt",
     "qlen_mon_start":                  2000000000,
     "qlen_mon_end":                    2010000000,
 
