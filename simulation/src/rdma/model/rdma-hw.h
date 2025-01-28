@@ -32,40 +32,26 @@ class RdmaHw : public Object {
 public:
 
 	static TypeId GetTypeId (void);
-	RdmaHw();
 
-	Ptr<Node> m_node;
-	DataRate m_minRate;		//< Min sending rate
-	uint32_t m_mtu;
-	uint32_t m_cc_mode;
-	double m_nack_interval;
-	uint32_t m_chunk;
-	uint32_t m_ack_interval;
-	bool m_backto0;
-	bool m_var_win, m_fast_react;
-	bool m_rateBound;
-	std::vector<RdmaInterfaceMgr> m_nic; // list of running nic controlled by this RdmaHw
-	std::unordered_map<uint64_t, Ptr<RdmaQueuePair> > m_qpMap; // mapping from uint64_t to qp
-	std::unordered_map<uint64_t, Ptr<RdmaRxQueuePair> > m_rxQpMap; // mapping from uint64_t to rx qp
-	std::unordered_map<uint32_t, std::vector<int> > m_rtTable; // map from ip address (u32) to possible ECMP port (index of dev)
-
-	// qp complete callback
-	typedef Callback<void, Ptr<RdmaQueuePair> > QpCompleteCallback;
-	QpCompleteCallback m_qpCompleteCallback;
-
-	void SetNode(Ptr<Node> node);
 	void Setup(); // setup shared data and callbacks with the QbbNetDevice
+	void AddQueuePair(uint64_t size, bool reliable, uint16_t pg, Ipv4Address _sip, Ipv4Address _dip, uint16_t _sport, uint16_t _dport, uint32_t win, uint64_t baseRtt, bool multicast, Callback<void> notifyAppFinish); // add a new qp (new send)
+	void DeleteRxQp(uint32_t dip, uint16_t pg, uint16_t dport);
+
+	// call this function after the NIC is setup
+	void AddTableEntry(const Ipv4Address &dstAddr, uint32_t intf_idx);
+	void ClearTable();
+	void RedistributeQp();
+
+private:
 	static uint64_t GetQpKey(uint32_t dip, uint16_t sport, uint16_t pg); // get the lookup key for m_qpMap
 	static uint64_t GetRxQpKey(uint32_t dip, uint16_t dport, uint16_t pg); // get the lookup key for m_rxQpMap
 	Ptr<RdmaQueuePair> GetQp(uint32_t dip, uint16_t sport, uint16_t pg); // get the qp
 	uint32_t GetNicIdxOfQp(Ptr<RdmaQueuePair> qp); // get the NIC index of the qp
-	void AddQueuePair(uint64_t size, bool reliable, uint16_t pg, Ipv4Address _sip, Ipv4Address _dip, uint16_t _sport, uint16_t _dport, uint32_t win, uint64_t baseRtt, bool multicast, Callback<void> notifyAppFinish); // add a new qp (new send)
 	void DeleteQueuePair(Ptr<RdmaQueuePair> qp);
 
 	Ptr<RdmaRxQueuePair> GetRxQp(uint32_t sip, uint32_t dip, uint16_t sport, uint16_t dport, uint16_t pg, bool create); // get a rxQp
 	uint32_t GetNicIdxOfRxQp(Ptr<RdmaRxQueuePair> q); // get the NIC index of the rxQp
-	void DeleteRxQp(uint32_t dip, uint16_t pg, uint16_t dport);
-
+	
 	int ReceiveUdp(Ptr<Packet> p, CustomHeader &ch);
 	int ReceiveCnp(Ptr<Packet> p, CustomHeader &ch);
 	int ReceiveAck(Ptr<Packet> p, CustomHeader &ch); // handle both ACK and NACK
@@ -81,15 +67,30 @@ public:
 	void QpComplete(Ptr<RdmaQueuePair> qp);
 	void SetLinkDown(Ptr<QbbNetDevice> dev);
 
-	// call this function after the NIC is setup
-	void AddTableEntry(const Ipv4Address &dstAddr, uint32_t intf_idx);
-	void ClearTable();
-	void RedistributeQp();
-
 	Ptr<Packet> GetNxtPacket(Ptr<RdmaQueuePair> qp); // get next packet to send, inc snd_nxt
 	void PktSent(Ptr<RdmaQueuePair> qp, Ptr<Packet> pkt, Time interframeGap);
 	void UpdateNextAvail(Ptr<RdmaQueuePair> qp, Time interframeGap, uint32_t pkt_size);
 	void ChangeRate(Ptr<RdmaQueuePair> qp, DataRate new_rate);
+	
+private:
+	Ptr<Node> m_node;
+	DataRate m_minRate;		//< Min sending rate
+	uint32_t m_mtu;
+	uint32_t m_cc_mode;
+	double m_nack_interval;
+	uint32_t m_chunk;
+	uint32_t m_ack_interval;
+	bool m_backto0;
+	bool m_var_win, m_fast_react;
+	bool m_rateBound;
+
+	std::vector<RdmaInterfaceMgr> m_nic; // list of running nic controlled by this RdmaHw
+	std::unordered_map<uint64_t, Ptr<RdmaQueuePair> > m_qpMap; // mapping from uint64_t to qp
+	std::unordered_map<uint64_t, Ptr<RdmaRxQueuePair> > m_rxQpMap; // mapping from uint64_t to rx qp
+	std::unordered_map<uint32_t, std::vector<int> > m_rtTable; // map from ip address (u32) to possible ECMP port (index of dev)
+
+	TracedCallback<Ptr<RdmaQueuePair>> m_traceQpComplete;
+
 	/******************************
 	 * Mellanox's version of DCQCN
 	 *****************************/
@@ -156,12 +157,8 @@ public:
 	 * HPCC-PINT
 	 ********************/
 	uint32_t pint_smpl_thresh;
-	void SetPintSmplThresh(double p);
 	void HandleAckHpPint(Ptr<RdmaQueuePair> qp, Ptr<Packet> p, CustomHeader &ch);
 	void UpdateRateHpPint(Ptr<RdmaQueuePair> qp, Ptr<Packet> p, CustomHeader &ch, bool fast_react);
-
-private:
-	TracedCallback<Ptr<RdmaQueuePair>> m_traceQpComplete;
 };
 
 } /* namespace ns3 */

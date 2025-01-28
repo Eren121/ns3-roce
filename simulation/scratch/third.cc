@@ -856,7 +856,7 @@ int main(int argc, char *argv[])
 			rdmaHw->SetAttribute("TargetUtil", DoubleValue(simConfig.u_target));
 			rdmaHw->SetAttribute("RateBound", BooleanValue(simConfig.rate_bound));
 			rdmaHw->SetAttribute("DctcpRateAI", DataRateValue(DataRate(simConfig.dctcp_rate_ai)));
-			rdmaHw->SetPintSmplThresh(simConfig.pint_prob);
+			rdmaHw->SetAttribute("PintSmplThresh", UintegerValue(simConfig.pint_prob * 65536));
 			// create and install RdmaDriver
 			// Ptr<RdmaDriver> rdma = CreateObject<RdmaDriver>();
 			// Ptr<Node> node = n.Get(i);

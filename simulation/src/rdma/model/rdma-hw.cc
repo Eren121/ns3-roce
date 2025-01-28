@@ -182,12 +182,6 @@ TypeId RdmaHw::GetTypeId (void)
 	return tid;
 }
 
-RdmaHw::RdmaHw(){
-}
-
-void RdmaHw::SetNode(Ptr<Node> node){
-	m_node = node;
-}
 void RdmaHw::Setup()
 {
 	m_node = GetObject<Node>();
@@ -1153,9 +1147,7 @@ void RdmaHw::HandleAckDctcp(Ptr<RdmaQueuePair> qp, Ptr<Packet> p, CustomHeader &
 /*********************
  * HPCC-PINT
  ********************/
-void RdmaHw::SetPintSmplThresh(double p){
-       pint_smpl_thresh = (uint32_t)(65536 * p);
-}
+
 void RdmaHw::HandleAckHpPint(Ptr<RdmaQueuePair> qp, Ptr<Packet> p, CustomHeader &ch){
        uint32_t ack_seq = ch.ack.seq;
        if (rand() % 65536 >= pint_smpl_thresh)
