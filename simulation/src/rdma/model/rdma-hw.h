@@ -7,6 +7,7 @@
 #include <ns3/custom-header.h>
 #include "qbb-net-device.h"
 #include <unordered_map>
+#include <functional>
 #include "pint.h"
 
 namespace ns3 {
@@ -46,11 +47,10 @@ private:
 	static uint64_t GetQpKey(uint32_t dip, uint16_t sport, uint16_t pg); // get the lookup key for m_qpMap
 	static uint64_t GetRxQpKey(uint32_t dip, uint16_t dport, uint16_t pg); // get the lookup key for m_rxQpMap
 	Ptr<RdmaQueuePair> GetQp(uint32_t dip, uint16_t sport, uint16_t pg); // get the qp
-	uint32_t GetNicIdxOfQp(Ptr<RdmaQueuePair> qp); // get the NIC index of the qp
+	uint32_t ResolveIface(Ipv4Address ip); //!< Get the interface connected to this IP.
 	void DeleteQueuePair(Ptr<RdmaQueuePair> qp);
 
 	Ptr<RdmaRxQueuePair> GetRxQp(uint32_t sip, uint32_t dip, uint16_t sport, uint16_t dport, uint16_t pg, bool create); // get a rxQp
-	uint32_t GetNicIdxOfRxQp(Ptr<RdmaRxQueuePair> q); // get the NIC index of the rxQp
 	
 	int ReceiveUdp(Ptr<Packet> p, CustomHeader &ch);
 	int ReceiveCnp(Ptr<Packet> p, CustomHeader &ch);
@@ -72,6 +72,21 @@ private:
 	void UpdateNextAvail(Ptr<RdmaQueuePair> qp, Time interframeGap, uint32_t pkt_size);
 	void ChangeRate(Ptr<RdmaQueuePair> qp, DataRate new_rate);
 	
+	using WhenReadyGen = std::function<Ptr<Packet>()>;
+	/**
+	 * @brief Enqueue a packet.
+	 * 
+	 * The packet is not pushed directly, but the callback is called when the 
+	 * NIC is ready to send the packet.
+	 */
+	void WhenReady(WhenReadyGen whenReady);
+
+	using OnRecv = std::function<void(Ptr<RdmaQueuePair>, Ptr<Packet>)>;
+	/**
+	 * @brief Set a callback when a packet is received from any QP.
+	 */
+	void SetOnRecv(OnRecv onRecv);
+
 private:
 	Ptr<Node> m_node;
 	DataRate m_minRate;		//< Min sending rate
@@ -85,9 +100,15 @@ private:
 	bool m_rateBound;
 
 	std::vector<RdmaInterfaceMgr> m_nic; // list of running nic controlled by this RdmaHw
-	std::unordered_map<uint64_t, Ptr<RdmaQueuePair> > m_qpMap; // mapping from uint64_t to qp
-	std::unordered_map<uint64_t, Ptr<RdmaRxQueuePair> > m_rxQpMap; // mapping from uint64_t to rx qp
-	std::unordered_map<uint32_t, std::vector<int> > m_rtTable; // map from ip address (u32) to possible ECMP port (index of dev)
+	
+	/// @brief Each QP has a key. Mapping from the key to the QP.
+	std::unordered_map<uint64_t, Ptr<RdmaQueuePair> > m_qpMap;
+
+	/// @brief The key is the same as in `m_qpMap`.
+	std::unordered_map<uint64_t, Ptr<RdmaRxQueuePair> > m_rxQpMap;
+
+	/// @brief Routing table from IP to output port index.
+	std::unordered_map<uint32_t, int> m_rtTable;
 
 	TracedCallback<Ptr<RdmaQueuePair>> m_traceQpComplete;
 

@@ -209,14 +209,6 @@ void RdmaHw::Setup()
 	}
 }
 
-uint32_t RdmaHw::GetNicIdxOfQp(Ptr<RdmaQueuePair> qp){
-	auto &v = m_rtTable[qp->dip.Get()];
-	if (v.size() > 0){
-		return v[qp->GetHash() % v.size()];
-	}else{
-		NS_ASSERT_MSG(false, "We assume at least one NIC is alive");
-	}
-}
 uint64_t RdmaHw::GetQpKey(uint32_t dip, uint16_t sport, uint16_t pg){
 	return ((uint64_t)dip << 32) | ((uint64_t)sport << 16) | (uint64_t)pg;
 }
@@ -244,7 +236,7 @@ void RdmaHw::AddQueuePair(uint64_t size, bool reliable, uint16_t pg, Ipv4Address
 	qp->SetAppNotifyCallback(notifyAppFinish);
 
 	// add qp
-	uint32_t nic_idx = GetNicIdxOfQp(qp);
+	uint32_t nic_idx = ResolveIface(qp->dip);
 	m_nic[nic_idx].AddQp(qp);
 	uint64_t key = GetQpKey(dip.Get(), sport, pg);
 	m_qpMap[key] = qp;
@@ -297,13 +289,14 @@ Ptr<RdmaRxQueuePair> RdmaHw::GetRxQp(uint32_t sip, uint32_t dip, uint16_t sport,
 	}
 	return NULL;
 }
-uint32_t RdmaHw::GetNicIdxOfRxQp(Ptr<RdmaRxQueuePair> q){
-	auto &v = m_rtTable[q->dip];
-	if (v.size() > 0){
-		return v[q->GetHash() % v.size()];
-	}else{
-		NS_ASSERT_MSG(false, "We assume at least one NIC is alive");
+
+uint32_t RdmaHw::ResolveIface(Ipv4Address ip)
+{
+	auto it = m_rtTable.find(ip.Get());
+	if(it == m_rtTable.end()) {
+		NS_ASSERT_MSG(false, "We assume at least one NIC is alive");	
 	}
+	return it->second;
 }
 void RdmaHw::DeleteRxQp(uint32_t dip, uint16_t pg, uint16_t dport){
 	uint64_t key = ((uint64_t)dip << 32) | ((uint64_t)pg << 16) | (uint64_t)dport;
@@ -376,7 +369,7 @@ int RdmaHw::ReceiveUdp(Ptr<Packet> p, CustomHeader &ch){
 		newp->AddHeader(head);
 		AddHeader(newp, 0x800);	// Attach PPP header
 		// send
-		uint32_t nic_idx = GetNicIdxOfRxQp(rxQp);
+		uint32_t nic_idx = ResolveIface(Ipv4Address(rxQp->dip));
 		m_nic[nic_idx].GetDevice()->RdmaEnqueueHighPrioQ(newp);
 		m_nic[nic_idx].GetDevice()->TriggerTransmit();
 	}
@@ -404,7 +397,7 @@ int RdmaHw::ReceiveCnp(Ptr<Packet> p, CustomHeader &ch){
 	if (qp == NULL)
 		std::cout << "ERROR: QCN NIC cannot find the flow\n";
 	// get nic
-	uint32_t nic_idx = GetNicIdxOfQp(qp);
+	uint32_t nic_idx = ResolveIface(qp->dip);
 	Ptr<QbbNetDevice> dev = m_nic[nic_idx].GetDevice();
 
 	if (qp->m_rate == 0)			//lazy initialization	
@@ -452,7 +445,7 @@ int RdmaHw::ReceiveAck(Ptr<Packet> p, CustomHeader &ch){
 		return 0;
 	}
 
-	uint32_t nic_idx = GetNicIdxOfQp(qp);
+	uint32_t nic_idx = ResolveIface(qp->dip);
 	Ptr<QbbNetDevice> dev = m_nic[nic_idx].GetDevice();
 	if (!m_backto0){
 		qp->Acknowledge(seq);
@@ -603,8 +596,9 @@ void RdmaHw::SetLinkDown(Ptr<QbbNetDevice> dev){
 }
 
 void RdmaHw::AddTableEntry(const Ipv4Address &dstAddr, uint32_t intf_idx){
-	uint32_t dip = dstAddr.Get();
-	m_rtTable[dip].push_back(intf_idx);
+	const uint32_t dip = dstAddr.Get();
+	NS_ASSERT_MSG(m_rtTable.find(dip) == m_rtTable.end(), "ECMP not implemented");
+	m_rtTable[dip] = intf_idx;
 }
 
 void RdmaHw::ClearTable(){
@@ -622,7 +616,7 @@ void RdmaHw::RedistributeQp(){
 	// redistribute qp
 	for (auto &it : m_qpMap){
 		Ptr<RdmaQueuePair> qp = it.second;
-		uint32_t nic_idx = GetNicIdxOfQp(qp);
+		uint32_t nic_idx = ResolveIface(qp->dip);
 		m_nic[nic_idx].AddQp(qp);
 		// Notify Nic
 		m_nic[nic_idx].GetDevice()->ReassignedQp(qp);
@@ -698,7 +692,7 @@ void RdmaHw::ChangeRate(Ptr<RdmaQueuePair> qp, DataRate new_rate){
 	Time new_sendintTime = Seconds(new_rate.CalculateTxTime(qp->lastPktSize));
 	qp->m_nextAvail = qp->m_nextAvail + new_sendintTime - sendingTime;
 	// update nic's next avail event
-	uint32_t nic_idx = GetNicIdxOfQp(qp);
+	uint32_t nic_idx = ResolveIface(qp->dip);
 	m_nic[nic_idx].GetDevice()->UpdateNextAvail(qp->m_nextAvail);
 	#endif
 
@@ -805,7 +799,7 @@ void RdmaHw::ActiveIncreaseMlx(Ptr<RdmaQueuePair> q){
 	printf("%lu active inc: %08x %08x %u %u (%0.3lf %.3lf)->", Simulator::Now().GetTimeStep(), q->sip.Get(), q->dip.Get(), q->sport, q->dport, q->mlx.m_targetRate.GetBitRate() * 1e-9, q->m_rate.GetBitRate() * 1e-9);
 	#endif
 	// get NIC
-	uint32_t nic_idx = GetNicIdxOfQp(q);
+	uint32_t nic_idx = ResolveIface(q->dip);
 	Ptr<QbbNetDevice> dev = m_nic[nic_idx].GetDevice();
 	// increate rate
 	q->mlx.m_targetRate += m_rai;
@@ -821,7 +815,7 @@ void RdmaHw::HyperIncreaseMlx(Ptr<RdmaQueuePair> q){
 	printf("%lu hyper inc: %08x %08x %u %u (%0.3lf %.3lf)->", Simulator::Now().GetTimeStep(), q->sip.Get(), q->dip.Get(), q->sport, q->dport, q->mlx.m_targetRate.GetBitRate() * 1e-9, q->m_rate.GetBitRate() * 1e-9);
 	#endif
 	// get NIC
-	uint32_t nic_idx = GetNicIdxOfQp(q);
+	uint32_t nic_idx = ResolveIface(q->dip);
 	Ptr<QbbNetDevice> dev = m_nic[nic_idx].GetDevice();
 	// increate rate
 	q->mlx.m_targetRate += m_rhai;
