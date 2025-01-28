@@ -54,7 +54,7 @@ public:
 	QpCompleteCallback m_qpCompleteCallback;
 
 	void SetNode(Ptr<Node> node);
-	void Setup(QpCompleteCallback cb); // setup shared data and callbacks with the QbbNetDevice
+	void Setup(); // setup shared data and callbacks with the QbbNetDevice
 	static uint64_t GetQpKey(uint32_t dip, uint16_t sport, uint16_t pg); // get the lookup key for m_qpMap
 	static uint64_t GetRxQpKey(uint32_t dip, uint16_t dport, uint16_t pg); // get the lookup key for m_rxQpMap
 	Ptr<RdmaQueuePair> GetQp(uint32_t dip, uint16_t sport, uint16_t pg); // get the qp
@@ -159,6 +159,9 @@ public:
 	void SetPintSmplThresh(double p);
 	void HandleAckHpPint(Ptr<RdmaQueuePair> qp, Ptr<Packet> p, CustomHeader &ch);
 	void UpdateRateHpPint(Ptr<RdmaQueuePair> qp, Ptr<Packet> p, CustomHeader &ch, bool fast_react);
+
+private:
+	TracedCallback<Ptr<RdmaQueuePair>> m_traceQpComplete;
 };
 
 } /* namespace ns3 */

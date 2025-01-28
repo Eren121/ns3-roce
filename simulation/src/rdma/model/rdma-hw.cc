@@ -21,6 +21,8 @@ TypeId RdmaHw::GetTypeId (void)
 {
 	static TypeId tid = TypeId ("ns3::RdmaHw")
 		.SetParent<Object> ()
+		.AddTraceSource ("QpComplete", "A qp completes.",
+				MakeTraceSourceAccessor (&RdmaHw::m_traceQpComplete))
 		.AddAttribute("MinRate",
 				"Minimum rate of a throttled flow",
 				DataRateValue(DataRate("100Mb/s")),
@@ -186,7 +188,18 @@ RdmaHw::RdmaHw(){
 void RdmaHw::SetNode(Ptr<Node> node){
 	m_node = node;
 }
-void RdmaHw::Setup(QpCompleteCallback cb){
+void RdmaHw::Setup()
+{
+	m_node = GetObject<Node>();
+	NS_ASSERT(m_node);
+		
+	for (uint32_t i = 0; i < m_node->GetNDevices(); i++){
+		Ptr<QbbNetDevice> dev = NULL;
+		if (IsQbb(m_node->GetDevice(i)))
+			dev = DynamicCast<QbbNetDevice>(m_node->GetDevice(i));
+		m_nic.push_back(RdmaInterfaceMgr(dev));
+	}	
+
 	for (uint32_t i = 0; i < m_nic.size(); i++){
 		Ptr<QbbNetDevice> dev = m_nic[i].GetDevice();
 		if (dev == NULL)
@@ -200,8 +213,6 @@ void RdmaHw::Setup(QpCompleteCallback cb){
 		// config NIC
 		dev->m_rdmaEQ->m_rdmaGetNxtPkt = MakeCallback(&RdmaHw::GetNxtPacket, this);
 	}
-	// setup qp complete callback
-	m_qpCompleteCallback = cb;
 }
 
 uint32_t RdmaHw::GetNicIdxOfQp(Ptr<RdmaQueuePair> qp){
@@ -579,16 +590,13 @@ void RdmaHw::RecoverQueue(Ptr<RdmaQueuePair> qp){
 }
 
 void RdmaHw::QpComplete(Ptr<RdmaQueuePair> qp){
-	NS_ASSERT(!m_qpCompleteCallback.IsNull());
 	if (m_cc_mode == 1){
 		Simulator::Cancel(qp->mlx.m_eventUpdateAlpha);
 		Simulator::Cancel(qp->mlx.m_eventDecreaseRate);
 		Simulator::Cancel(qp->mlx.m_rpTimer);
 	}
 
-	// This callback will log info
-	// It may also delete the rxQp on the receiver
-	m_qpCompleteCallback(qp);
+	m_traceQpComplete(qp);
 
 	qp->m_notifyAppFinish();
 

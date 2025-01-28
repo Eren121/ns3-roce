@@ -33,7 +33,7 @@
 #include <ns3/rdma-client.h>
 #include <ns3/rdma-random.h>
 #include <ns3/rdma-client-helper.h>
-#include <ns3/rdma-driver.h>
+#include <ns3/rdma-hw.h>
 #include <ns3/switch-node.h>
 #include <ns3/sim-setting.h>
 #include <ns3/json.h>
@@ -452,8 +452,8 @@ void qp_finish(FILE* fout, const SimConfig* simConfig, Ptr<RdmaQueuePair> q){
 
 	// remove rxQp from the receiver
 	Ptr<Node> dstNode = n.Get(did);
-	Ptr<RdmaDriver> rdma = dstNode->GetObject<RdmaDriver> ();
-	rdma->m_rdma->DeleteRxQp(q->sip.Get(), q->m_pg, q->sport);
+	Ptr<RdmaHw> rdma = dstNode->GetObject<RdmaHw> ();
+	rdma->DeleteRxQp(q->sip.Get(), q->m_pg, q->sport);
 }
 
 void get_pfc(FILE* fout, Ptr<QbbNetDevice> dev, uint32_t type){
@@ -574,7 +574,7 @@ void SetRoutingEntries(){
 				if (IsSwitchNode(node))
 					DynamicCast<SwitchNode>(node)->AddTableEntry(dstAddr, interface);
 				else{
-					node->GetObject<RdmaDriver>()->m_rdma->AddTableEntry(dstAddr, interface);
+					node->GetObject<RdmaHw>()->AddTableEntry(dstAddr, interface);
 				}
 			}
 		}
@@ -594,7 +594,7 @@ void TakeDownLink(NodeContainer n, Ptr<Node> a, Ptr<Node> b){
 		if (IsSwitchNode(n.Get(i)))
 			DynamicCast<SwitchNode>(n.Get(i))->ClearTable();
 		else
-			n.Get(i)->GetObject<RdmaDriver>()->m_rdma->ClearTable();
+			n.Get(i)->GetObject<RdmaHw>()->ClearTable();
 	}
 	DynamicCast<QbbNetDevice>(a->GetDevice(nbr2if[a][b].idx))->TakeDown();
 	DynamicCast<QbbNetDevice>(b->GetDevice(nbr2if[b][a].idx))->TakeDown();
@@ -604,7 +604,7 @@ void TakeDownLink(NodeContainer n, Ptr<Node> a, Ptr<Node> b){
 	// redistribute qp on each host
 	for (uint32_t i = 0; i < n.GetN(); i++){
 		if (!IsSwitchNode(n.Get(i)))
-			n.Get(i)->GetObject<RdmaDriver>()->m_rdma->RedistributeQp();
+			n.Get(i)->GetObject<RdmaHw>()->RedistributeQp();
 	}
 }
 
@@ -858,14 +858,15 @@ int main(int argc, char *argv[])
 			rdmaHw->SetAttribute("DctcpRateAI", DataRateValue(DataRate(simConfig.dctcp_rate_ai)));
 			rdmaHw->SetPintSmplThresh(simConfig.pint_prob);
 			// create and install RdmaDriver
-			Ptr<RdmaDriver> rdma = CreateObject<RdmaDriver>();
-			Ptr<Node> node = n.Get(i);
-			rdma->SetNode(node);
-			rdma->SetRdmaHw(rdmaHw);
+			// Ptr<RdmaDriver> rdma = CreateObject<RdmaDriver>();
+			// Ptr<Node> node = n.Get(i);
+			// rdma->SetNode(node);
+			// rdma->SetRdmaHw(rdmaHw);
 
-			node->AggregateObject (rdma);
-			rdma->Init();
-			rdma->TraceConnectWithoutContext("QpComplete", MakeBoundCallback (qp_finish, fct_output, &simConfig));
+			Ptr<Node> node = n.Get(i);
+			node->AggregateObject (rdmaHw);
+			rdmaHw->Setup();
+			rdmaHw->TraceConnectWithoutContext("QpComplete", MakeBoundCallback (qp_finish, fct_output, &simConfig));
 		}
 	}
 	#endif
@@ -970,7 +971,7 @@ int main(int argc, char *argv[])
 				qbb->AddGroup(group.id);
 
 				const Ipv4Address mcast_addr(group.id);
-				node->GetObject<RdmaDriver>()->m_rdma->AddTableEntry(mcast_addr, nic_iface);
+				node->GetObject<RdmaHw>()->AddTableEntry(mcast_addr, nic_iface);
 			}
 		}
 	}

@@ -34,7 +34,7 @@
 #include "ns3/qbb-net-device.h"
 #include "rdma-client.h"
 #include "ns3/rdma-seq-header.h"
-#include <ns3/rdma-driver.h>
+#include <ns3/rdma-hw.h>
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -122,7 +122,7 @@ void RdmaClient::StartApplication()
   NS_LOG_FUNCTION_NOARGS();
   // get RDMA driver and add up queue pair
   Ptr<Node> node = GetNode();
-  Ptr<RdmaDriver> rdma = node->GetObject<RdmaDriver>();
+  Ptr<RdmaHw> rdma = node->GetObject<RdmaHw>();
   rdma->AddQueuePair(m_size, m_reliable, m_pg, m_sip, m_dip, m_sport, m_dport, m_win, m_baseRtt, m_multicast, MakeCallback(&RdmaClient::StopApplication, this));
 }
 
