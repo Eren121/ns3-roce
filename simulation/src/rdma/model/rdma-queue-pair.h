@@ -126,19 +126,28 @@ public:
 	uint32_t GetHash(void);
 };
 
+/**
+ * @brief Simple wrapper around `std::vector<Ptr<RdmaQueuePair>>`.
+ */
 class RdmaQueuePairGroup : public Object {
 public:
-	std::vector<Ptr<RdmaQueuePair> > m_qps;
-	//std::vector<Ptr<RdmaRxQueuePair> > m_rxQps;
-
-	static TypeId GetTypeId (void);
-	RdmaQueuePairGroup(void);
-	uint32_t GetN(void);
+	static TypeId GetTypeId();
+	uint32_t GetN();
 	Ptr<RdmaQueuePair> Get(uint32_t idx);
 	Ptr<RdmaQueuePair> operator[](uint32_t idx);
 	void AddQp(Ptr<RdmaQueuePair> qp);
-	//void AddRxQp(Ptr<RdmaRxQueuePair> rxQp);
-	void Clear(void);
+	void Clear();
+
+	/**
+	 * @brief Remove all finished QPs in the index range `[begin;end)`.
+	 * @param res If stores a valid QP index,
+	 *            this variable is updated to reflect the new QP index
+	 *            after removal of all finished QPs.
+	 */
+	void RemoveFinished(int begin, int last, int& res);
+
+private:
+	std::vector<Ptr<RdmaQueuePair>> m_qps;
 };
 
 }

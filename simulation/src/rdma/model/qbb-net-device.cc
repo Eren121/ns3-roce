@@ -116,17 +116,10 @@ namespace ns3 {
 		}
 
 		// clear the finished qp
-		if (min_finish_id < 0xffffffff){
-			int nxt = min_finish_id;
-			auto &qps = m_qpGrp->m_qps;
-			for (int i = min_finish_id + 1; i < fcount; i++) if (!qps[i]->IsFinished()){
-				if (i == res) // update res to the idx after removing finished qp
-					res = nxt;
-				qps[nxt] = qps[i];
-				nxt++;
-			}
-			qps.resize(nxt);
+		if (min_finish_id < 0xffffffff) {
+			m_qpGrp->RemoveFinished(min_finish_id, fcount, res);
 		}
+
 		return res;
 	}
 

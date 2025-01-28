@@ -196,7 +196,8 @@ uint32_t RdmaRxQueuePair::GetHash(void){
 /*********************
  * RdmaQueuePairGroup
  ********************/
-TypeId RdmaQueuePairGroup::GetTypeId (void)
+
+TypeId RdmaQueuePairGroup::GetTypeId ()
 {
 	static TypeId tid = TypeId ("ns3::RdmaQueuePairGroup")
 		.SetParent<Object> ()
@@ -204,33 +205,45 @@ TypeId RdmaQueuePairGroup::GetTypeId (void)
 	return tid;
 }
 
-RdmaQueuePairGroup::RdmaQueuePairGroup(void){
-}
-
-uint32_t RdmaQueuePairGroup::GetN(void){
+uint32_t RdmaQueuePairGroup::GetN()
+{
 	return m_qps.size();
 }
 
-Ptr<RdmaQueuePair> RdmaQueuePairGroup::Get(uint32_t idx){
+Ptr<RdmaQueuePair> RdmaQueuePairGroup::Get(uint32_t idx)
+{
 	return m_qps[idx];
 }
 
-Ptr<RdmaQueuePair> RdmaQueuePairGroup::operator[](uint32_t idx){
+Ptr<RdmaQueuePair> RdmaQueuePairGroup::operator[](uint32_t idx)
+{
 	return m_qps[idx];
 }
 
-void RdmaQueuePairGroup::AddQp(Ptr<RdmaQueuePair> qp){
+void RdmaQueuePairGroup::AddQp(Ptr<RdmaQueuePair> qp)
+{
 	m_qps.push_back(qp);
 }
 
-#if 0
-void RdmaQueuePairGroup::AddRxQp(Ptr<RdmaRxQueuePair> rxQp){
-	m_rxQps.push_back(rxQp);
-}
-#endif
-
-void RdmaQueuePairGroup::Clear(void){
+void RdmaQueuePairGroup::Clear()
+{
 	m_qps.clear();
+}
+
+void RdmaQueuePairGroup::RemoveFinished(int begin, int end, int& res)
+{
+	int nxt = begin;
+	
+	for (int i = begin; i < end; i++) {
+		if (!m_qps[i]->IsFinished()) {
+			if (i == res) {
+				res = nxt;
+			}
+			m_qps[nxt] = m_qps[i];
+			nxt++;
+		}
+	}
+	m_qps.resize(nxt);
 }
 
 }
