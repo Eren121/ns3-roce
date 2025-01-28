@@ -124,12 +124,24 @@ public:
 	RdmaRxQueuePair();
 };
 
+class QbbNetDevice;
+
 /**
  * @brief Simple wrapper around `std::vector<Ptr<RdmaTxQueuePair>>`.
  */
 class RdmaTxQueuePairGroup : public Object
 {
 public:
+	RdmaTxQueuePairGroup(Ptr<QbbNetDevice> dev)
+		: m_dev(dev)
+	{
+	}
+
+	Ptr<QbbNetDevice> GetDevice()
+	{
+		return m_dev;
+	}
+
 	static TypeId GetTypeId();
 	uint32_t GetN();
 	Ptr<RdmaTxQueuePair> Get(uint32_t idx);
@@ -147,6 +159,7 @@ public:
 
 private:
 	std::vector<Ptr<RdmaTxQueuePair>> m_qps;
+	Ptr<QbbNetDevice> m_dev;
 };
 
 }

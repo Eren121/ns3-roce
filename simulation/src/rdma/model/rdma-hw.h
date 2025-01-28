@@ -12,23 +12,6 @@
 
 namespace ns3 {
 
-class RdmaInterfaceMgr : public RdmaTxQueuePairGroup
-{
-public:
-	RdmaInterfaceMgr(Ptr<QbbNetDevice> dev)
-		: m_dev(dev)
-	{
-	}
-
-	Ptr<QbbNetDevice> GetDevice()
-	{
-		return m_dev;
-	}
-
-private:
-	Ptr<QbbNetDevice> m_dev;
-};
-
 class RdmaHw : public Object {
 public:
 
@@ -98,7 +81,7 @@ private:
 	bool m_var_win, m_fast_react;
 	bool m_rateBound;
 
-	std::vector<RdmaInterfaceMgr> m_nic; // list of running nic controlled by this RdmaHw
+	std::vector<RdmaTxQueuePairGroup> m_nic; // list of running nic controlled by this RdmaHw
 	
 	/// @brief Each QP has a key. Mapping from the key to the QP.
 	std::unordered_map<uint64_t, Ptr<RdmaTxQueuePair> > m_qpMap;

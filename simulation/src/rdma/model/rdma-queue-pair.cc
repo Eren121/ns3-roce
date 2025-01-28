@@ -1,5 +1,6 @@
 #include <ns3/hash.h>
 #include <ns3/uinteger.h>
+#include <ns3/qbb-net-device.h>
 #include <ns3/rdma-seq-header.h>
 #include <ns3/udp-header.h>
 #include <ns3/ipv4-header.h>

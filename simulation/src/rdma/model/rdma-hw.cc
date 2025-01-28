@@ -191,7 +191,7 @@ void RdmaHw::Setup()
 		Ptr<QbbNetDevice> dev = NULL;
 		if (IsQbb(m_node->GetDevice(i)))
 			dev = DynamicCast<QbbNetDevice>(m_node->GetDevice(i));
-		m_nic.push_back(RdmaInterfaceMgr(dev));
+		m_nic.push_back(RdmaTxQueuePairGroup(dev));
 	}	
 
 	for (uint32_t i = 0; i < m_nic.size(); i++){
