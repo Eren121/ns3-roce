@@ -24,8 +24,7 @@ void RdmaDriver::Init() {
 		Ptr<QbbNetDevice> dev = NULL;
 		if (IsQbb(m_node->GetDevice(i)))
 			dev = DynamicCast<QbbNetDevice>(m_node->GetDevice(i));
-		m_rdma->m_nic.push_back(RdmaInterfaceMgr(dev));
-		m_rdma->m_nic.back().qpGrp = CreateObject<RdmaQueuePairGroup>();
+		m_rdma->m_nic.push_back(RdmaInterfaceMgr(dev, CreateObject<RdmaQueuePairGroup>()));
 	}	
 
 	// RdmaHw do setup

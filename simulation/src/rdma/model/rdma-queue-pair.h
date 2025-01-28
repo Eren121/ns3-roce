@@ -129,7 +129,8 @@ public:
 /**
  * @brief Simple wrapper around `std::vector<Ptr<RdmaQueuePair>>`.
  */
-class RdmaQueuePairGroup : public Object {
+class RdmaQueuePairGroup : public Object
+{
 public:
 	static TypeId GetTypeId();
 	uint32_t GetN();

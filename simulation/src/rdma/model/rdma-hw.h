@@ -11,14 +11,27 @@
 
 namespace ns3 {
 
-struct RdmaInterfaceMgr{
-	Ptr<QbbNetDevice> dev;
-	Ptr<RdmaQueuePairGroup> qpGrp;
-
-	RdmaInterfaceMgr() : dev(NULL), qpGrp(NULL) {}
-	RdmaInterfaceMgr(Ptr<QbbNetDevice> _dev){
-		dev = _dev;
+class RdmaInterfaceMgr
+{
+public:
+	RdmaInterfaceMgr(Ptr<QbbNetDevice> dev, Ptr<RdmaQueuePairGroup> qps)
+		: m_dev(dev), m_qps(qps)
+	{
 	}
+
+	Ptr<QbbNetDevice> GetDevice()
+	{
+		return m_dev;
+	}
+
+	Ptr<RdmaQueuePairGroup> GetQPs()
+	{
+		return m_qps;
+	}
+
+private:
+	Ptr<QbbNetDevice> m_dev;
+	Ptr<RdmaQueuePairGroup> m_qps;
 };
 
 class RdmaHw : public Object {
