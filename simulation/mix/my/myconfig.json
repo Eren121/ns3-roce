@@ -4,7 +4,7 @@
 
     "packet_payload_size":             1000,
 
-    "topology_file":                   "mix/my/mytopology.txt",
+    "topology_file":                   "mix/my/mytopology.json",
     "flow_file":                       "mix/my/myflow.json",
     "groups_file":                     "mix/my/groups.json",
     "trace_file":                      "mix/my/trace.txt",

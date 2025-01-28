@@ -248,6 +248,33 @@ private:
 	FlowsMap::const_iterator m_it = m_flows.end();
 };
 
+struct TopoConfig {
+	struct Node {
+		struct Pos {
+			double x = 0.0;
+			double y = 0.0;
+			NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(Pos, x, y);
+		};
+
+		uint32_t id = 0;
+		bool is_switch = false;
+		Pos pos;
+		NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(Node, id, is_switch, pos);
+	};
+	struct Link {
+		uint32_t src = 0;      // First node ID
+		uint32_t dst = 0;      // Second node ID
+		double bandwidth = 100e9;  // Unit: bps
+		double latency = 1e-6;    // Unit: seconds
+		double error_rate = 0.0; // Unit: percentage in [0;1]
+		NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(Link, src, dst, bandwidth, latency, error_rate);
+	};
+
+	std::vector<Node> nodes;
+	std::vector<Link> links;
+	NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(TopoConfig, nodes, links);
+};
+
 SimConfig simConfig;
 
 /************************************************
@@ -582,7 +609,6 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-
 	{
 		const json j = json::parse(std::ifstream(argv[1]));
 		from_json(j, simConfig);
@@ -615,11 +641,9 @@ int main(int argc, char *argv[])
 
 	//SeedManager::SetSeed(time(NULL));
 
-	std::ifstream topof, tracef;
+	const TopoConfig topo = json::parse(std::ifstream(simConfig.topology_file));
+	std::ifstream tracef;
 
-	topof.open(simConfig.topology_file.c_str());
-	NS_ABORT_MSG_IF(!topof, "Cannot open input topology file");
-	
 	{
 		const json j = json::parse(std::ifstream(simConfig.flow_file));
 		flowsConfig = FlowsConfig::Json(j);
@@ -629,29 +653,24 @@ int main(int argc, char *argv[])
 	tracef.open(simConfig.trace_file.c_str());
 	NS_ABORT_MSG_IF(!tracef, "Cannot open input trace file");
 
-	uint32_t node_num, switch_num, link_num, trace_num;
-	topof >> node_num >> switch_num >> link_num;
+	uint32_t trace_num;
 	tracef >> trace_num;
 
-
-	//n.Create(node_num);
-	std::vector<uint32_t> node_type(node_num, 0);
-	for (uint32_t i = 0; i < switch_num; i++)
-	{
-		uint32_t sid;
-		topof >> sid;
-		node_type[sid] = 1;
-	}
+	std::vector<uint32_t> node_type(topo.nodes.size(), 0);
+	const uint32_t node_num = topo.nodes.size();
+  	
 	for (uint32_t i = 0; i < node_num; i++){
-		if (node_type[i] == 0)
+		const TopoConfig::Node& node_config = topo.nodes[i];
+
+		if (!node_config.is_switch) {
 			n.Add(CreateObject<Node>());
-		else{
+		}
+		else {
 			Ptr<SwitchNode> sw = CreateObject<SwitchNode>();
 			n.Add(sw);
 			sw->SetAttribute("EcnEnabled", BooleanValue(simConfig.enable_qcn));
 		}
 	}
-
 
 	NS_LOG_INFO("Create nodes.");
 
@@ -694,25 +713,24 @@ int main(int argc, char *argv[])
 
 	QbbHelper qbb;
 	Ipv4AddressHelper ipv4;
-	for (uint32_t i = 0; i < link_num; i++)
+	for (uint32_t i = 0; i < topo.links.size(); i++)
 	{
-		uint32_t src, dst;
-		std::string data_rate, link_delay;
-		double error_rate;
-		topof >> src >> dst >> data_rate >> link_delay >> error_rate;
+		const TopoConfig::Link& link = topo.links[i];
+		const uint32_t src = link.src;
+		const uint32_t dst = link.dst;
+		Ptr<Node> snode = n.Get(link.src);
+		Ptr<Node> dnode = n.Get(link.dst);
 
-		Ptr<Node> snode = n.Get(src), dnode = n.Get(dst);
+		qbb.SetDeviceAttribute("DataRate", DataRateValue(DataRate(link.bandwidth)));
+		qbb.SetChannelAttribute("Delay", TimeValue(Seconds(link.latency)));
 
-		qbb.SetDeviceAttribute("DataRate", StringValue(data_rate));
-		qbb.SetChannelAttribute("Delay", StringValue(link_delay));
-
-		if (error_rate > 0)
+		if (link.error_rate > 0)
 		{
 			Ptr<RateErrorModel> rem = CreateObject<RateErrorModel>();
 			Ptr<UniformRandomVariable> uv = CreateObject<UniformRandomVariable>();
 			rem->SetRandomVariable(uv);
 			uv->SetStream(50);
-			rem->SetAttribute("ErrorRate", DoubleValue(error_rate));
+			rem->SetAttribute("ErrorRate", DoubleValue(link.error_rate));
 			rem->SetAttribute("ErrorUnit", StringValue("ERROR_UNIT_PACKET"));
 			qbb.SetDeviceAttribute("ReceiveErrorModel", PointerValue(rem));
 		}
@@ -720,8 +738,6 @@ int main(int argc, char *argv[])
 		{
 			qbb.SetDeviceAttribute("ReceiveErrorModel", PointerValue(rem));
 		}
-
-		fflush(stdout);
 
 		// Assigne server IP
 		// Note: this should be before the automatic assignment below (ipv4.Assign(d)),
@@ -933,7 +949,6 @@ int main(int argc, char *argv[])
 
 	ScheduleFlowInputs();
 
-	topof.close();
 	tracef.close();
 
 	// schedule link down
@@ -945,31 +960,19 @@ int main(int argc, char *argv[])
 	FILE* qlen_output = fopen(simConfig.qlen_mon_file.c_str(), "w");
 	Simulator::Schedule(NanoSeconds(simConfig.qlen_mon_start), &monitor_buffer, qlen_output, &simConfig, &n);
 	
-	MobilityHelper mobility;
-  	mobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
-  	mobility.Install (n); // Before instanciation of AnimationInterface
 	
-  	AnimationInterface anim("anim.xml");
+	// Save trace for animation
+	AnimationInterface anim("anim.xml");
 	// High polling interval; the nodes never move. Reduces XML size.
 	anim.SetMobilityPollInterval(Seconds(1e9));
 	
-	for(int i = 0; i < n.GetN(); i++) {
+	for (uint32_t i = 0; i < node_num; i++){
+		const TopoConfig::Node& node_config = topo.nodes[i];
 		Ptr<Node> node = n.Get(i);
-		const uint32_t id = node->GetId();
-		const uint32_t num_nodes = n.GetN();
-
-		Ptr<ConstantPositionMobilityModel> mob = node->GetObject<ConstantPositionMobilityModel> ();
 		Vector3D p = {};
-		
-		if(id != 0) {
-			p.x = std::cos(2 * M_PI / num_nodes * i);
-			p.y = std::sin(2 * M_PI / num_nodes * i);
-			anim.UpdateNodeColor(node, 1.0, 0.0, 0.0);
-		}
-		else {
-			anim.UpdateNodeColor(node, 1.0, 1.0, 0.0);
-		}
-		mob->SetPosition(p);
+		p.x = node_config.pos.x;
+		p.y = node_config.pos.y;
+		anim.SetConstantPosition(node, p.x, p.y, p.z);
 	}
 
 	// Now, do the actual simulation.

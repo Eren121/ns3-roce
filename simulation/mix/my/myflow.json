@@ -1,16 +1,16 @@
 {
     "flows": [
         {
-            "src": 2,
-            "dst": 1,
+            "src": 3,
+            "dst": 5,
             "priority": 3,
             "dst_port": 100,
             "size": 200000,
             "start_time": 1.1
         },
         {
-            "src": 3,
-            "dst": 1,
+            "src": 5,
+            "dst": 6,
             "priority": 3,
             "dst_port": 100,
             "size": 200000,
