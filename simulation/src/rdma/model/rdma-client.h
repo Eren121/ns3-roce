@@ -52,51 +52,14 @@ public:
   RdmaClient();
   ~RdmaClient() override;
 
-  /**
-   * \brief Set the destination where to send the data.
-   * \param ip   Destination IP address.
-   * \param port Destination port.
-   * 
-   * Works only if called before the application starts.
-   */
-  void SetRemote(Ipv4Address ip, uint16_t port);
-  
-  /**
-   * \brief Set the source from where to send the data.
-   * \param ip   Local IP address. It should belong to the node that runs the application.
-   * \param port Local port.
-   * 
-   * Works only if called before the application starts.
-   */
-  void SetLocal(Ipv4Address ip, uint16_t port);
-
-  /**
-   * \brief Set the priority group of the QP.
-   * \param pg New priority group.
-   * 
-   * Works only if called before the application starts.
-   */
-  void SetPG(uint16_t pg);
-  
-  /**
-   * \brief Set the count of bytes to RDMA Write.
-   * \param size New count of bytes to write.
-   * 
-   * Works only if called before the application starts.
-   */
-  void SetSize(uint64_t size);
-
-protected:
-  void DoDispose() override;
-
 private:
   void StartApplication() override;
   void StopApplication() override;
 
-  uint64_t m_size;            //!< Count of bytes to write.
-  bool m_reliable;            //!< `true` for RC, `false` for UD.
+  uint64_t m_size;            //<! Count of bytes to write.
+  bool m_reliable;            //<! `true` for RC, `false` for UD.
   bool m_multicast;           //<! `true` if `m_dip` is a multicast group, and `false` for unicast.
-  uint16_t m_pg;              //!< Priority group.
+  uint16_t m_pg;              //<! Priority group.
   Ipv4Address m_sip, m_dip;
   uint16_t m_sport, m_dport;
   uint32_t m_win;             //<! Bound of on-the-fly packets.

@@ -117,34 +117,6 @@ RdmaClient::~RdmaClient()
   NS_LOG_FUNCTION_NOARGS();
 }
 
-void RdmaClient::SetRemote(Ipv4Address ip, uint16_t port)
-{
-  m_dip = ip;
-  m_dport = port;
-}
-
-void RdmaClient::SetLocal(Ipv4Address ip, uint16_t port)
-{
-  m_sip = ip;
-  m_sport = port;
-}
-
-void RdmaClient::SetPG(uint16_t pg)
-{
-	m_pg = pg;
-}
-
-void RdmaClient::SetSize(uint64_t size)
-{
-	m_size = size;
-}
-
-void RdmaClient::DoDispose()
-{
-  NS_LOG_FUNCTION_NOARGS();
-  Application::DoDispose();
-}
-
 void RdmaClient::StartApplication()
 {
   NS_LOG_FUNCTION_NOARGS();
