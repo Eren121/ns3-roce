@@ -39,7 +39,7 @@ namespace ns3 {
 class PauseHeader : public Header
 {
 public:
-  PauseHeader (uint32_t time,uint32_t qlen,uint8_t qindex);
+  PauseHeader (uint32_t time,uint8_t qindex);
   PauseHeader ();
   ~PauseHeader () override;
 
@@ -48,7 +48,6 @@ public:
    * \param time The pause time in microseconds
    */
   void SetTime (uint32_t time);
-  void SetQLen (uint32_t qlen);
   void SetQIndex (uint8_t qindex);
 
 //Getters
@@ -56,7 +55,6 @@ public:
    * \return The pause time in microseconds
    */
   uint32_t GetTime () const;
-  uint32_t GetQLen () const;
   uint8_t GetQIndex () const;
 
   static TypeId GetTypeId (void);
@@ -68,7 +66,6 @@ public:
 
 private:
   uint32_t m_time;
-  uint32_t m_qlen;
   uint8_t m_qindex;
 };
 

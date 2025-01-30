@@ -1,12 +1,14 @@
-#include <ns3/hash.h>
 #include <ns3/uinteger.h>
 #include <ns3/qbb-net-device.h>
-#include <ns3/rdma-seq-header.h>
 #include <ns3/udp-header.h>
 #include <ns3/ipv4-header.h>
 #include <ns3/simulator.h>
-#include "ns3/ppp-header.h"
-#include "rdma-queue-pair.h"
+#include <ns3/ppp-header.h>
+#include <ns3/rdma-seq-header.h>
+#include <ns3/rdma-queue-pair.h>
+#include <ns3/rdma-hw.h>
+#include <ns3/rdma-bth.h>
+#include <ns3/qbb-header.h>
 
 namespace ns3 {
 
@@ -17,28 +19,19 @@ TypeId RdmaTxQueuePair::GetTypeId (void)
 {
 	static TypeId tid = TypeId ("ns3::RdmaTxQueuePair")
 		.SetParent<Object> ()
-		;
+	;
 	return tid;
 }
 
-RdmaTxQueuePair::RdmaTxQueuePair(uint16_t pg, Ipv4Address _sip, Ipv4Address _dip, uint16_t _sport, uint16_t _dport){
-	startTime = Simulator::Now();
-	sip = _sip;
-	dip = _dip;
-	sport = _sport;
-	dport = _dport;
-	m_size = 0;
-	snd_nxt = snd_una = 0;
+RdmaTxQueuePair::RdmaTxQueuePair(Ptr<Node> node, uint16_t pg, Ipv4Address sip, uint16_t sport)
+{
+	m_node = node;
 	m_pg = pg;
-	m_ipid = 0;
-	m_reliable = true;
-	m_multicast = false;
-	m_win = 0;
-	m_baseRtt = 0;
+	m_sip = sip;
+	m_sport = sport;
 	m_max_rate = 0;
-	m_var_win = false;
 	m_rate = 0;
-	m_nextAvail = Time(0);
+	m_nextAvail = Simulator::GetMaximumSimulationTime();
 	mlx.m_alpha = 1;
 	mlx.m_alpha_cnp_arrived = false;
 	mlx.m_first_cnp = true;
@@ -71,83 +64,41 @@ RdmaTxQueuePair::RdmaTxQueuePair(uint16_t pg, Ipv4Address _sip, Ipv4Address _dip
 	hpccPint.m_incStage = 0;
 }
 
-void RdmaTxQueuePair::SetSize(uint64_t size){
-	m_size = size;
+RdmaTxQueuePair::~RdmaTxQueuePair()
+{
+	Simulator::Cancel(mlx.m_eventUpdateAlpha);
+	Simulator::Cancel(mlx.m_eventDecreaseRate);
+	Simulator::Cancel(mlx.m_rpTimer);
 }
 
-void RdmaTxQueuePair::SetWin(uint32_t win){
-	m_win = win;
+Ptr<QbbNetDevice> RdmaTxQueuePair::GetDevice()
+{
+	// Assume each server has only one NIC
+	NS_ASSERT(m_node->GetNDevices() == 2);
+	return DynamicCast<QbbNetDevice>(m_node->GetDevice(1));	
 }
 
-void RdmaTxQueuePair::SetBaseRtt(uint64_t baseRtt){
-	m_baseRtt = baseRtt;
-}
-
-void RdmaTxQueuePair::SetVarWin(bool v){
-	m_var_win = v;
-}
-
-void RdmaTxQueuePair::SetAppNotifyCallback(Callback<void> notifyAppFinish){
-	m_notifyAppFinish = notifyAppFinish;
-}
-
-uint64_t RdmaTxQueuePair::GetBytesLeft(){
-	return m_size >= snd_nxt ? m_size - snd_nxt : 0;
-}
-
-void RdmaTxQueuePair::Acknowledge(uint64_t ack){
-	if (ack > snd_una){
-		snd_una = ack;
+void RdmaTxQueuePair::LazyInitCnp()
+{
+	// Assume each server has only one NIC
+	Ptr<QbbNetDevice> dev = GetDevice();
+	Ptr<RdmaHw> rdma = m_node->GetObject<RdmaHw>();
+	const uint32_t cc = rdma->GetCC();
+	NS_ASSERT(cc == 1);
+	
+	if (m_rate == 0)			//lazy initialization	
+	{
+		m_rate = dev->GetDataRate();
+		if (cc == 1) {
+			mlx.m_targetRate = dev->GetDataRate();
+		}
 	}
-}
-
-uint64_t RdmaTxQueuePair::GetOnTheFly(){
-	return snd_nxt - snd_una;
-}
-
-bool RdmaTxQueuePair::IsWinBound(){
-	uint64_t w = GetWin();
-	return w != 0 && GetOnTheFly() >= w;
-}
-
-uint64_t RdmaTxQueuePair::GetWin(){
-	if (m_win == 0)
-		return 0;
-	uint64_t w;
-	if (m_var_win){
-		w = m_win * m_rate.GetBitRate() / m_max_rate.GetBitRate();
-		if (w == 0)
-			w = 1; // must > 0
-	}else{
-		w = m_win;
-	}
-	return w;
-}
-
-uint64_t RdmaTxQueuePair::HpGetCurWin(){
-	if (m_win == 0)
-		return 0;
-	uint64_t w;
-	if (m_var_win){
-		w = m_win * hp.m_curRate.GetBitRate() / m_max_rate.GetBitRate();
-		if (w == 0)
-			w = 1; // must > 0
-	}else{
-		w = m_win;
-	}
-	return w;
-}
-
-bool RdmaTxQueuePair::IsFinished(){
-	if(!m_reliable) {
-		return snd_nxt >= m_size;
-	}
-	return snd_una >= m_size;
 }
 
 /*********************
  * RdmaRxQueuePair
  ********************/
+
 TypeId RdmaRxQueuePair::GetTypeId (void)
 {
 	static TypeId tid = TypeId ("ns3::RdmaRxQueuePair")
@@ -156,13 +107,58 @@ TypeId RdmaRxQueuePair::GetTypeId (void)
 	return tid;
 }
 
-RdmaRxQueuePair::RdmaRxQueuePair(){
-	m_local_ip = 0;
-	m_local_port = 0;
-	m_ipid = 0;
-	ReceiverNextExpectedSeq = 0;
-	m_nackTimer = Time(0);
-	m_lastNACK = 0;
+bool RdmaRxQueuePair::Receive(Ptr<Packet> p, const CustomHeader &ch)
+{
+	if (ch.l3Prot == 0x11) { // UDP
+		ReceiveUdp(p, ch);
+	}
+	else if (ch.l3Prot == 0xFF) { // CNP
+		ReceiveCnp(p, ch);
+	}
+	else {
+		return false;
+	}
+
+	return true;
+}
+
+void RdmaRxQueuePair::ReceiveUdp(Ptr<Packet> p, const CustomHeader &ch)
+{
+	const uint8_t ecnbits = ch.GetIpv4EcnBits();
+	const uint32_t payload_size = p->GetSize() - ch.GetSerializedSize();
+
+	// TODO find corresponding rx queue pair
+	Ptr<RdmaRxQueuePair> rxQp;
+	RdmaBTH bth;
+	NS_ASSERT(p->PeekPacketTag(bth));
+
+	if (ecnbits != 0) {
+		m_ecn_source.ecnbits |= ecnbits;
+		m_ecn_source.qfb++;
+	}
+
+	m_ecn_source.total++;
+}
+
+void RdmaRxQueuePair::ReceiveCnp(Ptr<Packet> p, const CustomHeader &ch)
+{
+	// QCN on NIC
+	// This is a Congestion signal
+	// Then, extract data from the congestion packet.
+	// We assume, without verify, the packet is destinated to me
+	const uint32_t qIndex = ch.cnp.qIndex;
+	if (qIndex == 1){		//DCTCP
+		std::cout << "TCP--ignore\n";
+		return;
+	}
+	uint16_t udpport = ch.cnp.fid; // corresponds to the sport
+	uint8_t ecnbits = ch.cnp.ecnBits;
+	uint16_t qfb = ch.cnp.qfb;
+	uint16_t total = ch.cnp.total;
+
+	uint32_t i;
+	
+	m_tx->LazyInitCnp();
 }
 
 /*********************
@@ -175,6 +171,11 @@ TypeId RdmaTxQueuePairGroup::GetTypeId ()
 		.SetParent<Object> ()
 		;
 	return tid;
+}
+
+Ptr<QbbNetDevice> RdmaTxQueuePairGroup::GetDevice()
+{
+	return m_dev;
 }
 
 uint32_t RdmaTxQueuePairGroup::GetN()
@@ -190,6 +191,11 @@ Ptr<RdmaTxQueuePair> RdmaTxQueuePairGroup::Get(uint32_t idx)
 Ptr<RdmaTxQueuePair> RdmaTxQueuePairGroup::operator[](uint32_t idx)
 {
 	return m_qps[idx];
+}
+
+RdmaTxQueuePairGroup::RdmaTxQueuePairGroup(Ptr<QbbNetDevice> dev)
+	: m_dev(dev)
+{
 }
 
 void RdmaTxQueuePairGroup::AddQp(Ptr<RdmaTxQueuePair> qp)

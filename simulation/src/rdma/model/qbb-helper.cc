@@ -366,7 +366,11 @@ void QbbHelper::GetTraceFromPacket(TraceFormat &tr, Ptr<QbbNetDevice> dev, Ptr<c
 			break;
 	}
 	tr.size = p->GetSize();//hdr.m_payloadSize;
+
+#if RAF_WAITS_REFACTORING
 	tr.qlen = dev->GetQueue()->GetNBytes(qidx);
+#endif
+	tr.qlen = 0;
 }
 
 void QbbHelper::PacketEventCallback(FILE *file, Ptr<QbbNetDevice> dev, Ptr<const Packet> p, uint32_t qidx, Event event, bool hasL2){
@@ -398,7 +402,7 @@ void QbbHelper::PhyRxDropDetailCallback(FILE* file, Ptr<QbbNetDevice> dev, Ptr<c
 
 void QbbHelper::QpDequeueCallback(FILE *file, Ptr<QbbNetDevice> dev, Ptr<const Packet> p, Ptr<RdmaTxQueuePair> qp){
 	TraceFormat tr;
-	GetTraceFromPacket(tr, dev, p, qp->m_pg, Dequ, true);
+	GetTraceFromPacket(tr, dev, p, qp->GetPG(), Dequ, true);
 	tr.Serialize(file);
 }
 

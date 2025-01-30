@@ -31,8 +31,8 @@ namespace ns3 {
 
 NS_OBJECT_ENSURE_REGISTERED (PauseHeader);
 
-PauseHeader::PauseHeader (uint32_t time, uint32_t qlen, uint8_t qindex)
-  : m_time(time), m_qlen(qlen), m_qindex(qindex)
+PauseHeader::PauseHeader (uint32_t time, uint8_t qindex)
+  : m_time(time), m_qindex(qindex)
 {
 }
 
@@ -51,16 +51,6 @@ void PauseHeader::SetTime (uint32_t time)
 uint32_t PauseHeader::GetTime () const
 {
   return m_time;
-}
-
-void PauseHeader::SetQLen (uint32_t qlen)
-{
-  m_qlen = qlen;
-}
-
-uint32_t PauseHeader::GetQLen () const
-{
-  return m_qlen;
 }
 
 void PauseHeader::SetQIndex (uint8_t qindex)
@@ -89,7 +79,7 @@ PauseHeader::GetInstanceTypeId (void) const
 }
 void PauseHeader::Print (std::ostream &os) const
 {
-  os << "pause=" << m_time << "us, qlen=" << m_qlen <<", qidx=" << int(m_qindex);
+  os << "pause=" << m_time << "us" <<", qidx=" << int(m_qindex);
 }
 uint32_t PauseHeader::GetSerializedSize (void)  const
 {
@@ -98,14 +88,14 @@ uint32_t PauseHeader::GetSerializedSize (void)  const
 void PauseHeader::Serialize (Buffer::Iterator start)  const
 {
   start.WriteU32 (m_time);
-  start.WriteU32 (m_qlen);
+  start.WriteU32 (0); // qlen, refactored
   start.WriteU8 (m_qindex);
 }
 
 uint32_t PauseHeader::Deserialize (Buffer::Iterator start)
 {
   m_time = start.ReadU32 ();
-  m_qlen = start.ReadU32 ();
+  start.ReadU32 (); // qlen, refactored
   m_qindex = start.ReadU8 ();
   return GetSerializedSize ();
 }

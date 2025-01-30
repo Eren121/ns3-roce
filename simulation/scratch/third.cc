@@ -435,7 +435,9 @@ uint32_t ip_to_node_id(Ipv4Address ip){
 	return (ip.Get() >> 8) & 0xffff;
 }
 
-void qp_finish(FILE* fout, const SimConfig* simConfig, Ptr<RdmaTxQueuePair> q){
+void qp_finish(FILE* fout, const SimConfig* simConfig, Ptr<RdmaTxQueuePair> q)
+{
+#if RAF_WAITS_REFACTORING
 	if(q->dip.Get() < 1000) { // Quick dirty test to check if it is multicast address
 		return; // Stop since the `ip_to_node_id()` doesn't work with multicast
 	}
@@ -449,11 +451,12 @@ void qp_finish(FILE* fout, const SimConfig* simConfig, Ptr<RdmaTxQueuePair> q){
 	// sip, dip, sport, dport, size (B), start_time, fct (ns), standalone_fct (ns)
 	fprintf(fout, "%08x %08x %u %u %lu %lu %lu %lu\n", q->sip.Get(), q->dip.Get(), q->sport, q->dport, q->m_size, q->startTime.GetTimeStep(), (Simulator::Now() - q->startTime).GetTimeStep(), standalone_fct);
 	fflush(fout);
-
+	
 	// remove rxQp from the receiver
 	Ptr<Node> dstNode = n.Get(did);
 	Ptr<RdmaHw> rdma = dstNode->GetObject<RdmaHw> ();
 	rdma->DeleteRxQp(q->sip.Get(), q->m_pg, q->sport);
+#endif
 }
 
 void get_pfc(FILE* fout, Ptr<QbbNetDevice> dev, uint32_t type){

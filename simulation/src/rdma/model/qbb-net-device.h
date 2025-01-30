@@ -56,7 +56,6 @@ public:
 	uint32_t GetNBytes(uint32_t qIndex);
 	uint32_t GetFlowCount(void);
 	Ptr<RdmaTxQueuePair> GetQp(uint32_t i);
-	void RecoverQueue(uint32_t i);
 	void EnqueueHighPrioQ(Ptr<Packet> p);
 	void CleanHighPrio(TracedCallback<Ptr<const Packet>, uint32_t> dropCb);
 

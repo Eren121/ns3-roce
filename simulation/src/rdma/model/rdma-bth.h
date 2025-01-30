@@ -25,12 +25,18 @@ public:
 	void SetAckReq(bool ack_req);
 	bool GetMulticast() const;
 	void SetMulticast(bool multicast);
+	bool GetNotif() const;
+	void SetNotif(bool notif);
+	void SetImm(uint32_t imm);
+	uint32_t GetImm() const;
 
 private:
 	// true: RC, false: UD.
 	bool m_reliable{true};
-	bool m_ack_req{false}; //<! When true, the sender requests explicitly an ACK.
+	bool m_ack_req{false}; //<! When `true`, the sender requests explicitly an ACK.
 	bool m_multicast{false}; //<! When `true`, the destination is a multicast group.
+	bool m_notif{false}; //<! When `true`, a notification event is generated in the RX side.
+	uint32_t m_imm{0};
 };
 
 }

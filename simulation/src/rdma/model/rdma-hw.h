@@ -26,17 +26,15 @@ public:
 	void ClearTable();
 	void RedistributeQp();
 
+	uint32_t GetCC() const { return m_cc_mode; }
+	
 private:
-	static uint64_t GetQpKey(uint32_t dip, uint16_t sport, uint16_t pg); // get the lookup key for m_qpMap
-	static uint64_t GetRxQpKey(uint32_t dip, uint16_t dport, uint16_t pg); // get the lookup key for m_rxQpMap
+	static uint64_t GetRxQpKey(uint16_t dport); // get the lookup key for m_rxQpMap
 	uint32_t ResolveIface(Ipv4Address ip); //!< Get the interface connected to this IP.
 	void DeleteQueuePair(Ptr<RdmaTxQueuePair> qp);
 
 	Ptr<RdmaRxQueuePair> GetRxQp(uint32_t sip, uint32_t dip, uint16_t sport, uint16_t dport, uint16_t pg, bool create); // get a rxQp
 	
-	int ReceiveUdp(Ptr<Packet> p, CustomHeader &ch);
-	int ReceiveCnp(Ptr<Packet> p, CustomHeader &ch);
-	int ReceiveAck(Ptr<Packet> p, CustomHeader &ch); // handle both ACK and NACK
 	int Receive(Ptr<Packet> p, CustomHeader &ch); // callback function that the QbbNetDevice should use when receive packets. Only NIC can call this function. And do not call this upon PFC
 
 	void CheckandSendQCN(Ptr<RdmaRxQueuePair> q);
@@ -45,7 +43,6 @@ private:
 	void AddHeader (Ptr<Packet> p, uint16_t protocolNumber);
 	static uint16_t EtherToPpp (uint16_t protocol);
 
-	void RecoverQueue(Ptr<RdmaTxQueuePair> qp);
 	void QpComplete(Ptr<RdmaTxQueuePair> qp);
 	void SetLinkDown(Ptr<QbbNetDevice> dev);
 
@@ -127,41 +124,6 @@ private:
 	void FastRecoveryMlx(Ptr<RdmaTxQueuePair> q);
 	void ActiveIncreaseMlx(Ptr<RdmaTxQueuePair> q);
 	void HyperIncreaseMlx(Ptr<RdmaTxQueuePair> q);
-
-	/***********************
-	 * High Precision CC
-	 ***********************/
-	double m_targetUtil;
-	double m_utilHigh;
-	uint32_t m_miThresh;
-	bool m_multipleRate;
-	bool m_sampleFeedback; // only react to feedback every RTT, or qlen > 0
-	void HandleAckHp(Ptr<RdmaTxQueuePair> qp, Ptr<Packet> p, CustomHeader &ch);
-	void UpdateRateHp(Ptr<RdmaTxQueuePair> qp, Ptr<Packet> p, CustomHeader &ch, bool fast_react);
-	void UpdateRateHpTest(Ptr<RdmaTxQueuePair> qp, Ptr<Packet> p, CustomHeader &ch, bool fast_react);
-	void FastReactHp(Ptr<RdmaTxQueuePair> qp, Ptr<Packet> p, CustomHeader &ch);
-
-	/**********************
-	 * TIMELY
-	 *********************/
-	double m_tmly_alpha, m_tmly_beta;
-	uint64_t m_tmly_TLow, m_tmly_THigh, m_tmly_minRtt;
-	void HandleAckTimely(Ptr<RdmaTxQueuePair> qp, Ptr<Packet> p, CustomHeader &ch);
-	void UpdateRateTimely(Ptr<RdmaTxQueuePair> qp, Ptr<Packet> p, CustomHeader &ch, bool us);
-	void FastReactTimely(Ptr<RdmaTxQueuePair> qp, Ptr<Packet> p, CustomHeader &ch);
-
-	/**********************
-	 * DCTCP
-	 *********************/
-	DataRate m_dctcp_rai;
-	void HandleAckDctcp(Ptr<RdmaTxQueuePair> qp, Ptr<Packet> p, CustomHeader &ch);
-
-	/*********************
-	 * HPCC-PINT
-	 ********************/
-	uint32_t pint_smpl_thresh;
-	void HandleAckHpPint(Ptr<RdmaTxQueuePair> qp, Ptr<Packet> p, CustomHeader &ch);
-	void UpdateRateHpPint(Ptr<RdmaTxQueuePair> qp, Ptr<Packet> p, CustomHeader &ch, bool fast_react);
 };
 
 } /* namespace ns3 */

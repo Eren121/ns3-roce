@@ -49,6 +49,7 @@
 #include "ns3/custom-header.h"
 #include "ns3/assert.h"
 #include "ns3/switch-node.h"
+#include "ns3/rdma-reliable-qp.h"
 #include <iostream>
 
 NS_LOG_COMPONENT_DEFINE("QbbNetDevice");
@@ -87,7 +88,7 @@ namespace ns3 {
 			Ptr<Packet> p = m_rdmaGetNxtPkt(m_qpGrp->Get(qIndex));
 			m_rrlast = qIndex;
 			m_qlast = qIndex;
-			m_traceRdmaDequeue(p, m_qpGrp->Get(qIndex)->m_pg);
+			m_traceRdmaDequeue(p, m_qpGrp->Get(qIndex)->GetPG());
 			return p;
 		}
 		return 0;
@@ -105,9 +106,7 @@ namespace ns3 {
 		for (qIndex = 1; qIndex <= fcount; qIndex++){
 			uint32_t idx = (qIndex + m_rrlast) % fcount;
 			Ptr<RdmaTxQueuePair> qp = m_qpGrp->Get(idx);
-			if (!paused[qp->m_pg] && qp->GetBytesLeft() > 0 && !qp->IsWinBound()){
-				if (m_qpGrp->Get(idx)->m_nextAvail.GetTimeStep() > Simulator::Now().GetTimeStep()) //not available now
-					continue;
+			if (!paused[qp->GetPG()] && qp->IsReadyToSend()){
 				res = idx;
 				break;
 			}else if (qp->IsFinished()){
@@ -128,8 +127,13 @@ namespace ns3 {
 	}
 
 	uint32_t RdmaEgressQueue::GetNBytes(uint32_t qIndex){
-		NS_ASSERT_MSG(qIndex < m_qpGrp->GetN(), "RdmaEgressQueue::GetNBytes: qIndex >= m_qpGrp->GetN()");
-		return m_qpGrp->Get(qIndex)->GetBytesLeft();
+		#if RAF_WAITS_REFACTORING
+			NS_ASSERT_MSG(qIndex < m_qpGrp->GetN(), "RdmaEgressQueue::GetNBytes: qIndex >= m_qpGrp->GetN()");
+			return m_qpGrp->Get(qIndex)->GetBytesLeft();
+		#else
+			NS_ABORT_IF(true);
+			return 0;
+		#endif
 	}
 
 	uint32_t RdmaEgressQueue::GetFlowCount(void){
@@ -138,11 +142,6 @@ namespace ns3 {
 
 	Ptr<RdmaTxQueuePair> RdmaEgressQueue::GetQp(uint32_t i){
 		return m_qpGrp->Get(i);
-	}
- 
-	void RdmaEgressQueue::RecoverQueue(uint32_t i){
-		NS_ASSERT_MSG(i < m_qpGrp->GetN(), "RdmaEgressQueue::RecoverQueue: qIndex >= m_qpGrp->GetN()");
-		m_qpGrp->Get(i)->snd_nxt = m_qpGrp->Get(i)->snd_una;
 	}
 
 	void RdmaEgressQueue::EnqueueHighPrioQ(Ptr<Packet> p){
@@ -276,9 +275,7 @@ namespace ns3 {
 				Time t = Simulator::GetMaximumSimulationTime();
 				for (uint32_t i = 0; i < m_rdmaEQ->GetFlowCount(); i++){
 					Ptr<RdmaTxQueuePair> qp = m_rdmaEQ->GetQp(i);
-					if (qp->GetBytesLeft() == 0)
-						continue;
-					t = Min(qp->m_nextAvail, t);
+					t = Min(qp->GetNextAvailTime(), t);
 				}
 				if (m_nextSend.IsExpired() && t < Simulator::GetMaximumSimulationTime() && t > Simulator::Now()){
 					m_nextSend = Simulator::Schedule(t - Simulator::Now(), &QbbNetDevice::DequeueAndTransmit, this);
@@ -313,9 +310,7 @@ namespace ns3 {
 					Time t = Simulator::GetMaximumSimulationTime();
 					for (uint32_t i = 0; i < m_rdmaEQ->GetFlowCount(); i++){
 						Ptr<RdmaTxQueuePair> qp = m_rdmaEQ->GetQp(i);
-						if (qp->GetBytesLeft() == 0)
-							continue;
-						t = Min(qp->m_nextAvail, t);
+						t = Min(qp->GetNextAvailTime(), t);
 					}
 					if (m_nextSend.IsExpired() && t < Simulator::GetMaximumSimulationTime() && t > Simulator::Now()){
 						m_nextSend = Simulator::Schedule(t - Simulator::Now(), &QbbNetDevice::DequeueAndTransmit, this);
@@ -400,7 +395,7 @@ namespace ns3 {
 
 	void QbbNetDevice::SendPfc(uint32_t qIndex, uint32_t type){
 		Ptr<Packet> p = Create<Packet>(0);
-		PauseHeader pauseh((type == 0 ? m_pausetime : 0), m_queue->GetNBytes(qIndex), qIndex);
+		PauseHeader pauseh((type == 0 ? m_pausetime : 0), qIndex);
 		p->AddHeader(pauseh);
 		Ipv4Header ipv4h;  // Prepare IPv4 header
 		ipv4h.SetProtocol(0xFE);
@@ -460,7 +455,6 @@ namespace ns3 {
 	}
 
    void QbbNetDevice::NewQp(Ptr<RdmaTxQueuePair> qp){
-	   qp->m_nextAvail = Simulator::Now();
 	   DequeueAndTransmit();
    }
    void QbbNetDevice::ReassignedQp(Ptr<RdmaTxQueuePair> qp){

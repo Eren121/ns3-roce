@@ -46,9 +46,11 @@ void RdmaBTH::Serialize(TagBuffer start) const
 {
 	const uint8_t payload = m_reliable
 		| (m_multicast << 1)
-		| (m_ack_req << 2);
+		| (m_ack_req << 2)
+		| (m_notif << 3);
 
 	start.WriteU8(payload);
+	start.WriteU32(m_imm);
 }
 
 void RdmaBTH::Deserialize(TagBuffer start)
@@ -57,6 +59,8 @@ void RdmaBTH::Deserialize(TagBuffer start)
 	m_reliable  = payload & 1;
 	m_multicast = payload & 2;
 	m_ack_req   = payload & 4;
+	m_notif     = payload & 8;
+	m_imm       = start.ReadU32();
 }
 
 bool RdmaBTH::GetReliable() const
@@ -87,6 +91,26 @@ bool RdmaBTH::GetMulticast() const
 void RdmaBTH::SetMulticast(bool multicast)
 {
 	m_multicast = multicast;
+}
+
+bool RdmaBTH::GetNotif() const
+{
+	return m_notif;
+}
+
+void RdmaBTH::SetNotif(bool notif)
+{
+	m_notif = notif;
+}
+
+void RdmaBTH::SetImm(uint32_t imm)
+{
+	m_imm = imm;
+}
+
+uint32_t RdmaBTH::GetImm() const
+{
+	return m_imm;
 }
 
 }

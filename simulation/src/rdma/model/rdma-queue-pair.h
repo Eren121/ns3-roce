@@ -1,35 +1,100 @@
 #ifndef RDMA_QUEUE_PAIR_H
 #define RDMA_QUEUE_PAIR_H
 
-#include <ns3/object.h>
+#include <ns3/node.h>
 #include <ns3/packet.h>
 #include <ns3/ipv4-address.h>
 #include <ns3/data-rate.h>
 #include <ns3/event-id.h>
 #include <ns3/custom-header.h>
 #include <ns3/int-header.h>
+#include <functional>
 #include <vector>
 
 namespace ns3 {
 
-class RdmaTxQueuePair : public Object {
+class QbbNetDevice;
+
+class RdmaTxQueuePair : public Object
+{ 
 public:
-	Time startTime;
-	Ipv4Address sip, dip;
-	uint16_t sport, dport;
-	uint64_t m_size;
-	uint64_t snd_nxt, snd_una; // next seq to send, the highest unacked seq
-	uint16_t m_pg;
-	uint16_t m_ipid;
-	bool m_reliable;
-	bool m_multicast;
-	uint32_t m_win; // bound of on-the-fly packets
-	uint64_t m_baseRtt; // base RTT of this qp
-	DataRate m_max_rate; // max rate
-	bool m_var_win; // variable window size
-	Time m_nextAvail;	//< Soonest time of next send
-	uint32_t lastPktSize;
-	Callback<void> m_notifyAppFinish;
+	RdmaTxQueuePair(Ptr<Node> node, uint16_t pg, Ipv4Address sip, uint16_t sport);
+	~RdmaTxQueuePair() override;
+
+	Ptr<QbbNetDevice> GetDevice();
+
+	using OnSendCallback = std::function<void()>;
+	
+	struct SendRequest
+	{
+		uint32_t payload_size{0};
+		uint32_t imm{0};
+		Ipv4Address dip{}; // Only for unreliable
+		uint16_t dport{0}; // Only for unreliable
+		OnSendCallback on_send{}; // For unreliable: called when sent, for reliable: called when ACKed.
+	};
+
+	virtual void PostSend(SendRequest sr)
+	{
+		NS_ABORT_MSG("Not implemented");
+	}
+
+	/**
+	 * @returns true When this SQ is ready to send and a next packet is available.
+	 */
+	virtual bool IsReadyToSend() const
+	{
+		return false;
+	}
+
+	/**
+	 * @returns true When the QP can be deleted.
+	 */
+	virtual bool IsFinished() const
+	{
+		return false;
+	}
+
+	virtual Ptr<Packet> GetNextPacket()
+	{
+		return nullptr;
+	}
+
+	/**
+	 * @returns The time when the next packet will be ready to send.
+	 */
+	Time GetNextAvailTime() const
+	{
+		return m_nextAvail;
+	}
+
+	/***********
+	 * methods
+	 **********/
+	static TypeId GetTypeId (void);
+
+	Ptr<Node> GetNode() const { return m_node; }
+	Ipv4Address GetSrcIP() const { return m_sip; }
+	uint16_t GetSrcPort() const { return m_sport; }
+	uint16_t GetPG() const { return m_pg; }
+
+	void LazyInitCnp();
+
+	uint64_t GetKey()
+	{
+		return m_sport;
+	}
+
+protected:
+	Ptr<Node> m_node{};
+	Ipv4Address m_sip{};
+	uint16_t m_sport{0};
+	uint16_t m_pg{0};
+	DataRate m_max_rate{}; // max rate
+	Time m_nextAvail{};	//< Soonest time of next send
+	uint32_t m_lastPktSize{0};
+
+	friend class RdmaHw;
 
 	/******************************
 	 * runtime states
@@ -45,7 +110,7 @@ public:
 		bool m_decrease_cnp_arrived; // indicate if CNP arrived in the last slot
 		uint32_t m_rpTimeStage;
 		EventId m_rpTimer;
-	} mlx;
+	} mlx{};
 	struct {
 		uint32_t m_lastUpdateSeq;
 		DataRate m_curRate;
@@ -59,14 +124,14 @@ public:
 			DataRate Rc;
 			uint32_t incStage;
 		}hopState[IntHeader::maxHop];
-	} hp;
+	} hp{};
 	struct{
 		uint32_t m_lastUpdateSeq;
 		DataRate m_curRate;
 		uint32_t m_incStage;
 		uint64_t lastRtt;
 		double rttDiff;
-	} tmly;
+	} tmly{};
 	struct{
 		uint32_t m_lastUpdateSeq;
 		uint32_t m_caState;
@@ -74,57 +139,74 @@ public:
 		double m_alpha;
 		uint32_t m_ecnCnt;
 		uint32_t m_batchSizeOfAlpha;
-	} dctcp;
+	} dctcp{};
 	struct{
 		uint32_t m_lastUpdateSeq;
 		DataRate m_curRate;
 		uint32_t m_incStage;
-	}hpccPint;
-
-	/***********
-	 * methods
-	 **********/
-	static TypeId GetTypeId (void);
-	RdmaTxQueuePair(uint16_t pg, Ipv4Address _sip, Ipv4Address _dip, uint16_t _sport, uint16_t _dport);
-	void SetSize(uint64_t size);
-	void SetWin(uint32_t win);
-	void SetBaseRtt(uint64_t baseRtt);
-	void SetVarWin(bool v);
-	void SetAppNotifyCallback(Callback<void> notifyAppFinish);
-
-	uint64_t GetBytesLeft();
-	void Acknowledge(uint64_t ack);
-	uint64_t GetOnTheFly();
-	bool IsWinBound();
-	uint64_t GetWin(); // window size calculated from m_rate
-	virtual bool IsFinished();
-	uint64_t HpGetCurWin(); // window size calculated from hp.m_curRate, used by HPCC
+	} hpccPint{};
 };
 
 class RdmaRxQueuePair : public Object { // Rx side queue pair
 public:
-	struct ECNAccount{
-		uint16_t qIndex;
-		uint8_t ecnbits;
-		uint16_t qfb;
-		uint16_t total;
-
-		ECNAccount() { memset(this, 0, sizeof(ECNAccount));}
+	struct RecvNotif
+	{
+		bool has_imm{false};
+		uint32_t imm{0};
 	};
-	ECNAccount m_ecn_source;
-	uint32_t m_local_ip;
-	uint16_t m_local_port;
-	uint16_t m_ipid;
-	uint32_t ReceiverNextExpectedSeq;
-	Time m_nackTimer;
-	uint32_t m_lastNACK;
-	EventId QcnTimerEvent; // if destroy this rxQp, remember to cancel this timer
+
+	using OnRecvCallback = std::function<void(RecvNotif)>;
+
+	struct ECNAccount{
+		uint16_t qIndex{0};
+		uint8_t ecnbits{0};
+		uint16_t qfb{0};
+		uint16_t total{0};
+	};
+	ECNAccount m_ecn_source{};
+	uint32_t m_local_ip{0};
+	uint16_t m_local_port{0};
+	uint16_t m_ipid{0};
+	EventId QcnTimerEvent{}; // if destroy this rxQp, remember to cancel this timer
 
 	static TypeId GetTypeId (void);
-	RdmaRxQueuePair();
-};
+	
+	RdmaRxQueuePair(Ptr<RdmaTxQueuePair> tx)
+		: m_tx(tx)
+	{
+	}
 
-class QbbNetDevice;
+	/**
+	 * @return true If the packet was succesfully processed, or false if the protocol is not known.
+	 */
+	virtual bool Receive(Ptr<Packet> p, const CustomHeader& ch);
+
+	/**
+	 * @brief Set a callback called when an RDMA Write operation has completed.
+	 * 
+	 * Works for both unreliable and reliable RDMA Writes.
+	 * For reliable RDMA Write, the callback is called once the entire message is written
+	 * (as opposed for each packet).
+	 * For unreliable RDMA Write, as any message cannot exceed MTU, the callback is called
+	 * for each received packet.
+	 */
+	void SetOnRecv(OnRecvCallback cb)
+	{
+		m_onRecv = std::move(cb);
+	}
+
+protected:
+	/**
+	 * @brief Receive application data.
+	 * 
+	 * No reliability at this layer.
+	 */
+	virtual void ReceiveUdp(Ptr<Packet> p, const CustomHeader &ch);
+	virtual void ReceiveCnp(Ptr<Packet> p, const CustomHeader &ch);
+
+	Ptr<RdmaTxQueuePair> m_tx;
+	OnRecvCallback m_onRecv;
+};
 
 /**
  * @brief Simple wrapper around `std::vector<Ptr<RdmaTxQueuePair>>`.
@@ -132,17 +214,10 @@ class QbbNetDevice;
 class RdmaTxQueuePairGroup : public Object
 {
 public:
-	RdmaTxQueuePairGroup(Ptr<QbbNetDevice> dev)
-		: m_dev(dev)
-	{
-	}
-
-	Ptr<QbbNetDevice> GetDevice()
-	{
-		return m_dev;
-	}
+	RdmaTxQueuePairGroup(Ptr<QbbNetDevice> dev);
 
 	static TypeId GetTypeId();
+	Ptr<QbbNetDevice> GetDevice();
 	uint32_t GetN();
 	Ptr<RdmaTxQueuePair> Get(uint32_t idx);
 	Ptr<RdmaTxQueuePair> operator[](uint32_t idx);
