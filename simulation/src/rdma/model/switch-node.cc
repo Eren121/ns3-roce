@@ -14,10 +14,14 @@
 #include "ns3/int-header.h"
 #include "ns3/simulator.h"
 #include "ns3/abort.h"
+#include "ns3/log.h"
+#include "ns3/assert.h"
 #include <cmath>
 #include <atomic>
 
 namespace ns3 {
+
+NS_LOG_COMPONENT_DEFINE("SwitchNode");
 
 TypeId SwitchNode::GetTypeId (void)
 {
@@ -68,12 +72,15 @@ int SwitchNode::GetOutDev(Ptr<const Packet> p, CustomHeader &ch){
 	// look up entries
 	auto entry = m_rtTable.find(ch.dip);
 
+	
 	// no matching entry
 	if (entry == m_rtTable.end())
 		return -1;
 
 	// entry found
 	auto &nexthops = entry->second;
+
+	NS_ASSERT_MSG(nexthops.size() == 1, "ECMP not supported for now");
 
 	// pick one next hop based on hash
 	union {
@@ -194,6 +201,7 @@ void SwitchNode::SendToDev(Ptr<Packet>p, CustomHeader &ch){
 			}
 			CheckAndSendPfc(inDev, qIndex);
 		}
+
 		m_bytes[inDev][idx][qIndex] += p->GetSize();
 		SwitchSend(GetDevice(idx), qIndex, p);
 	}else {
@@ -245,8 +253,14 @@ void SwitchNode::SetEcmpSeed(uint32_t seed){
 }
 
 void SwitchNode::AddTableEntry(Ipv4Address &dstAddr, uint32_t intf_idx){
+
+	NS_LOG_LOGIC("Switch " << GetId() << " add {"
+		"port=" << intf_idx << ",ip=" << dstAddr << "}");
+	
 	uint32_t dip = dstAddr.Get();
 	m_rtTable[dip].push_back(intf_idx);
+
+	NS_ASSERT_MSG(m_rtTable[dip].size() == 1, "ECMP not supported");
 }
 
 void SwitchNode::ClearTable(){

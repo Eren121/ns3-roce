@@ -33,6 +33,7 @@
 #include <ns3/rdma-client.h>
 #include <ns3/rdma-random.h>
 #include <ns3/rdma-client-helper.h>
+#include <ns3/rdma-unicast-app-helper.h>
 #include <ns3/rdma-hw.h>
 #include <ns3/switch-node.h>
 #include <ns3/sim-setting.h>
@@ -404,12 +405,34 @@ void RunFlow(ScheduledFlow flow)
 		dip = Ipv4Address(flow.dst);
 	}
 
-	RdmaClientHelper clientHelper(flow.priority, sip, dip, src_port, flow.dst_port, flow.size, win, baseRtt);
-	clientHelper.SetAttribute("Reliable", BooleanValue(flow.reliable));
-	clientHelper.SetAttribute("Multicast", BooleanValue(flow.multicast));
-	ApplicationContainer appCon = clientHelper.Install(n.Get(flow.src));
+	
+	{
+		static uint16_t unique_port = 10;
+
+		RdmaUnicastAppHelper app_helper;
+		app_helper.SetAttribute("SrcNode", UintegerValue(flow.src));
+		app_helper.SetAttribute("DstNode", UintegerValue(flow.dst));
+		app_helper.SetAttribute("SrcPort", UintegerValue(unique_port++));
+		app_helper.SetAttribute("DstPort", UintegerValue(unique_port++));
+		app_helper.SetAttribute("WriteSize", UintegerValue(flow.size));
+		app_helper.SetAttribute("PriorityGroup", UintegerValue(flow.priority));
+		app_helper.SetAttribute("Window", UintegerValue(win));
+		app_helper.SetAttribute("Mtu", UintegerValue(1500));
+	
+		std::cout << "Running flow " << Simulator::Now() << json(flow) << std::endl;
+
+		ApplicationContainer app_con = app_helper.Install(n);
+		app_con.Start(Time(0));
+	
+		return;
+	}
+
+	RdmaClientHelper clientHelper(n, flow.priority, sip, dip, src_port, flow.dst_port, flow.size, win, baseRtt);
+
+	// raf quick test to replace flow by multicast, run on all nodes
+	//ApplicationContainer appCon = clientHelper.Install(n.Get(flow.src));
+	ApplicationContainer appCon = clientHelper.Install(n);
 	appCon.Start(Time(0));
-	std::cout << "Running flow " << Simulator::Now() << json(flow) << std::endl;
 }
 
 void ScheduleFlowInputs()
@@ -451,7 +474,7 @@ void qp_finish(FILE* fout, const SimConfig* simConfig, Ptr<RdmaTxQueuePair> q)
 	// sip, dip, sport, dport, size (B), start_time, fct (ns), standalone_fct (ns)
 	fprintf(fout, "%08x %08x %u %u %lu %lu %lu %lu\n", q->sip.Get(), q->dip.Get(), q->sport, q->dport, q->m_size, q->startTime.GetTimeStep(), (Simulator::Now() - q->startTime).GetTimeStep(), standalone_fct);
 	fflush(fout);
-	
+
 	// remove rxQp from the receiver
 	Ptr<Node> dstNode = n.Get(did);
 	Ptr<RdmaHw> rdma = dstNode->GetObject<RdmaHw> ();
@@ -851,15 +874,28 @@ int main(int argc, char *argv[])
 			rdmaHw->SetAttribute("RateDecreaseInterval", DoubleValue(simConfig.rate_decrease_interval));
 			rdmaHw->SetAttribute("MinRate", DataRateValue(DataRate(simConfig.min_rate)));
 			rdmaHw->SetAttribute("Mtu", UintegerValue(simConfig.packet_payload_size));
+			
+			#if RAF_WAITS_REFACTORING
 			rdmaHw->SetAttribute("MiThresh", UintegerValue(simConfig.mi_thresh));
+			#endif
+
 			rdmaHw->SetAttribute("VarWin", BooleanValue(simConfig.var_win));
 			rdmaHw->SetAttribute("FastReact", BooleanValue(simConfig.fast_react));
+			
+			#if RAF_WAITS_REFACTORING
 			rdmaHw->SetAttribute("MultiRate", BooleanValue(simConfig.multi_rate));
 			rdmaHw->SetAttribute("SampleFeedback", BooleanValue(simConfig.sample_feedback));
 			rdmaHw->SetAttribute("TargetUtil", DoubleValue(simConfig.u_target));
+			#endif
+
 			rdmaHw->SetAttribute("RateBound", BooleanValue(simConfig.rate_bound));
+			
+			
+			#if RAF_WAITS_REFACTORING
 			rdmaHw->SetAttribute("DctcpRateAI", DataRateValue(DataRate(simConfig.dctcp_rate_ai)));
 			rdmaHw->SetAttribute("PintSmplThresh", UintegerValue(simConfig.pint_prob * 65536));
+			#endif
+			
 			// create and install RdmaDriver
 			// Ptr<RdmaDriver> rdma = CreateObject<RdmaDriver>();
 			// Ptr<Node> node = n.Get(i);
@@ -1021,6 +1057,7 @@ int main(int argc, char *argv[])
 	fclose(trace_output);
 
 	endt = clock();
-	std::cout << (double)(endt - begint) / CLOCKS_PER_SEC << "\n";
-
+	std::cout << "Elapsed simulation time: "
+					  << (double)(endt - begint) / CLOCKS_PER_SEC
+						<< std::endl;
 }

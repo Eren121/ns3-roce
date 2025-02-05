@@ -2,15 +2,15 @@
     "enable_qcn":                      true,
     "use_dynamic_pfc_threshold":       true,
 
-    "packet_payload_size":             1000,
+    "packet_payload_size":             1500,
 
-    "topology_file":                   "mix/my/mytopology.json",
-    "flow_file":                       "mix/my/myflow.json",
-    "groups_file":                     "mix/my/groups.json",
-    "trace_file":                      "mix/my/trace.txt",
-    "trace_output_file":               "mix/my/out/trace.tr",
-    "fct_output_file":                 "mix/my/out/fct.txt",
-    "pfc_output_file":                 "mix/my/out/pfc.txt",
+    "topology_file":                   "{{ IN_DIR }}/topology.json",
+    "flow_file":                       "{{ IN_DIR }}/flow.json",
+    "groups_file":                     "{{ IN_DIR }}/groups.json",
+    "trace_file":                      "{{ IN_DIR }}/trace.txt",
+    "trace_output_file":               "{{ OUT_DIR }}/trace.tr",
+    "fct_output_file":                 "{{ OUT_DIR }}/fct.txt",
+    "pfc_output_file":                 "{{ OUT_DIR }}/pfc.txt",
 
     "simulator_stop_time":             1e9,
 
@@ -26,9 +26,9 @@
     "min_rate":                        "100Mb/s",
     "dctcp_rate_ai":                   "1000Mb/s",
 
-    "error_rate_per_link":             0.20,
+    "error_rate_per_link":             {{ ERROR_RATE_PER_LINK }},
     "l2_chunk_size":                   4000,
-    "l2_ack_interval":                 1000,
+    "l2_ack_interval":                 4000,
     "l2_back_to_zero":                 false,
     "nak_interval":                    500.0,
 
@@ -54,7 +54,7 @@
         "dst": 0
     },
 
-    "enable_trace":                    1,
+    "enable_trace":                    0,
 
     "kmax_map": [
         {"bandwidth": 25000000000, "ecn_threshold": 400},
@@ -75,7 +75,7 @@
     ],
 
     "buffer_size":                     32,
-    "qlen_mon_file":                   "mix/my/out/qlen.txt",
+    "qlen_mon_file":                   "{{ OUT_DIR }}/qlen.txt",
     "qlen_mon_start":                  2000000000,
     "qlen_mon_end":                    2010000000,
 

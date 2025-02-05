@@ -31,7 +31,7 @@ RdmaTxQueuePair::RdmaTxQueuePair(Ptr<Node> node, uint16_t pg, Ipv4Address sip, u
 	m_sport = sport;
 	m_max_rate = 0;
 	m_rate = 0;
-	m_nextAvail = Simulator::GetMaximumSimulationTime();
+	m_nextAvail = Simulator::Now();
 	mlx.m_alpha = 1;
 	mlx.m_alpha_cnp_arrived = false;
 	mlx.m_first_cnp = true;
@@ -99,6 +99,13 @@ void RdmaTxQueuePair::LazyInitCnp()
  * RdmaRxQueuePair
  ********************/
 
+RdmaRxQueuePair::RdmaRxQueuePair(Ptr<RdmaTxQueuePair> tx)
+	: m_tx{tx},
+	  m_local_ip{m_tx->GetSrcIP().Get()},
+	  m_local_port{m_tx->GetSrcPort()}
+{
+}
+
 TypeId RdmaRxQueuePair::GetTypeId (void)
 {
 	static TypeId tid = TypeId ("ns3::RdmaRxQueuePair")
@@ -126,12 +133,7 @@ void RdmaRxQueuePair::ReceiveUdp(Ptr<Packet> p, const CustomHeader &ch)
 {
 	const uint8_t ecnbits = ch.GetIpv4EcnBits();
 	const uint32_t payload_size = p->GetSize() - ch.GetSerializedSize();
-
-	// TODO find corresponding rx queue pair
-	Ptr<RdmaRxQueuePair> rxQp;
-	RdmaBTH bth;
-	NS_ASSERT(p->PeekPacketTag(bth));
-
+	
 	if (ecnbits != 0) {
 		m_ecn_source.ecnbits |= ecnbits;
 		m_ecn_source.qfb++;

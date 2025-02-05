@@ -6,26 +6,74 @@
 #include <ns3/simulator.h>
 #include <ns3/ppp-header.h>
 #include <ns3/rdma-seq-header.h>
+#include <ns3/log.h>
 
 namespace ns3 {
+
+NS_LOG_COMPONENT_DEFINE("RdmaReliableQP");
 
 RdmaReliableSQ::RdmaReliableSQ(Ptr<Node> node, uint16_t pg, Ipv4Address sip, uint16_t sport, Ipv4Address dip, uint16_t dport)
     : RdmaTxQueuePair(node, pg, sip, sport),
       m_dip(dip),
       m_dport(dport)
 {
+	NS_LOG_FUNCTION(this);
 }
 
-void RdmaReliableSQ::Acknowledge(uint64_t ack)
-{
-	if(ack > m_snd_una) {
-		m_snd_una = ack;
 
-		// Notify the sender packets have been received
-		while(m_ack_cbs.front().seq_no <= ack) {
-			m_ack_cbs.front().on_send();
-			m_ack_cbs.pop();
-		}
+void RdmaReliableSQ::SetAckInterval(uint64_t chunk, uint64_t ack_interval)
+{
+	NS_LOG_FUNCTION(this << chunk << ack_interval);
+
+	m_chunk = chunk;
+	m_ack_interval = ack_interval;
+}
+
+void RdmaReliableSQ::Acknowledge(uint64_t next_psn_expected)
+{
+	NS_LOG_FUNCTION(this << next_psn_expected);
+	
+	if(next_psn_expected > m_snd_una) {
+		m_snd_una = next_psn_expected;
+		NotifyPendingCompEvents();
+	}
+	
+	ScheduleRetrTimeout();
+}
+
+void RdmaReliableSQ::ScheduleRetrTimeout()
+{
+	if(m_retr_to.IsRunning()) {
+		m_retr_to.Cancel();
+	}
+	
+	const bool infly_acks = (highest_ack_psn > m_snd_una); 
+	if(!infly_acks) {
+		return;
+	}
+
+	// https://www.rdmamojo.com/2013/01/12/ibv_modify_qp/
+	// Corresponds to level 4
+	const Time retr_timeout = MicroSeconds(65.536);
+	m_retr_to = Simulator::Schedule(retr_timeout, &RdmaReliableSQ::OnRetrTimeout, this);
+}
+
+void RdmaReliableSQ::OnRetrTimeout()
+{
+	NS_LOG_FUNCTION(this);
+	RecoverNack(m_snd_una);
+}
+
+void RdmaReliableSQ::NotifyPendingCompEvents()
+{
+	while(!m_ack_cbs.empty() && m_ack_cbs.front().seq_no <= m_snd_una) {
+		OnSendCallback& callback = m_ack_cbs.front().on_send;
+		if(callback) { callback(); }
+		m_ack_cbs.pop();
+		m_to_send.pop();
+
+		// This may unblock, because next op could have been blocked until ACK is received
+		TriggerDevTransmit();
 	}
 }
 
@@ -42,51 +90,86 @@ bool RdmaReliableSQ::IsWinBound() const
 
 bool RdmaReliableSQ::IsReadyToSend() const
 {
-	const bool timerReady = Simulator::Now().GetTimeStep() <= m_nextAvail.GetTimeStep();
-	return !m_to_send.empty() && !IsWinBound() && timerReady;
+	const bool timer_ready = Simulator::Now().GetTimeStep() >= m_nextAvail.GetTimeStep();
+	const bool has_work = !m_to_send.empty() && m_ack_cbs.empty();
+
+	NS_LOG_LOGIC(this << " {to_send.size=" << m_to_send.size() << ",timer_ready=" << timer_ready
+	                  << ",win_bound=" << IsWinBound() << "}");
+
+	return timer_ready && !IsWinBound() && has_work;
 }
 
 void RdmaReliableSQ::PostSend(SendRequest sr)
 {
-	m_to_send.push(std::move(sr));
+	NS_LOG_FUNCTION(this);
+
+	sr.first_psn = m_next_op_first_psn;
+	m_next_op_first_psn += sr.payload_size;
+
+	m_to_send.push(sr);
+	TriggerDevTransmit();
+}
+
+void RdmaReliableSQ::TriggerDevTransmit()
+{
+	// Trigger to possibly send
+	if(m_nextAvail <= Simulator::Now()) {
+		Simulator::Schedule(Seconds(0), &QbbNetDevice::TriggerTransmit, GetDevice());
+	}
+	else {
+		Simulator::Schedule(m_nextAvail - Simulator::Now(), &QbbNetDevice::TriggerTransmit, GetDevice());
+	}
 }
 
 Ptr<Packet> RdmaReliableSQ::GetNextPacket()
 {
+	NS_LOG_FUNCTION(this);
+
 	if(m_to_send.empty()) {
+		NS_ASSERT(false);
 		return nullptr;
 	}
-	SendRequest sr = m_to_send.front();
+
+	const SendRequest sr = m_to_send.front();
+	const uint64_t op_end_psn = sr.first_psn + sr.payload_size;
+	NS_ASSERT(op_end_psn > m_snd_nxt);
+	uint32_t packet_size = (op_end_psn - m_snd_nxt);
+	
+	if(packet_size > m_mtu) {
+		// Split the Write Request in multiple MTU-sized packets.
+		// Only the last packet will trigger the completion event
+		packet_size = m_mtu;
+	}
+
 	RdmaBTH bth;
 	bth.SetReliable(true);
 	bth.SetMulticast(false);
+	bth.SetDestQpKey(m_dport);
 
-	if (sr.payload_size > m_mtu) {
-		// Split the Write Request in multiple MTU-sized packets.
-		// Only the last packet will trigger the completion event
-		sr.payload_size = m_mtu;
+	const bool op_last_pkt = (m_snd_nxt + packet_size == op_end_psn);
+	
+	if (!op_last_pkt) {
 		bth.SetNotif(false);
-		bth.SetAckReq(ShouldReqAck(sr.payload_size));
-		// Don't push again a packet, but resize the next packet in the queue
-		m_to_send.front().payload_size -= m_mtu;
+		bth.SetAckReq(ShouldReqAck(packet_size));
 	}
 	else {
 		bth.SetNotif(true); // Last packet, generate a notif on the RX
 		bth.SetAckReq(true);
 		bth.SetImm(sr.imm);
-		m_to_send.pop();
 
 		// When the ACK is received, call this
-		if(sr.on_send) {
+		
+		const bool already_here = !m_ack_cbs.empty();
+		if(!already_here && sr.on_send) {
 			AckCallback cb;
-			cb.seq_no = m_snd_nxt;
+			cb.seq_no = m_snd_nxt + packet_size;
 			cb.on_send = std::move(sr.on_send);
 			m_ack_cbs.push(cb);
 		}
 	}
 	
-	Ptr<Packet> p = Create<Packet>(sr.payload_size);
-	
+	Ptr<Packet> p = Create<Packet>(packet_size);
+
 	// Add RdmaSeqHeader
 	RdmaSeqHeader seqTs;
 	seqTs.SetSeq(m_snd_nxt);
@@ -119,16 +202,38 @@ Ptr<Packet> RdmaReliableSQ::GetNextPacket()
 	p->AddPacketTag(bth);
 
 	// Update state
-	m_snd_nxt += sr.payload_size;
+	m_snd_nxt += packet_size;
 	m_ipid++;
+
+	if(bth.GetAckReq()) {
+		highest_ack_psn = m_snd_nxt;
+		ScheduleRetrTimeout();
+	}
 
 	// return
 	return p;
 }
 
-void RdmaReliableSQ::RecoverNack()
+void RdmaReliableSQ::RecoverNack(uint64_t next_psn_expected)
 {
+	NS_LOG_FUNCTION(this);
+	
+	Acknowledge(next_psn_expected);
+	Rollback();
+	TriggerDevTransmit();
+}
+
+void RdmaReliableSQ::Rollback()
+{
+	NS_ASSERT(!m_to_send.empty());
+	SendRequest& sr = m_to_send.front();
+
 	m_snd_nxt = m_snd_una;
+
+	// Remove the callback in case the last packet was sent
+	if(!m_ack_cbs.empty()) {
+		m_ack_cbs.pop();
+	}
 }
 
 uint64_t RdmaReliableSQ::GetWin() const
@@ -148,6 +253,8 @@ uint64_t RdmaReliableSQ::GetWin() const
 
 bool RdmaReliableRQ::Receive(Ptr<Packet> p, const CustomHeader& ch)
 {
+	NS_LOG_FUNCTION(this);
+
 	if(ch.l3Prot == 0xFD) { // NACK
 		ReceiveAck(p, ch);
 	}
@@ -158,9 +265,15 @@ bool RdmaReliableRQ::Receive(Ptr<Packet> p, const CustomHeader& ch)
 	return RdmaRxQueuePair::Receive(p, ch);
 }
 
+RdmaReliableRQ::RdmaReliableRQ(Ptr<RdmaReliableSQ> sq)
+	: RdmaRxQueuePair{sq}
+{
+}
 
 int RdmaReliableRQ::ReceiverCheckSeq(uint32_t seq, uint32_t size)
 {
+	NS_LOG_FUNCTION(this << seq << size);
+
 	// returns:
 	//   - 1: Generate ACK (success)
 	//   - 2: Generate NAK (failure, missing seqno)
@@ -169,21 +282,24 @@ int RdmaReliableRQ::ReceiverCheckSeq(uint32_t seq, uint32_t size)
 	//   - 5: Success, don't send ACK
 	uint32_t expected = ReceiverNextExpectedSeq;
 	if (seq == expected){
+		NS_LOG_LOGIC("Received data {expected=" << expected << ",size=" << size << "}");
 		ReceiverNextExpectedSeq = expected + size;
 		return 5;
 	} else if (seq > expected) {
+		NS_LOG_LOGIC("Seq. received is higher than expected (" << seq << ">" << expected << ")");
 		// Generate NACK
 		if (Simulator::Now() >= m_nackTimer || m_lastNACK != expected){
+			NS_LOG_LOGIC("Send NACK");	
 			m_nackTimer = Simulator::Now() + MicroSeconds(m_nack_interval);
 			m_lastNACK = expected;
 			if (m_backto0){
-				ReceiverNextExpectedSeq = ReceiverNextExpectedSeq / m_chunk*m_chunk;
+				ReceiverNextExpectedSeq = ReceiverNextExpectedSeq / GetChunk() * GetChunk();
 			}
 			return 2;
 		}else
 			return 4;
 	}else {
-		// Duplicate. 
+		NS_LOG_LOGIC("Duplicate received {expected=" << expected << ",recv=" << seq << "}");
 		return 3;
 	}
 }
@@ -191,12 +307,15 @@ int RdmaReliableRQ::ReceiverCheckSeq(uint32_t seq, uint32_t size)
 /**
  * \return true If the interval between the two values spans on more than one chunk.
  */
-static bool CrossBoundary(uint64_t chunksize, uint64_t oldval, uint64_t newval) {
+static bool CrossBoundary(uint64_t chunksize, uint64_t oldval, uint64_t newval)
+{
 	return (oldval / chunksize) != (newval / chunksize);
 }
 
 bool RdmaReliableSQ::ShouldReqAck(uint64_t payload_size) const
 {
+	NS_LOG_FUNCTION(this << payload_size);
+
 	// This is a change from the original project.
 	// Previously, it was to the discretion of the receiver to choose when to send back ACKs.
 	// Now, the sender can request for an ACK.
@@ -221,23 +340,31 @@ bool RdmaReliableSQ::ShouldReqAck(uint64_t payload_size) const
 
 void RdmaReliableRQ::ReceiveUdp(Ptr<Packet> p, const CustomHeader &ch)
 {
+	NS_LOG_FUNCTION(this);
+
 	RdmaRxQueuePair::ReceiveUdp(p, ch);
 
 	RdmaBTH bth;
-	NS_ASSERT(p->PeekPacketTag(bth));
-	if(!bth.GetReliable()) {
-		return;
-	}
+	NS_ABORT_UNLESS(p->PeekPacketTag(bth));
+	NS_ASSERT(bth.GetReliable());
+	NS_ASSERT(ch.dip == m_local_ip);
+	NS_ASSERT(ch.sip == DynamicCast<RdmaReliableSQ>(m_tx)->GetDestIP());
+	NS_ASSERT(ch.udp.sport == DynamicCast<RdmaReliableSQ>(m_tx)->GetDestPort());
+	NS_ASSERT(ch.udp.dport == m_local_port);
 	
 	const uint8_t ecnbits = ch.GetIpv4EcnBits();
 	const uint32_t payload_size = p->GetSize() - ch.GetSerializedSize();
 	int x = ReceiverCheckSeq(ch.udp.seq, payload_size);
 	
 	if(x != 2 && bth.GetAckReq()) {
+		NS_LOG_LOGIC("ACK requested, sending back ACK");
 		x = 1; // If no NAK and ACK is requested, force an ACK
 	}
 
 	if (x == 1 || x == 2) { //generate ACK or NACK
+		
+		NS_LOG_LOGIC("Send back " << (x == 1 ? "ACK" : "NACK"));
+
 		qbbHeader seqh;
 		seqh.SetSeq(ReceiverNextExpectedSeq);
 		seqh.SetPG(ch.udp.pg);
@@ -271,27 +398,40 @@ void RdmaReliableRQ::ReceiveUdp(Ptr<Packet> p, const CustomHeader &ch)
 
 		PppHeader ppp;
 		ppp.SetProtocol(EtherToPpp (0x800));
-		p->AddHeader (ppp);
+		newp->AddHeader (ppp);
+
+		RdmaBTH bth;
+		bth.SetDestQpKey(ch.udp.sport);
+		newp->AddPacketTag(bth);
 
 		// send
 		Ptr<QbbNetDevice> dev = m_tx->GetDevice();
 		dev->RdmaEnqueueHighPrioQ(newp);
 		dev->TriggerTransmit();
 	}
-}
 
+	// If no error, call completion event
+	if(m_onRecv && x != 2 && bth.GetNotif()) {
+		RecvNotif notif;
+		notif.has_imm = true;
+		notif.imm = bth.GetImm();
+		m_onRecv(notif);
+	}
+}
 
 void RdmaReliableRQ::ReceiveAck(Ptr<Packet> p, const CustomHeader &ch){
 
+	NS_LOG_FUNCTION(this);
+
 	RdmaBTH bth;
-	NS_ASSERT(p->PeekPacketTag(bth));
+	NS_ABORT_UNLESS(p->PeekPacketTag(bth));
 	const bool reliable = bth.GetReliable();
 	NS_ASSERT(reliable);
 
-	uint16_t qIndex = ch.ack.pg;
-	uint16_t port = ch.ack.dport;
-	uint32_t seq = ch.ack.seq;
-	uint8_t cnp = (ch.ack.flags >> qbbHeader::FLAG_CNP) & 1;
+	const uint16_t qIndex = ch.ack.pg;
+	const uint16_t port = ch.ack.dport;
+	const uint32_t seq = ch.ack.seq;
+	const uint8_t cnp = (ch.ack.flags >> qbbHeader::FLAG_CNP) & 1;
 	const bool nack = (ch.l3Prot == 0xFD);
 	int i;
 	
@@ -302,12 +442,12 @@ void RdmaReliableRQ::ReceiveAck(Ptr<Packet> p, const CustomHeader &ch){
 		tx->Acknowledge(seq);
 	}
 	else {
-		uint32_t goback_seq = seq / m_chunk * m_chunk;
+		uint32_t goback_seq = seq / GetChunk() * GetChunk();
 		tx->Acknowledge(goback_seq);
 	}
 	
 	if (nack) {
-		tx->RecoverNack();
+		tx->RecoverNack(seq);
 	}
 	
 	Ptr<RdmaHw> rdma = m_tx->GetNode()->GetObject<RdmaHw>();

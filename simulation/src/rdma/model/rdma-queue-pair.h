@@ -27,11 +27,15 @@ public:
 	
 	struct SendRequest
 	{
-		uint32_t payload_size{0};
-		uint32_t imm{0};
+		uint32_t payload_size{};
+		uint32_t imm{};
+		bool multicast{};
 		Ipv4Address dip{}; // Only for unreliable
-		uint16_t dport{0}; // Only for unreliable
+		uint16_t dport{};  // Only for unreliable
 		OnSendCallback on_send{}; // For unreliable: called when sent, for reliable: called when ACKed.
+	
+		// Private
+		uint64_t first_psn{};
 	};
 
 	virtual void PostSend(SendRequest sr)
@@ -52,7 +56,7 @@ public:
 	 */
 	virtual bool IsFinished() const
 	{
-		return false;
+		return m_finished;
 	}
 
 	virtual Ptr<Packet> GetNextPacket()
@@ -77,7 +81,8 @@ public:
 	Ipv4Address GetSrcIP() const { return m_sip; }
 	uint16_t GetSrcPort() const { return m_sport; }
 	uint16_t GetPG() const { return m_pg; }
-
+	void SetMTU(uint32_t mtu) { m_mtu = mtu; }
+	
 	void LazyInitCnp();
 
 	uint64_t GetKey()
@@ -85,14 +90,21 @@ public:
 		return m_sport;
 	}
 
+	void Finish()
+	{
+		m_finished = true;
+	}
+
 protected:
 	Ptr<Node> m_node{};
+	uint32_t m_mtu{0};
 	Ipv4Address m_sip{};
 	uint16_t m_sport{0};
 	uint16_t m_pg{0};
 	DataRate m_max_rate{}; // max rate
-	Time m_nextAvail{};	//< Soonest time of next send
+	Time m_nextAvail{};	//< Next time the QP is ready to send (regardless of if the queue is empty).
 	uint32_t m_lastPktSize{0};
+	bool m_finished{false};
 
 	friend class RdmaHw;
 
@@ -151,6 +163,8 @@ class RdmaRxQueuePair : public Object { // Rx side queue pair
 public:
 	struct RecvNotif
 	{
+		Ptr<Packet> packet;
+		const CustomHeader* ch;
 		bool has_imm{false};
 		uint32_t imm{0};
 	};
@@ -163,18 +177,10 @@ public:
 		uint16_t qfb{0};
 		uint16_t total{0};
 	};
-	ECNAccount m_ecn_source{};
-	uint32_t m_local_ip{0};
-	uint16_t m_local_port{0};
-	uint16_t m_ipid{0};
-	EventId QcnTimerEvent{}; // if destroy this rxQp, remember to cancel this timer
 
 	static TypeId GetTypeId (void);
 	
-	RdmaRxQueuePair(Ptr<RdmaTxQueuePair> tx)
-		: m_tx(tx)
-	{
-	}
+	RdmaRxQueuePair(Ptr<RdmaTxQueuePair> tx);
 
 	/**
 	 * @return true If the packet was succesfully processed, or false if the protocol is not known.
@@ -206,6 +212,13 @@ protected:
 
 	Ptr<RdmaTxQueuePair> m_tx;
 	OnRecvCallback m_onRecv;
+
+public:
+	ECNAccount m_ecn_source{};
+	uint32_t m_local_ip{0};
+	uint16_t m_local_port{0};
+	uint16_t m_ipid{0};
+	EventId QcnTimerEvent{}; // if destroy this rxQp, remember to cancel this timer
 };
 
 /**

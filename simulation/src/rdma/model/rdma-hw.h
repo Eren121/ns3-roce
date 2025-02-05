@@ -18,7 +18,7 @@ public:
 	static TypeId GetTypeId (void);
 
 	void Setup(); // setup shared data and callbacks with the QbbNetDevice
-	void AddQueuePair(uint64_t size, bool reliable, uint16_t pg, Ipv4Address _sip, Ipv4Address _dip, uint16_t _sport, uint16_t _dport, uint32_t win, uint64_t baseRtt, bool multicast, Callback<void> notifyAppFinish); // add a new qp (new send)
+	void RegisterQP(Ptr<RdmaTxQueuePair> sq, Ptr<RdmaRxQueuePair> rq);
 	void DeleteRxQp(uint32_t dip, uint16_t pg, uint16_t dport);
 
 	// call this function after the NIC is setup
@@ -27,6 +27,8 @@ public:
 	void RedistributeQp();
 
 	uint32_t GetCC() const { return m_cc_mode; }
+
+	uint32_t GetMTU() const { return m_mtu; }
 	
 private:
 	static uint64_t GetRxQpKey(uint16_t dport); // get the lookup key for m_rxQpMap
@@ -65,7 +67,7 @@ private:
 	 * @brief Set a callback when a packet is received from any QP.
 	 */
 	void SetOnRecv(OnRecv onRecv);
-
+	
 private:
 	Ptr<Node> m_node;
 	DataRate m_minRate;		//< Min sending rate

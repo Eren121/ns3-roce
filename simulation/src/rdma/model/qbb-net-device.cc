@@ -260,12 +260,14 @@ namespace ns3 {
 					TransmitStart(p);
 					return;
 				}
+
 				// a qp dequeue a packet
 				Ptr<RdmaTxQueuePair> lastQp = m_rdmaEQ->GetQp(qIndex);
 				p = m_rdmaEQ->DequeueQindex(qIndex);
 
 				// transmit
 				m_traceQpDequeue(p, lastQp);
+
 				TransmitStart(p);
 
 				// update for the next avail time
@@ -552,6 +554,11 @@ namespace ns3 {
 	bool IsQbb(Ptr<const NetDevice> self)
 	{
 		return DynamicCast<const QbbNetDevice>(self) != nullptr;
+	}
+
+	Ipv4Address GetServerAddress(Ptr<const Node> node)
+	{
+		return node->GetObject<Ipv4>()->GetAddress(1, 0).GetLocal();
 	}
 
 } // namespace ns3

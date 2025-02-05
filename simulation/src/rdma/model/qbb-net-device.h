@@ -218,6 +218,8 @@ public:
 
 bool IsQbb(Ptr<const NetDevice> self);
 
+Ipv4Address GetServerAddress(Ptr<const Node> node);
+
 } // namespace ns3
 
 #endif // QBB_NET_DEVICE_H

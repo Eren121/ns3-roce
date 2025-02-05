@@ -26,7 +26,9 @@ def build(bld):
         'model/switch-node.cc',
         'model/data-rate-ops.cc',
         'model/rdma-seq-header.cc',
-        'model/rdma-random.cc'
+        'model/rdma-random.cc',
+        'app/rdma-unicast-app.cc',
+        'app/rdma-unicast-app-helper.cc',
     ]
     headers = bld(features='ns3header')
     headers.module = 'rdma'
@@ -57,5 +59,7 @@ def build(bld):
         'model/trace-format.h',
         'model/data-rate-ops.h',
         'model/rdma-seq-header.h',
-        'model/rdma-random.h'
+        'model/rdma-random.h',
+        'app/rdma-unicast-app.h',
+        'app/rdma-unicast-app-helper.h',
     ]

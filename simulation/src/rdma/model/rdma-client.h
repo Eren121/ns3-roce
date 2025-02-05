@@ -28,6 +28,10 @@
 #include "ns3/ptr.h"
 #include "ns3/ipv4-address.h"
 #include <ns3/rdma.h>
+#include <ns3/node-container.h>
+#include <ns3/rdma-reliable-qp.h>
+#include <ns3/rdma-unreliable-qp.h>
+#include <unordered_set>
 
 namespace ns3 {
 
@@ -51,20 +55,55 @@ public:
 
   RdmaClient();
   ~RdmaClient() override;
+  
+  void SetNodeContainer(NodeContainer nodes) { m_nodes = nodes; }
 
 private:
   void StartApplication() override;
   void StopApplication() override;
 
+  /**
+   * @brief Initialize `m_left` and `m_right` and left and right QPs.
+   */
+  void InitLeftRight();
+
+  void TryUpdateState();
+
+  void RunRecoveryPhase();
+  Ipv4Address GetLeftIp() const;
+  Ipv4Address GetRightIp() const;
+  Ipv4Address GetLocalIp() const;
+  
+  const uint32_t MCAST_GROUP = 1;
+  const uint16_t PORT_MCAST = 100; //!< Multicast comm. port
+  const uint16_t PORT_RNODE = 101; //!< Right node RC comm. port
+  const uint16_t PORT_LNODE = 102; //!< Left Node RC comm. port
+
+  NodeContainer m_nodes;
+  uint64_t m_mcastSrcNodeId;
   uint64_t m_size;            //<! Count of bytes to write.
-  bool m_reliable;            //<! `true` for RC, `false` for UD.
-  bool m_multicast;           //<! `true` if `m_dip` is a multicast group, and `false` for unicast.
   uint16_t m_pg;              //<! Priority group.
-  Ipv4Address m_sip, m_dip;
-  uint16_t m_sport, m_dport;
   uint32_t m_win;             //<! Bound of on-the-fly packets.
   uint64_t m_baseRtt;         //<! Base Rtt.
   Callback<void, RdmaClient&> m_onFlowFinished; //< Callback when flow finished.
+
+  std::unordered_set<uint64_t> m_recv_chunks; //!< Succesfully received chunks
+  uint32_t m_left; //<! Index of the left node in `m_nodes`.
+  uint32_t m_right; //!< Index of the right node in `m_nodes`.
+
+  RdmaUnreliableQP m_mcast_qp; //!< QP used for multicast.
+  RdmaReliableQP m_left_qp; //!< QP used for left node comm.
+  RdmaReliableQP m_right_qp; //!< Qp used for right node comm.
+
+  bool m_has_recovered_chunks{false}; //!< Set to `true` when the missed chunks are recovered.
+  bool m_has_send_to_right{false}; //!< Set to `true` when the current node has send all the chunks the right node missed.
+  int m_peer_requested_chunks{-1}; //!< Count of nodes requested by right node. Set to -1 until the request arrives.
+  bool m_completed{false}; //!< Set to `true` when the allgather finished.
+
+  enum class Phase {
+    Mcast, Recovery
+  };
+  Phase m_phase = Phase::Mcast;
 };
 
 } // namespace ns3

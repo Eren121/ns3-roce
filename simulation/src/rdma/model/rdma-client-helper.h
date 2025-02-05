@@ -51,7 +51,7 @@ public:
    * \param port The port number of the remote udp server
    */
 
-  RdmaClientHelper (uint16_t pg, Ipv4Address sip, Ipv4Address dip, uint16_t sport, uint16_t dport, uint64_t size, uint32_t win, uint64_t baseRtt);
+  RdmaClientHelper (NodeContainer nodes, uint16_t pg, Ipv4Address sip, Ipv4Address dip, uint16_t sport, uint16_t dport, uint64_t size, uint32_t win, uint64_t baseRtt);
 
   /**
    * Record an attribute to be set in each Application after it is is created.
@@ -71,6 +71,7 @@ public:
   ApplicationContainer Install (NodeContainer c);
 
 private:
+  NodeContainer m_nodes;
   ObjectFactory m_factory;
 };
 

@@ -29,6 +29,8 @@ public:
 	void SetNotif(bool notif);
 	void SetImm(uint32_t imm);
 	uint32_t GetImm() const;
+	uint16_t GetDestQpKey() const { return m_key; }
+	void SetDestQpKey(uint16_t key) { m_key = key; }
 
 private:
 	// true: RC, false: UD.
@@ -37,6 +39,7 @@ private:
 	bool m_multicast{false}; //<! When `true`, the destination is a multicast group.
 	bool m_notif{false}; //<! When `true`, a notification event is generated in the RX side.
 	uint32_t m_imm{0};
+	uint16_t m_key{0}; // Destination QP key.
 };
 
 }

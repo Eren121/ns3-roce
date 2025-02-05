@@ -39,7 +39,7 @@ void RdmaBTH::Print(std::ostream &os) const
 
 uint32_t RdmaBTH::GetSerializedSize() const
 {
-	return 1;
+	return 7;
 }
 
 void RdmaBTH::Serialize(TagBuffer start) const
@@ -51,6 +51,7 @@ void RdmaBTH::Serialize(TagBuffer start) const
 
 	start.WriteU8(payload);
 	start.WriteU32(m_imm);
+	start.WriteU16(m_key);
 }
 
 void RdmaBTH::Deserialize(TagBuffer start)
@@ -61,6 +62,7 @@ void RdmaBTH::Deserialize(TagBuffer start)
 	m_ack_req   = payload & 4;
 	m_notif     = payload & 8;
 	m_imm       = start.ReadU32();
+	m_key       = start.ReadU16();
 }
 
 bool RdmaBTH::GetReliable() const

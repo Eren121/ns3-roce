@@ -15,6 +15,11 @@
 #include "qbb-header.h"
 #include "rdma-bth.h"
 #include "cn-header.h"
+#include "ns3/rdma-reliable-qp.h"
+#include "ns3/rdma-unreliable-qp.h"
+#include "ns3/log.h"
+
+NS_LOG_COMPONENT_DEFINE("RdmaHw");
 
 namespace ns3{
 
@@ -125,15 +130,18 @@ TypeId RdmaHw::GetTypeId (void)
 
 void RdmaHw::Setup()
 {
+	NS_LOG_FUNCTION(this);
 	m_node = GetObject<Node>();
 	NS_ASSERT(m_node);
 		
 	for (uint32_t i = 0; i < m_node->GetNDevices(); i++){
 		Ptr<QbbNetDevice> dev = NULL;
-		if (IsQbb(m_node->GetDevice(i)))
-			dev = DynamicCast<QbbNetDevice>(m_node->GetDevice(i));
+		if (!IsQbb(m_node->GetDevice(i)))
+			continue;
+		
+		dev = DynamicCast<QbbNetDevice>(m_node->GetDevice(i));
 		m_nic.push_back(RdmaTxQueuePairGroup(dev));
-	}	
+	}
 
 	for (uint32_t i = 0; i < m_nic.size(); i++){
 		Ptr<QbbNetDevice> dev = m_nic[i].GetDevice();
@@ -150,38 +158,29 @@ void RdmaHw::Setup()
 	}
 }
 
-void RdmaHw::AddQueuePair(uint64_t size, bool reliable, uint16_t pg, Ipv4Address sip, Ipv4Address dip, uint16_t sport, uint16_t dport, uint32_t win, uint64_t baseRtt, bool multicast, Callback<void> notifyAppFinish){
-	
-#if RAF_WAITS_REFACTORING
-	// create qp
-	Ptr<RdmaTxQueuePair> qp = CreateObject<RdmaTxQueuePair>(pg, sip, dip, sport, dport);
-	qp->m_node = m_node;
-	qp->m_reliable = reliable;
-	qp->m_multicast = multicast;
-	qp->SetSize(size);
-	qp->SetWin(win);
-	qp->SetBaseRtt(baseRtt);
-	qp->SetVarWin(m_var_win);
-	qp->SetAppNotifyCallback(notifyAppFinish);
+void RdmaHw::RegisterQP(Ptr<RdmaTxQueuePair> sq, Ptr<RdmaRxQueuePair> rq)
+{
+	const uint64_t key = sq->GetKey();
+
+	// Store in map
+	m_rxQpMap[key] = rq;
 
 	// add qp
-	uint32_t nic_idx = ResolveIface(qp->dip);
-	m_nic[nic_idx].AddQp(qp);
-	uint64_t key = GetQpKey(dip.Get(), sport, pg);
-	m_qpMap[key] = qp;
+	m_qpMap[key] = sq;
 
 	// set init variables
 	NS_ASSERT(m_cc_mode == 1);
-	DataRate m_bps = m_nic[nic_idx].GetDevice()->GetDataRate();
-	qp->m_rate = m_bps;
-	qp->m_max_rate = m_bps;
+	DataRate m_bps = sq->GetDevice()->GetDataRate();
+	sq->m_rate = m_bps;
+	sq->m_max_rate = m_bps;
 	if (m_cc_mode == 1){
-		qp->mlx.m_targetRate = m_bps;
+		sq->mlx.m_targetRate = m_bps;
 	}
 
 	// Notify Nic
-	m_nic[nic_idx].GetDevice()->NewQp(qp);
-#endif
+	NS_ASSERT(m_nic.size() == 1);
+	m_nic[0].AddQp(sq);
+	sq->GetDevice()->NewQp(sq);
 }
 
 uint64_t RdmaHw::GetRxQpKey(uint16_t dport)
@@ -228,8 +227,11 @@ void RdmaHw::DeleteRxQp(uint32_t dip, uint16_t pg, uint16_t dport){
 	m_rxQpMap.erase(key);
 }
 
-int RdmaHw::Receive(Ptr<Packet> p, CustomHeader &ch){
-	NS_ASSERT("TODO REMOVE");
+int RdmaHw::Receive(Ptr<Packet> p, CustomHeader &ch)
+{
+	RdmaBTH bth;
+	NS_ABORT_UNLESS(p->PeekPacketTag(bth));
+	m_rxQpMap.at(bth.GetDestQpKey())->Receive(p, ch);
 	return 0;
 }
 

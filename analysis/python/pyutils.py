@@ -6,11 +6,13 @@ import pathlib
 import os
 import decimal
 import subprocess as sp
+import joblib
 
 
 def build_template_file(in_path: str, vars: dict):
     """
     Read a jinja2 template from `in_path` and build it into a NamedTemporaryFile which is returned.
+    The temporary file's parent directory is this python file's directory.
     Params:
         vars: List of key-value variables for the jinja template. Value is stringified automatically.
     """
@@ -54,3 +56,8 @@ def run_process(argv: list, each_line=print_each_line) -> None:
     proc.wait()
     if proc.returncode != 0:
         raise Exception(f"Error: process exited with return code {proc.returncode}")
+
+
+def parallel_for(data: list, func):
+    results = joblib.Parallel(n_jobs=-1)(joblib.delayed(func)(i) for i in data)
+    return results
