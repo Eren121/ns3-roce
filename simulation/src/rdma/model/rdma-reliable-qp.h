@@ -40,6 +40,7 @@ private:
 	void TriggerDevTransmit();
 	void ScheduleRetrTimeout();
 	void OnRetrTimeout();
+	uint64_t GetNextPayloadSize() const;
 
 private:
 	EventId m_retr_to;

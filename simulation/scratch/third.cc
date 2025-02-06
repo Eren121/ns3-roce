@@ -406,6 +406,7 @@ void RunFlow(ScheduledFlow flow)
 	}
 
 	
+	if(false)
 	{
 		static uint16_t unique_port = 10;
 

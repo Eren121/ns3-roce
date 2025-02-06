@@ -36,6 +36,8 @@ public:
 	
 		// Private
 		uint64_t first_psn{};
+
+		uint64_t GetEndPSN() const { return first_psn + payload_size; }
 	};
 
 	virtual void PostSend(SendRequest sr)

@@ -70,10 +70,17 @@ void RdmaReliableSQ::NotifyPendingCompEvents()
 		OnSendCallback& callback = m_ack_cbs.front().on_send;
 		if(callback) { callback(); }
 		m_ack_cbs.pop();
-		m_to_send.pop();
 
 		// This may unblock, because next op could have been blocked until ACK is received
 		TriggerDevTransmit();
+	}
+
+	while(!m_to_send.empty()) {
+		const SendRequest& sr = m_to_send.front();
+		if(sr.GetEndPSN() > m_snd_una) {
+			break;
+		}
+		m_to_send.pop();
 	}
 }
 
@@ -88,25 +95,57 @@ bool RdmaReliableSQ::IsWinBound() const
 	return w != 0 && GetOnTheFly() >= w;
 }
 
+uint64_t RdmaReliableSQ::GetNextPayloadSize() const
+{
+	if(m_to_send.empty()) {
+		return 0;
+	}
+
+	const SendRequest& sr = m_to_send.front();
+	NS_ASSERT(sr.GetEndPSN() >= m_snd_nxt);
+	const uint64_t rem_to_send = (sr.GetEndPSN() - m_snd_nxt);
+	return rem_to_send;
+}
+
 bool RdmaReliableSQ::IsReadyToSend() const
 {
 	const bool timer_ready = Simulator::Now().GetTimeStep() >= m_nextAvail.GetTimeStep();
-	const bool has_work = !m_to_send.empty() && m_ack_cbs.empty();
+	if(!timer_ready) {
+		return false;
+	}
 
-	NS_LOG_LOGIC(this << " {to_send.size=" << m_to_send.size() << ",timer_ready=" << timer_ready
-	                  << ",win_bound=" << IsWinBound() << "}");
+	if(m_to_send.empty()) {
+		return false;
+	}
 
-	return timer_ready && !IsWinBound() && has_work;
+	if(IsWinBound()) {
+		return false;
+	}
+
+	const uint64_t rem_to_send = GetNextPayloadSize();
+	return rem_to_send > 0;
 }
 
 void RdmaReliableSQ::PostSend(SendRequest sr)
 {
 	NS_LOG_FUNCTION(this);
+	
+	if(sr.payload_size == 0) {
+		// Zero payload size not supported,
+		// because PSN should be incremented
+		sr.payload_size = 1;
+	}
 
 	sr.first_psn = m_next_op_first_psn;
 	m_next_op_first_psn += sr.payload_size;
 
 	m_to_send.push(sr);
+
+	AckCallback cb;
+	cb.seq_no = sr.GetEndPSN();
+	cb.on_send = std::move(sr.on_send);
+	m_ack_cbs.push(cb);
+
 	TriggerDevTransmit();
 }
 
@@ -131,9 +170,7 @@ Ptr<Packet> RdmaReliableSQ::GetNextPacket()
 	}
 
 	const SendRequest sr = m_to_send.front();
-	const uint64_t op_end_psn = sr.first_psn + sr.payload_size;
-	NS_ASSERT(op_end_psn > m_snd_nxt);
-	uint32_t packet_size = (op_end_psn - m_snd_nxt);
+	uint32_t packet_size = GetNextPayloadSize();
 	
 	if(packet_size > m_mtu) {
 		// Split the Write Request in multiple MTU-sized packets.
@@ -146,7 +183,7 @@ Ptr<Packet> RdmaReliableSQ::GetNextPacket()
 	bth.SetMulticast(false);
 	bth.SetDestQpKey(m_dport);
 
-	const bool op_last_pkt = (m_snd_nxt + packet_size == op_end_psn);
+	const bool op_last_pkt = (m_snd_nxt + packet_size == sr.GetEndPSN());
 	
 	if (!op_last_pkt) {
 		bth.SetNotif(false);
@@ -156,16 +193,6 @@ Ptr<Packet> RdmaReliableSQ::GetNextPacket()
 		bth.SetNotif(true); // Last packet, generate a notif on the RX
 		bth.SetAckReq(true);
 		bth.SetImm(sr.imm);
-
-		// When the ACK is received, call this
-		
-		const bool already_here = !m_ack_cbs.empty();
-		if(!already_here && sr.on_send) {
-			AckCallback cb;
-			cb.seq_no = m_snd_nxt + packet_size;
-			cb.on_send = std::move(sr.on_send);
-			m_ack_cbs.push(cb);
-		}
 	}
 	
 	Ptr<Packet> p = Create<Packet>(packet_size);
@@ -229,11 +256,6 @@ void RdmaReliableSQ::Rollback()
 	SendRequest& sr = m_to_send.front();
 
 	m_snd_nxt = m_snd_una;
-
-	// Remove the callback in case the last packet was sent
-	if(!m_ack_cbs.empty()) {
-		m_ack_cbs.pop();
-	}
 }
 
 uint64_t RdmaReliableSQ::GetWin() const

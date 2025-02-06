@@ -51,15 +51,15 @@ RdmaClientHelper::Install (NodeContainer c)
 {
   ApplicationContainer apps;
   for (NodeContainer::Iterator i = c.Begin (); i != c.End (); ++i)
-    {
-      Ptr<Node> node = *i;
-      if(!IsSwitchNode(node)) {
-		Ptr<RdmaClient> client = m_factory.Create<RdmaClient> ();
-		client->SetNodeContainer(m_nodes);
-		node->AddApplication (client);
-		apps.Add (client);
-	  }
-    }
+	{
+		Ptr<Node> node = *i;
+		if(!IsSwitchNode(node)) {
+			Ptr<RdmaClient> client = m_factory.Create<RdmaClient> ();
+			client->SetNodeContainer(m_nodes);
+			node->AddApplication (client);
+			apps.Add (client);
+		}
+	}
   return apps;
 }
 
