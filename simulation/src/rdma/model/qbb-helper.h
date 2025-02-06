@@ -32,10 +32,6 @@
 
 namespace ns3 {
 
-class Queue;
-class NetDevice;
-class Node;
-
 /**
  * \brief Build a set of qbbNetDevice objects
  *

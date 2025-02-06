@@ -25,11 +25,11 @@
 #include "ns3/drop-tail-queue.h"
 #include "broadcom-egress-queue.h"
 
-NS_LOG_COMPONENT_DEFINE("BEgressQueue");
-
 namespace ns3 {
 
-	NS_OBJECT_ENSURE_REGISTERED(BEgressQueue);
+NS_LOG_COMPONENT_DEFINE("BEgressQueue");
+
+NS_OBJECT_ENSURE_REGISTERED(BEgressQueue);
 
 	TypeId BEgressQueue::GetTypeId(void)
 	{
@@ -48,19 +48,19 @@ namespace ns3 {
 	BEgressQueue::BEgressQueue() :
 		Queue()
 	{
-		NS_LOG_FUNCTION_NOARGS();
+		NS_LOG_FUNCTION(this);
 		m_bytesInQueueTotal = 0;
 		m_rrlast = 0;
 		for (uint32_t i = 0; i < qCnt; i++)
 		{
 			m_bytesInQueue[i] = 0;
-			m_queues.push_back(CreateObject<DropTailQueue>());
+			m_queues.push_back(CreateObject<DropTailQueue<Packet>>());
 		}
 	}
 
 	BEgressQueue::~BEgressQueue()
 	{
-		NS_LOG_FUNCTION_NOARGS();
+		NS_LOG_FUNCTION(this);
 	}
 
 	bool
@@ -70,7 +70,7 @@ namespace ns3 {
 
 		if (m_bytesInQueueTotal + p->GetSize() < m_maxBytes)  //infinite queue
 		{
-			m_queues[qIndex]->Enqueue(Create<QueueItem>(p));
+			m_queues[qIndex]->Enqueue(p);
 			m_bytesInQueueTotal += p->GetSize();
 			m_bytesInQueue[qIndex] += p->GetSize();
 		}
@@ -116,7 +116,7 @@ namespace ns3 {
 		}
 		if (found)
 		{
-			Ptr<Packet> p = m_queues[qIndex]->Dequeue()->GetPacket();
+			Ptr<Packet> p = m_queues[qIndex]->Dequeue();
 			m_traceBeqDequeue(p, qIndex);
 			m_bytesInQueueTotal -= p->GetSize();
 			m_bytesInQueue[qIndex] -= p->GetSize();
@@ -175,15 +175,16 @@ namespace ns3 {
 	}
 
 	bool
-		BEgressQueue::DoEnqueue(Ptr<QueueItem> item)	//for compatiability
+		BEgressQueue::Enqueue(Ptr<Packet> p)	//for compatiability
 	{
-		Ptr<Packet> p = item->GetPacket();
+		NS_ABORT_MSG("BEgressQueue::Enqueue not implemented");
+
 		std::cout << "Warning: Call Broadcom queues without priority\n";
 		uint32_t qIndex = 0;
 		NS_LOG_FUNCTION(this << p);
 		if (m_bytesInQueueTotal + p->GetSize() < m_maxBytes)
 		{
-			m_queues[qIndex]->Enqueue(Create<QueueItem>(p));
+			m_queues[qIndex]->Enqueue(p);
 			m_bytesInQueueTotal += p->GetSize();
 			m_bytesInQueue[qIndex] += p->GetSize();
 		}
@@ -196,23 +197,25 @@ namespace ns3 {
 	}
 
 
-	Ptr<QueueItem>
-		BEgressQueue::DoDequeue(void)
+	Ptr<Packet>
+		BEgressQueue::Dequeue(void)
 	{
-		NS_ASSERT_MSG(false, "BEgressQueue::DoDequeue not implemented");
+		NS_ABORT_MSG("BEgressQueue::DoDequeue not implemented");
 		return 0;
 	}
 
-	Ptr<QueueItem>
-		BEgressQueue::DoRemove(void)
+	Ptr<Packet>
+		BEgressQueue::Remove(void)
 	{
-		NS_ASSERT_MSG(false, "BEgressQueue::DoRemove not implemented");
+		NS_ABORT_MSG("BEgressQueue::DoRemove not implemented");
 		return 0;
 	}
 
-	Ptr<const QueueItem>
-		BEgressQueue::DoPeek(void) const	//DoPeek doesn't work for multiple queues!!
+	Ptr<const Packet>
+		BEgressQueue::Peek(void) const	//DoPeek doesn't work for multiple queues!!
 	{
+		NS_ABORT_MSG("BEgressQueue::Peek not implemented");
+
 		std::cout << "Warning: Call Broadcom queues without priority\n";
 		NS_LOG_FUNCTION(this);
 		if (m_bytesInQueueTotal == 0)

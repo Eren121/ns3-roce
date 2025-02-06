@@ -12,12 +12,11 @@ namespace ns3 {
 	NS_OBJECT_ENSURE_REGISTERED(qbbHeader);
 
 	qbbHeader::qbbHeader(uint16_t pg)
-		: m_pg(pg), sport(0), dport(0), flags(0), m_seq(0)
+		: m_pg(pg)
 	{
 	}
 
 	qbbHeader::qbbHeader()
-		: m_pg(0), sport(0), dport(0), flags(0), m_seq(0)
 	{}
 
 	qbbHeader::~qbbHeader()

@@ -85,12 +85,12 @@ RdmaClient::GetTypeId()
 
 RdmaClient::RdmaClient()
 {
-  NS_LOG_FUNCTION_NOARGS();
+  NS_LOG_FUNCTION(this);
 }
 
 RdmaClient::~RdmaClient()
 {
-  NS_LOG_FUNCTION_NOARGS();
+  NS_LOG_FUNCTION(this);
 }
 
 Ipv4Address RdmaClient::GetLeftIp() const
@@ -184,7 +184,7 @@ void RdmaClient::InitLeftRight()
 
 void RdmaClient::StartApplication()
 {
-  NS_LOG_FUNCTION_NOARGS();
+  NS_LOG_FUNCTION(this);
   InitLeftRight();
 
   Ptr<Node> node = GetNode();
@@ -329,7 +329,7 @@ void RdmaClient::TryUpdateState()
 
 void RdmaClient::StopApplication()
 {
-  NS_LOG_FUNCTION_NOARGS();
+  NS_LOG_FUNCTION(this);
   // TODO stop the queue pair
   
   if(!m_onFlowFinished.IsNull()) {

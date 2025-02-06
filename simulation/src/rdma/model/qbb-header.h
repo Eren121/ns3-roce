@@ -63,10 +63,10 @@ public:
   static uint32_t GetBaseSize(); // size without INT
 
 private:
-  uint16_t sport, dport;
-  uint16_t flags;
-  uint16_t m_pg;
-  uint32_t m_seq; // the qbb sequence number.
+  uint16_t sport{}, dport{};
+  uint16_t flags{};
+  uint16_t m_pg{};
+  uint32_t m_seq{}; // the qbb sequence number.
   IntHeader ih;
   
 };

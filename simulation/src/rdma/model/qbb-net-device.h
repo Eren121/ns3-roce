@@ -32,6 +32,7 @@
 #include <vector>
 #include <unordered_set>
 #include <ns3/rdma.h>
+#include <ns3/queue-item.h>
 
 namespace ns3 {
 
@@ -41,7 +42,7 @@ public:
 	static uint32_t ack_q_idx;
 	int m_qlast;
 	uint32_t m_rrlast;
-	Ptr<DropTailQueue> m_ackQ; // highest priority queue
+	Ptr<DropTailQueue<Packet>> m_ackQ; // highest priority queue
 	Ptr<RdmaTxQueuePairGroup> m_qpGrp; // queue pairs
 
 	// callback for get next packet
@@ -152,13 +153,6 @@ protected:
 
   /// Resume a paused queue and call DequeueAndTransmit()
   virtual void Resume(unsigned qIndex);
-
-  /**
-   * The queues for each priority class.
-   * @see class Queue
-   * @see class InfiniteQueue
-   */
-  Ptr<BEgressQueue> m_queue;
 
   Ptr<QbbChannel> m_channel;
   

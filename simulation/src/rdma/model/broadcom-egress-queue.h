@@ -20,11 +20,11 @@
 #define BROADCOM_EGRESS_H
 
 #include <queue>
-#include "ns3/packet.h"
-#include "ns3/queue.h"
-#include "ns3/drop-tail-queue.h"
-#include "ns3/point-to-point-net-device.h"
-#include "ns3/event-id.h"
+#include <ns3/packet.h>
+#include <ns3/queue.h>
+#include <ns3/drop-tail-queue.h>
+#include <ns3/point-to-point-net-device.h>
+#include <ns3/event-id.h>
 
 namespace ns3 {
 
@@ -33,7 +33,7 @@ namespace ns3 {
 	/**
 	 * @brief Merge multiple queues into one (multi-queue).
 	 */
-	class BEgressQueue : public Queue {
+	class BEgressQueue : public Queue<Packet> {
 	public:
 		static TypeId GetTypeId(void);
 		static const unsigned qCnt = 8; //max number of queues, 8 for switches
@@ -61,10 +61,10 @@ namespace ns3 {
 		 */
 		Ptr<Packet> DoDequeueRR(bool paused[]);
 		//for compatibility
-		bool DoEnqueue(Ptr<QueueItem> p) override;
-		Ptr<QueueItem> DoDequeue(void) override;
-		Ptr<const QueueItem> DoPeek(void) const override;
-  		Ptr<QueueItem> DoRemove (void) override;
+		bool Enqueue(Ptr<Packet> p) override;
+		Ptr<Packet> Dequeue(void) override;
+		Ptr<const Packet> Peek(void) const override;
+		Ptr<Packet> Remove (void) override;
 		uint32_t m_bytesInQueue[qCnt];
 		uint32_t m_bytesInQueueTotal;
 		uint32_t m_rrlast; //!< Like `m_qlast`, but is not updated when the popped index is zero.

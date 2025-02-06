@@ -48,7 +48,7 @@ QbbRemoteChannel::GetTypeId (void)
 
 bool
 QbbRemoteChannel::TransmitStart (
-  Ptr<Packet> p,
+  Ptr<const Packet> p,
   Ptr<PointToPointNetDevice> src_,
   Time txTime)
 {

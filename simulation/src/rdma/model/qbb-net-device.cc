@@ -73,13 +73,13 @@ namespace ns3 {
 	RdmaEgressQueue::RdmaEgressQueue(){
 		m_rrlast = 0;
 		m_qlast = 0;
-		m_ackQ = CreateObject<DropTailQueue>();
+		m_ackQ = CreateObject<DropTailQueue<Packet>>();
 		m_ackQ->SetAttribute("MaxBytes", UintegerValue(0xffffffff)); // queue limit is on a higher level, not here
 	}
 
 	Ptr<Packet> RdmaEgressQueue::DequeueQindex(int qIndex){
 		if (qIndex == -1){ // high prio
-			Ptr<Packet> p = m_ackQ->Dequeue()->GetPacket();
+			Ptr<Packet> p = m_ackQ->Dequeue();
 			m_qlast = -1;
 			m_traceRdmaDequeue(p, 0);
 			return p;
@@ -146,12 +146,12 @@ namespace ns3 {
 
 	void RdmaEgressQueue::EnqueueHighPrioQ(Ptr<Packet> p){
 		m_traceRdmaEnqueue(p, 0);
-		m_ackQ->Enqueue(Create<QueueItem>(p));
+		m_ackQ->Enqueue(p);
 	}
 
 	void RdmaEgressQueue::CleanHighPrio(TracedCallback<Ptr<const Packet>, uint32_t> dropCb){
 		while (m_ackQ->GetNPackets() > 0){
-			Ptr<Packet> p = m_ackQ->Dequeue()->GetPacket();
+			Ptr<Packet> p = m_ackQ->Dequeue();
 			dropCb(p, 0);
 		}
 	}
@@ -191,7 +191,7 @@ namespace ns3 {
 					"A queue to use as the transmit queue in the device.",
 					PointerValue (),
 					MakePointerAccessor (&QbbNetDevice::m_queue),
-					MakePointerChecker<Queue> ())
+					MakePointerChecker<BEgressQueue> ())
 			.AddAttribute ("RdmaEgressQueue", 
 					"A queue to use as the transmit queue in the device.",
 					PointerValue (),
@@ -285,7 +285,7 @@ namespace ns3 {
 			}
 			return;
 		}else{   //switch, doesn't care about qcn, just send
-			p = m_queue->DequeueRR(m_paused);		//this is round-robin
+			p = GetQueue()->DequeueRR(m_paused);		//this is round-robin
 			if (p != 0){
 				m_snifferTrace(p);
 				m_promiscSnifferTrace(p);
@@ -295,7 +295,7 @@ namespace ns3 {
 				ProcessHeader(packet, protocol);
 				packet->RemoveHeader(h);
 				FlowIdTag t;
-				uint32_t qIndex = m_queue->GetLastQueue();
+				uint32_t qIndex = GetQueue()->GetLastQueue();
 				if (qIndex == 0){//this is a pause or cnp, send it immediately!
 					SwitchNotifyDequeue(m_node, m_ifIndex, qIndex, p);
 					p->RemovePacketTag(t);
@@ -390,7 +390,7 @@ namespace ns3 {
 	bool QbbNetDevice::SwitchSend (uint32_t qIndex, Ptr<Packet> packet){
 		m_macTxTrace(packet);
 		m_traceEnqueue(packet, qIndex);
-		m_queue->Enqueue(packet, qIndex);
+		GetQueue()->Enqueue(packet, qIndex);
 		DequeueAndTransmit();
 		return true;
 	}
@@ -472,7 +472,7 @@ namespace ns3 {
 	}
 
 	Ptr<BEgressQueue> QbbNetDevice::GetQueue(){
-		return m_queue;
+		return DynamicCast<BEgressQueue>(m_queue);
 	}
 
 	Ptr<RdmaEgressQueue> QbbNetDevice::GetRdmaQueue(){
@@ -496,10 +496,10 @@ namespace ns3 {
 			for (uint32_t i = 0; i < qCnt; i++)
 				m_paused[i] = false;
 			while (1){
-				Ptr<Packet> p = m_queue->DequeueRR(m_paused);
+				Ptr<Packet> p = GetQueue()->DequeueRR(m_paused);
 				if (p == 0)
 					 break;
-				m_traceDrop(p, m_queue->GetLastQueue());
+				m_traceDrop(p, GetQueue()->GetLastQueue());
 			}
 			// TODO: Notify switch that this link is down
 		}
