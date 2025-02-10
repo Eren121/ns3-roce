@@ -33,6 +33,8 @@
 #include <ns3/rdma-unreliable-qp.h>
 #include <unordered_set>
 
+#define LOG_VAR(x) #x << "=" << (x)
+
 namespace ns3 {
 
 class Socket;
@@ -59,13 +61,20 @@ public:
   void SetNodeContainer(NodeContainer nodes) { m_nodes = nodes; }
 
 private:
+  uint32_t GetMTU() const;
+  uint32_t GetChunkCountPerNode() const;
   void StartApplication() override;
   void StopApplication() override;
+
+  void OnMulticastTransmissionEnd(uint32_t last_chunk);
 
   /**
    * @brief Initialize `m_left` and `m_right` and left and right QPs.
    */
   void InitLeftRight();
+  void InitOrder();
+
+  void StartMulticast();
 
   void TryUpdateState();
 
@@ -78,9 +87,10 @@ private:
   const uint16_t PORT_MCAST = 100; //!< Multicast comm. port
   const uint16_t PORT_RNODE = 101; //!< Right node RC comm. port
   const uint16_t PORT_LNODE = 102; //!< Left Node RC comm. port
+  const uint16_t PORT_NEXT = 103; //!< Port to comm with next mcast src
+  const uint16_t PORT_PREV = 104; //!< Port to comm with prev mcast src
 
   NodeContainer m_nodes;
-  uint64_t m_mcastSrcNodeId;
   uint64_t m_size;            //<! Count of bytes to write.
   uint16_t m_pg;              //<! Priority group.
   uint32_t m_win;             //<! Bound of on-the-fly packets.
@@ -90,11 +100,14 @@ private:
   std::unordered_set<uint64_t> m_recv_chunks; //!< Succesfully received chunks
   uint32_t m_left; //<! Index of the left node in `m_nodes`.
   uint32_t m_right; //!< Index of the right node in `m_nodes`.
+  uint32_t m_myindex; //!< Index of this node in `m_order`.
+  std::vector<uint32_t> m_order; //!< Indices of the multicast sources in order.
 
   RdmaUnreliableQP m_mcast_qp; //!< QP used for multicast.
   RdmaReliableQP m_left_qp; //!< QP used for left node comm.
-  RdmaReliableQP m_right_qp; //!< Qp used for right node comm.
-
+  RdmaReliableQP m_right_qp; //!< QP used for right node comm.
+  RdmaReliableQP m_next_qp; //!< QP used to ask the next multicast source to run the multicast.
+  RdmaReliableQP m_prev_qp; //!< QP used to be notified to start the mcast.
   bool m_has_recovered_chunks{false}; //!< Set to `true` when the missed chunks are recovered.
   bool m_has_send_to_right{false}; //!< Set to `true` when the current node has send all the chunks the right node missed.
   int m_peer_requested_chunks{-1}; //!< Count of nodes requested by right node. Set to -1 until the request arrives.

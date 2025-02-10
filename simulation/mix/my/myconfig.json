@@ -26,7 +26,7 @@
         "min_rate":                        "100Mb/s",
         "dctcp_rate_ai":                   "1000Mb/s",
 
-        "error_rate_per_link":             0.00,
+        "error_rate_per_link":             0.05,
         "l2_chunk_size":                   4000,
         "l2_ack_interval":                 0,
         "l2_back_to_zero":                 false,

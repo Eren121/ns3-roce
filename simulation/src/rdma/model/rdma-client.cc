@@ -36,6 +36,7 @@
 #include "ns3/rdma-seq-header.h"
 #include <ns3/rdma-hw.h>
 #include <ns3/switch-node.h>
+#include "allgather/circle.h"
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -73,12 +74,7 @@ RdmaClient::GetTypeId()
                   "Callback when the flow finishes",
                   CallbackValue(),
                   MakeCallbackAccessor(&RdmaClient::m_onFlowFinished),
-                  MakeCallbackChecker())
-    .AddAttribute("MulticastSource",
-                  "Mulitcast source",
-                  CallbackValue(),
-                  MakeUintegerAccessor(&RdmaClient::m_mcastSrcNodeId),
-                  MakeUintegerChecker<uint64_t>());
+                  MakeCallbackChecker());
     ;
   return tid;
 }
@@ -174,86 +170,153 @@ void RdmaClient::InitLeftRight()
     NS_LOG_LOGIC("Right node has requested " << m_peer_requested_chunks << " chunks");
     TryUpdateState();
   });
+}
 
-  for(uint32_t i{0}; i < node_count; i++) {
+uint32_t RdmaClient::GetChunkCountPerNode() const
+{
+  const uint32_t mtu = GetMTU();
+  return (m_size + mtu - 1) / mtu;
+}
+
+void RdmaClient::InitOrder()
+{
+  NS_ASSERT(m_order.empty());
+  
+  for(uint32_t i{0}; i < m_nodes.GetN(); i++) {
     if(!IsSwitchNode(m_nodes.Get(i))) {
-      m_mcastSrcNodeId = m_nodes.Get(i)->GetId();
+      if(m_nodes.Get(i) == GetNode()) {
+        m_myindex = m_order.size();
+      }
+      m_order.push_back(i);
     }
   }
+
+  const bool is_first = (m_myindex == 0);
+  const bool is_last = (m_myindex == m_order.size() - 1);
+
+  Ptr<Node> node = GetNode();
+  Ptr<RdmaHw> rdma = node->GetObject<RdmaHw>();
+  const uint32_t mtu = rdma->GetMTU();
+
+  if(!is_last) {
+    const Ipv4Address dip = GetServerAddress(m_nodes.Get(m_order.at(m_myindex + 1)));
+    m_next_qp.sq = CreateObject<RdmaReliableSQ>(GetNode(), m_pg, GetLocalIp(), PORT_PREV, dip, PORT_NEXT);
+    m_next_qp.sq->SetMTU(mtu);
+    m_next_qp.rq = CreateObject<RdmaReliableRQ>(m_next_qp.sq);
+    rdma->RegisterQP(m_next_qp.sq, m_next_qp.rq);
+  }
+
+  if(!is_first) {
+    const Ipv4Address dip = GetServerAddress(m_nodes.Get(m_order.at(m_myindex - 1)));
+    m_prev_qp.sq = CreateObject<RdmaReliableSQ>(GetNode(), m_pg, GetLocalIp(), PORT_NEXT, dip, PORT_PREV);
+    m_prev_qp.sq->SetMTU(mtu);
+    m_prev_qp.rq = CreateObject<RdmaReliableRQ>(m_prev_qp.sq);
+    m_prev_qp.rq->SetOnRecv(
+      [this](RdmaRxQueuePair::RecvNotif notif) {
+      StartMulticast();
+    });
+    rdma->RegisterQP(m_prev_qp.sq, m_prev_qp.rq);
+  }
+}
+
+uint32_t RdmaClient::GetMTU() const
+{
+  Ptr<Node> node = GetNode();
+  Ptr<RdmaHw> rdma = node->GetObject<RdmaHw>();
+  return rdma->GetMTU();  
 }
 
 void RdmaClient::StartApplication()
 {
   NS_LOG_FUNCTION(this);
   InitLeftRight();
+  InitOrder();
 
   Ptr<Node> node = GetNode();
   Ptr<RdmaHw> rdma = node->GetObject<RdmaHw>();
   const uint32_t mtu = rdma->GetMTU();
-  const uint32_t chunk_count = (m_size + mtu - 1) / mtu;
+  
+  // Count of chunks per multicast source
+  const uint32_t chunk_count = GetChunkCountPerNode();
 
-  if(m_mcastSrcNodeId == GetNode()->GetId()) {
-    // This node is the multicast source, launch the multicast
+  m_mcast_qp.sq = CreateObject<RdmaUnreliableSQ>(GetNode(), m_pg, GetLocalIp(), PORT_MCAST);
+  m_mcast_qp.sq->SetMTU(mtu);
+  m_mcast_qp.rq = CreateObject<RdmaUnreliableRQ>(m_mcast_qp.sq);
 
-    m_mcast_qp.sq = CreateObject<RdmaUnreliableSQ>(GetNode(), m_pg, GetLocalIp(), PORT_MCAST);
-    m_mcast_qp.sq->SetMTU(mtu);
+  // Timeout for when no packet is received
+  Time timeout = MicroSeconds(50);
+  EventId timeout_ev = Simulator::Schedule(timeout, &RdmaClient::RunRecoveryPhase, this);
 
-    // Create RQ (unused)
-    m_mcast_qp.rq = CreateObject<RdmaUnreliableRQ>(m_mcast_qp.sq);
-
-    // Register queue
-    rdma->RegisterQP(m_mcast_qp.sq, m_mcast_qp.rq);
-
-    // Schedule flow
-    for(uint32_t i = 0; i < chunk_count; i++) {
-      RdmaTxQueuePair::SendRequest sr;
-      sr.payload_size = mtu;
-      sr.dip = Ipv4Address(MCAST_GROUP);
-      sr.dport = PORT_MCAST;
-      sr.multicast = true;
-      sr.imm = i;
-      
-      if(i == chunk_count - 1) {
-        sr.on_send = [this]() {
-          RunRecoveryPhase();
-        };
-      };
-
-      m_mcast_qp.sq->PostSend(sr);
-    }
-  }
-  else {
-    // Create SQ (unused)
-    m_mcast_qp.sq = CreateObject<RdmaUnreliableSQ>(GetNode(), m_pg, GetLocalIp(), PORT_MCAST);
-
-    // Create RQ
-    m_mcast_qp.rq = CreateObject<RdmaUnreliableRQ>(m_mcast_qp.sq);
-
-    // Timeout for when no packet is received
-    Time timeout = MicroSeconds(50);
-    EventId timeout_ev = Simulator::Schedule(timeout, &RdmaClient::RunRecoveryPhase, this);
-
-
-    // Register callback
-    m_mcast_qp.rq->SetOnRecv(
-      [this, chunk_count, timeout, timeout_ev](RdmaRxQueuePair::RecvNotif notif) mutable {
-      NS_ASSERT(notif.has_imm);
-      const uint64_t chunk_id = notif.imm;
-      m_recv_chunks.insert(chunk_id);
+  // Register callback
+  m_mcast_qp.rq->SetOnRecv(
+    [this, chunk_count, timeout, timeout_ev](RdmaRxQueuePair::RecvNotif notif) mutable {
+    NS_ASSERT(notif.has_imm);
+    const uint64_t chunk_id = notif.imm;
+    m_recv_chunks.insert(chunk_id);
+  
+    // Reset the timeout
+    Simulator::Cancel(timeout_ev);
     
-      // Reset the timeout
-      Simulator::Cancel(timeout_ev);
+    const bool is_last_chunk = (chunk_id == m_order.size() * chunk_count - 1);
+    if(is_last_chunk) {
+      RunRecoveryPhase();
+    }
+    else {
       timeout_ev = Simulator::Schedule(timeout, &RdmaClient::RunRecoveryPhase, this);
-
-      const bool is_last_chunk = (chunk_id == chunk_count - 1);
-      if(is_last_chunk) {
-        Simulator::Cancel(timeout_ev);
-        RunRecoveryPhase();
-      }
-    });
-  }
+    }
+  });
 
   rdma->RegisterQP(m_mcast_qp.sq, m_mcast_qp.rq);
+
+
+  const int root_count = 2;
+  if(AgIsFirstMcastSrc(m_order.size(), root_count, m_myindex)) {
+    StartMulticast();
+  }
+}
+
+void RdmaClient::StartMulticast()
+{
+  NS_LOG_LOGIC("Start multicast {" << LOG_VAR(GetNode()->GetId())
+                                   << "," << LOG_VAR(m_myindex) << "}");
+
+  const uint32_t chunk_count = GetChunkCountPerNode();
+
+  // Schedule flow
+  for(uint32_t i = 0; i < chunk_count; i++) {
+    RdmaTxQueuePair::SendRequest sr;
+    sr.payload_size = GetMTU();
+    sr.dip = Ipv4Address(MCAST_GROUP);
+    sr.dport = PORT_MCAST;
+    sr.multicast = true;
+
+    const uint32_t chunk = m_myindex * chunk_count + i;
+    sr.imm = chunk;
+    
+    // Sender has already the chunk
+    m_recv_chunks.insert(sr.imm);
+    
+    if(i == chunk_count - 1) {
+      sr.on_send = [this, chunk]() {
+        OnMulticastTransmissionEnd(chunk);
+      };
+    };
+
+    m_mcast_qp.sq->PostSend(sr);
+  }
+}
+
+void RdmaClient::OnMulticastTransmissionEnd()
+{
+  const bool was_last = (m_myindex == m_order.size() - 1);
+  if(was_last) {
+    RunRecoveryPhase();
+    return;
+  }
+
+  // Hand over next multicast source
+  RdmaTxQueuePair::SendRequest sr;
+  m_next_qp.sq->PostSend(sr);
 }
 
 void RdmaClient::RunRecoveryPhase()
@@ -267,16 +330,12 @@ void RdmaClient::RunRecoveryPhase()
 
   m_phase = Phase::Recovery;
   
-  Ptr<RdmaHw> rdma{GetNode()->GetObject<RdmaHw>()};
-  const uint32_t mtu{rdma->GetMTU()};
-  const auto chunk_count{uint32_t{(m_size + mtu - 1) / mtu}};
+  const auto chunk_count{GetChunkCountPerNode() * m_order.size()};
   const uint32_t missed_chunk_count{[&]() -> uint32_t {
     uint32_t ret{0};
-    if(m_mcastSrcNodeId != GetNode()->GetId()) {
-      for(uint32_t i{0}; i < chunk_count; i++) {
-        if(m_recv_chunks.count(i) < 1) {
-          ret++;
-        }
+    for(uint32_t i{0}; i < chunk_count; i++) {
+      if(m_recv_chunks.count(i) < 1) {
+        ret++;
       }
     }
     return ret;
@@ -323,7 +382,7 @@ void RdmaClient::TryUpdateState()
   }
   if(m_has_recovered_chunks && m_has_send_to_right && !m_completed) {
     m_completed = true;
-    NS_LOG_LOGIC("Completed " << GetNode()->GetId() << "/" << m_mcastSrcNodeId);
+    NS_LOG_LOGIC("Completed " << GetNode()->GetId());
   }
 }
 
