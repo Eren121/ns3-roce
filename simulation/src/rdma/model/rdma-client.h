@@ -92,6 +92,7 @@ private:
 
   void TryUpdateState();
 
+  void OnMcastTimeout();
   void RunRecoveryPhase();
   Ipv4Address GetLeftIp() const;
   Ipv4Address GetRightIp() const;

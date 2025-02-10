@@ -3,7 +3,7 @@
         {
             "src": 3,
             "dst": 4,
-            "size": 1e8,
+            "size": 100000,
             "start_time": 0,
             "multicast": false,
             "reliable": true

@@ -11,8 +11,9 @@ class RdmaReliableSQ : public RdmaTxQueuePair
 public:
 	using psn_t = uint64_t;
 	
-    RdmaReliableSQ(Ptr<Node> node, uint16_t pg, Ipv4Address sip, uint16_t sport, Ipv4Address dip, uint16_t dport);
-    
+	RdmaReliableSQ(Ptr<Node> node, uint16_t pg, Ipv4Address sip, uint16_t sport, Ipv4Address dip, uint16_t dport);
+  ~RdmaReliableSQ() override;
+	
 	void SetAckInterval(uint64_t chunk, uint64_t ack_interval);
 	void SetWin(uint32_t win) { m_win = win; }
 	void SetVarWin(bool v) { m_var_win = v; }
@@ -41,7 +42,7 @@ private:
 
 private:
 	EventId m_retr_to;
-	uint64_t highest_ack_psn{}; //!< PSN following the highest PSN sent with an ACK request.
+	uint64_t highest_ack_psn{0}; //!< PSN following the highest PSN sent with an ACK request.
 
 	std::map<psn_t, SendRequest> m_to_send; //!< Pending packet to send. Removed when ACKed.
 	Ipv4Address m_dip;

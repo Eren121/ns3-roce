@@ -138,10 +138,9 @@ void RdmaClient::InitLeftRightQP()
 
   m_left_qp.rq->SetOnRecv(
     [this](RdmaRxQueuePair::RecvNotif notif) {
-
-    if(m_phase != Phase::Recovery) {
-      return;
-    }
+    
+    // The recovery cannot be completed until all notifs have been received
+    NS_ASSERT(m_phase == Phase::Recovery);
 
     // Mark the block as complete
     const AgConfig::block_id_t block{notif.imm};
@@ -160,10 +159,9 @@ void RdmaClient::InitLeftRightQP()
   m_right_qp.rq->SetOnRecv(
     [this](RdmaRxQueuePair::RecvNotif notif) {
 
-    if(m_phase != Phase::Recovery) {
-      return;
-    }
-
+    // It is possible that the phase is still mcast,
+    // But we still need to register the request.
+    
     const uint32_t missed{m_recovery_request_map.at(FindNeighbor(Neighbor::Right)).size()};
     NS_LOG_LOGIC("Right node has partially missed " << missed << " blocks");
     m_has_recv_recover_req = true;
@@ -250,10 +248,15 @@ void RdmaClient::OnRecvMcastChunk(AgConfig::chunk_id_t chunk)
     RunRecoveryPhase();
   }
   else {
-    m_timeout_ev = Simulator::Schedule(timeout, &RdmaClient::RunRecoveryPhase, this);
+    m_timeout_ev = Simulator::Schedule(timeout, &RdmaClient::OnMcastTimeout, this);
   }
 }
 
+void RdmaClient::OnMcastTimeout()
+{
+  NS_LOG_FUNCTION(this);
+  RunRecoveryPhase();
+}
 void RdmaClient::InitMcastQP()
 {
   Ptr<Node> node{GetNode()};
@@ -361,6 +364,7 @@ void RdmaClient::RunRecoveryPhase()
     // If no block has to be recovered, mark left complete when recv ACK
     recover_request.on_send = [this]() {
       m_has_recovered_chunks = true;
+      NS_LOG_LOGIC("All blocks have been received");
       TryUpdateState();
     };
   }
@@ -382,9 +386,10 @@ void RdmaClient::TryUpdateState()
   const uint32_t peer_req_block_count{right_recover_req.size()};
 
   NS_LOG_LOGIC("{"
-    << "m_has_recovered_chunks=" << m_has_recovered_chunks << ","
+    << "has_recovered_chunks=" << m_has_recovered_chunks << ","
     << "peer_req_block_count=" << peer_req_block_count << ","
-    << "m_has_send_all_to_right=" << m_has_send_all_to_right << "}");
+    << "has_send_all_to_right=" << m_has_send_all_to_right << ","
+    << "has_recv_recover_req=" << m_has_recv_recover_req << "}");
 
   if(m_has_recv_recover_req && !m_has_send_all_to_right) {
 

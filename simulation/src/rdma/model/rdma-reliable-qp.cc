@@ -20,6 +20,7 @@ RdmaReliableSQ::RdmaReliableSQ(Ptr<Node> node, uint16_t pg, Ipv4Address sip, uin
 	NS_LOG_FUNCTION(this);
 }
 
+RdmaReliableSQ::~RdmaReliableSQ() = default;
 
 void RdmaReliableSQ::SetAckInterval(uint64_t chunk, uint64_t ack_interval)
 {
@@ -212,8 +213,11 @@ Ptr<Packet> RdmaReliableSQ::GetNextPacket()
 	m_ipid++;
 
 	if(bth.GetAckReq()) {
+		NS_ASSERT(m_snd_nxt > highest_ack_psn);
 		highest_ack_psn = m_snd_nxt;
-		ScheduleRetrTimeout();
+		if(!m_retr_to.IsRunning()) {
+			ScheduleRetrTimeout();
+		}
 	}
 
 	// return
@@ -223,7 +227,8 @@ Ptr<Packet> RdmaReliableSQ::GetNextPacket()
 void RdmaReliableSQ::RecoverNack(uint64_t next_psn_expected)
 {
 	NS_LOG_FUNCTION(this);
-	
+	NS_ASSERT(next_psn_expected >= m_snd_una);
+
 	Acknowledge(next_psn_expected);
 	Rollback();
 	TriggerDevTransmit();
@@ -233,6 +238,9 @@ void RdmaReliableSQ::Rollback()
 {
 	NS_ASSERT(!m_to_send.empty());
 	m_snd_nxt = m_snd_una;
+	highest_ack_psn = m_snd_una;
+
+	ScheduleRetrTimeout();
 }
 
 uint64_t RdmaReliableSQ::GetWin() const
