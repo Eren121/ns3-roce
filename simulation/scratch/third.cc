@@ -428,7 +428,7 @@ void RunFlow(ScheduledFlow flow)
 		return;
 	}
 
-	RdmaClientHelper clientHelper(n, flow.priority, sip, dip, src_port, flow.dst_port, flow.size, win, baseRtt);
+	RdmaClientHelper clientHelper(flow.priority, sip, dip, src_port, flow.dst_port, flow.size, win, baseRtt);
 
 	// raf quick test to replace flow by multicast, run on all nodes
 	//ApplicationContainer appCon = clientHelper.Install(n.Get(flow.src));
@@ -644,9 +644,6 @@ uint64_t get_nic_rate(NodeContainer &n){
 
 int main(int argc, char *argv[])
 {
-	const clock_t begint = clock();
-	clock_t endt;
-
 	if(argc < 2) {
 		std::cout << "Error: require a config file" << std::endl;
 		return 1;
@@ -1046,6 +1043,7 @@ int main(int argc, char *argv[])
 	AnimationInterface anim("anim.xml");
 	// High polling interval; the nodes never move. Reduces XML size.
 	anim.SetMobilityPollInterval(Seconds(1e9));
+	anim.EnablePacketMetadata(true);
 	
 	// Now, do the actual simulation.
 	std::cout << "Running Simulation.\n";
@@ -1054,11 +1052,5 @@ int main(int argc, char *argv[])
 	Simulator::Stop(Seconds(simConfig.simulator_stop_time));
 	Simulator::Run();
 	Simulator::Destroy();
-	NS_LOG_INFO("Done.");
 	fclose(trace_output);
-
-	endt = clock();
-	std::cout << "Elapsed simulation time: "
-					  << (double)(endt - begint) / CLOCKS_PER_SEC
-						<< std::endl;
 }

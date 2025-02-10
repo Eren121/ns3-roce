@@ -2,12 +2,15 @@
 
 #include <ns3/rdma-queue-pair.h>
 #include <queue>
+#include <map>
 
 namespace ns3 {
 
 class RdmaReliableSQ : public RdmaTxQueuePair
 {
 public:
+	using psn_t = uint64_t;
+	
     RdmaReliableSQ(Ptr<Node> node, uint16_t pg, Ipv4Address sip, uint16_t sport, Ipv4Address dip, uint16_t dport);
     
 	void SetAckInterval(uint64_t chunk, uint64_t ack_interval);
@@ -28,11 +31,6 @@ public:
 	uint32_t GetDestIP() const { return m_dip.Get(); }
 
 private:
-	struct AckCallback
-	{
-		uint64_t seq_no{0}; //!< PSN following the last one of the operation.
-		OnSendCallback on_send;
-	};
 
 	bool ShouldReqAck(uint64_t payload_size) const;
 	void NotifyPendingCompEvents();
@@ -40,14 +38,12 @@ private:
 	void TriggerDevTransmit();
 	void ScheduleRetrTimeout();
 	void OnRetrTimeout();
-	uint64_t GetNextPayloadSize() const;
 
 private:
 	EventId m_retr_to;
 	uint64_t highest_ack_psn{}; //!< PSN following the highest PSN sent with an ACK request.
 
-	std::queue<SendRequest> m_to_send; //!< Pending packet to send.
-	std::queue<AckCallback> m_ack_cbs; //!< Pending ACK callbacks
+	std::map<psn_t, SendRequest> m_to_send; //!< Pending packet to send. Removed when ACKed.
 	Ipv4Address m_dip;
 	uint16_t m_dport{0};
 	uint16_t m_ipid{0};

@@ -161,6 +161,8 @@ protected:
 	} hpccPint{};
 };
 
+using RdmaImm = uint32_t;
+
 class RdmaRxQueuePair : public Object { // Rx side queue pair
 public:
 	struct RecvNotif
@@ -168,7 +170,7 @@ public:
 		Ptr<Packet> packet;
 		const CustomHeader* ch;
 		bool has_imm{false};
-		uint32_t imm{0};
+		RdmaImm imm{0};
 	};
 
 	using OnRecvCallback = std::function<void(RecvNotif)>;

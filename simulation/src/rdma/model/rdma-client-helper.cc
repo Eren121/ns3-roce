@@ -30,8 +30,7 @@ RdmaClientHelper::RdmaClientHelper()
 {
 }
 
-RdmaClientHelper::RdmaClientHelper (NodeContainer nodes, uint16_t pg, Ipv4Address sip, Ipv4Address dip, uint16_t sport, uint16_t dport, uint64_t size, uint32_t win, uint64_t baseRtt)
-	: m_nodes(nodes)
+RdmaClientHelper::RdmaClientHelper (uint16_t pg, Ipv4Address sip, Ipv4Address dip, uint16_t sport, uint16_t dport, uint64_t size, uint32_t win, uint64_t baseRtt)
 {
 	m_factory.SetTypeId (RdmaClient::GetTypeId ());
 	SetAttribute ("PriorityGroup", UintegerValue (pg));
@@ -46,19 +45,32 @@ RdmaClientHelper::SetAttribute (std::string name, const AttributeValue &value)
   m_factory.Set (name, value);
 }
 
+
+NodeContainer RdmaClientHelper::FilterServers(NodeContainer c)
+{
+	NodeContainer ret;
+  for (NodeContainer::Iterator i{c.Begin()}; i != c.End (); ++i)
+	{
+		Ptr<Node> node{*i};
+		if(!IsSwitchNode(node)) { ret.Add(node); }
+	}
+	return ret;
+}
+
 ApplicationContainer
 RdmaClientHelper::Install (NodeContainer c)
 {
+	const NodeContainer servers{FilterServers(c)};
   ApplicationContainer apps;
-  for (NodeContainer::Iterator i = c.Begin (); i != c.End (); ++i)
+
+  for (NodeContainer::Iterator i{servers.Begin()}; i != servers.End (); ++i)
 	{
-		Ptr<Node> node = *i;
-		if(!IsSwitchNode(node)) {
-			Ptr<RdmaClient> client = m_factory.Create<RdmaClient> ();
-			client->SetNodeContainer(m_nodes);
-			node->AddApplication (client);
-			apps.Add (client);
-		}
+		Ptr<Node> server{*i};
+		Ptr<RdmaClient> client{m_factory.Create<RdmaClient>()};
+		client->SetServers(servers);
+		const uint32_t app_id{server->AddApplication(client)};
+		NS_ASSERT(app_id == 0);
+		apps.Add(client);
 	}
   return apps;
 }

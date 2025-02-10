@@ -53,8 +53,7 @@ void RdmaReliableSQ::ScheduleRetrTimeout()
 	}
 
 	// https://www.rdmamojo.com/2013/01/12/ibv_modify_qp/
-	// Corresponds to level 4
-	const Time retr_timeout = MicroSeconds(65.536);
+	const Time retr_timeout = MicroSeconds(65.556);
 	m_retr_to = Simulator::Schedule(retr_timeout, &RdmaReliableSQ::OnRetrTimeout, this);
 }
 
@@ -66,21 +65,19 @@ void RdmaReliableSQ::OnRetrTimeout()
 
 void RdmaReliableSQ::NotifyPendingCompEvents()
 {
-	while(!m_ack_cbs.empty() && m_ack_cbs.front().seq_no <= m_snd_una) {
-		OnSendCallback& callback = m_ack_cbs.front().on_send;
-		if(callback) { callback(); }
-		m_ack_cbs.pop();
+	while(!m_to_send.empty()) {
+		auto it{m_to_send.begin()};
+		const SendRequest& next{it->second};
+		const psn_t sr_end_psn{next.GetEndPSN()};
+		if(m_snd_una < sr_end_psn) {
+			break;
+		}
+		const OnSendCallback& on_ack{next.on_send};
+		if(on_ack) { on_ack(); }
+		m_to_send.erase(it);
 
 		// This may unblock, because next op could have been blocked until ACK is received
 		TriggerDevTransmit();
-	}
-
-	while(!m_to_send.empty()) {
-		const SendRequest& sr = m_to_send.front();
-		if(sr.GetEndPSN() > m_snd_una) {
-			break;
-		}
-		m_to_send.pop();
 	}
 }
 
@@ -95,18 +92,6 @@ bool RdmaReliableSQ::IsWinBound() const
 	return w != 0 && GetOnTheFly() >= w;
 }
 
-uint64_t RdmaReliableSQ::GetNextPayloadSize() const
-{
-	if(m_to_send.empty()) {
-		return 0;
-	}
-
-	const SendRequest& sr = m_to_send.front();
-	NS_ASSERT(sr.GetEndPSN() >= m_snd_nxt);
-	const uint64_t rem_to_send = (sr.GetEndPSN() - m_snd_nxt);
-	return rem_to_send;
-}
-
 bool RdmaReliableSQ::IsReadyToSend() const
 {
 	const bool timer_ready = Simulator::Now().GetTimeStep() >= m_nextAvail.GetTimeStep();
@@ -114,16 +99,16 @@ bool RdmaReliableSQ::IsReadyToSend() const
 		return false;
 	}
 
-	if(m_to_send.empty()) {
-		return false;
-	}
-
 	if(IsWinBound()) {
 		return false;
 	}
 
-	const uint64_t rem_to_send = GetNextPayloadSize();
-	return rem_to_send > 0;
+	const bool has_data_to_send = (m_next_op_first_psn > m_snd_nxt);
+	if(!has_data_to_send) {
+		return false;
+	}
+
+	return true;
 }
 
 void RdmaReliableSQ::PostSend(SendRequest sr)
@@ -139,12 +124,7 @@ void RdmaReliableSQ::PostSend(SendRequest sr)
 	sr.first_psn = m_next_op_first_psn;
 	m_next_op_first_psn += sr.payload_size;
 
-	m_to_send.push(sr);
-
-	AckCallback cb;
-	cb.seq_no = sr.GetEndPSN();
-	cb.on_send = std::move(sr.on_send);
-	m_ack_cbs.push(cb);
+	m_to_send[sr.first_psn] = sr;
 
 	TriggerDevTransmit();
 }
@@ -169,14 +149,12 @@ Ptr<Packet> RdmaReliableSQ::GetNextPacket()
 		return nullptr;
 	}
 
-	const SendRequest sr = m_to_send.front();
-	uint32_t packet_size = GetNextPayloadSize();
-	
-	if(packet_size > m_mtu) {
-		// Split the Write Request in multiple MTU-sized packets.
-		// Only the last packet will trigger the completion event
-		packet_size = m_mtu;
-	}
+	const SendRequest& sr{(--m_to_send.upper_bound(m_snd_nxt))->second};
+	const psn_t sr_already_sent_payload{m_snd_nxt - sr.first_psn};
+	const psn_t sr_rem_to_send{sr.payload_size - sr_already_sent_payload};
+
+	NS_ASSERT(sr_rem_to_send > 0);
+	const psn_t packet_size = std::min<psn_t>(m_mtu, sr_rem_to_send);
 
 	RdmaBTH bth;
 	bth.SetReliable(true);
@@ -195,6 +173,7 @@ Ptr<Packet> RdmaReliableSQ::GetNextPacket()
 		bth.SetImm(sr.imm);
 	}
 	
+	NS_LOG_INFO("Sending psn=" << m_snd_nxt << ",payload_size=" << packet_size);
 	Ptr<Packet> p = Create<Packet>(packet_size);
 
 	// Add RdmaSeqHeader
@@ -253,8 +232,6 @@ void RdmaReliableSQ::RecoverNack(uint64_t next_psn_expected)
 void RdmaReliableSQ::Rollback()
 {
 	NS_ASSERT(!m_to_send.empty());
-	SendRequest& sr = m_to_send.front();
-
 	m_snd_nxt = m_snd_una;
 }
 
@@ -377,10 +354,16 @@ void RdmaReliableRQ::ReceiveUdp(Ptr<Packet> p, const CustomHeader &ch)
 	const uint8_t ecnbits = ch.GetIpv4EcnBits();
 	const uint32_t payload_size = p->GetSize() - ch.GetSerializedSize();
 	int x = ReceiverCheckSeq(ch.udp.seq, payload_size);
-	
-	if(x != 2 && bth.GetAckReq()) {
-		NS_LOG_LOGIC("ACK requested, sending back ACK");
-		x = 1; // If no NAK and ACK is requested, force an ACK
+	const bool success{x == 1 || x == 5};
+
+	if(bth.GetAckReq()) {
+			NS_LOG_LOGIC("ACK requested, sending back ACK");
+			if(x == 5 || x == 3) {
+				x = 1;
+			}
+			else if(x == 4) {
+				x = 2;
+			}
 	}
 
 	if (x == 1 || x == 2) { //generate ACK or NACK
@@ -433,7 +416,7 @@ void RdmaReliableRQ::ReceiveUdp(Ptr<Packet> p, const CustomHeader &ch)
 	}
 
 	// If no error, call completion event
-	if(m_onRecv && x != 2 && bth.GetNotif()) {
+	if(m_onRecv && success && bth.GetNotif()) {
 		RecvNotif notif;
 		notif.has_imm = true;
 		notif.imm = bth.GetImm();

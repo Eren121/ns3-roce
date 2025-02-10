@@ -89,20 +89,30 @@ void RdmaUnicastApp::StartApplication()
 {
   NS_LOG_FUNCTION(this);
 
-	if(m_node->GetId() == m_src) {
-		RdmaTxQueuePair::SendRequest sr;
-		sr.payload_size = m_size;
-		sr.on_send = [this]() {
-			NS_LOG_LOGIC("Sender finishes");
-			StopApplication();
-		};
+  const int flow_count = 2;
 
-		m_qp.sq->PostSend(sr);
+	if(m_node->GetId() == m_src) {
+    for(int i = 0; i < flow_count; i++) {
+      RdmaTxQueuePair::SendRequest sr;
+      sr.payload_size = m_size;
+
+      if(i == flow_count - 1) {
+        sr.on_send = [this]() {
+          NS_LOG_LOGIC("Sender finishes");
+          StopApplication();
+        };
+      }
+
+      m_qp.sq->PostSend(sr);
+    }
   }
 	else {
-		m_qp.rq->SetOnRecv([this](RdmaRxQueuePair::RecvNotif notif) {
-			NS_LOG_LOGIC("Receiver finishes");
-			StopApplication();
+		m_qp.rq->SetOnRecv([this, flow_count, recv=0](RdmaRxQueuePair::RecvNotif notif) mutable {
+      recv++;
+      if(recv == flow_count) {
+        NS_LOG_LOGIC("Receiver finishes");
+        StopApplication();
+      }
 		});
 	}
 }

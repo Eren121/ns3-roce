@@ -36,7 +36,8 @@
 #include "ns3/rdma-seq-header.h"
 #include <ns3/rdma-hw.h>
 #include <ns3/switch-node.h>
-#include "allgather/circle.h"
+#include <ns3/ag-circle.h>
+#include <ns3/abort.h>
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -44,6 +45,9 @@ namespace ns3 {
 
 NS_LOG_COMPONENT_DEFINE ("RdmaClient");
 NS_OBJECT_ENSURE_REGISTERED (RdmaClient);
+
+std::unordered_map<RdmaImm, AgRecovery::RecoveryRequest> RdmaClient::m_recovery_request_map;
+int RdmaClient::m_completed_apps = 0;
 
 TypeId
 RdmaClient::GetTypeId()
@@ -91,12 +95,12 @@ RdmaClient::~RdmaClient()
 
 Ipv4Address RdmaClient::GetLeftIp() const
 {
-  return m_nodes.Get(m_left)->GetObject<Ipv4>()->GetAddress(1, 0).GetLocal();
+  return m_servers.Get(FindNeighbor(Neighbor::Left))->GetObject<Ipv4>()->GetAddress(1, 0).GetLocal();
 }
 
 Ipv4Address RdmaClient::GetRightIp() const
 {
-  return m_nodes.Get(m_right)->GetObject<Ipv4>()->GetAddress(1, 0).GetLocal();
+  return m_servers.Get(FindNeighbor(Neighbor::Right))->GetObject<Ipv4>()->GetAddress(1, 0).GetLocal();
 }
 
 Ipv4Address RdmaClient::GetLocalIp() const
@@ -104,119 +108,112 @@ Ipv4Address RdmaClient::GetLocalIp() const
   return GetNode()->GetObject<Ipv4>()->GetAddress(1, 0).GetLocal();
 }
 
-void RdmaClient::InitLeftRight()
+
+void RdmaClient::MakeLeftRightReliableConnection(RdmaReliableQP& left_qp, uint16_t left_dst_port, RdmaReliableQP& right_qp, uint16_t right_dst_port)
 {
+  Ptr<Node> node{GetNode()};
+  Ptr<RdmaHw> rdma{node->GetObject<RdmaHw>()};
+
+  left_qp.sq = CreateObject<RdmaReliableSQ>(GetNode(), m_pg, GetLocalIp(), right_dst_port, GetLeftIp(), left_dst_port);
+  left_qp.sq->SetMTU(GetMTU());
+  left_qp.rq = CreateObject<RdmaReliableRQ>(left_qp.sq);
+  rdma->RegisterQP(left_qp.sq, left_qp.rq);
+
+  right_qp.sq = CreateObject<RdmaReliableSQ>(GetNode(), m_pg, GetLocalIp(), left_dst_port, GetRightIp(), right_dst_port);
+  right_qp.sq->SetMTU(GetMTU());
+  right_qp.rq = CreateObject<RdmaReliableRQ>(right_qp.sq);
+  rdma->RegisterQP(right_qp.sq, right_qp.rq);
+}
+
+void RdmaClient::InitLeftRightQP()
+{
+  MakeLeftRightReliableConnection(m_left_qp, PORT_LNODE, m_right_qp, PORT_RNODE);
+
   const Ptr<Node> node{GetNode()};
   const Ipv4Address my_ip{node->GetObject<Ipv4>()->GetAddress(1, 0).GetLocal()};
-  const Ptr<RdmaHw> rdma{node->GetObject<RdmaHw>()};
-  const uint32_t mtu{rdma->GetMTU()};
-  const uint32_t node_count = m_nodes.GetN();
-  const uint32_t my_id = [&]() -> uint32_t {
-    for(uint32_t i = 0; i < node_count; i++) {
-      if(m_nodes.Get(i) == node) {
-        return i;
-      }
-    }
-    NS_ASSERT(false);
-    return 0;
-  }();
 
-  const auto find_neighbor_server = [&](int increment){
-    NS_ASSERT(increment == 1 || increment == -1);
-    int cur = my_id + increment;
-    while(true) {
-      if(cur < 0) {
-        cur += node_count;
-      }
-      else if(cur >= node_count) {
-        cur -= node_count;
-      }
-
-      if(!IsSwitchNode(m_nodes.Get(cur))) {
-        NS_ASSERT(cur != my_id);
-        return cur;
-      }
-
-      cur += increment;
-    }
-  };
-
-  m_left = find_neighbor_server(-1);
-  m_left_qp.sq = CreateObject<RdmaReliableSQ>(GetNode(), m_pg, GetLocalIp(), PORT_RNODE, GetLeftIp(), PORT_LNODE);
-  m_left_qp.sq->SetMTU(mtu);
-  m_left_qp.rq = CreateObject<RdmaReliableRQ>(m_left_qp.sq);
-  rdma->RegisterQP(m_left_qp.sq, m_left_qp.rq);
-
-  m_right = find_neighbor_server(1);
-  m_right_qp.sq = CreateObject<RdmaReliableSQ>(GetNode(), m_pg, GetLocalIp(), PORT_LNODE, GetRightIp(), PORT_RNODE);
-  m_right_qp.sq->SetMTU(mtu);
-  m_right_qp.rq = CreateObject<RdmaReliableRQ>(m_right_qp.sq);
-  rdma->RegisterQP(m_right_qp.sq, m_right_qp.rq);
-
-	NS_LOG_LOGIC("Node " << "{" << my_id << "," << my_ip << "}"
-               << " left={" << m_left << "," << GetLeftIp() << "}"
-               << " right={" << m_right << "," << GetRightIp() << "}");
+	NS_LOG_LOGIC("Node " << "{" << m_config.current_node << "," << my_ip << "}"
+                       << " left={" << FindNeighbor(Neighbor::Left) << "," << GetLeftIp() << "}"
+                       << " right={" << FindNeighbor(Neighbor::Right) << "," << GetRightIp() << "}");
 
   m_left_qp.rq->SetOnRecv(
     [this](RdmaRxQueuePair::RecvNotif notif) {
-    NS_LOG_LOGIC("Missed chunks have been received");
-    m_has_recovered_chunks = true;
+
+    if(m_phase != Phase::Recovery) {
+      return;
+    }
+
+    // Mark the block as complete
+    const AgConfig::block_id_t block{notif.imm};
+
+    NS_LOG_LOGIC("[" << m_config.current_node << "] Received recovery of block " << block);
+    
+    auto& my_recover_req = m_recovery_request_map[m_config.current_node];
+    my_recover_req.erase(block);
+    if(my_recover_req.empty()) {
+      m_has_recovered_chunks = true;
+    }
+
     TryUpdateState();
   });
   
   m_right_qp.rq->SetOnRecv(
-    [this, mtu](RdmaRxQueuePair::RecvNotif notif) {
-    m_peer_requested_chunks = notif.imm;
-    NS_LOG_LOGIC("Right node has requested " << m_peer_requested_chunks << " chunks");
+    [this](RdmaRxQueuePair::RecvNotif notif) {
+
+    if(m_phase != Phase::Recovery) {
+      return;
+    }
+
+    const uint32_t missed{m_recovery_request_map.at(FindNeighbor(Neighbor::Right)).size()};
+    NS_LOG_LOGIC("Right node has partially missed " << missed << " blocks");
+    m_has_recv_recover_req = true;
+
+    if(missed == 0) {
+      m_has_send_all_to_right = true;
+    }
+
     TryUpdateState();
   });
 }
 
-uint32_t RdmaClient::GetChunkCountPerNode() const
+uint32_t RdmaClient::FindMyIndex() const
 {
-  const uint32_t mtu = GetMTU();
-  return (m_size + mtu - 1) / mtu;
-}
-
-void RdmaClient::InitOrder()
-{
-  NS_ASSERT(m_order.empty());
-  
-  for(uint32_t i{0}; i < m_nodes.GetN(); i++) {
-    if(!IsSwitchNode(m_nodes.Get(i))) {
-      if(m_nodes.Get(i) == GetNode()) {
-        m_myindex = m_order.size();
-      }
-      m_order.push_back(i);
+  for(uint32_t i{0}; i < m_servers.GetN(); i++) {
+    if(m_servers.Get(i) == GetNode()) {
+      return i;
     }
   }
 
-  const bool is_first = (m_myindex == 0);
-  const bool is_last = (m_myindex == m_order.size() - 1);
+  NS_ABORT_MSG("Cannot find my node in the server list");
+  return 0;
+}
 
-  Ptr<Node> node = GetNode();
-  Ptr<RdmaHw> rdma = node->GetObject<RdmaHw>();
-  const uint32_t mtu = rdma->GetMTU();
-
-  if(!is_last) {
-    const Ipv4Address dip = GetServerAddress(m_nodes.Get(m_order.at(m_myindex + 1)));
-    m_next_qp.sq = CreateObject<RdmaReliableSQ>(GetNode(), m_pg, GetLocalIp(), PORT_PREV, dip, PORT_NEXT);
-    m_next_qp.sq->SetMTU(mtu);
-    m_next_qp.rq = CreateObject<RdmaReliableRQ>(m_next_qp.sq);
-    rdma->RegisterQP(m_next_qp.sq, m_next_qp.rq);
+uint32_t RdmaClient::FindNeighbor(RdmaClient::Neighbor n) const
+{
+  int increment;
+  switch(n) {
+    case Neighbor::Left:
+      increment = -1;
+      break;
+    case Neighbor::Right:
+      increment = 1;
+      break;
+    default:
+      NS_ABORT_MSG("Invalid enum");
+      break;
   }
 
-  if(!is_first) {
-    const Ipv4Address dip = GetServerAddress(m_nodes.Get(m_order.at(m_myindex - 1)));
-    m_prev_qp.sq = CreateObject<RdmaReliableSQ>(GetNode(), m_pg, GetLocalIp(), PORT_NEXT, dip, PORT_PREV);
-    m_prev_qp.sq->SetMTU(mtu);
-    m_prev_qp.rq = CreateObject<RdmaReliableRQ>(m_prev_qp.sq);
-    m_prev_qp.rq->SetOnRecv(
-      [this](RdmaRxQueuePair::RecvNotif notif) {
-      StartMulticast();
-    });
-    rdma->RegisterQP(m_prev_qp.sq, m_prev_qp.rq);
-  }
+  return (m_config.current_node + increment) % m_config.node_count;
+}
+
+void RdmaClient::InitPrevNextQP()
+{
+  MakeLeftRightReliableConnection(m_prev_qp, PORT_PREV, m_next_qp, PORT_NEXT);
+
+  m_prev_qp.rq->SetOnRecv(
+    [this](RdmaRxQueuePair::RecvNotif notif) {
+    StartMulticast();
+  });
 }
 
 uint32_t RdmaClient::GetMTU() const
@@ -226,95 +223,117 @@ uint32_t RdmaClient::GetMTU() const
   return rdma->GetMTU();  
 }
 
-void RdmaClient::StartApplication()
+void RdmaClient::InitConfig()
+{
+  m_config.chunk_size = GetMTU();
+  m_config.node_count = m_servers.GetN();
+  m_config.current_node = FindMyIndex();
+  m_config.root_count = 2;
+  m_config.size = m_size;
+  m_recovery = AgRecovery{m_config};
+}
+
+void RdmaClient::OnRecvMcastChunk(AgConfig::chunk_id_t chunk)
 {
   NS_LOG_FUNCTION(this);
-  InitLeftRight();
-  InitOrder();
-
-  Ptr<Node> node = GetNode();
-  Ptr<RdmaHw> rdma = node->GetObject<RdmaHw>();
-  const uint32_t mtu = rdma->GetMTU();
   
-  // Count of chunks per multicast source
-  const uint32_t chunk_count = GetChunkCountPerNode();
+  if(m_phase != Phase::Mcast) {
+    return;
+  }
+
+  m_recovery.ReceiveMcastChunk(chunk);
+
+  // Reset the timeout
+  Simulator::Cancel(m_timeout_ev);
+  
+  if(m_recovery.IsMcastComplete()) {
+    RunRecoveryPhase();
+  }
+  else {
+    m_timeout_ev = Simulator::Schedule(timeout, &RdmaClient::RunRecoveryPhase, this);
+  }
+}
+
+void RdmaClient::InitMcastQP()
+{
+  Ptr<Node> node{GetNode()};
+  Ptr<RdmaHw> rdma{node->GetObject<RdmaHw>()};
+  const uint32_t mtu{GetMTU()};
 
   m_mcast_qp.sq = CreateObject<RdmaUnreliableSQ>(GetNode(), m_pg, GetLocalIp(), PORT_MCAST);
   m_mcast_qp.sq->SetMTU(mtu);
   m_mcast_qp.rq = CreateObject<RdmaUnreliableRQ>(m_mcast_qp.sq);
-
-  // Timeout for when no packet is received
-  Time timeout = MicroSeconds(50);
-  EventId timeout_ev = Simulator::Schedule(timeout, &RdmaClient::RunRecoveryPhase, this);
-
-  // Register callback
-  m_mcast_qp.rq->SetOnRecv(
-    [this, chunk_count, timeout, timeout_ev](RdmaRxQueuePair::RecvNotif notif) mutable {
-    NS_ASSERT(notif.has_imm);
-    const uint64_t chunk_id = notif.imm;
-    m_recv_chunks.insert(chunk_id);
-  
-    // Reset the timeout
-    Simulator::Cancel(timeout_ev);
-    
-    const bool is_last_chunk = (chunk_id == m_order.size() * chunk_count - 1);
-    if(is_last_chunk) {
-      RunRecoveryPhase();
-    }
-    else {
-      timeout_ev = Simulator::Schedule(timeout, &RdmaClient::RunRecoveryPhase, this);
-    }
-  });
-
   rdma->RegisterQP(m_mcast_qp.sq, m_mcast_qp.rq);
 
+  m_timeout_ev = Simulator::Schedule(timeout, &RdmaClient::RunRecoveryPhase, this);
 
-  const int root_count = 2;
-  if(AgIsFirstMcastSrc(m_order.size(), root_count, m_myindex)) {
+  // Register callback
+  m_mcast_qp.rq->SetOnRecv([this](RdmaRxQueuePair::RecvNotif notif) mutable {
+    NS_ASSERT(notif.has_imm);
+    OnRecvMcastChunk(notif.imm);
+  });
+}
+
+void RdmaClient::StartApplication()
+{
+  NS_LOG_FUNCTION(this);
+  InitConfig();
+  InitPrevNextQP();
+  InitLeftRightQP();
+  InitMcastQP();
+
+  m_phase = Phase::Mcast;
+
+  if(AgIsFirstMcastSrc(m_config, m_config.current_node)) {
     StartMulticast();
   }
 }
 
 void RdmaClient::StartMulticast()
 {
-  NS_LOG_LOGIC("Start multicast {" << LOG_VAR(GetNode()->GetId())
-                                   << "," << LOG_VAR(m_myindex) << "}");
+  NS_LOG_FUNCTION(this);
 
-  const uint32_t chunk_count = GetChunkCountPerNode();
+  if(m_phase != Phase::Mcast) {
+    return;
+  }
 
-  // Schedule flow
-  for(uint32_t i = 0; i < chunk_count; i++) {
+  NS_LOG_LOGIC("Start multicast {" << LOG_VAR(m_config.current_node) << "}");
+
+  // Schedule multicast flow
+  for(uint32_t i{0}; i < m_config.GetChunkCountPerBlock(); i++) {
     RdmaTxQueuePair::SendRequest sr;
-    sr.payload_size = GetMTU();
+    sr.payload_size = m_config.chunk_size;
     sr.dip = Ipv4Address(MCAST_GROUP);
     sr.dport = PORT_MCAST;
     sr.multicast = true;
 
-    const uint32_t chunk = m_myindex * chunk_count + i;
+    const AgConfig::chunk_id_t chunk{m_config.current_node * m_config.GetChunkCountPerBlock() + i};
     sr.imm = chunk;
     
-    // Sender has already the chunk
-    m_recv_chunks.insert(sr.imm);
-    
-    if(i == chunk_count - 1) {
-      sr.on_send = [this, chunk]() {
+    sr.on_send = [this, i, chunk]() {
+      // Mark the sent chunk as received immediately, because the sender cannot miss any of them
+      OnRecvMcastChunk(chunk);
+
+      if(i == m_config.GetChunkCountPerBlock() - 1) {
         OnMulticastTransmissionEnd(chunk);
-      };
+      }
     };
 
     m_mcast_qp.sq->PostSend(sr);
   }
 }
 
-void RdmaClient::OnMulticastTransmissionEnd()
+void RdmaClient::OnMulticastTransmissionEnd(AgConfig::chunk_id_t last_chunk)
 {
-  const bool was_last = (m_myindex == m_order.size() - 1);
-  if(was_last) {
-    RunRecoveryPhase();
+  NS_LOG_FUNCTION(this);
+
+  if(AgIsLastChainChunk(m_config, last_chunk)) {
+    NS_LOG_LOGIC(m_config.current_node << " Was last of multicast chain {last_chunk=" << last_chunk << "}");
     return;
   }
 
-  // Hand over next multicast source
+  NS_LOG_LOGIC(m_config.current_node << " Hand over next multicast source");
+
   RdmaTxQueuePair::SendRequest sr;
   m_next_qp.sq->PostSend(sr);
 }
@@ -329,60 +348,77 @@ void RdmaClient::RunRecoveryPhase()
   }
 
   m_phase = Phase::Recovery;
-  
-  const auto chunk_count{GetChunkCountPerNode() * m_order.size()};
-  const uint32_t missed_chunk_count{[&]() -> uint32_t {
-    uint32_t ret{0};
-    for(uint32_t i{0}; i < chunk_count; i++) {
-      if(m_recv_chunks.count(i) < 1) {
-        ret++;
-      }
-    }
-    return ret;
-  }()};
 
-  NS_LOG_LOGIC("Missed " << missed_chunk_count << " chunks");
+  AgRecovery::RecoveryRequest req = m_recovery.MakeRecoveryRequest();
+
+  
+  NS_LOG_LOGIC("[" << m_config.current_node << "] Missed partially " << req.size() << " blocks");
 
   // Request missed chunks to the left node
-  // The request imm. data only contains the count of missed nodes to simplify
-  // The left node will RDMA Write the missed chunks, be notified when it is completed
+
   RdmaTxQueuePair::SendRequest recover_request;
-  recover_request.imm = missed_chunk_count;
+  if(req.size() == 0) {
+    // If no block has to be recovered, mark left complete when recv ACK
+    recover_request.on_send = [this]() {
+      m_has_recovered_chunks = true;
+      TryUpdateState();
+    };
+  }
+
+  m_recovery_request_map[m_config.current_node] = std::move(req);
   m_left_qp.sq->PostSend(recover_request);
 }
 
 void RdmaClient::TryUpdateState()
 {
   NS_LOG_FUNCTION(this);
-  NS_LOG_LOGIC("{"
-    << "has_recovered_chunks=" << m_has_recovered_chunks << ","
-    << "peer_requested_chunks=" << m_peer_requested_chunks << ","
-    << "has_send_to_right=" << m_has_send_to_right << "}");
-  
+
   if(m_phase != Phase::Recovery) {
     return;
   }
 
-  const Ptr<RdmaHw> rdma{GetNode()->GetObject<RdmaHw>()};
-  const uint32_t mtu{rdma->GetMTU()};
+  const auto& right_recover_req = m_recovery_request_map[FindNeighbor(Neighbor::Right)];
+  auto& my_recover_req = m_recovery_request_map[m_config.current_node];
+  const uint32_t peer_req_block_count{right_recover_req.size()};
 
-  if((m_has_recovered_chunks || m_peer_requested_chunks == 0)
-    && m_peer_requested_chunks >= 0) {
-    NS_LOG_LOGIC("Sending " << m_peer_requested_chunks << " to right node because right node missed them.");
-    
-    RdmaTxQueuePair::SendRequest sr;
-    sr.payload_size = m_peer_requested_chunks * mtu,
-    sr.on_send = [this]() {
-      m_has_send_to_right = true;
-      NS_LOG_LOGIC("Has just send missed chunks to right");
-      TryUpdateState();
-    };
-    m_peer_requested_chunks = -2; // Avoid sending twice
-    m_right_qp.sq->PostSend(sr);
+  NS_LOG_LOGIC("{"
+    << "m_has_recovered_chunks=" << m_has_recovered_chunks << ","
+    << "peer_req_block_count=" << peer_req_block_count << ","
+    << "m_has_send_all_to_right=" << m_has_send_all_to_right << "}");
+
+  if(m_has_recv_recover_req && !m_has_send_all_to_right) {
+
+    for(const auto& [block, chunk_count] : right_recover_req) {
+      if(m_blocks_sent_to_right.count(block) > 0) {
+        continue; // Don't send the same block multiple time!
+      }
+
+      const bool can_send{my_recover_req.count(block) == 0};
+      if(can_send) {
+        m_blocks_sent_to_right.insert(block);
+        NS_LOG_LOGIC("[" << m_config.current_node << "] Sending {block=" << block << ",chunk_count=" << chunk_count << "} to right node because right node missed them.");
+        RdmaTxQueuePair::SendRequest sr;
+        sr.imm = block;
+        sr.payload_size = chunk_count * GetMTU();
+        sr.on_send = [this, &right_recover_req]() {
+          if(right_recover_req.empty()) {
+            m_has_send_all_to_right = true;
+          }
+          TryUpdateState();
+        };
+        m_right_qp.sq->PostSend(sr);
+      }
+    }
   }
-  if(m_has_recovered_chunks && m_has_send_to_right && !m_completed) {
-    m_completed = true;
-    NS_LOG_LOGIC("Completed " << GetNode()->GetId());
+
+  if(m_has_recovered_chunks && m_has_send_all_to_right && m_phase != Phase::Complete) {
+    m_phase = Phase::Complete;
+    NS_LOG_LOGIC("Completed " << m_config.current_node);
+
+    m_completed_apps++;
+    if(m_completed_apps == m_servers.GetN()) {
+      std::cout << "Elapsed simulation time: " << Simulator::Now().GetSeconds() << std::endl;
+    }
   }
 }
 

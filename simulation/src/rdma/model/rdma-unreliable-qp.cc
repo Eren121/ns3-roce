@@ -12,7 +12,9 @@ NS_LOG_COMPONENT_DEFINE("RdmaUnreliableSQ");
 
 void RdmaUnreliableSQ::PostSend(RdmaTxQueuePair::SendRequest sr)
 {
-    NS_ASSERT_MSG(sr.payload_size <= m_mtu, "UD QP max. message size is MTU");
+  NS_LOG_FUNCTION(this);
+
+	NS_ASSERT_MSG(sr.payload_size <= m_mtu, "UD QP max. message size is MTU");
 
 	m_to_send.push(std::move(sr));	
 	
@@ -37,6 +39,8 @@ bool RdmaUnreliableSQ::IsReadyToSend() const
 
 Ptr<Packet> RdmaUnreliableSQ::GetNextPacket()
 {
+  NS_LOG_FUNCTION(this);
+
 	if(m_to_send.empty()) {
 		NS_ASSERT(false);
 		return nullptr;
@@ -104,6 +108,8 @@ Ptr<Packet> RdmaUnreliableSQ::GetNextPacket()
 
 void RdmaUnreliableRQ::ReceiveUdp(Ptr<Packet> p, const CustomHeader &ch)
 {
+  NS_LOG_FUNCTION(this);
+	
 	RdmaRxQueuePair::ReceiveUdp(p, ch);
 
 	RdmaBTH bth;
