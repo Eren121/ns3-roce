@@ -107,7 +107,8 @@ void SwitchNode::OnPeerJoinGroup(uint32_t ifIndex, uint32_t group)
 	odevs.emplace(ifIndex);
 
 	if(!notifyOthers) {
-		return;
+		//return;
+		// Not working, all need to be notified
 	}
 	
 	Ptr<QbbNetDevice> iface = DynamicCast<QbbNetDevice>(GetDevice(ifIndex));
