@@ -63,7 +63,7 @@ TypeId RdmaUnicastApp::GetTypeId()
 void RdmaUnicastApp::InitQP(NodeContainer nodes)
 {
 	NS_ASSERT(!m_qp.sq);
-
+  
 	const Ipv4Address sip{GetServerAddress(nodes.Get(m_src))};
 	const Ipv4Address dip{GetServerAddress(nodes.Get(m_dst))};
 	
@@ -89,9 +89,9 @@ void RdmaUnicastApp::StartApplication()
 {
   NS_LOG_FUNCTION(this);
 
-  const int flow_count = 2;
+  const int flow_count = 1;
 
-	if(m_node->GetId() == m_src) {
+  {
     for(int i = 0; i < flow_count; i++) {
       RdmaTxQueuePair::SendRequest sr;
       sr.payload_size = m_size;
@@ -106,7 +106,7 @@ void RdmaUnicastApp::StartApplication()
       m_qp.sq->PostSend(sr);
     }
   }
-	else {
+	{
 		m_qp.rq->SetOnRecv([this, flow_count, recv=0](RdmaRxQueuePair::RecvNotif notif) mutable {
       recv++;
       if(recv == flow_count) {

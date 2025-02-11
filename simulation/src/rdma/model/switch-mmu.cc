@@ -44,9 +44,7 @@ namespace ns3 {
 		}
 		return true;
 	}
-	bool SwitchMmu::CheckEgressAdmission(uint32_t port, uint32_t qIndex, uint32_t psize){
-		return true;
-	}
+	
 	void SwitchMmu::UpdateIngressAdmission(uint32_t port, uint32_t qIndex, uint32_t psize){
 		uint32_t new_bytes = ingress_bytes[port][qIndex] + psize;
 		if (new_bytes <= reserve){
@@ -81,6 +79,7 @@ namespace ns3 {
 		if (!paused[port][qIndex])
 			return false;
 		uint32_t shared_used = GetSharedUsed(port, qIndex);
+		std::cout << "usage: " <<shared_used  <<std::endl;
 		return hdrm_bytes[port][qIndex] == 0 && (shared_used == 0 || shared_used + resume_offset <= GetPfcThreshold(port));
 	}
 	void SwitchMmu::SetPause(uint32_t port, uint32_t qIndex){

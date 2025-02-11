@@ -32,13 +32,13 @@
     "links": [
         {
             "src": 0, "dst": 1,
-            "bandwidth": 100e9,
+            "bandwidth": 200e9,
             "latency": 1e-6,
             "error_rate": 0
         },
         {
             "src": 0, "dst": 2,
-            "bandwidth": 100e9,
+            "bandwidth": 200e9,
             "latency": 1e-6,
             "error_rate": 0
         },

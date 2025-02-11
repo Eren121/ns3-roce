@@ -23,6 +23,7 @@ public:
 	uint64_t GetWin() const; // window size calculated from m_rate
 	uint64_t GetChunk() const { return m_chunk; }
 	bool IsReadyToSend() const override;
+	bool HasDataToSend() const override;
 	void PostSend(SendRequest sr) override;
 	Ptr<Packet> GetNextPacket() override;
 	

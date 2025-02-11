@@ -54,7 +54,7 @@ void RdmaReliableSQ::ScheduleRetrTimeout()
 	}
 
 	// https://www.rdmamojo.com/2013/01/12/ibv_modify_qp/
-	const Time retr_timeout = MicroSeconds(65.556);
+	const Time retr_timeout = MicroSeconds(65.536);
 	m_retr_to = Simulator::Schedule(retr_timeout, &RdmaReliableSQ::OnRetrTimeout, this);
 }
 
@@ -93,22 +93,32 @@ bool RdmaReliableSQ::IsWinBound() const
 	return w != 0 && GetOnTheFly() >= w;
 }
 
+bool RdmaReliableSQ::HasDataToSend() const
+{
+	return m_next_op_first_psn > m_snd_nxt;
+}
+
 bool RdmaReliableSQ::IsReadyToSend() const
 {
-	const bool timer_ready = Simulator::Now().GetTimeStep() >= m_nextAvail.GetTimeStep();
+	NS_LOG_FUNCTION(this);
+
+	const bool timer_ready{Simulator::Now() >= m_nextAvail};
 	if(!timer_ready) {
+		NS_LOG_LOGIC("Timer not ready");
 		return false;
 	}
 
 	if(IsWinBound()) {
+		NS_LOG_LOGIC("Win bound");
 		return false;
 	}
 
-	const bool has_data_to_send = (m_next_op_first_psn > m_snd_nxt);
-	if(!has_data_to_send) {
+	if(!HasDataToSend()) {
+		NS_LOG_LOGIC("No data to send");
 		return false;
 	}
 
+	NS_LOG_LOGIC("Ready");
 	return true;
 }
 
@@ -122,16 +132,21 @@ void RdmaReliableSQ::PostSend(SendRequest sr)
 		sr.payload_size = 1;
 	}
 
+
 	sr.first_psn = m_next_op_first_psn;
 	m_next_op_first_psn += sr.payload_size;
 
 	m_to_send[sr.first_psn] = sr;
 
+	NS_LOG_LOGIC("Post reliable psn=" << sr.first_psn << ",payload_size=" << sr.payload_size);
 	TriggerDevTransmit();
 }
 
 void RdmaReliableSQ::TriggerDevTransmit()
 {
+	NS_LOG_FUNCTION(this);
+	NS_LOG_LOGIC("Try to send at " << m_nextAvail.GetSeconds());
+
 	// Trigger to possibly send
 	if(m_nextAvail <= Simulator::Now()) {
 		Simulator::Schedule(Seconds(0), &QbbNetDevice::TriggerTransmit, GetDevice());
@@ -149,8 +164,10 @@ Ptr<Packet> RdmaReliableSQ::GetNextPacket()
 		NS_ASSERT(false);
 		return nullptr;
 	}
+	auto it{m_to_send.upper_bound(m_snd_nxt)};
+	NS_ASSERT(it != m_to_send.begin());
 
-	const SendRequest& sr{(--m_to_send.upper_bound(m_snd_nxt))->second};
+	const SendRequest& sr{(--it)->second};
 	const psn_t sr_already_sent_payload{m_snd_nxt - sr.first_psn};
 	const psn_t sr_rem_to_send{sr.payload_size - sr_already_sent_payload};
 
@@ -226,7 +243,7 @@ Ptr<Packet> RdmaReliableSQ::GetNextPacket()
 
 void RdmaReliableSQ::RecoverNack(uint64_t next_psn_expected)
 {
-	NS_LOG_FUNCTION(this);
+	NS_LOG_FUNCTION(this << next_psn_expected);
 	NS_ASSERT(next_psn_expected >= m_snd_una);
 
 	Acknowledge(next_psn_expected);
@@ -260,7 +277,7 @@ uint64_t RdmaReliableSQ::GetWin() const
 
 bool RdmaReliableRQ::Receive(Ptr<Packet> p, const CustomHeader& ch)
 {
-	NS_LOG_FUNCTION(this);
+	NS_LOG_FUNCTION(this << ch.l3Prot);
 
 	if(ch.l3Prot == 0xFD) { // NACK
 		ReceiveAck(p, ch);
@@ -293,10 +310,10 @@ int RdmaReliableRQ::ReceiverCheckSeq(uint32_t seq, uint32_t size)
 		ReceiverNextExpectedSeq = expected + size;
 		return 5;
 	} else if (seq > expected) {
-		NS_LOG_LOGIC("Seq. received is higher than expected (" << seq << ">" << expected << ")");
-		// Generate NACK
-		if (Simulator::Now() >= m_nackTimer || m_lastNACK != expected){
-			NS_LOG_LOGIC("Send NACK");	
+		NS_LOG_LOGIC("Seq. received is different than expected (" << seq << ">" << expected << ")");
+	// Generate NACK
+		if (Simulator::Now() >= m_nackTimer || m_lastNACK != expected) {
+			NS_LOG_LOGIC("Send NACK {time=" << Simulator::Now().GetSeconds() << ",timer=" << m_nackTimer.GetSeconds() << "last_nack=" << m_lastNACK << ",expected=" << expected << "}");	
 			m_nackTimer = Simulator::Now() + MicroSeconds(m_nack_interval);
 			m_lastNACK = expected;
 			if (m_backto0){
@@ -377,7 +394,7 @@ void RdmaReliableRQ::ReceiveUdp(Ptr<Packet> p, const CustomHeader &ch)
 	if (x == 1 || x == 2) { //generate ACK or NACK
 		
 		NS_LOG_LOGIC("Send back " << (x == 1 ? "ACK" : "NACK"));
-
+		
 		qbbHeader seqh;
 		seqh.SetSeq(ReceiverNextExpectedSeq);
 		seqh.SetPG(ch.udp.pg);
@@ -432,8 +449,8 @@ void RdmaReliableRQ::ReceiveUdp(Ptr<Packet> p, const CustomHeader &ch)
 	}
 }
 
-void RdmaReliableRQ::ReceiveAck(Ptr<Packet> p, const CustomHeader &ch){
-
+void RdmaReliableRQ::ReceiveAck(Ptr<Packet> p, const CustomHeader &ch)
+{
 	NS_LOG_FUNCTION(this);
 
 	RdmaBTH bth;

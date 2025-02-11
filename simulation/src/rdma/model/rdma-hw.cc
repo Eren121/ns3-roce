@@ -160,6 +160,12 @@ void RdmaHw::Setup()
 
 void RdmaHw::RegisterQP(Ptr<RdmaTxQueuePair> sq, Ptr<RdmaRxQueuePair> rq)
 {
+	Ptr<RdmaReliableRQ> rel_rq = DynamicCast<RdmaReliableRQ>(rq);
+	if(rel_rq) {
+		rel_rq->SetNackInterval(m_nack_interval);
+		// DynamicCast<RdmaReliableSQ>(sq)->SetWin(0.95);
+		DynamicCast<RdmaReliableSQ>(sq)->SetAckInterval(m_chunk, m_ack_interval);
+	}
 	const uint64_t key = sq->GetKey();
 
 	// Store in map

@@ -12,6 +12,7 @@ public:
 
 	void PostSend(SendRequest sr) override;
 	bool IsReadyToSend() const override;
+	bool HasDataToSend() const override;
 	Ptr<Packet> GetNextPacket() override;
 	
 private:

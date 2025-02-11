@@ -26,8 +26,8 @@
         "min_rate":                        "100Mb/s",
         "dctcp_rate_ai":                   "1000Mb/s",
 
-        "error_rate_per_link":             0.05,
-        "l2_chunk_size":                   200000,
+        "error_rate_per_link":             0.0,
+        "l2_chunk_size":                   3000,
         "l2_ack_interval":                 0,
         "l2_back_to_zero":                 false,
         "nak_interval":                    500.0,
@@ -74,7 +74,7 @@
             {"bandwidth": 100000000000, "ecn_threshold": 0.2}
         ],
 
-        "buffer_size":                     32,
+        "buffer_size":                     3200,
         "qlen_mon_file":                   "mix/my/out/qlen.txt",
         "qlen_mon_start":                  2000000000,
         "qlen_mon_end":                    2010000000,

@@ -257,6 +257,7 @@ void RdmaClient::OnMcastTimeout()
   NS_LOG_FUNCTION(this);
   RunRecoveryPhase();
 }
+
 void RdmaClient::InitMcastQP()
 {
   Ptr<Node> node{GetNode()};
@@ -354,8 +355,7 @@ void RdmaClient::RunRecoveryPhase()
 
   AgRecovery::RecoveryRequest req = m_recovery.MakeRecoveryRequest();
 
-  
-  NS_LOG_LOGIC("[" << m_config.current_node << "] Missed partially " << req.size() << " blocks");
+  NS_LOG_LOGIC("[" << m_config.current_node << "] Missed " << AgRecovery::GetTotalMissedChunks(req) << " chunks in " << req.size() << " blocks");
 
   // Request missed chunks to the left node
 

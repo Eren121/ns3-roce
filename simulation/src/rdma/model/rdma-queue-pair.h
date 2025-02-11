@@ -61,6 +61,8 @@ public:
 		return m_finished;
 	}
 
+	virtual bool HasDataToSend() const = 0;
+
 	virtual Ptr<Packet> GetNextPacket()
 	{
 		return nullptr;

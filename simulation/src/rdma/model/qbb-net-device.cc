@@ -93,7 +93,17 @@ namespace ns3 {
 		}
 		return 0;
 	}
-	int RdmaEgressQueue::GetNextQindex(bool paused[]){
+	int RdmaEgressQueue::GetNextQindex(bool paused[])
+	{
+		NS_LOG_FUNCTION(this);
+
+		std::ostringstream ss;
+		for(int i = 0; i < 8; i++) {
+			ss << (paused[i] ? "1" : "0");
+		}
+		
+		NS_LOG_INFO("pause=" << ss.str());
+
 		bool found = false;
 		uint32_t qIndex;
 		if (!paused[ack_q_idx] && m_ackQ->GetNPackets() > 0)
@@ -272,13 +282,22 @@ namespace ns3 {
 
 				// update for the next avail time
 				m_rdmaPktSent(lastQp, p, m_tInterframeGap);
-			}else { // no packet to send
+			}
+			else { // no packet to send
+
 				NS_LOG_INFO("PAUSE prohibits send at node " << m_node->GetId());
+
 				Time t = Simulator::GetMaximumSimulationTime();
 				for (uint32_t i = 0; i < m_rdmaEQ->GetFlowCount(); i++){
 					Ptr<RdmaTxQueuePair> qp = m_rdmaEQ->GetQp(i);
-					t = Min(qp->GetNextAvailTime(), t);
+					if(qp->HasDataToSend()) {
+						t = Min(qp->GetNextAvailTime(), t);
+					}
 				}
+
+				if(t < Simulator::Now()) { t = Simulator::Now(); }
+				t += MicroSeconds(1);
+
 				if (m_nextSend.IsExpired() && t < Simulator::GetMaximumSimulationTime() && t > Simulator::Now()){
 					m_nextSend = Simulator::Schedule(t - Simulator::Now(), &QbbNetDevice::DequeueAndTransmit, this);
 				}
@@ -307,7 +326,7 @@ namespace ns3 {
 				TransmitStart(p);
 				return;
 			}else{ //No queue can deliver any packet
-				NS_LOG_INFO("PAUSE prohibits send at node " << m_node->GetId());
+				NS_LOG_INFO("PAUSE prohibits switch send at node " << m_node->GetId());
 				if (!IsSwitchNode(m_node) && m_qcnEnabled){ //nothing to send, possibly due to qcn flow control, if so reschedule sending
 					Time t = Simulator::GetMaximumSimulationTime();
 					for (uint32_t i = 0; i < m_rdmaEQ->GetFlowCount(); i++){
@@ -362,9 +381,11 @@ namespace ns3 {
 			if (!m_qbbEnabled) return;
 			unsigned qIndex = ch.pfc.qIndex;
 			if (ch.pfc.time > 0){
+				NS_LOG_LOGIC("PFC: Pause " << qIndex);
 				m_tracePfc(1);
 				m_paused[qIndex] = true;
 			}else{
+				NS_LOG_LOGIC("PFC: Resume " << qIndex);
 				m_tracePfc(0);
 				Resume(qIndex);
 			}

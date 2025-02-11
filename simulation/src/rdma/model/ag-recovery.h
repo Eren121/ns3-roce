@@ -12,6 +12,8 @@ class AgRecovery
 public:
   using RecoveryRequest = std::unordered_map<AgConfig::block_id_t, uint32_t>;
   
+  static uint64_t GetTotalMissedChunks(const RecoveryRequest& req);
+
   AgRecovery() = default;
   AgRecovery(const AgConfig& config);
   void ReceiveMcastChunk(AgConfig::chunk_id_t chunk);

@@ -1029,22 +1029,26 @@ int main(int argc, char *argv[])
 	// schedule buffer monitor
 	FILE* qlen_output = fopen(simConfig.qlen_mon_file.c_str(), "w");
 	Simulator::Schedule(NanoSeconds(simConfig.qlen_mon_start), &monitor_buffer, qlen_output, &simConfig, &n);
-	
-	for (uint32_t i = 0; i < node_num; i++){
-		const TopoConfig::Node& node_config = topo.nodes[i];
-		Ptr<Node> node = n.Get(i);
-		Vector3D p = {};
-		p.x = node_config.pos.x;
-		p.y = node_config.pos.y;
-		AnimationInterface::SetConstantPosition(node, p.x, p.y, p.z);
+
+	std::unique_ptr<AnimationInterface> anim;
+	if(simConfig.enable_trace)
+	{
+		for (uint32_t i = 0; i < node_num; i++){
+			const TopoConfig::Node& node_config = topo.nodes[i];
+			Ptr<Node> node = n.Get(i);
+			Vector3D p = {};
+			p.x = node_config.pos.x;
+			p.y = node_config.pos.y;
+			AnimationInterface::SetConstantPosition(node, p.x, p.y, p.z);
+		}
+
+		// Save trace for animation
+		anim.reset(new AnimationInterface{"anim.xml"});
+		// High polling interval; the nodes never move. Reduces XML size.
+		anim->SetMobilityPollInterval(Seconds(1e9));
+		anim->EnablePacketMetadata(true);
 	}
 
-	// Save trace for animation
-	AnimationInterface anim("anim.xml");
-	// High polling interval; the nodes never move. Reduces XML size.
-	anim.SetMobilityPollInterval(Seconds(1e9));
-	anim.EnablePacketMetadata(true);
-	
 	// Now, do the actual simulation.
 	std::cout << "Running Simulation.\n";
 	fflush(stdout);

@@ -8,7 +8,7 @@
 
 namespace ns3 {
 
-NS_LOG_COMPONENT_DEFINE("RdmaUnreliableSQ");
+NS_LOG_COMPONENT_DEFINE("RdmaUnreliableQP");
 
 void RdmaUnreliableSQ::PostSend(RdmaTxQueuePair::SendRequest sr)
 {
@@ -27,10 +27,17 @@ void RdmaUnreliableSQ::PostSend(RdmaTxQueuePair::SendRequest sr)
 	}
 }
 
+bool RdmaUnreliableSQ::HasDataToSend() const
+{
+	return !m_to_send.empty();
+}
+
 bool RdmaUnreliableSQ::IsReadyToSend() const
 {
+  NS_LOG_FUNCTION(this);
+
 	const bool timer_ready = Simulator::Now().GetTimeStep() >= m_nextAvail.GetTimeStep();
-	const bool ready = !m_to_send.empty() && timer_ready;
+	const bool ready = HasDataToSend() && timer_ready;
 	
 	NS_LOG_LOGIC(this << " {to_send.size=" << m_to_send.size() << ",timer_ready=" << timer_ready << "}");
 

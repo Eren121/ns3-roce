@@ -136,6 +136,31 @@ void SwitchNode::CheckAndSendResume(uint32_t inDev, uint32_t qIndex){
 }
 
 void SwitchNode::SendMultiToDevs(Ptr<Packet> packet, CustomHeader& ch, int in_iface) {
+	
+	FlowIdTag t;
+	packet->PeekPacketTag(t);
+	const uint32_t inDev{t.GetFlowId()};
+
+	// Determine the qIndex
+	uint32_t qIndex;
+	if (ch.l3Prot == 0xFF || ch.l3Prot == 0xFE || (m_ackHighPrio && (ch.l3Prot == 0xFD || ch.l3Prot == 0xFC))){  //QCN or PFC or NACK, go highest priority
+		qIndex = 0;
+	}else{
+		qIndex = (ch.l3Prot == 0x06 ? 1 : ch.udp.pg); // if TCP, put to queue 1
+	}
+
+	// Admission control
+	if (qIndex != 0) { //not highest priority
+
+		if(!m_mmu->CheckIngressAdmission(inDev, qIndex, packet->GetSize())) {
+			NS_LOG_LOGIC("PFC: Pause multicast " << qIndex);
+			return; // Drop
+		}
+		
+		m_mmu->UpdateIngressAdmission(inDev, qIndex, packet->GetSize());
+		CheckAndSendPfc(inDev, qIndex);
+	}
+
 	auto iface_it = m_ogroups.find(ch.dip);
 	if(iface_it == m_ogroups.end()) {
 		std::cerr << "ERROR: Cannot find ports for multicast group " << ch.dip << std::endl;
@@ -149,29 +174,8 @@ void SwitchNode::SendMultiToDevs(Ptr<Packet> packet, CustomHeader& ch, int in_if
 		NS_ASSERT_MSG(GetDevice(idx)->IsLinkUp(), "The routing table look up should return link that is up");
 
 		Ptr<Packet> p = packet->Copy();
-		// determine the qIndex
-		uint32_t qIndex;
-		if (ch.l3Prot == 0xFF || ch.l3Prot == 0xFE || (m_ackHighPrio && (ch.l3Prot == 0xFD || ch.l3Prot == 0xFC))){  //QCN or PFC or NACK, go highest priority
-			qIndex = 0;
-		}else{
-			qIndex = (ch.l3Prot == 0x06 ? 1 : ch.udp.pg); // if TCP, put to queue 1
-		}
-
-		// admission control
-		FlowIdTag t;
-		p->PeekPacketTag(t);
-		uint32_t inDev = t.GetFlowId();
-		if (qIndex != 0){ //not highest priority
-			if (m_mmu->CheckIngressAdmission(inDev, qIndex, p->GetSize()) && m_mmu->CheckEgressAdmission(idx, qIndex, p->GetSize())){			// Admission control
-				m_mmu->UpdateIngressAdmission(inDev, qIndex, p->GetSize());
-				m_mmu->UpdateEgressAdmission(idx, qIndex, p->GetSize());
-			}
-			else{
-				continue; // Drop
-			}
-			CheckAndSendPfc(inDev, qIndex);
-		}
-		m_bytes[inDev][idx][qIndex] += p->GetSize();
+		m_mmu->UpdateEgressAdmission(idx, qIndex, packet->GetSize());
+		if(qIndex != 0) { m_bytes[inDev][idx][qIndex] += p->GetSize(); }
 		SwitchSend(GetDevice(idx), qIndex, p);
 	}
 }
@@ -194,7 +198,7 @@ void SwitchNode::SendToDev(Ptr<Packet>p, CustomHeader &ch){
 		p->PeekPacketTag(t);
 		uint32_t inDev = t.GetFlowId();
 		if (qIndex != 0){ //not highest priority
-			if (m_mmu->CheckIngressAdmission(inDev, qIndex, p->GetSize()) && m_mmu->CheckEgressAdmission(idx, qIndex, p->GetSize())){			// Admission control
+			if (m_mmu->CheckIngressAdmission(inDev, qIndex, p->GetSize())){			// Admission control
 				m_mmu->UpdateIngressAdmission(inDev, qIndex, p->GetSize());
 				m_mmu->UpdateEgressAdmission(idx, qIndex, p->GetSize());
 			}else{
