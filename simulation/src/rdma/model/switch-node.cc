@@ -153,8 +153,8 @@ void SwitchNode::SendMultiToDevs(Ptr<Packet> packet, CustomHeader& ch, int in_if
 	if (qIndex != 0) { //not highest priority
 
 		if(!m_mmu->CheckIngressAdmission(inDev, qIndex, packet->GetSize())) {
-			NS_LOG_LOGIC("PFC: Pause multicast " << qIndex);
-			return; // Drop
+			NS_LOG_LOGIC("Drop: Pause multicast " << qIndex);
+			return;
 		}
 		
 		m_mmu->UpdateIngressAdmission(inDev, qIndex, packet->GetSize());
@@ -163,7 +163,7 @@ void SwitchNode::SendMultiToDevs(Ptr<Packet> packet, CustomHeader& ch, int in_if
 
 	auto iface_it = m_ogroups.find(ch.dip);
 	if(iface_it == m_ogroups.end()) {
-		std::cerr << "ERROR: Cannot find ports for multicast group " << ch.dip << std::endl;
+		NS_LOG_LOGIC("Drop: Cannot find ports for multicast group " << ch.dip);
 		return;
 	}
 	for(int idx : iface_it->second) {
@@ -202,7 +202,8 @@ void SwitchNode::SendToDev(Ptr<Packet>p, CustomHeader &ch){
 				m_mmu->UpdateIngressAdmission(inDev, qIndex, p->GetSize());
 				m_mmu->UpdateEgressAdmission(idx, qIndex, p->GetSize());
 			}else{
-				return; // Drop
+				NS_LOG_LOGIC("Drop: unicast packet not admitted");
+				return;
 			}
 			CheckAndSendPfc(inDev, qIndex);
 		}
@@ -210,8 +211,8 @@ void SwitchNode::SendToDev(Ptr<Packet>p, CustomHeader &ch){
 		m_bytes[inDev][idx][qIndex] += p->GetSize();
 		SwitchSend(GetDevice(idx), qIndex, p);
 	}else {
-		std::cerr << "ERROR: Cannot find output device for packet" << std::endl;
-		return; // Drop
+		NS_LOG_LOGIC("Drop: cannot find output device for packet");
+		return;
 	}
 }
 

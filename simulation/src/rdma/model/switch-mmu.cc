@@ -34,7 +34,10 @@ namespace ns3 {
 		memset(paused, 0, sizeof(paused));
 		memset(egress_bytes, 0, sizeof(egress_bytes));
 	}
-	bool SwitchMmu::CheckIngressAdmission(uint32_t port, uint32_t qIndex, uint32_t psize){
+	bool SwitchMmu::CheckIngressAdmission(uint32_t port, uint32_t qIndex, uint32_t psize)
+	{
+		NS_LOG_FUNCTION(this << port << qIndex << psize);
+
 		if (psize + hdrm_bytes[port][qIndex] > headroom[port] && psize + GetSharedUsed(port, qIndex) > GetPfcThreshold(port)){
 			printf("%lu %u Drop: queue:%u,%u: Headroom full\n", Simulator::Now().GetTimeStep(), node_id, port, qIndex);
 			for (uint32_t i = 1; i < 64; i++)
@@ -44,8 +47,11 @@ namespace ns3 {
 		}
 		return true;
 	}
-	
-	void SwitchMmu::UpdateIngressAdmission(uint32_t port, uint32_t qIndex, uint32_t psize){
+
+	void SwitchMmu::UpdateIngressAdmission(uint32_t port, uint32_t qIndex, uint32_t psize)
+	{
+		NS_LOG_FUNCTION(this << port << qIndex << psize);
+
 		uint32_t new_bytes = ingress_bytes[port][qIndex] + psize;
 		if (new_bytes <= reserve){
 			ingress_bytes[port][qIndex] += psize;
@@ -59,21 +65,49 @@ namespace ns3 {
 			}
 		}
 	}
-	void SwitchMmu::UpdateEgressAdmission(uint32_t port, uint32_t qIndex, uint32_t psize){
+	void SwitchMmu::UpdateEgressAdmission(uint32_t port, uint32_t qIndex, uint32_t psize)
+	{
+		NS_LOG_FUNCTION(this << port << qIndex << psize);
+
 		egress_bytes[port][qIndex] += psize;
 	}
-	void SwitchMmu::RemoveFromIngressAdmission(uint32_t port, uint32_t qIndex, uint32_t psize){
+
+	void SwitchMmu::RemoveFromIngressAdmission(uint32_t port, uint32_t qIndex, uint32_t psize)
+	{
+		NS_LOG_FUNCTION(this << port << qIndex << psize);
+
 		uint32_t from_hdrm = std::min(hdrm_bytes[port][qIndex], psize);
 		uint32_t from_shared = std::min(psize - from_hdrm, ingress_bytes[port][qIndex] > reserve ? ingress_bytes[port][qIndex] - reserve : 0);
 		hdrm_bytes[port][qIndex] -= from_hdrm;
 		ingress_bytes[port][qIndex] -= psize - from_hdrm;
 		shared_used_bytes -= from_shared;
 	}
-	void SwitchMmu::RemoveFromEgressAdmission(uint32_t port, uint32_t qIndex, uint32_t psize){
+	
+	void SwitchMmu::RemoveFromEgressAdmission(uint32_t port, uint32_t qIndex, uint32_t psize)
+	{
+		NS_LOG_FUNCTION(this << port << qIndex << psize);
 		egress_bytes[port][qIndex] -= psize;
 	}
-	bool SwitchMmu::CheckShouldPause(uint32_t port, uint32_t qIndex){
-		return !paused[port][qIndex] && (hdrm_bytes[port][qIndex] > 0 || GetSharedUsed(port, qIndex) >= GetPfcThreshold(port));
+
+	bool SwitchMmu::CheckShouldPause(uint32_t port, uint32_t qIndex)
+	{
+		NS_LOG_FUNCTION(this << port << qIndex);
+
+		if(paused[port][qIndex]) {
+			return false;
+		}
+
+		if(hdrm_bytes[port][qIndex] > 0) {
+			NS_LOG_LOGIC("PFC headroom not empty");
+			return true;
+		}
+
+		if(GetSharedUsed(port, qIndex) >= GetPfcThreshold(port)) {
+			NS_LOG_LOGIC("PFC threshold reached");
+			return true;
+		}
+
+		return false;
 	}
 	bool SwitchMmu::CheckShouldResume(uint32_t port, uint32_t qIndex){
 		if (!paused[port][qIndex])
