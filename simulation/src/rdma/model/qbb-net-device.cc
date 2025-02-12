@@ -97,17 +97,12 @@ namespace ns3 {
 	{
 		NS_LOG_FUNCTION(this);
 
-		std::ostringstream ss;
-		for(int i = 0; i < 8; i++) {
-			ss << (paused[i] ? "1" : "0");
-		}
-		
-		NS_LOG_INFO("pause=" << ss.str());
-
 		bool found = false;
 		uint32_t qIndex;
-		if (!paused[ack_q_idx] && m_ackQ->GetNPackets() > 0)
+		if (!paused[ack_q_idx] && m_ackQ->GetNPackets() > 0) {
+			NS_LOG_LOGIC("Next packet is an ACK");
 			return -1;
+		}
 
 		// no pkt in highest priority queue, do rr for each qp
 		int res = -1024;
@@ -249,6 +244,15 @@ namespace ns3 {
 		DequeueAndTransmit();
 	}
 
+	static std::string BoolsToStr(bool arr[], int size)
+	{
+		std::ostringstream ss;
+		for(int i = 0; i < size; i++) {
+			ss << (arr[i] ? "1" : "0");
+		}
+		return ss.str();
+	}
+
 	void
 		QbbNetDevice::DequeueAndTransmit(void)
 	{
@@ -280,7 +284,8 @@ namespace ns3 {
 			}
 			else { // no packet to send
 
-				NS_LOG_INFO("PAUSE prohibits send at node " << m_node->GetId());
+			
+				NS_LOG_INFO("PAUSE " << BoolsToStr(m_paused, 8) << " prohibits send at node " << m_node->GetId());
 
 				Time t = Simulator::GetMaximumSimulationTime();
 				for (uint32_t i = 0; i < m_rdmaEQ->GetFlowCount(); i++){
@@ -298,7 +303,8 @@ namespace ns3 {
 				}
 			}
 			return;
-		}else{   //switch, doesn't care about qcn, just send
+		}
+		else {   //switch, doesn't care about qcn, just send
 			p = GetQueue()->DequeueRR(m_paused);		//this is round-robin
 			if (p != 0){
 				m_snifferTrace(p);
@@ -320,18 +326,10 @@ namespace ns3 {
 				m_traceDequeue(p, qIndex);
 				TransmitStart(p);
 				return;
-			}else{ //No queue can deliver any packet
-				NS_LOG_INFO("PAUSE prohibits switch send at node " << m_node->GetId());
-				if (!IsSwitchNode(m_node) && m_qcnEnabled){ //nothing to send, possibly due to qcn flow control, if so reschedule sending
-					Time t = Simulator::GetMaximumSimulationTime();
-					for (uint32_t i = 0; i < m_rdmaEQ->GetFlowCount(); i++){
-						Ptr<RdmaTxQueuePair> qp = m_rdmaEQ->GetQp(i);
-						t = Min(qp->GetNextAvailTime(), t);
-					}
-					if (m_nextSend.IsExpired() && t < Simulator::GetMaximumSimulationTime() && t > Simulator::Now()){
-						m_nextSend = Simulator::Schedule(t - Simulator::Now(), &QbbNetDevice::DequeueAndTransmit, this);
-					}
-				}
+			}
+			else { //No queue can deliver any packet
+				NS_LOG_INFO("PAUSE " << BoolsToStr(m_paused, 8) << " prohibits switch send at node " << m_node->GetId());
+				NS_ASSERT(IsSwitchNode(m_node));
 			}
 		}
 		return;
@@ -353,6 +351,7 @@ namespace ns3 {
 	{
 		NS_LOG_FUNCTION(this << packet);
 		if (!m_linkUp){
+			NS_LOG_LOGIC("Drop (link down)");
 			m_traceDrop(packet, 0);
 			return;
 		}
@@ -363,6 +362,7 @@ namespace ns3 {
 			// If we have an error model and it indicates that it is time to lose a
 			// corrupted packet, don't forward this packet up, let it go.
 			//
+			NS_LOG_LOGIC("Drop (error model)");
 			m_phyRxDropTrace(packet);
 			return;
 		}
@@ -373,7 +373,11 @@ namespace ns3 {
 		packet->PeekHeader(ch);
 		
 		if (ch.l3Prot == 0xFE){ // PFC
-			if (!m_qbbEnabled) return;
+			if (!m_qbbEnabled) {
+				NS_LOG_LOGIC("Drop (PFC packet; QBB disabled)");
+				return;
+			}
+
 			unsigned qIndex = ch.pfc.qIndex;
 			if (ch.pfc.time > 0){
 				NS_LOG_LOGIC("PFC: Pause " << qIndex);
@@ -406,12 +410,19 @@ namespace ns3 {
 	bool QbbNetDevice::SwitchSend (uint32_t qIndex, Ptr<Packet> packet){
 		m_macTxTrace(packet);
 		m_traceEnqueue(packet, qIndex);
-		GetQueue()->Enqueue(packet, qIndex);
+		
+		if(!GetQueue()->Enqueue(packet, qIndex)) {
+			NS_LOG_LOGIC("Drop: recv queue cannot enqueue");
+		}
+
 		DequeueAndTransmit();
 		return true;
 	}
 
-	void QbbNetDevice::SendPfc(uint32_t qIndex, uint32_t type){
+	void QbbNetDevice::SendPfc(uint32_t qIndex, uint32_t type)
+	{
+		NS_LOG_FUNCTION(this);
+
 		Ptr<Packet> p = Create<Packet>(0);
 		PauseHeader pauseh((type == 0 ? m_pausetime : 0), qIndex);
 		p->AddHeader(pauseh);
