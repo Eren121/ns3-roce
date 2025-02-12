@@ -15,8 +15,8 @@ public:
   ~RdmaReliableSQ() override;
 	
 	void SetAckInterval(uint64_t chunk, uint64_t ack_interval);
-	void SetWin(uint32_t win) { m_win = win; }
-	void SetVarWin(bool v) { m_var_win = v; }
+	void SetWin(uint32_t win);
+	void SetVarWin(bool v);
 	void Acknowledge(uint64_t next_psn_expected);
 	uint64_t GetOnTheFly() const;
 	bool IsWinBound() const;

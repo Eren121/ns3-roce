@@ -30,6 +30,20 @@ void RdmaReliableSQ::SetAckInterval(uint64_t chunk, uint64_t ack_interval)
 	m_ack_interval = ack_interval;
 }
 
+void RdmaReliableSQ	::SetWin(uint32_t win)
+{
+	NS_LOG_FUNCTION(this << win);
+
+	m_win = win;
+}
+
+void RdmaReliableSQ::SetVarWin(bool v)
+{
+	NS_LOG_FUNCTION(this << v);
+
+	m_var_win = v;
+}
+
 void RdmaReliableSQ::Acknowledge(uint64_t next_psn_expected)
 {
 	NS_LOG_FUNCTION(this << next_psn_expected);
