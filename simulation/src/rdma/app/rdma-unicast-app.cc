@@ -121,14 +121,16 @@ void RdmaUnicastApp::StartApplication()
 
   const int flow_count = 1;
 
-  auto on_send{[this]() {
-    NS_LOG_LOGIC("Sender finishes");
+  const uint64_t packet_count{m_size / m_mtu};
+  NS_LOG_INFO("Sending " << packet_count << " packets");
+
+  auto on_send{[this, packet_count]() {
+    NS_LOG_INFO("Sender finishes. Sent " << packet_count << " packets in total");
     StopApplication();
   }};
 
   if(IsSrc()) {
     if(m_multicast) {
-      const uint64_t packet_count{m_size / m_mtu};
       for(uint64_t i{0}; i < packet_count; i++) {
         RdmaTxQueuePair::SendRequest sr;
         sr.multicast = true;
@@ -159,9 +161,10 @@ void RdmaUnicastApp::StartApplication()
     }
   }
 	else {
-    auto on_recv{[this](RdmaRxQueuePair::RecvNotif notif) mutable {
+    auto on_recv{[this, recv=0](RdmaRxQueuePair::RecvNotif notif) mutable {
+      recv++;
       if(notif.has_imm && notif.imm == 1) {
-        NS_LOG_LOGIC("Receiver finishes");
+        NS_LOG_INFO("Receiver finishes. Received " << recv << " packets in total");
         StopApplication();
       }
 		}};

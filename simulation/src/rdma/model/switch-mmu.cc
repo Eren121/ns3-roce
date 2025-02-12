@@ -110,10 +110,10 @@ namespace ns3 {
 		return false;
 	}
 	bool SwitchMmu::CheckShouldResume(uint32_t port, uint32_t qIndex){
+		NS_LOG_DEBUG("usage: " << GetSharedUsed(port, qIndex));
 		if (!paused[port][qIndex])
 			return false;
 		uint32_t shared_used = GetSharedUsed(port, qIndex);
-		std::cout << "usage: " <<shared_used  <<std::endl;
 		return hdrm_bytes[port][qIndex] == 0 && (shared_used == 0 || shared_used + resume_offset <= GetPfcThreshold(port));
 	}
 	void SwitchMmu::SetPause(uint32_t port, uint32_t qIndex){
