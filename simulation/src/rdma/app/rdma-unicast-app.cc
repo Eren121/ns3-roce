@@ -135,7 +135,6 @@ void RdmaUnicastApp::StartApplication()
         sr.payload_size = m_mtu;
         sr.dip = m_peer_ip;
         sr.dport = m_peer_port;
-        std::cout<<m_peer_ip<<std::endl;
 
         if(i == packet_count - 1) {
           sr.imm = 1;
