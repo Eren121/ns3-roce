@@ -31,22 +31,19 @@ RdmaUnicastAppHelper::Install(NodeContainer c)
   // Finished = when last ACK is received
   src_app->SetAttribute("OnFlowFinished", CallbackValue(m_on_complete));
 
+  ApplicationContainer apps;
+
   for(NodeContainer::Iterator i = c.Begin (); i != c.End (); ++i)
   {
     Ptr<Node> node = *i;
-    if(node->GetId() == src_node) {
-		  node->AddApplication(src_app);
-      src_app->InitQP(c);
-    }
-    else if(node->GetId() == dst_node) {
-		  node->AddApplication(dst_app);
-      dst_app->InitQP(c);
+    if(!IsSwitchNode(node)) {
+      Ptr<RdmaUnicastApp> app = m_factory.Create<RdmaUnicastApp>();
+      app->SetNodes(c);
+		  node->AddApplication(app);
+      apps.Add(app);
     }
   }
 
-  ApplicationContainer apps;
-  apps.Add(src_app);
-  apps.Add(dst_app);
   return apps;
 }
 

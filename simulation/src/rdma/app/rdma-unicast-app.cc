@@ -52,6 +52,11 @@ TypeId RdmaUnicastApp::GetTypeId()
                   UintegerValue(0),
                   MakeUintegerAccessor(&RdmaUnicastApp::m_win),
                   MakeUintegerChecker<uint32_t>())
+		.AddAttribute("Multicast",
+                  "Whether this is a multicast flow",
+                  BooleanValue(false),
+                  MakeBooleanAccessor(&RdmaUnicastApp::m_multicast),
+                  MakeBooleanChecker())
     .AddAttribute("OnFlowFinished",
                   "Callback when the flow finishes",
                   CallbackValue(),
@@ -60,60 +65,114 @@ TypeId RdmaUnicastApp::GetTypeId()
 	return tid;
 }
 
-void RdmaUnicastApp::InitQP(NodeContainer nodes)
+void RdmaUnicastApp::SetNodes(NodeContainer n)
+{ 
+  m_nodes = n;
+}
+
+bool RdmaUnicastApp::IsSrc() const
 {
-	NS_ASSERT(!m_qp.sq);
+  return GetNode()->GetId() == m_src;
+}
+
+void RdmaUnicastApp::InitQP()
+{
+	NS_ASSERT(!m_ud_qp.sq && !m_rc_qp.sq);
   
-	const Ipv4Address sip{GetServerAddress(nodes.Get(m_src))};
-	const Ipv4Address dip{GetServerAddress(nodes.Get(m_dst))};
-	
-	Ptr<Node> node = GetNode();
-	if(node->GetId() == m_src) {
-		m_qp.sq = CreateObject<RdmaReliableSQ>(GetNode(), m_pg, sip, m_sport, dip, m_dport);
-	}
-	else if(node->GetId() == m_dst) {
-		m_qp.sq = CreateObject<RdmaReliableSQ>(GetNode(), m_pg, dip, m_dport, sip, m_sport);
+  Ipv4Address local_ip{GetServerAddress(GetNode())};
+  m_peer_ip = (m_multicast ? Ipv4Address{m_dst} : GetServerAddress(m_nodes.Get(m_dst)));
+  uint16_t local_port;
+
+  if(IsSrc()) {
+    local_port = m_sport;
+    m_peer_port = m_dport;
+  }
+  else {
+    local_port = m_dport;
+    m_peer_port = m_sport;
+  }
+
+  const Ptr<RdmaHw> rdma{m_node->GetObject<RdmaHw>()};
+  
+	if(m_multicast) {
+		m_ud_qp.sq = CreateObject<RdmaUnreliableSQ>(GetNode(), m_pg, local_ip, local_port);
+	  m_ud_qp.sq->SetMTU(m_mtu);
+	  m_ud_qp.rq = CreateObject<RdmaUnreliableRQ>(m_ud_qp.sq);
+    rdma->RegisterQP(m_ud_qp.sq, m_ud_qp.rq);
 	}
 	else {
-		NS_ABORT_MSG("Node is neither source or destination");
+		m_rc_qp.sq = CreateObject<RdmaReliableSQ>(GetNode(), m_pg, local_ip, local_port, m_peer_ip, m_peer_port);
+	  m_rc_qp.sq->SetMTU(m_mtu);
+	  m_rc_qp.rq = CreateObject<RdmaReliableRQ>(m_rc_qp.sq);
+    rdma->RegisterQP(m_rc_qp.sq, m_rc_qp.rq);
 	}
-		
-	m_qp.sq->SetMTU(m_mtu);
-	m_qp.rq = CreateObject<RdmaReliableRQ>(m_qp.sq);
- 
-  const Ptr<RdmaHw> rdma{m_node->GetObject<RdmaHw>()};
-  rdma->RegisterQP(m_qp.sq, m_qp.rq);
 }
 
 void RdmaUnicastApp::StartApplication()
 {
   NS_LOG_FUNCTION(this);
 
+  if(!IsSrc() && !m_multicast) {
+    StopApplication();
+    return;
+  }
+
+  InitQP();
+
   const int flow_count = 1;
 
-  {
-    for(int i = 0; i < flow_count; i++) {
-      RdmaTxQueuePair::SendRequest sr;
-      sr.payload_size = m_size;
+  auto on_send{[this]() {
+    NS_LOG_LOGIC("Sender finishes");
+    StopApplication();
+  }};
 
-      if(i == flow_count - 1) {
-        sr.on_send = [this]() {
-          NS_LOG_LOGIC("Sender finishes");
-          StopApplication();
-        };
+  if(IsSrc()) {
+    if(m_multicast) {
+      const uint64_t packet_count{m_size / m_mtu};
+      for(uint64_t i{0}; i < packet_count; i++) {
+        RdmaTxQueuePair::SendRequest sr;
+        sr.multicast = true;
+        sr.payload_size = m_mtu;
+        sr.dip = m_peer_ip;
+        sr.dport = m_peer_port;
+        std::cout<<m_peer_ip<<std::endl;
+
+        if(i == packet_count - 1) {
+          sr.imm = 1;
+          sr.on_send = on_send;
+        }
+
+        m_ud_qp.sq->PostSend(sr);
       }
+    }
+    else {
+      for(int i = 0; i < flow_count; i++) {
+        RdmaTxQueuePair::SendRequest sr;
+        sr.payload_size = m_size;
 
-      m_qp.sq->PostSend(sr);
+        if(i == flow_count - 1) {
+          sr.imm = 1;
+          sr.on_send = on_send;
+        }
+
+        m_rc_qp.sq->PostSend(sr);
+      }
     }
   }
-	{
-		m_qp.rq->SetOnRecv([this, flow_count, recv=0](RdmaRxQueuePair::RecvNotif notif) mutable {
-      recv++;
-      if(recv == flow_count) {
+	else {
+    auto on_recv{[this](RdmaRxQueuePair::RecvNotif notif) mutable {
+      if(notif.has_imm && notif.imm == 1) {
         NS_LOG_LOGIC("Receiver finishes");
         StopApplication();
       }
-		});
+		}};
+
+    if(m_multicast) {
+      m_ud_qp.rq->SetOnRecv(on_recv);
+    }
+    else {
+		  m_rc_qp.rq->SetOnRecv(on_recv);
+    }
 	}
 }
 
