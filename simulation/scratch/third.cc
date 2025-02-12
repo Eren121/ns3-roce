@@ -419,6 +419,7 @@ void RunFlow(ScheduledFlow flow)
 		app_helper.SetAttribute("PriorityGroup", UintegerValue(flow.priority));
 		app_helper.SetAttribute("Window", UintegerValue(win));
 		app_helper.SetAttribute("Mtu", UintegerValue(1500));
+		app_helper.SetAttribute("Multicast", BooleanValue(flow.multicast));
 	
 		std::cout << "Running flow " << Simulator::Now() << json(flow) << std::endl;
 
