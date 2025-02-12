@@ -132,9 +132,9 @@ void RdmaClient::InitLeftRightQP()
   const Ptr<Node> node{GetNode()};
   const Ipv4Address my_ip{node->GetObject<Ipv4>()->GetAddress(1, 0).GetLocal()};
 
-	NS_LOG_LOGIC("Node " << "{" << m_config.current_node << "," << my_ip << "}"
-                       << " left={" << FindNeighbor(Neighbor::Left) << "," << GetLeftIp() << "}"
-                       << " right={" << FindNeighbor(Neighbor::Right) << "," << GetRightIp() << "}");
+	NS_LOG_INFO("Node " << "{" << m_config.current_node << "," << my_ip << "}"
+                      << " left={" << FindNeighbor(Neighbor::Left) << "," << GetLeftIp() << "}"
+                      << " right={" << FindNeighbor(Neighbor::Right) << "," << GetRightIp() << "}");
 
   m_left_qp.rq->SetOnRecv(
     [this](RdmaRxQueuePair::RecvNotif notif) {
@@ -355,7 +355,7 @@ void RdmaClient::RunRecoveryPhase()
 
   AgRecovery::RecoveryRequest req = m_recovery.MakeRecoveryRequest();
 
-  NS_LOG_LOGIC("[" << m_config.current_node << "] Missed " << AgRecovery::GetTotalMissedChunks(req) << " chunks in " << req.size() << " blocks");
+  NS_LOG_INFO("[" << m_config.current_node << "] Missed " << AgRecovery::GetTotalMissedChunks(req) << " chunks in " << req.size() << " blocks");
 
   // Request missed chunks to the left node
 
@@ -418,7 +418,7 @@ void RdmaClient::TryUpdateState()
 
   if(m_has_recovered_chunks && m_has_send_all_to_right && m_phase != Phase::Complete) {
     m_phase = Phase::Complete;
-    NS_LOG_LOGIC("Completed " << m_config.current_node);
+    NS_LOG_INFO("Completed " << m_config.current_node);
 
     m_completed_apps++;
     if(m_completed_apps == m_servers.GetN()) {
