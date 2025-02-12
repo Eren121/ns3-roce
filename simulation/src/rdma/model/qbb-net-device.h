@@ -158,7 +158,6 @@ protected:
   
   //pfc
   bool m_qbbEnabled;	//< PFC behaviour enabled
-  bool m_qcnEnabled;
   bool m_dynamicth;
   uint32_t m_pausetime;	//< Time for each Pause
   bool m_paused[qCnt];	//< Whether a queue paused

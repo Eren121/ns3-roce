@@ -657,7 +657,7 @@ int main(int argc, char *argv[])
 	}
 
 	Config::SetDefault("ns3::QbbNetDevice::PauseTime", UintegerValue(simConfig.pause_time));
-	Config::SetDefault("ns3::QbbNetDevice::QcnEnabled", BooleanValue(simConfig.enable_qcn));
+	Config::SetDefault("ns3::QbbNetDevice::QbbEnabled", BooleanValue(simConfig.enable_qcn));
 	Config::SetDefault("ns3::QbbNetDevice::DynamicThreshold", BooleanValue(simConfig.use_dynamic_pfc_threshold));
 	
 	// set int_multi
