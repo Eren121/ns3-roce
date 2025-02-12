@@ -255,6 +255,7 @@ void RdmaClient::OnRecvMcastChunk(AgConfig::chunk_id_t chunk)
 void RdmaClient::OnMcastTimeout()
 {
   NS_LOG_FUNCTION(this);
+  NS_LOG_INFO("[" << m_config.current_node << "] Multicast timeout");
   RunRecoveryPhase();
 }
 
