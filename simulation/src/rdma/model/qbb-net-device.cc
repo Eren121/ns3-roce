@@ -253,6 +253,14 @@ namespace ns3 {
 		return ss.str();
 	}
 
+	static bool IsAnyTrue(bool arr[], int size)
+	{
+		for(int i = 0; i < size; i++) {
+			if(arr[i]) { return true; }
+		}
+		return false;
+	}
+
 	void
 		QbbNetDevice::DequeueAndTransmit(void)
 	{
@@ -284,8 +292,9 @@ namespace ns3 {
 			}
 			else { // no packet to send
 
-			
-				NS_LOG_INFO("PAUSE " << BoolsToStr(m_paused, 8) << " prohibits send at node " << m_node->GetId());
+				if(IsAnyTrue(m_paused, 8)) {			
+					NS_LOG_INFO("PAUSE " << BoolsToStr(m_paused, 8) << " prohibits send at node " << m_node->GetId() << " (or no data to send)");
+				}
 
 				Time t = Simulator::GetMaximumSimulationTime();
 				for (uint32_t i = 0; i < m_rdmaEQ->GetFlowCount(); i++){
@@ -328,8 +337,10 @@ namespace ns3 {
 				return;
 			}
 			else { //No queue can deliver any packet
-				NS_LOG_INFO("PAUSE " << BoolsToStr(m_paused, 8) << " prohibits switch send at node " << m_node->GetId());
-				NS_ASSERT(IsSwitchNode(m_node));
+
+				if(IsAnyTrue(m_paused, 8)) {		
+					NS_LOG_INFO("PAUSE " << BoolsToStr(m_paused, 8) << " prohibits switch send at node " << m_node->GetId() << " (or no data to send)");
+				}
 			}
 		}
 		return;
