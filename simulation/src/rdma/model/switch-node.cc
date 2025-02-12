@@ -151,14 +151,10 @@ void SwitchNode::SendMultiToDevs(Ptr<Packet> packet, CustomHeader& ch, int in_if
 
 	// Admission control
 	if (qIndex != 0) { //not highest priority
-
 		if(!m_mmu->CheckIngressAdmission(inDev, qIndex, packet->GetSize())) {
 			NS_LOG_LOGIC("Drop: Pause multicast " << qIndex);
 			return;
 		}
-		
-		m_mmu->UpdateIngressAdmission(inDev, qIndex, packet->GetSize());
-		CheckAndSendPfc(inDev, qIndex);
 	}
 
 	auto iface_it = m_ogroups.find(ch.dip);
@@ -174,9 +170,21 @@ void SwitchNode::SendMultiToDevs(Ptr<Packet> packet, CustomHeader& ch, int in_if
 		NS_ASSERT_MSG(GetDevice(idx)->IsLinkUp(), "The routing table look up should return link that is up");
 
 		Ptr<Packet> p = packet->Copy();
+
+		// TODO: now we increase the input interface buffer usage for each output device in the routing table of the multicast destination
+		// It would be more logical to increase only once, regardless of the count of the output devices.
+		// This is easy to do like here, but maybe it changes behaviour when the buffer is almost at full capacity, because the buffer full capacity is triggered earlier than what it should.
+		// See `SwitchNotifyDequeue::RemoveFromIngressAdmission()`
+		// We need to keep trace of the output packet because increasing only once would do an integer underflow resulting in buffer usage of 4 billion....
+		m_mmu->UpdateIngressAdmission(inDev, qIndex, packet->GetSize());
+		
 		m_mmu->UpdateEgressAdmission(idx, qIndex, packet->GetSize());
 		if(qIndex != 0) { m_bytes[inDev][idx][qIndex] += p->GetSize(); }
 		SwitchSend(GetDevice(idx), qIndex, p);
+	}
+
+	if(qIndex != 0) {
+		CheckAndSendPfc(inDev, qIndex);
 	}
 }
 
