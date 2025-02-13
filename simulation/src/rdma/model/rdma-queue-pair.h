@@ -99,6 +99,8 @@ public:
 		m_finished = true;
 	}
 
+	void StopTimers();
+
 protected:
 	Ptr<Node> m_node{};
 	uint32_t m_mtu{0};

@@ -68,6 +68,11 @@ RdmaTxQueuePair::RdmaTxQueuePair(Ptr<Node> node, uint16_t pg, Ipv4Address sip, u
 
 RdmaTxQueuePair::~RdmaTxQueuePair()
 {
+	StopTimers();
+}
+
+void RdmaTxQueuePair::StopTimers()
+{
 	Simulator::Cancel(mlx.m_eventUpdateAlpha);
 	Simulator::Cancel(mlx.m_eventDecreaseRate);
 	Simulator::Cancel(mlx.m_rpTimer);

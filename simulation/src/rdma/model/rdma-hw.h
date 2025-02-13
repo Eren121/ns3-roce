@@ -112,8 +112,10 @@ private:
 	void ScheduleUpdateAlphaMlx(Ptr<RdmaTxQueuePair> q);
 
 	// Mellanox's version of CNP receive
+public:
 	void cnp_received_mlx(Ptr<RdmaTxQueuePair> q);
 
+private:
 	// Mellanox's version of rate decrease
 	// It checks every m_rateDecreaseInterval if CNP arrived (m_decrease_cnp_arrived).
 	// If so, decrease rate, and reset all rate increase related things
