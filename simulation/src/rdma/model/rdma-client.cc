@@ -431,6 +431,7 @@ void RdmaClient::TryUpdateState()
     m_completed_apps++;
     if(m_completed_apps == m_servers.GetN()) {
       std::cout << "Elapsed simulation time: " << Simulator::Now().GetSeconds() << std::endl;
+      Simulator::Stop();
     }
   }
 }
