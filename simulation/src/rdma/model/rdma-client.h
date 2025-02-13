@@ -134,7 +134,7 @@ private:
   Phase m_phase = Phase::Mcast;
 
   EventId m_timeout_ev; //! Timeout for when no mcast packet is received
-  Time timeout{MicroSeconds(50)};
+  Time timeout{MicroSeconds(1000)};
 };
 
 } // namespace ns3
