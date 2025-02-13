@@ -38,6 +38,7 @@
 #include <ns3/switch-node.h>
 #include <ns3/ag-circle.h>
 #include <ns3/abort.h>
+#include <ns3/simulator.h>
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -363,6 +364,15 @@ void RdmaClient::RunRecoveryPhase()
   for(const auto& [start, end] : missed_pairs)
   {
     NS_LOG_INFO("Missed " << start << "-" << end);
+  }
+
+  static int completed_mcasts{0};
+  static int total_chunk_lost{0};
+  completed_mcasts++;
+  total_chunk_lost += AgRecovery::GetTotalMissedChunks(req);
+  if(completed_mcasts == m_config.node_count) {
+    std::cout << "Elapsed mcast time: " << Simulator::Now().GetSeconds() << std::endl;
+    std::cout << "Chunks lost across all nodes: " << total_chunk_lost << std::endl;
   }
 
   // Request missed chunks to the left node

@@ -1,6 +1,7 @@
 #include <ns3/rdma-unicast-app.h>
 #include <ns3/qbb-net-device.h>
 #include <ns3/rdma-hw.h>
+#include <ns3/simulator.h>
 #include <ns3/log.h>
 
 NS_LOG_COMPONENT_DEFINE("RdmaUnicastApp");
