@@ -2,13 +2,14 @@
 #include <ns3/qbb-net-device.h>
 #include <ns3/udp-header.h>
 #include <ns3/ipv4-header.h>
-#include <ns3/simulator.h>
 #include <ns3/ppp-header.h>
+#include <ns3/qbb-header.h>
 #include <ns3/rdma-seq-header.h>
+#include <ns3/simulator.h>
 #include <ns3/rdma-queue-pair.h>
 #include <ns3/rdma-hw.h>
 #include <ns3/rdma-bth.h>
-#include <ns3/qbb-header.h>
+#include <ns3/log.h>
 
 namespace ns3 {
 
@@ -152,6 +153,8 @@ void RdmaRxQueuePair::ReceiveUdp(Ptr<Packet> p, const CustomHeader &ch)
 void RdmaRxQueuePair::ReceiveCnp(Ptr<Packet> p, const CustomHeader &ch)
 {
 	NS_LOG_FUNCTION(this);
+
+#if 0 // raf refactored
 	// QCN on NIC
 	// This is a Congestion signal
 	// Then, extract data from the congestion packet.
@@ -161,14 +164,15 @@ void RdmaRxQueuePair::ReceiveCnp(Ptr<Packet> p, const CustomHeader &ch)
 		std::cout << "TCP--ignore\n";
 		return;
 	}
-	uint16_t udpport = ch.cnp.fid; // corresponds to the sport
-	uint8_t ecnbits = ch.cnp.ecnBits;
-	uint16_t qfb = ch.cnp.qfb;
-	uint16_t total = ch.cnp.total;
 
 	uint32_t i;
-	
+#endif
+
+	Ptr<RdmaHw> rdma{m_tx->GetNode()->GetObject<RdmaHw>()};
+	const uint32_t cc{rdma->GetCC()};
+	NS_ASSERT(cc == 1);
 	m_tx->LazyInitCnp();
+	rdma->cnp_received_mlx(m_tx);
 }
 
 /*********************

@@ -36,6 +36,13 @@ public:
 	}
 	
 	void ReceiveUdp(Ptr<Packet> p, const CustomHeader &ch) override;
+
+private:
+	void SendEcn(const CustomHeader& recv);
+
+private:
+	Time m_ecn_next_avail{Time(0)};
+	Time m_ecn_delay{MicroSeconds(100)};
 };
 
 struct RdmaUnreliableQP {

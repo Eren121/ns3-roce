@@ -2,8 +2,12 @@
 #include <ns3/qbb-net-device.h>
 #include <ns3/rdma-bth.h>
 #include <ns3/rdma-seq-header.h>
+#include <ns3/cn-header.h>
 #include <ns3/ppp-header.h>
+#include <ns3/qbb-header.h>
+#include <ns3/rdma-seq-header.h>
 #include <ns3/simulator.h>
+#include <ns3/rdma-hw.h>
 #include <ns3/log.h>
 
 namespace ns3 {
@@ -132,6 +136,60 @@ void RdmaUnreliableRQ::ReceiveUdp(Ptr<Packet> p, const CustomHeader &ch)
 		notif.imm = bth.GetImm();
 		m_onRecv(notif);
 	}
+
+	// Even if UD QP has no ACK, we use ACK to manage the congestion control
+	const uint8_t ecnbits = ch.GetIpv4EcnBits();
+	
+	// If any node in the path encountered congestion, send back an ECN notification (but not too often)
+	if(ecnbits == Ipv4Header::ECN_CE && Simulator::Now() >= m_ecn_next_avail) {
+		m_ecn_next_avail = Simulator::Now() + m_ecn_delay;
+		SendEcn(ch);
+	}
+}
+
+void RdmaUnreliableRQ::SendEcn(const CustomHeader& recv)
+{
+	NS_LOG_FUNCTION(this);
+
+	CustomHeader ch;
+
+	// We don't really care of the content, we just want to send the packet
+	CnHeader cn(0, 0, 0, 0, 0);
+
+	Ptr<Packet> newp = Create<Packet>(1);
+	newp->AddHeader(cn);
+
+	Ipv4Header head;	// Prepare IPv4 header
+	head.SetDestination(Ipv4Address(recv.sip));
+	head.SetSource(Ipv4Address(recv.dip));
+	head.SetProtocol(0xFF); // CNP
+	head.SetTtl(64);
+	head.SetPayloadSize(newp->GetSize());
+	head.SetIdentification(0);
+
+	newp->AddHeader(head);
+	
+	const auto EtherToPpp = [](uint16_t proto) -> uint16_t {
+		switch(proto){
+			case 0x0800: return 0x0021;   //IPv4
+			case 0x86DD: return 0x0057;   //IPv6
+			default: NS_ASSERT_MSG (false, "PPP Protocol number not defined!");
+		}
+		return 0;
+	};
+
+	PppHeader ppp;
+	ppp.SetProtocol(EtherToPpp (0x800));
+	newp->AddHeader (ppp);
+
+	RdmaBTH bth;
+	bth.SetDestQpKey(recv.udp.sport);
+	newp->AddPacketTag(bth);
+
+	// send
+	Ptr<QbbNetDevice> dev = m_tx->GetDevice();
+	dev->RdmaEnqueueHighPrioQ(newp);
+	dev->TriggerTransmit();
 }
 
 }

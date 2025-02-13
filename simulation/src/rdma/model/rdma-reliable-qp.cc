@@ -499,10 +499,8 @@ void RdmaReliableRQ::ReceiveAck(Ptr<Packet> p, const CustomHeader &ch)
 	NS_ASSERT(cc == 1);
 	
 	if (cnp){
-		if (cc == 1) { // mlx version
-			//TODO
-			//cnp_received_mlx(qp);
-		} 
+		m_tx->LazyInitCnp();
+		rdma->cnp_received_mlx(m_tx);
 	}
 	
 	// ACK may advance the on-the-fly window, allowing more packets to send
