@@ -174,7 +174,7 @@ namespace ns3 {
 			.AddConstructor<QbbNetDevice>()
 			.AddAttribute("QbbEnabled",
 				"Enable the generation of PAUSE packet.",
-				BooleanValue(true),
+				BooleanValue(false),
 				MakeBooleanAccessor(&QbbNetDevice::m_qbbEnabled),
 				MakeBooleanChecker())
 			.AddAttribute("DynamicThreshold",

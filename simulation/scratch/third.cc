@@ -81,7 +81,7 @@ struct SimConfig
 	SimConfig& operator=(SimConfig&&) = default;
 
 	uint32_t cc_mode = 1;
-	bool enable_qcn = true, use_dynamic_pfc_threshold = true;
+	bool enable_pfc = false, enable_qcn = true, use_dynamic_pfc_threshold = true;
 	uint32_t packet_payload_size = 1000, l2_chunk_size = 0, l2_ack_interval = 0;
 	double nak_interval = 500.0;
 	double pause_time = 5, simulator_stop_time = 3.01;
@@ -135,6 +135,8 @@ struct SimConfig
 		NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(BandwidthToECNThreshold, bandwidth, ecn_threshold);
 	};
 
+	// `kmin_map` says for which egress minimal buffer size we should mark the "Congestion Experienced" bit.
+	// the probability is 100% when > `kmax_map`, pmax% when == `kmax_map`, and 0% when == `kmin_map`, and increases linearly between `kmin_map` and `kmax_map`..
 	std::vector<BandwidthToECNThreshold<uint32_t>> kmax_map, kmin_map;
 	std::vector<BandwidthToECNThreshold<double>> pmax_map;
 
@@ -152,7 +154,7 @@ struct SimConfig
 	}
 
 	NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(SimConfig,
-		enable_qcn, use_dynamic_pfc_threshold, packet_payload_size,
+		enable_pfc, enable_qcn, use_dynamic_pfc_threshold, packet_payload_size,
 		topology_file, flow_file, groups_file, trace_file, trace_output_file, fct_output_file, pfc_output_file,
 		simulator_stop_time, cc_mode, alpha_resume_interval, rate_decrease_interval, clamp_target_rate,
 		rp_timer, ewma_gain, fast_recovery_times, rate_ai, rate_hai, min_rate, dctcp_rate_ai, error_rate_per_link,
@@ -658,7 +660,7 @@ int main(int argc, char *argv[])
 	}
 
 	Config::SetDefault("ns3::QbbNetDevice::PauseTime", UintegerValue(simConfig.pause_time));
-	Config::SetDefault("ns3::QbbNetDevice::QbbEnabled", BooleanValue(simConfig.enable_qcn));
+	Config::SetDefault("ns3::QbbNetDevice::QbbEnabled", BooleanValue(simConfig.enable_pfc));
 	Config::SetDefault("ns3::QbbNetDevice::DynamicThreshold", BooleanValue(simConfig.use_dynamic_pfc_threshold));
 	
 	// set int_multi
