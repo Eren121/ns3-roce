@@ -29,7 +29,7 @@ TypeId SwitchNode::GetTypeId (void)
     .SetParent<Node> ()
     .AddConstructor<SwitchNode> ()
 	.AddAttribute("EcnEnabled",
-			"Enable ECN marking.",
+			"Enable ECN marking",
 			BooleanValue(false),
 			MakeBooleanAccessor(&SwitchNode::m_ecnEnabled),
 			MakeBooleanChecker())
@@ -311,7 +311,8 @@ void SwitchNode::SwitchNotifyDequeue(uint32_t ifIndex, uint32_t qIndex, Ptr<Pack
 		m_bytes[inDev][ifIndex][qIndex] -= p->GetSize();
 		if (m_ecnEnabled){
 			bool egressCongested = m_mmu->ShouldSendCN(ifIndex, qIndex);
-			if (egressCongested){
+			if (egressCongested) {
+				NS_LOG_DEBUG("Switch marks CE");
 				PppHeader ppp;
 				Ipv4Header h;
 				p->RemoveHeader(ppp);

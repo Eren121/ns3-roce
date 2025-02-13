@@ -58,6 +58,7 @@ private:
 	double m_u[pCnt];
 
 protected:
+	/// When true: when congestion is experienced, the switch marks the ECN bit before forwarding the packets to their destination.
 	bool m_ecnEnabled;
 	uint32_t m_ccMode;
 	uint64_t m_maxRtt;

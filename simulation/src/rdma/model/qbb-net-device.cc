@@ -391,11 +391,11 @@ namespace ns3 {
 
 			unsigned qIndex = ch.pfc.qIndex;
 			if (ch.pfc.time > 0){
-				NS_LOG_LOGIC("PFC: Pause " << qIndex);
+				NS_LOG_LOGIC("PFC: Pause priority=" << qIndex << " time=" << ch.pfc.time);
 				m_tracePfc(1);
 				m_paused[qIndex] = true;
 			}else{
-				NS_LOG_LOGIC("PFC: Resume " << qIndex);
+				NS_LOG_LOGIC("PFC: Resume priority=" << qIndex);
 				m_tracePfc(0);
 				Resume(qIndex);
 			}

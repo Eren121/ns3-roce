@@ -164,7 +164,7 @@ void RdmaUnicastApp::StartApplication()
     auto on_recv{[this, recv=0](RdmaRxQueuePair::RecvNotif notif) mutable {
       recv++;
       if(notif.has_imm && notif.imm == 1) {
-        NS_LOG_INFO("Receiver finishes. Received " << recv << " packets in total");
+        NS_LOG_INFO("Receiver finishes. Received " << recv << " packets in total at " << Simulator::Now());
         StopApplication();
       }
 		}};

@@ -88,7 +88,7 @@ namespace ns3 {
 		NS_LOG_FUNCTION(this << port << qIndex << psize);
 		egress_bytes[port][qIndex] -= psize;
 	}
-
+	
 	bool SwitchMmu::CheckShouldPause(uint32_t port, uint32_t qIndex)
 	{
 		NS_LOG_FUNCTION(this << port << qIndex);
@@ -96,6 +96,8 @@ namespace ns3 {
 		if(paused[port][qIndex]) {
 			return false;
 		}
+		
+		NS_LOG_DEBUG("usage: " << GetSharedUsed(port, qIndex));
 
 		if(hdrm_bytes[port][qIndex] > 0) {
 			NS_LOG_LOGIC("PFC headroom not empty");
@@ -103,14 +105,16 @@ namespace ns3 {
 		}
 
 		if(GetSharedUsed(port, qIndex) >= GetPfcThreshold(port)) {
-			NS_LOG_LOGIC("PFC threshold reached");
+			NS_LOG_LOGIC("PFC threshold reached (" << GetSharedUsed(port, qIndex) << "/" << GetPfcThreshold(port) << ")");
 			return true;
 		}
 
 		return false;
 	}
-	bool SwitchMmu::CheckShouldResume(uint32_t port, uint32_t qIndex){
+	bool SwitchMmu::CheckShouldResume(uint32_t port, uint32_t qIndex)
+	{
 		NS_LOG_DEBUG("usage: " << GetSharedUsed(port, qIndex));
+
 		if (!paused[port][qIndex])
 			return false;
 		uint32_t shared_used = GetSharedUsed(port, qIndex);
@@ -130,7 +134,11 @@ namespace ns3 {
 		uint32_t used = ingress_bytes[port][qIndex];
 		return used > reserve ? used - reserve : 0;
 	}
-	bool SwitchMmu::ShouldSendCN(uint32_t ifindex, uint32_t qIndex){
+	bool SwitchMmu::ShouldSendCN(uint32_t ifindex, uint32_t qIndex)
+	{
+		NS_LOG_FUNCTION(this);
+		NS_LOG_DEBUG("Egress byte buffer " << egress_bytes[ifindex][qIndex] << "/" << kmin[ifindex]);
+
 		if (qIndex == 0)
 			return false;
 		if (egress_bytes[ifindex][qIndex] > kmax[ifindex])

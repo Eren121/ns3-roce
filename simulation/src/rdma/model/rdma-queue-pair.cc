@@ -12,6 +12,8 @@
 
 namespace ns3 {
 
+NS_LOG_COMPONENT_DEFINE("RdmaQP");
+
 /**************************
  * RdmaTxQueuePair
  *************************/
@@ -144,6 +146,7 @@ void RdmaRxQueuePair::ReceiveUdp(Ptr<Packet> p, const CustomHeader &ch)
 
 void RdmaRxQueuePair::ReceiveCnp(Ptr<Packet> p, const CustomHeader &ch)
 {
+	NS_LOG_FUNCTION(this);
 	// QCN on NIC
 	// This is a Congestion signal
 	// Then, extract data from the congestion packet.

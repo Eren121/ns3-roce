@@ -4,6 +4,7 @@
 #include <unordered_set>
 #include <cstdint>
 #include <ns3/ag-circle.h>
+#include <vector>
 
 namespace ns3 {
 
@@ -25,6 +26,8 @@ public:
   RecoveryRequest MakeRecoveryRequest() const;
 
   bool IsMcastComplete() const;
+
+  std::vector<std::pair<uint64_t, uint64_t>> GetPairOfMissedChunks() const;
   
 private:
   AgConfig m_config;

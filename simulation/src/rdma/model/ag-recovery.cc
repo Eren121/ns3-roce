@@ -39,6 +39,29 @@ uint64_t AgRecovery::GetTotalMissedChunks(const RecoveryRequest& req)
   }
   return chunk_tot;
 }
+
+std::vector<std::pair<uint64_t, uint64_t>> AgRecovery::GetPairOfMissedChunks() const
+{
+    std::vector<std::pair<uint64_t, uint64_t>> missed_ranges;
+    
+    if (m_recv_chunks.empty()) {
+        return missed_ranges;
+    }
+    
+    uint64_t count_chunk = m_config.GetChunkCountPerBlock() * m_config.node_count;
+    uint64_t start = 0;
+    for (uint64_t i = 0; i < count_chunk; ++i) {
+        if (m_recv_chunks.find(i) == m_recv_chunks.end()) { // Chunk is missing
+            start = i;
+            while (i < count_chunk && m_recv_chunks.find(i) == m_recv_chunks.end()) {
+                ++i;
+            }
+            missed_ranges.emplace_back(start, i - 1);
+        }
+    }
+    
+    return missed_ranges;
+}
   
 
 bool AgRecovery::IsMcastComplete() const

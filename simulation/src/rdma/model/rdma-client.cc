@@ -356,7 +356,14 @@ void RdmaClient::RunRecoveryPhase()
 
   AgRecovery::RecoveryRequest req = m_recovery.MakeRecoveryRequest();
 
-  NS_LOG_INFO("[" << m_config.current_node << "] Missed " << AgRecovery::GetTotalMissedChunks(req) << " chunks in " << req.size() << " blocks");
+  NS_LOG_INFO("[" << m_config.current_node << "] Missed " << AgRecovery::GetTotalMissedChunks(req)
+                  << "/" << (m_config.GetChunkCountPerBlock() * m_config.node_count) << " chunks in " << req.size() << " blocks");
+
+  const auto missed_pairs = m_recovery.GetPairOfMissedChunks();
+  for(const auto& [start, end] : missed_pairs)
+  {
+    NS_LOG_INFO("Missed " << start << "-" << end);
+  }
 
   // Request missed chunks to the left node
 
