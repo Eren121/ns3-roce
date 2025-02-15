@@ -1036,7 +1036,7 @@ int main(int argc, char *argv[])
 
 	// schedule link down
 	if (simConfig.link_down.time > 0){
-		Simulator::Schedule(Seconds(2) + MicroSeconds(simConfig.link_down.time), &TakeDownLink, n, n.Get(simConfig.link_down.src), n.Get(simConfig.link_down.dst));
+		Simulator::Schedule(MicroSeconds(simConfig.link_down.time), &TakeDownLink, n, n.Get(simConfig.link_down.src), n.Get(simConfig.link_down.dst));
 	}
 
 	// schedule buffer monitor
