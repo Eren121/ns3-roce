@@ -12,6 +12,7 @@ waf3-*-*/
 
 ################## HPCC
 
+.lock*
 simulation/build
 *.tr
 
