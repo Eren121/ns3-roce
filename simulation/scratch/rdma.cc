@@ -413,7 +413,7 @@ void RunFlow(ScheduledFlow flow)
 
 		if(flow.bandwidth_percent <= 0.0) {
 			NS_LOG_INFO("Skipping flow because bandwidth percent is zero");
-			continue;
+			return;
 		}
 
 		RdmaUnicastAppHelper app_helper;
