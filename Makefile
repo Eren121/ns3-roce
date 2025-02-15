@@ -10,9 +10,6 @@ docker_mount = --mount type=bind,src=.,dst=/app
 # If set, flag to run the docker container as interactive
 docker_interactive ?= -it
 
-# Default working dir in the container
-docker_workdir = /app
-
 # When running container, environment variables
 docker_env = -e NS_LOG='$(NS_LOG)' -e CXXFLAGS='-Wall'
 
@@ -23,7 +20,6 @@ docker_run ?= docker run --rm \
 	$(docker_interactive) \
 	$(docker_mount) \
 	$(docker_user) \
-	-w $(docker_workdir) \
 	$(docker_env) \
 	$(docker_extra) \
 	$(docker_tag)
@@ -48,35 +44,38 @@ configure_release: build_type = optimized
 configure_release: configure
 
 .PHONY: configure
-configure: docker_workdir = /app/simulation
 configure:	
-	$(docker_run) ./ns3 configure -d $(build_type) --disable-werror
+	$(docker_run) ./simulation/ns3 configure -d $(build_type) --disable-werror
 
 .PHONY: build
-build: docker_workdir = /app/simulation
 build:
-	$(docker_run) ./ns3 build rdma
+	$(docker_run) ./simulation/ns3 build rdma
 
 # Clean all build files + generated binaries
 .PHONY: distclean
-distclean: docker_workdir = /app/simulation
 distclean:
-	$(docker_run) ./ns3 clean
+	$(docker_run) ./simulation/ns3 clean
 
 .PHONY: run
-run: docker_workdir = /app/simulation
 run:
-	$(docker_run) ./ns3 run 'rdma ../$(app_config)'
+	$(docker_run) ./simulation/ns3 run 'rdma ../$(app_config)'
 
 .PHONY: run_gdb
-run_gdb: docker_workdir = /app/simulation
 run_gdb:
-	$(docker_run) ./ns3 run rdma --command-template="gdb -ex run --args %s ../$(app_config)"
+	$(docker_run) ./simulation/ns3 run rdma --command-template="gdb -ex run --args %s ../$(app_config)"
 
 .PHONY: run_bash
 run_bash: docker_user =
 run_bash:
 	$(docker_run) /bin/bash
+
+#################
+################# Analysis
+#################
+
+.PHONY: analysis
+analysis:
+	$(docker_run) python3 analysis/python/loss_sim.py
 
 #################
 ################# Netanim
@@ -89,9 +88,8 @@ build_netanim:
 .PHONY: run_netanim
 run_netanim: docker_env     += -e DISPLAY=$(DISPLAY)
 run_netanim: docker_extra   += -v /tmp/.X11-unix:/tmp/.X11-unix
-run_netanim: docker_workdir  = /app/netanim
 run_netanim:
-	$(docker_run) ./NetAnim
+	$(docker_run) ./netanim/NetAnim
 
 #################
 ################# Trace Reader
