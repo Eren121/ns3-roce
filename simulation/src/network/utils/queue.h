@@ -263,7 +263,7 @@ public:
   double GetDroppedPacketsPerSecondVariance (void);
 #endif
 
-private:
+protected:
   TracedValue<uint32_t> m_nBytes;               //!< Number of bytes in the queue
   uint32_t m_nTotalReceivedBytes;               //!< Total received bytes
   TracedValue<uint32_t> m_nPackets;             //!< Number of packets in the queue
@@ -444,6 +444,7 @@ private:
   std::list<Ptr<Item> > m_packets;          //!< the items in the queue
   NS_LOG_TEMPLATE_DECLARE;                  //!< the log component
 
+protected:
   /// Traced callback: fired when a packet is enqueued
   TracedCallback<Ptr<const Item> > m_traceEnqueue;
   /// Traced callback: fired when a packet is dequeued

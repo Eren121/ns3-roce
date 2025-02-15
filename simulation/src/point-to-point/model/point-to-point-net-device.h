@@ -148,7 +148,7 @@ public:
    *
    * \param p Ptr to the received packet.
    */
-  void Receive (Ptr<Packet> p);
+  virtual void Receive (Ptr<Packet> p);
 
   // The remaining methods are documented in ns3::NetDevice*
 
@@ -228,7 +228,7 @@ private:
    */
   virtual void DoDispose (void);
 
-private:
+protected:
 
   /**
    * \returns the address of the remote device connected to this device
@@ -254,6 +254,7 @@ private:
    */
   bool ProcessHeader (Ptr<Packet> p, uint16_t& param);
 
+private:
   /**
    * Start Sending a Packet Down the Wire.
    *
@@ -279,6 +280,7 @@ private:
    */
   void TransmitComplete (void);
 
+protected:
   /**
    * \brief Make the link up and running
    *
@@ -286,6 +288,7 @@ private:
    */
   void NotifyLinkUp (void);
 
+protected:
   /**
    * Enumeration of the states of the transmit machine of the net device.
    */
