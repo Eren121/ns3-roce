@@ -148,7 +148,7 @@ public:
    *
    * \param p Ptr to the received packet.
    */
-  virtual void Receive (Ptr<Packet> p);
+  void Receive (Ptr<Packet> p);
 
   // The remaining methods are documented in ns3::NetDevice*
 
@@ -228,7 +228,7 @@ private:
    */
   virtual void DoDispose (void);
 
-protected:
+private:
 
   /**
    * \returns the address of the remote device connected to this device

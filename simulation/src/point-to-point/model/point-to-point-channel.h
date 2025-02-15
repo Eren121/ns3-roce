@@ -80,7 +80,7 @@ public:
    */
   virtual bool TransmitStart (Ptr<const Packet> p, Ptr<PointToPointNetDevice> src, Time txTime);
 
-  /**
+  /**p
    * \brief Get number of devices on this channel
    * \returns number of devices on this channel
    */
