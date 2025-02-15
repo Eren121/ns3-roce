@@ -9,15 +9,17 @@ config ?= mix/my/myconfig.json
 
 docker_interactive ?= -it
 
+configure_cmd ?= $(DOCKER_RUN) python2 waf configure --cxx-standard -std=c++17
+
 build_image:
 	docker build -t $(TAG) .
 
 # Configure waf
 configure_debug:
-	 $(DOCKER_RUN) python2 waf configure -d debug
+	 $(configure_cmd) -d debug
 
 configure_release:
-	 $(DOCKER_RUN) python2 waf configure -d release
+	 $(configure_cmd) -d release
 
 # Build waf
 build:
