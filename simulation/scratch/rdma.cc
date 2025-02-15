@@ -150,12 +150,16 @@ struct SimConfig
 	template<typename T>
 	static T find_in_map(const std::vector<BandwidthToECNThreshold<T>>& map, uint64_t bps)
 	{
-		for(auto& entry : map) {
-			if(entry.bandwidth == bps) {
-				return entry.ecn_threshold;
-			}
+		std::map<uint64_t, BandwidthToECNThreshold<T>> sorted{};
+		for(const auto& entry : map) {
+			sorted[entry.bandwidth] = entry;
 		}
-		throw std::runtime_error("Cannot find in map");
+
+		// Just used the entry lower or equals
+		// This permit to avoid crash when the bandwidth is not in the map
+		auto it{sorted.upper_bound(bps)};
+		NS_ABORT_MSG_IF(it == sorted.begin(), "Cannot find ECN threshold related to bandwidth " << bps);
+		return (--it)->second.ecn_threshold;
 	}
 
 	NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(SimConfig,
