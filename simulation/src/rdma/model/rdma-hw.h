@@ -117,6 +117,7 @@ private:
 	std::unordered_map<uint32_t, int> m_rtTable;
 
 	TracedCallback<Ptr<RdmaTxQueuePair>> m_traceQpComplete;
+	using TraceQpCompleteCallback = void(*)(Ptr<RdmaTxQueuePair> sq);
 
 	/******************************
 	 * Mellanox's version of DCQCN

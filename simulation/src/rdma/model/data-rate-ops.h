@@ -14,6 +14,5 @@ DataRate operator/(const DataRate& d, const double& c);
 double operator/(const DataRate& lhs, const DataRate& rhs);
 
 DataRate operator+(const DataRate& lhs, const DataRate& rhs);
-DataRate& operator+=(DataRate& lhs, const DataRate& rhs);
 
 }

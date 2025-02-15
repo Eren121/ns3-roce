@@ -1,57 +1,101 @@
-TAG = hpcc
-DOCKER_USER ?= -u $(shell id -u):$(shell id -g) # Avoid creating files as root
-DOCKER_MOUNT ?= --mount type=bind,src=.,dst=/app
-DOCKER_RUN ?= docker run --rm $(docker_interactive) $(DOCKER_MOUNT) $(DOCKER_USER) -w /app/simulation -e NS_LOG='$(NS_LOG)' -e CXXFLAGS='-Wall -fdiagnostics-color=always' -e LD_LIBRARY_PATH=build $(TAG)
-.PHONY: build_image configure build run build_trace
+# Docker image tag
+docker_tag = hpcc
 
-# config file from inside the container path when running ns-3
-config ?= mix/my/myconfig.json
+# When running image, avoid creating files as root
+docker_user ?= -u $(shell id -u):$(shell id -g)
 
+# When running image, mount git directory in the container in /app
+docker_mount = --mount type=bind,src=.,dst=/app
+
+# If set, flag to run the docker container as interactive
 docker_interactive ?= -it
 
-configure_cmd ?= $(DOCKER_RUN) python2 waf configure --cxx-standard -std=c++17
+# Default working dir in the container
+docker_workdir = /app
 
+# When running container, environment variables
+docker_env = -e NS_LOG='$(NS_LOG)' -e CXXFLAGS='-Wall'
+
+docker_extra =
+
+# Command to run the docker container
+docker_run ?= docker run --rm \
+	$(docker_interactive) \
+	$(docker_mount) \
+	$(docker_user) \
+	-w $(docker_workdir) \
+	$(docker_env) \
+	$(docker_extra) \
+	$(docker_tag)
+
+# Default config file path (starting at git root)
+# When running ns-3
+app_config ?= rdma-config/config.json
+
+# Build type when configuring CMake
+build_type ?= default
+
+.PHONY: build_image
 build_image:
-	docker build -t $(TAG) .
+	docker build -t $(docker_tag) .
 
-# Configure waf
-configure_debug:
-	 $(configure_cmd) -d debug
+.PHONY: configure_debug
+configure_debug: build_type = debug
+configure_debug: configure
 
-configure_release:
-	 $(configure_cmd) -d release
+.PHONY: configure_release
+configure_release: build_type = optimized
+configure_release: configure
 
-# Build waf
+.PHONY: configure
+configure: docker_workdir = /app/simulation
+configure:	
+	$(docker_run) ./ns3 configure -d $(build_type) --disable-werror
+
+.PHONY: build
+build: docker_workdir = /app/simulation
 build:
-	$(DOCKER_RUN) python2 waf build
-
-# Build netanim
-build_netanim:
-	$(DOCKER_RUN) bash ../build-netanim.sh
-
-run_netanim:
-	docker run --rm -it $(DOCKER_MOUNT) $(DOCKER_USER) \
-	 -e DISPLAY=$(DISPLAY) \
-	 -w /app/netanim -v /tmp/.X11-unix:/tmp/.X11-unix \
-	 $(TAG) ./NetAnim
+	$(docker_run) ./ns3 build rdma
 
 # Clean all build files + generated binaries
+.PHONY: distclean
+distclean: docker_workdir = /app/simulation
 distclean:
-	$(DOCKER_RUN) python2 waf distclean
+	$(docker_run) ./ns3 clean
 
-# Run HPCC
-# Working directory inside the Docker container is "$GIT_ROOT/simulation".
-# Don't use waf because running waf in parallel doeesnt work very well (some clang's waf's files are modified)
+.PHONY: run
+run: docker_workdir = /app/simulation
 run:
-	$(DOCKER_RUN) build/scratch/third $(config)
+	$(docker_run) ./ns3 run 'rdma ../$(app_config)'
 
+.PHONY: run_gdb
+run_gdb: docker_workdir = /app/simulation
 run_gdb:
-	$(DOCKER_RUN) python2 waf --run 'scratch/third' --command-template="gdb -ex run --args %s $(config)"
+	$(docker_run) ./ns3 run rdma --command-template="gdb -ex run --args %s ../$(app_config)"
 
-run_bash: DOCKER_USER=
+.PHONY: run_bash
+run_bash: docker_user =
 run_bash:
-	$(DOCKER_RUN) /bin/bash
+	$(docker_run) /bin/bash
 
-# Build trace reader
+#################
+################# Netanim
+#################
+
+.PHONY: build_netanim
+build_netanim:
+	$(docker_run) bash build-netanim.sh
+
+.PHONY: run_netanim
+run_netanim: docker_env     += -e DISPLAY=$(DISPLAY)
+run_netanim: docker_extra   += -v /tmp/.X11-unix:/tmp/.X11-unix
+run_netanim: docker_workdir  = /app/netanim
+run_netanim:
+	$(docker_run) ./NetAnim
+
+#################
+################# Trace Reader
+#################
+
 build_trace: 
-	$(DOCKER_RUN) make -C ../analysis
+	$(docker_run) make -C analysis

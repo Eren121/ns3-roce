@@ -15,6 +15,9 @@ waf3-*-*/
 .lock*
 simulation/build
 *.tr
+cmake-build-*
+cmake-cache/
+out_*
 
 ################## Python
 

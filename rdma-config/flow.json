@@ -1,0 +1,21 @@
+{
+  "flows": [
+    {
+      "type": "allgather",
+      "start_time": 0,
+      "priority": 3,
+      "size": 1000000.0,
+      "output_file": "out_allgather.json"
+    },
+    {
+      "type": "flow",
+      "start_time": 0,
+      "priority": 3,
+      "multicast": true,
+      "size": 1000000.0,
+      "src": 4,
+      "dst": 1,
+      "bandwidth_percent": 0.1
+    }
+  ]
+}

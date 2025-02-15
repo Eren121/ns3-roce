@@ -63,9 +63,11 @@ namespace ns3 {
 		static TypeId tid = TypeId ("ns3::RdmaEgressQueue")
 			.SetParent<Object> ()
 			.AddTraceSource ("RdmaEnqueue", "Enqueue a packet in the RdmaEgressQueue.",
-					MakeTraceSourceAccessor (&RdmaEgressQueue::m_traceRdmaEnqueue))
+					MakeTraceSourceAccessor (&RdmaEgressQueue::m_traceRdmaEnqueue),
+					"ns3::RdmaEgressQueue::TraceRdmaEnqueueCallback")
 			.AddTraceSource ("RdmaDequeue", "Dequeue a packet in the RdmaEgressQueue.",
-					MakeTraceSourceAccessor (&RdmaEgressQueue::m_traceRdmaDequeue))
+					MakeTraceSourceAccessor (&RdmaEgressQueue::m_traceRdmaDequeue),
+					"ns3::RdmaEgressQueue::TraceRdmaDequeueCallback")
 			;
 		return tid;
 	}
@@ -198,15 +200,20 @@ namespace ns3 {
 					MakePointerAccessor (&QbbNetDevice::m_rdmaEQ),
 					MakePointerChecker<Object> ())
 			.AddTraceSource ("QbbEnqueue", "Enqueue a packet in the QbbNetDevice.",
-					MakeTraceSourceAccessor (&QbbNetDevice::m_traceEnqueue))
+					MakeTraceSourceAccessor (&QbbNetDevice::m_traceEnqueue),
+					"ns3::QbbNetDevice::TraceEnqueueCallback")
 			.AddTraceSource ("QbbDequeue", "Dequeue a packet in the QbbNetDevice.",
-					MakeTraceSourceAccessor (&QbbNetDevice::m_traceDequeue))
+					MakeTraceSourceAccessor (&QbbNetDevice::m_traceDequeue),
+					"ns3::QbbNetDevice::TraceDequeueCallback")
 			.AddTraceSource ("QbbDrop", "Drop a packet in the QbbNetDevice.",
-					MakeTraceSourceAccessor (&QbbNetDevice::m_traceDrop))
+					MakeTraceSourceAccessor (&QbbNetDevice::m_traceDrop),
+					"ns3::QbbNetDevice::TraceDropCallback")
 			.AddTraceSource ("RdmaQpDequeue", "A qp dequeue a packet.",
-					MakeTraceSourceAccessor (&QbbNetDevice::m_traceQpDequeue))
+					MakeTraceSourceAccessor (&QbbNetDevice::m_traceQpDequeue),
+					"ns3::QbbNetDevice::TraceQpDequeueCallback")
 			.AddTraceSource ("QbbPfc", "get a PFC packet. 0: resume, 1: pause",
-					MakeTraceSourceAccessor (&QbbNetDevice::m_tracePfc))
+					MakeTraceSourceAccessor (&QbbNetDevice::m_tracePfc),
+					"ns3::QbbNetDevice::TracePfcCallback")
 			;
 
 		return tid;
@@ -475,7 +482,7 @@ namespace ns3 {
 		m_txMachineState = BUSY;
 		m_currentPkt = p;
 		m_phyTxBeginTrace(m_currentPkt);
-		Time txTime = Seconds(m_bps.CalculateTxTime(p->GetSize()));
+		Time txTime = m_bps.CalculateBytesTxTime(p->GetSize());
 		Time txCompleteTime = txTime + m_tInterframeGap;
 		NS_LOG_LOGIC("Schedule TransmitCompleteEvent in " << txCompleteTime.GetSeconds() << "sec");
 		Simulator::Schedule(txCompleteTime, &QbbNetDevice::TransmitComplete, this);
@@ -545,7 +552,7 @@ namespace ns3 {
 	}
 
 	void QbbNetDevice::UpdateNextAvail(Time t){
-		if (!m_nextSend.IsExpired() && t < m_nextSend.GetTs()){
+		if (!m_nextSend.IsExpired() && t < Time(m_nextSend.GetTs())){
 			Simulator::Cancel(m_nextSend);
 			Time delta = t < Simulator::Now() ? Time(0) : t - Simulator::Now();
 			m_nextSend = Simulator::Schedule(delta, &QbbNetDevice::DequeueAndTransmit, this);

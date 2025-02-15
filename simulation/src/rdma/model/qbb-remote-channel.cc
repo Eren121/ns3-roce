@@ -25,8 +25,11 @@
 #include "ns3/packet.h"
 #include "ns3/simulator.h"
 #include "ns3/log.h"
-#include "ns3/mpi-interface.h"
 #include "ns3/assert.h"
+
+#ifdef NS3_MPI
+# include "ns3/mpi-interface.h"
+#endif
 
 using namespace std;
 

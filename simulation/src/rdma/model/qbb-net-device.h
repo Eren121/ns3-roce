@@ -61,7 +61,10 @@ public:
 	void CleanHighPrio(TracedCallback<Ptr<const Packet>, uint32_t> dropCb);
 
 	TracedCallback<Ptr<const Packet>, uint32_t> m_traceRdmaEnqueue;
+  using TraceRdmaEnqueueCallback = void(*)(Ptr<const Packet>, uint32_t priority);
+
 	TracedCallback<Ptr<const Packet>, uint32_t> m_traceRdmaDequeue;
+  using TraceRdmaDequeueCallback = void(*)(Ptr<const Packet>, uint32_t priority);
 };
 
 /**
@@ -136,9 +139,17 @@ public:
   void OnPeerJoinGroup(uint32_t group);
 
 	TracedCallback<Ptr<const Packet>, uint32_t> m_traceEnqueue;
+  using TraceEnqueueCallback = void(*)(Ptr<const Packet>, uint32_t priority);
+
 	TracedCallback<Ptr<const Packet>, uint32_t> m_traceDequeue;
-	TracedCallback<Ptr<const Packet>, uint32_t> m_traceDrop;
-	TracedCallback<uint32_t> m_tracePfc; // 0: resume, 1: pause
+	using TraceDequeueCallback = void(*)(Ptr<const Packet>, uint32_t priority);
+  
+  TracedCallback<Ptr<const Packet>, uint32_t> m_traceDrop;
+	using TraceDropCallback = void(*)(Ptr<const Packet>, uint32_t priority);
+  
+  TracedCallback<uint32_t> m_tracePfc; // 0: resume, 1: pause
+  using TracePfcCallback = void(*)(uint32_t do_pause);
+  
 protected:
 
 	//Ptr<Node> m_node;
@@ -207,6 +218,7 @@ public:
 	void UpdateNextAvail(Time t);
 
 	TracedCallback<Ptr<const Packet>, Ptr<RdmaTxQueuePair> > m_traceQpDequeue; // the trace for printing dequeue
+  using TraceQpDequeueCallback = void(*)(Ptr<const Packet>, Ptr<RdmaTxQueuePair> sq);
 };
 
 bool IsQbb(Ptr<const NetDevice> self);

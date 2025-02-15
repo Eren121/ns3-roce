@@ -28,7 +28,8 @@ TypeId RdmaHw::GetTypeId (void)
 	static TypeId tid = TypeId ("ns3::RdmaHw")
 		.SetParent<Object> ()
 		.AddTraceSource ("QpComplete", "A qp completes.",
-				MakeTraceSourceAccessor (&RdmaHw::m_traceQpComplete))
+				MakeTraceSourceAccessor (&RdmaHw::m_traceQpComplete),
+				"ns3::RdmaHw::TraceQpCompleteCallback")
 		.AddAttribute("MinRate",
 				"Minimum rate of a throttled flow",
 				DataRateValue(DataRate("100Mb/s")),
@@ -299,16 +300,16 @@ void RdmaHw::PktSent(Ptr<RdmaTxQueuePair> qp, Ptr<Packet> pkt, Time interframeGa
 void RdmaHw::UpdateNextAvail(Ptr<RdmaTxQueuePair> qp, Time interframeGap, uint32_t pkt_size){
 	Time sendingTime;
 	if (m_rateBound)
-		sendingTime = interframeGap + Seconds(qp->m_rate.CalculateTxTime(pkt_size));
+		sendingTime = interframeGap + (qp->m_rate.CalculateBytesTxTime(pkt_size));
 	else
-		sendingTime = interframeGap + Seconds(qp->GetMaxRate().CalculateTxTime(pkt_size));
+		sendingTime = interframeGap + (qp->GetMaxRate().CalculateBytesTxTime(pkt_size));
 	qp->m_nextAvail = Simulator::Now() + sendingTime;
 }
 
 void RdmaHw::ChangeRate(Ptr<RdmaTxQueuePair> qp, DataRate new_rate){
 	#if 1
-	Time sendingTime = Seconds(qp->m_rate.CalculateTxTime(qp->m_lastPktSize));
-	Time new_sendintTime = Seconds(new_rate.CalculateTxTime(qp->m_lastPktSize));
+	Time sendingTime = (qp->m_rate.CalculateBytesTxTime(qp->m_lastPktSize));
+	Time new_sendintTime = (new_rate.CalculateBytesTxTime(qp->m_lastPktSize));
 	qp->m_nextAvail = qp->m_nextAvail + new_sendintTime - sendingTime;
 	
 	// update nic's next avail event

@@ -9,7 +9,7 @@
 
 namespace ns3{
 
-enum Event{
+enum RdmaEvent {
 	Recv = 0,
 	Enqu = 1,
 	Dequ = 2,
@@ -73,7 +73,7 @@ struct TraceFormat{
 	}
 };
 
-static inline const char* EventToStr(enum Event e){
+static inline const char* EventToStr(RdmaEvent e){
 	switch (e){
 		case Recv:
 			return "Recv";

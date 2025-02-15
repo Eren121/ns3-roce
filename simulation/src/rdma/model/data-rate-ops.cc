@@ -27,10 +27,4 @@ DataRate operator+(const DataRate& lhs, const DataRate& rhs)
 	return DataRate(lhs.GetBitRate()+rhs.GetBitRate());
 };
 
-DataRate& operator+=(DataRate& lhs, const DataRate& rhs)
-{
-	lhs = lhs + rhs;
-	return lhs;
-}
-
 }

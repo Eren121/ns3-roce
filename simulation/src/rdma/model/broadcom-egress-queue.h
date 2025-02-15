@@ -45,6 +45,9 @@ namespace ns3 {
 		uint32_t GetNBytesTotal() const;
 		uint32_t GetLastQueue();
 
+		using TraceBeqEnqueueCallback = void(*)(Ptr<const Packet> p, uint32_t priority);
+		using TraceBeqDequeueCallback = void(*)(Ptr<const Packet> p, uint32_t priority);
+
 		TracedCallback<Ptr<const Packet>, uint32_t> m_traceBeqEnqueue;
 		TracedCallback<Ptr<const Packet>, uint32_t> m_traceBeqDequeue;
 

@@ -37,9 +37,11 @@ NS_OBJECT_ENSURE_REGISTERED(BEgressQueue);
 			.SetParent<Queue>()
 			.AddConstructor<BEgressQueue>()
 			.AddTraceSource ("BeqEnqueue", "Enqueue a packet in the BEgressQueue. Multiple queue",
-					MakeTraceSourceAccessor (&BEgressQueue::m_traceBeqEnqueue))
+					MakeTraceSourceAccessor (&BEgressQueue::m_traceBeqEnqueue),
+					"ns3::BEgressQueue::TraceBeqEnqueueCallback")
 			.AddTraceSource ("BeqDequeue", "Dequeue a packet in the BEgressQueue. Multiple queue",
-					MakeTraceSourceAccessor (&BEgressQueue::m_traceBeqDequeue))
+					MakeTraceSourceAccessor (&BEgressQueue::m_traceBeqDequeue),
+					"ns3::BEgressQueue::TraceBeqDequeueCallback")
 			;
 
 		return tid;
@@ -68,8 +70,9 @@ NS_OBJECT_ENSURE_REGISTERED(BEgressQueue);
 		BEgressQueue::DoEnqueue(Ptr<Packet> p, uint32_t qIndex)
 	{
 		NS_LOG_FUNCTION(this << p);
+		NS_ASSERT(m_maxSize.GetUnit() == BYTES);
 
-		if (m_bytesInQueueTotal + p->GetSize() < m_maxBytes)  //infinite queue
+		if (m_bytesInQueueTotal + p->GetSize() < m_maxSize.GetValue())  //infinite queue
 		{
 			m_queues[qIndex]->Enqueue(p);
 			m_bytesInQueueTotal += p->GetSize();
@@ -179,22 +182,7 @@ NS_OBJECT_ENSURE_REGISTERED(BEgressQueue);
 		BEgressQueue::Enqueue(Ptr<Packet> p)	//for compatiability
 	{
 		NS_ABORT_MSG("BEgressQueue::Enqueue not implemented");
-
-		std::cout << "Warning: Call Broadcom queues without priority\n";
-		uint32_t qIndex = 0;
-		NS_LOG_FUNCTION(this << p);
-		if (m_bytesInQueueTotal + p->GetSize() < m_maxBytes)
-		{
-			m_queues[qIndex]->Enqueue(p);
-			m_bytesInQueueTotal += p->GetSize();
-			m_bytesInQueue[qIndex] += p->GetSize();
-		}
-		else
-		{
-			return false;
-
-		}
-		return true;
+		return false;
 	}
 
 

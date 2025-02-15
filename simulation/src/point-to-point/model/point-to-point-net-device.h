@@ -147,7 +147,7 @@ public:
    *
    * \param p Ptr to the received packet.
    */
-  void Receive (Ptr<Packet> p);
+  virtual void Receive (Ptr<Packet> p);
 
   // The remaining methods are documented in ns3::NetDevice*
 
@@ -232,6 +232,7 @@ private:
    */
   Address GetRemote (void) const;
 
+protected:
   /**
    * Adds the necessary headers and trailers to a packet of data in order to
    * respect the protocol implemented by the agent.
@@ -250,6 +251,7 @@ private:
    */
   bool ProcessHeader (Ptr<Packet> p, uint16_t& param);
 
+private:
   /**
    * Start Sending a Packet Down the Wire.
    *
@@ -274,6 +276,8 @@ private:
    * of sending a packet out on the channel.
    */
   void TransmitComplete (void);
+
+protected:
 
   /**
    * \brief Make the link up and running
