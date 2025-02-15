@@ -46,7 +46,8 @@ NS_OBJECT_ENSURE_REGISTERED(BEgressQueue);
 	}
 
 	BEgressQueue::BEgressQueue() :
-		Queue()
+		Queue(),
+		NS_LOG_TEMPLATE_DEFINE("BEgressQueue")
 	{
 		NS_LOG_FUNCTION(this);
 		m_bytesInQueueTotal = 0;

@@ -70,6 +70,8 @@ namespace ns3 {
 		uint32_t m_rrlast; //!< Like `m_qlast`, but is not updated when the popped index is zero.
 		uint32_t m_qlast;  //!< Last popped queue index.
 		std::vector<Ptr<Queue> > m_queues; // uc queues
+
+		NS_LOG_TEMPLATE_DECLARE;
 	};
 
 } // namespace ns3
