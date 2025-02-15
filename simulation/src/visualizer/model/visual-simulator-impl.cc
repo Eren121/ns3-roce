@@ -18,9 +18,12 @@
  * Author: Gustavo Carneiro <gjcarneiro@gmail.com> <gjc@inescporto.pt>
  */
 #include <Python.h>
+#undef HAVE_PTHREAD_H
+#undef HAVE_SYS_STAT_H
 #include "visual-simulator-impl.h"
 #include "ns3/default-simulator-impl.h"
 #include "ns3/log.h"
+#include "ns3/packet-metadata.h"
 
 namespace ns3 {
 
@@ -30,7 +33,10 @@ NS_OBJECT_ENSURE_REGISTERED (VisualSimulatorImpl);
 
 namespace
 {
-/// Get an object factory configured to the default simulator implementation
+/**
+ * Get an object factory configured to the default simulator implementation
+ * \return an object factory.
+ */
 ObjectFactory
 GetDefaultSimulatorImplFactory ()
 {
@@ -60,6 +66,7 @@ VisualSimulatorImpl::GetTypeId (void)
 
 VisualSimulatorImpl::VisualSimulatorImpl ()
 {
+  PacketMetadata::Enable ();
 }
 
 VisualSimulatorImpl::~VisualSimulatorImpl ()
@@ -112,11 +119,17 @@ VisualSimulatorImpl::IsFinished (void) const
 void
 VisualSimulatorImpl::Run (void)
 {
-  if (!Py_IsInitialized ()) 
+  if (!Py_IsInitialized ())
     {
-      const char *argv[] = { "python", NULL};
-      Py_Initialize ();
-      PySys_SetArgv (1, (char**) argv);
+      #if PY_MAJOR_VERSION >= 3
+        const wchar_t *argv[] = { L"python", NULL};
+        Py_Initialize ();
+        PySys_SetArgv (1, (wchar_t**) argv);
+      #else
+        const char *argv[] = { "python", NULL};
+        Py_Initialize ();
+        PySys_SetArgv (1, (char**) argv);
+      #endif
       PyRun_SimpleString (
                           "import visualizer\n"
                           "visualizer.start();\n"
@@ -214,6 +227,12 @@ uint32_t
 VisualSimulatorImpl::GetContext (void) const
 {
   return m_simulator->GetContext ();
+}
+
+uint64_t
+VisualSimulatorImpl::GetEventCount (void) const
+{
+  return m_simulator->GetEventCount ();
 }
 
 void

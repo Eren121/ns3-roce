@@ -22,8 +22,13 @@
 #ifndef ORBIS_TOPOLOGY_READER_H
 #define ORBIS_TOPOLOGY_READER_H
 
-#include "ns3/nstime.h"
 #include "topology-reader.h"
+
+/**
+ * \file
+ * \ingroup topology
+ * ns3::OrbisTopologyReader declaration.
+ */
 
 namespace ns3 {
 
@@ -36,7 +41,7 @@ namespace ns3 {
  * \brief Topology file reader (Orbis-format type).
  *
  * This class takes an input file in Orbis format and extracts all
- * the informations needed to build the topology
+ * the information needed to build the topology
  * (i.e.number of nodes, links and links structure).
  * It have been tested with Orbis 0.70
  * http://www.sysnet.ucsd.edu/~pmahadevan/topo_research/topo.html
@@ -53,6 +58,10 @@ public:
   OrbisTopologyReader ();
   virtual ~OrbisTopologyReader ();
 
+  // Delete copy constructor and assignment operator to avoid misuse
+  OrbisTopologyReader (const OrbisTopologyReader &) = delete;
+  OrbisTopologyReader & operator = (const OrbisTopologyReader &) = delete;
+
   /**
    * \brief Main topology reading function.
    *
@@ -64,22 +73,6 @@ public:
    * \return The container of the nodes created (or empty container if there was an error)
    */
   virtual NodeContainer Read (void);
-
-private:
-private:
-  /**
-   * \brief Copy constructor
-   *
-   * Defined and unimplemented to avoid misuse.
-   */
-  OrbisTopologyReader (const OrbisTopologyReader&);
-  /**
-   * \brief Copy constructor
-   *
-   * Defined and unimplemented to avoid misuse.
-   * \returns
-   */
-  OrbisTopologyReader& operator= (const OrbisTopologyReader&);
 
   // end class OrbisTopologyReader
 };

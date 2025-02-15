@@ -52,23 +52,21 @@ public:
    *
    * Sets an attribute of the underlying PHY object.
    */
-  void Set (std::string name, const AttributeValue &v);
+  void Set (std::string name, const AttributeValue &v) override;
 
   /**
    * \param callback Callback function for energy depletion handling.
    *
    * Sets the callback to be invoked when energy is depleted.
    */
-  void SetDepletionCallback (
-    WifiRadioEnergyModel::WifiRadioEnergyDepletionCallback callback);
+  void SetDepletionCallback (WifiRadioEnergyModel::WifiRadioEnergyDepletionCallback callback);
 
   /**
    * \param callback Callback function for energy recharged handling.
    *
    * Sets the callback to be invoked when energy is recharged.
    */
-  void SetRechargedCallback (
-    WifiRadioEnergyModel::WifiRadioEnergyRechargedCallback callback);
+  void SetRechargedCallback (WifiRadioEnergyModel::WifiRadioEnergyRechargedCallback callback);
 
   /**
    * \param name the name of the model to set
@@ -110,7 +108,7 @@ private:
    * Implements DeviceEnergyModel::Install.
    */
   virtual Ptr<DeviceEnergyModel> DoInstall (Ptr<NetDevice> device,
-                                            Ptr<EnergySource> source) const;
+                                            Ptr<EnergySource> source) const override;
 
 private:
   ObjectFactory m_radioEnergy; ///< radio energy

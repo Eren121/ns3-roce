@@ -18,22 +18,23 @@
  * Author: Mirko Banchi <mk.banchi@gmail.com>
  */
 
-#include "block-ack-agreement.h"
 #include "ns3/log.h"
+#include "block-ack-agreement.h"
+#include "wifi-utils.h"
 
 namespace ns3 {
 
 NS_LOG_COMPONENT_DEFINE ("BlockAckAgreement");
 
 BlockAckAgreement::BlockAckAgreement (Mac48Address peer, uint8_t tid)
-  : m_amsduSupported (0),
+  : m_peer (peer),
+    m_amsduSupported (0),
     m_blockAckPolicy (1),
+    m_tid (tid),
     m_htSupported (0),
     m_inactivityEvent ()
 {
   NS_LOG_FUNCTION (this << peer << +tid);
-  m_tid = tid;
-  m_peer = peer;
 }
 
 BlockAckAgreement::~BlockAckAgreement ()
@@ -46,7 +47,7 @@ void
 BlockAckAgreement::SetBufferSize (uint16_t bufferSize)
 {
   NS_LOG_FUNCTION (this << bufferSize);
-  NS_ASSERT (bufferSize <= 1024);
+  NS_ASSERT (bufferSize <= 256);
   NS_ASSERT (bufferSize % 16 == 0);
   m_bufferSize = bufferSize;
 }
@@ -98,7 +99,6 @@ BlockAckAgreement::SetAmsduSupport (bool supported)
 uint8_t
 BlockAckAgreement::GetTid (void) const
 {
-  NS_LOG_FUNCTION (this);
   return m_tid;
 }
 
@@ -112,28 +112,24 @@ BlockAckAgreement::GetPeer (void) const
 uint16_t
 BlockAckAgreement::GetBufferSize (void) const
 {
-  NS_LOG_FUNCTION (this);
   return m_bufferSize;
 }
 
 uint16_t
 BlockAckAgreement::GetTimeout (void) const
 {
-  NS_LOG_FUNCTION (this);
   return m_timeout;
 }
 
 uint16_t
 BlockAckAgreement::GetStartingSequence (void) const
 {
-  NS_LOG_FUNCTION (this);
   return m_startingSeq;
 }
 
 uint16_t
 BlockAckAgreement::GetStartingSequenceControl (void) const
 {
-  NS_LOG_FUNCTION (this);
   uint16_t seqControl = (m_startingSeq << 4) & 0xfff0;
   return seqControl;
 }
@@ -141,27 +137,19 @@ BlockAckAgreement::GetStartingSequenceControl (void) const
 bool
 BlockAckAgreement::IsImmediateBlockAck (void) const
 {
-  NS_LOG_FUNCTION (this);
-  return (m_blockAckPolicy == 1);
+  return m_blockAckPolicy == 1;
 }
 
 bool
 BlockAckAgreement::IsAmsduSupported (void) const
 {
-  NS_LOG_FUNCTION (this);
-  return (m_amsduSupported == 1) ? true : false;
+  return m_amsduSupported == 1;
 }
 
 uint16_t
 BlockAckAgreement::GetWinEnd (void) const
 {
-  return m_winEnd;
-}
-
-void
-BlockAckAgreement::SetWinEnd (uint16_t seq)
-{
-  m_winEnd = seq;
+  return (GetStartingSequence () + GetBufferSize () - 1) % SEQNO_SPACE_SIZE;
 }
 
 void
@@ -174,8 +162,40 @@ BlockAckAgreement::SetHtSupported (bool htSupported)
 bool
 BlockAckAgreement::IsHtSupported (void) const
 {
-  NS_LOG_FUNCTION (this);
-  return (m_htSupported == 1) ? true : false;
+  return m_htSupported == 1;
+}
+
+BlockAckType
+BlockAckAgreement::GetBlockAckType (void) const
+{
+  if (!m_htSupported)
+    {
+      return BlockAckType::BASIC;
+    }
+  // Multi-TID Block Ack is not currently supported
+  if (m_bufferSize > 64)
+    {
+      return {BlockAckType::COMPRESSED, {32}};
+    }
+  return {BlockAckType::COMPRESSED, {8}};
+}
+
+BlockAckReqType
+BlockAckAgreement::GetBlockAckReqType (void) const
+{
+  if (!m_htSupported)
+    {
+      return BlockAckReqType::BASIC;
+    }
+  // Multi-TID Block Ack Request is not currently supported
+  return BlockAckReqType::COMPRESSED;
+}
+
+std::size_t
+BlockAckAgreement::GetDistance (uint16_t seqNumber, uint16_t startingSeqNumber)
+{
+  NS_ASSERT (seqNumber < SEQNO_SPACE_SIZE && startingSeqNumber < SEQNO_SPACE_SIZE);
+  return (seqNumber - startingSeqNumber + SEQNO_SPACE_SIZE) % SEQNO_SPACE_SIZE;
 }
 
 } //namespace ns3

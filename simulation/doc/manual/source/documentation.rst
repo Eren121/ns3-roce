@@ -23,7 +23,7 @@ To build all the standard documentation:
 
 .. sourcecode:: bash
 
-   $ ./waf docs
+   $ ./ns3 docs
 
 For more specialized options, read on.
 
@@ -56,7 +56,7 @@ Where?
 
 Documentation for a specific module, ``foo``, should normally go in
 ``src/foo/doc/``.  For example ``src/foo/doc/foo.rst`` would be the
-top-level document for the module.  The ``src/create-module.py`` script
+top-level document for the module.  The ``utils/create-module.py`` script
 will create this file for you.
 
 Some models require several ``.rst`` files, and figures; these should
@@ -132,7 +132,7 @@ To build all the Sphinx documentation:
 
 .. sourcecode:: bash
 
-   $ ./waf sphinx
+   $ ./ns3 sphinx
 
 To build just the Models documentation:
 
@@ -276,7 +276,7 @@ for every class
 * Documentation for any ``Trace`` sources defined by the class.
 * The memory footprint for each class.
 
-Doxygen operates by scaning the source code, looking for
+Doxygen operates by scanning the source code, looking for
 specially marked comments.  It also creates a cross reference,
 indicating *where* each file, class, method, and variable is used.
 
@@ -371,7 +371,7 @@ Building the Doxygen documentation is pretty simple:
 
 .. sourcecode:: bash
 
-   $ ./waf doxygen
+   $ ./ns3 doxygen
 
 This builds using the default configuration, which generates
 documentation sections for *all* items, even if they do not have
@@ -529,11 +529,11 @@ usage for |ns3|.
 
     /**
      *  \defgroup foo Foo protocol.
-     *  Implemenation of the Foo protocol.
+     *  Implementation of the Foo protocol.
      */
 
   The symbol ``foo`` is how other items can add themselves to this group.
-  The string following that will be the title for the group.  Any futher
+  The string following that will be the title for the group.  Any further
   text will be the detailed description for the group page.
 
 * Document each file, assigning it to the relevant group.  In a header file::

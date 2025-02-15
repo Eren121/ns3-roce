@@ -29,17 +29,21 @@
 #ifndef AODVNEIGHBOR_H
 #define AODVNEIGHBOR_H
 
+#include <vector>
 #include "ns3/simulator.h"
 #include "ns3/timer.h"
 #include "ns3/ipv4-address.h"
 #include "ns3/callback.h"
-#include "ns3/wifi-mac-header.h"
 #include "ns3/arp-cache.h"
-#include <vector>
 
 namespace ns3 {
+
+class WifiMacHeader;
+
 namespace aodv {
+
 class RoutingProtocol;
+
 /**
  * \ingroup aodv
  * \brief maintain list of active neighbors
@@ -162,8 +166,11 @@ private:
    * \returns the MAC address for the IP address
    */
   Mac48Address LookupMacAddress (Ipv4Address addr);
-  /// Process layer 2 TX error notification
-  void ProcessTxError (WifiMacHeader const &);
+  /**
+   * Process layer 2 TX error notification
+   * \param hdr header of the packet
+   */
+  void ProcessTxError (WifiMacHeader const &hdr);
 };
 
 }  // namespace aodv

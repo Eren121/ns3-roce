@@ -22,47 +22,108 @@
 
 using namespace ns3;
 
-// ===========================================================================
-// Test the basic Callback mechanism
-// ===========================================================================
+/**
+ * \file
+ * \ingroup callback-tests
+ * Callback test suite
+ */
+
+/**
+ * \ingroup core-tests
+ * \defgroup callback-tests Callback tests
+ */
+
+/**
+ * \ingroup callback-tests
+ * 
+ * Test the basic Callback mechanism.
+ */
 class BasicCallbackTestCase : public TestCase
 {
 public:
   BasicCallbackTestCase ();
-  virtual ~BasicCallbackTestCase () {}
+  virtual ~BasicCallbackTestCase ()
+  {}
 
-  void Target1 (void) { m_test1 = true; }
-  int Target2 (void) { m_test2 = true; return 2; }
-  void Target3 (double a) { m_test3 = true; }
-  int Target4 (double a, int b) { m_test4 = true; return 4; }
+  /**
+   * Callback 1 target function.
+   */
+  void Target1 (void)
+  {
+    m_test1 = true;
+  }
+  /**
+   * Callback 2 target function.
+   * \return two.
+   */
+  int Target2 (void)
+  {
+    m_test2 = true;
+    return 2;
+  }
+  /**
+   * Callback 3 target function.
+   * \param a A parameter (unused).
+   */
+  void Target3 ([[maybe_unused]] double a)
+  {
+    m_test3 = true;
+  }
+  /**
+   * Callback 4 target function.
+   * \param a A parameter (unused).
+   * \param b Another parameter (unused).
+   * \return four.
+   */
+  int Target4 ([[maybe_unused]] double a, [[maybe_unused]] int b)
+  {
+    m_test4 = true;
+    return 4;
+  }
 
 private:
   virtual void DoRun (void);
   virtual void DoSetup (void);
 
-  bool m_test1;
-  bool m_test2;
-  bool m_test3;
-  bool m_test4;
+  bool m_test1; //!< true if Target1 has been called, false otherwise.
+  bool m_test2; //!< true if Target2 has been called, false otherwise.
+  bool m_test3; //!< true if Target3 has been called, false otherwise.
+  bool m_test4; //!< true if Target4 has been called, false otherwise.
 };
 
+/**
+ * Variable to verify that a calback has been called.
+ * @{
+ */
 static bool gBasicCallbackTest5;
 static bool gBasicCallbackTest6;
 static bool gBasicCallbackTest7;
+/** @} */
 
-void 
+/**
+ * Callback 5 target function.
+ */
+void
 BasicCallbackTarget5 (void)
 {
   gBasicCallbackTest5 = true;
 }
 
-void 
+/**
+ * Callback 6 target function.
+ */
+void
 BasicCallbackTarget6 (int)
 {
   gBasicCallbackTest6 = true;
 }
 
-int 
+/**
+ * Callback 6 target function.
+ * \param a The value passed by the callback.
+ * \return the value of the calling function.
+ */
+int
 BasicCallbackTarget7 (int a)
 {
   gBasicCallbackTest7 = true;
@@ -71,8 +132,7 @@ BasicCallbackTarget7 (int a)
 
 BasicCallbackTestCase::BasicCallbackTestCase ()
   : TestCase ("Check basic Callback mechansim")
-{
-}
+{}
 
 void
 BasicCallbackTestCase::DoSetup (void)
@@ -90,7 +150,7 @@ void
 BasicCallbackTestCase::DoRun (void)
 {
   //
-  // Make sure we can declare and compile a Callback pointing to a member 
+  // Make sure we can declare and compile a Callback pointing to a member
   // function returning void and execute it.
   //
   Callback<void> target1 (this, &BasicCallbackTestCase::Target1);
@@ -98,7 +158,7 @@ BasicCallbackTestCase::DoRun (void)
   NS_TEST_ASSERT_MSG_EQ (m_test1, true, "Callback did not fire");
 
   //
-  // Make sure we can declare and compile a Callback pointing to a member 
+  // Make sure we can declare and compile a Callback pointing to a member
   // function that returns an int and execute it.
   //
   Callback<int> target2;
@@ -107,7 +167,7 @@ BasicCallbackTestCase::DoRun (void)
   NS_TEST_ASSERT_MSG_EQ (m_test2, true, "Callback did not fire");
 
   //
-  // Make sure we can declare and compile a Callback pointing to a member 
+  // Make sure we can declare and compile a Callback pointing to a member
   // function that returns void, takes a double parameter, and execute it.
   //
   Callback<void, double> target3 = Callback<void, double> (this, &BasicCallbackTestCase::Target3);
@@ -115,7 +175,7 @@ BasicCallbackTestCase::DoRun (void)
   NS_TEST_ASSERT_MSG_EQ (m_test3, true, "Callback did not fire");
 
   //
-  // Make sure we can declare and compile a Callback pointing to a member 
+  // Make sure we can declare and compile a Callback pointing to a member
   // function that returns void, takes two parameters, and execute it.
   //
   Callback<int, double, int> target4 = Callback<int, double, int> (this, &BasicCallbackTestCase::Target4);
@@ -123,7 +183,7 @@ BasicCallbackTestCase::DoRun (void)
   NS_TEST_ASSERT_MSG_EQ (m_test4, true, "Callback did not fire");
 
   //
-  // Make sure we can declare and compile a Callback pointing to a non-member 
+  // Make sure we can declare and compile a Callback pointing to a non-member
   // function that returns void, and execute it.  This is a lower level call
   // than MakeCallback so we have got to include at least two arguments to make
   // sure that the constructor is properly disambiguated.  If the arguments are
@@ -134,7 +194,7 @@ BasicCallbackTestCase::DoRun (void)
   NS_TEST_ASSERT_MSG_EQ (gBasicCallbackTest5, true, "Callback did not fire");
 
   //
-  // Make sure we can declare and compile a Callback pointing to a non-member 
+  // Make sure we can declare and compile a Callback pointing to a non-member
   // function that returns void, takes one integer argument and execute it.
   // We also need to provide two dummy arguments to the constructor here.
   //
@@ -143,7 +203,7 @@ BasicCallbackTestCase::DoRun (void)
   NS_TEST_ASSERT_MSG_EQ (gBasicCallbackTest6, true, "Callback did not fire");
 
   //
-  // Make sure we can declare and compile a Callback pointing to a non-member 
+  // Make sure we can declare and compile a Callback pointing to a non-member
   // function that returns int, takes one integer argument and execute it.
   // We also need to provide two dummy arguments to the constructor here.
   //
@@ -152,47 +212,97 @@ BasicCallbackTestCase::DoRun (void)
   NS_TEST_ASSERT_MSG_EQ (gBasicCallbackTest7, true, "Callback did not fire");
 }
 
-// ===========================================================================
-// Test the MakeCallback mechanism
-// ===========================================================================
+/**
+ * \ingroup callback-tests
+ * 
+ * Test the MakeCallback mechanism.
+ */
 class MakeCallbackTestCase : public TestCase
 {
 public:
   MakeCallbackTestCase ();
-  virtual ~MakeCallbackTestCase () {}
+  virtual ~MakeCallbackTestCase ()
+  {}
 
-  void Target1 (void) { m_test1 = true; }
-  int Target2 (void) { m_test2 = true; return 2; }
-  void Target3 (double a) { m_test3 = true; }
-  int Target4 (double a, int b) { m_test4 = true; return 4; }
+  /**
+   * Callback 1 target function.
+   */
+  void Target1 (void)
+  {
+    m_test1 = true;
+  }
+  /**
+   * Callback 2 target function.
+   * \return two.
+   */
+  int Target2 (void)
+  {
+    m_test2 = true;
+    return 2;
+  }
+  /**
+   * Callback 3 target function.
+   * \param a A parameter (unused).
+   */
+  void Target3 ([[maybe_unused]] double a)
+  {
+    m_test3 = true;
+  }
+  /**
+   * Callback 4 target function.
+   * \param a A parameter (unused).
+   * \param b Another parameter (unused).
+   * \return four.
+   */
+  int Target4 ([[maybe_unused]] double a, [[maybe_unused]] int b)
+  {
+    m_test4 = true;
+    return 4;
+  }
 
 private:
   virtual void DoRun (void);
   virtual void DoSetup (void);
 
-  bool m_test1;
-  bool m_test2;
-  bool m_test3;
-  bool m_test4;
+  bool m_test1; //!< true if Target1 has been called, false otherwise.
+  bool m_test2; //!< true if Target2 has been called, false otherwise.
+  bool m_test3; //!< true if Target3 has been called, false otherwise.
+  bool m_test4; //!< true if Target4 has been called, false otherwise.
 };
 
+/**
+ * Variable to verify that a calback has been called.
+ * @{
+ */
 static bool gMakeCallbackTest5;
 static bool gMakeCallbackTest6;
 static bool gMakeCallbackTest7;
+/** @} */
 
-void 
+/**
+ * MakeCallback 5 target function.
+ */
+void
 MakeCallbackTarget5 (void)
 {
   gMakeCallbackTest5 = true;
 }
 
-void 
+/**
+ * MakeCallback 6 target function.
+ */
+void
 MakeCallbackTarget6 (int)
 {
   gMakeCallbackTest6 = true;
 }
 
-int 
+/**
+ * MakeCallback 7 target function.
+ * \param a The value passed by the callback.
+ * \return the value of the calling function.
+ */
+int
 MakeCallbackTarget7 (int a)
 {
   gMakeCallbackTest7 = true;
@@ -201,8 +311,7 @@ MakeCallbackTarget7 (int a)
 
 MakeCallbackTestCase::MakeCallbackTestCase ()
   : TestCase ("Check MakeCallback() mechanism")
-{
-}
+{}
 
 void
 MakeCallbackTestCase::DoSetup (void)
@@ -220,7 +329,7 @@ void
 MakeCallbackTestCase::DoRun (void)
 {
   //
-  // Make sure we can declare and make a Callback pointing to a member 
+  // Make sure we can declare and make a Callback pointing to a member
   // function returning void and execute it.
   //
   Callback<void> target1 = MakeCallback (&MakeCallbackTestCase::Target1, this);
@@ -228,7 +337,7 @@ MakeCallbackTestCase::DoRun (void)
   NS_TEST_ASSERT_MSG_EQ (m_test1, true, "Callback did not fire");
 
   //
-  // Make sure we can declare and make a Callback pointing to a member 
+  // Make sure we can declare and make a Callback pointing to a member
   // function that returns an int and execute it.
   //
   Callback<int> target2 = MakeCallback (&MakeCallbackTestCase::Target2, this);
@@ -236,7 +345,7 @@ MakeCallbackTestCase::DoRun (void)
   NS_TEST_ASSERT_MSG_EQ (m_test2, true, "Callback did not fire");
 
   //
-  // Make sure we can declare and make a Callback pointing to a member 
+  // Make sure we can declare and make a Callback pointing to a member
   // function that returns void, takes a double parameter, and execute it.
   //
   Callback<void, double> target3 = MakeCallback (&MakeCallbackTestCase::Target3, this);
@@ -244,7 +353,7 @@ MakeCallbackTestCase::DoRun (void)
   NS_TEST_ASSERT_MSG_EQ (m_test3, true, "Callback did not fire");
 
   //
-  // Make sure we can declare and make a Callback pointing to a member 
+  // Make sure we can declare and make a Callback pointing to a member
   // function that returns void, takes two parameters, and execute it.
   //
   Callback<int, double, int> target4 = MakeCallback (&MakeCallbackTestCase::Target4, this);
@@ -252,7 +361,7 @@ MakeCallbackTestCase::DoRun (void)
   NS_TEST_ASSERT_MSG_EQ (m_test4, true, "Callback did not fire");
 
   //
-  // Make sure we can declare and make a Callback pointing to a non-member 
+  // Make sure we can declare and make a Callback pointing to a non-member
   // function that returns void, and execute it.  This uses a higher level call
   // than in the basic tests so we do not need to include any dummy arguments
   // here.
@@ -262,9 +371,9 @@ MakeCallbackTestCase::DoRun (void)
   NS_TEST_ASSERT_MSG_EQ (gMakeCallbackTest5, true, "Callback did not fire");
 
   //
-  // Make sure we can declare and compile a Callback pointing to a non-member 
+  // Make sure we can declare and compile a Callback pointing to a non-member
   // function that returns void, takes one integer argument and execute it.
-  // This uses a higher level call than in the basic tests so we do not need to 
+  // This uses a higher level call than in the basic tests so we do not need to
   // include any dummy arguments here.
   //
   Callback<void, int> target6 = MakeCallback (&MakeCallbackTarget6);
@@ -272,9 +381,9 @@ MakeCallbackTestCase::DoRun (void)
   NS_TEST_ASSERT_MSG_EQ (gMakeCallbackTest6, true, "Callback did not fire");
 
   //
-  // Make sure we can declare and compile a Callback pointing to a non-member 
+  // Make sure we can declare and compile a Callback pointing to a non-member
   // function that returns int, takes one integer argument and execute it.
-  // This uses a higher level call than in the basic tests so we do not need to 
+  // This uses a higher level call than in the basic tests so we do not need to
   // include any dummy arguments here.
   //
   Callback<int, int> target7 = MakeCallback (&MakeCallbackTarget7);
@@ -282,20 +391,27 @@ MakeCallbackTestCase::DoRun (void)
   NS_TEST_ASSERT_MSG_EQ (gMakeCallbackTest7, true, "Callback did not fire");
 }
 
-// ===========================================================================
-// Test the MakeBoundCallback mechanism
-// ===========================================================================
+/**
+ * \ingroup callback-tests
+ * 
+ * Test the MakeBoundCallback mechanism.
+ */
 class MakeBoundCallbackTestCase : public TestCase
 {
 public:
   MakeBoundCallbackTestCase ();
-  virtual ~MakeBoundCallbackTestCase () {}
+  virtual ~MakeBoundCallbackTestCase ()
+  {}
 
 private:
   virtual void DoRun (void);
   virtual void DoSetup (void);
 };
 
+/**
+ * Variable to verify that a calback has been called.
+ * @{
+ */
 static int gMakeBoundCallbackTest1;
 static bool *gMakeBoundCallbackTest2;
 static bool *gMakeBoundCallbackTest3a;
@@ -318,19 +434,36 @@ static int gMakeBoundCallbackTest9a;
 static int gMakeBoundCallbackTest9b;
 static int gMakeBoundCallbackTest9c;
 static int gMakeBoundCallbackTest9d;
+/** @} */
 
-void 
+// Note: doxygen compounds don not work due to params / return variability.
+
+/**
+ * MakeBoundCallback 1 target function.
+ * \param a The value passed by the callback.
+ */
+void
 MakeBoundCallbackTarget1 (int a)
 {
   gMakeBoundCallbackTest1 = a;
 }
 
-void 
+/**
+ * MakeBoundCallback 2 target function.
+ * \param a The value passed by the callback.
+ */
+void
 MakeBoundCallbackTarget2 (bool *a)
 {
   gMakeBoundCallbackTest2 = a;
 }
 
+/**
+ * MakeBoundCallback 3 target function.
+ * \param a The value passed by the callback.
+ * \param b The value passed by the callback.
+ * \return the value 1234.
+ */
 int
 MakeBoundCallbackTarget3 (bool *a, int b)
 {
@@ -339,6 +472,11 @@ MakeBoundCallbackTarget3 (bool *a, int b)
   return 1234;
 }
 
+/**
+ * MakeBoundCallback 4 target function.
+ * \param a The value passed by the callback.
+ * \param b The value passed by the callback.
+ */
 void
 MakeBoundCallbackTarget4 (int a, int b)
 {
@@ -346,6 +484,12 @@ MakeBoundCallbackTarget4 (int a, int b)
   gMakeBoundCallbackTest4b = b;
 }
 
+/**
+ * MakeBoundCallback 5 target function.
+ * \param a The value passed by the callback.
+ * \param b The value passed by the callback.
+ * \return the value 1234.
+ */
 int
 MakeBoundCallbackTarget5 (int a, int b)
 {
@@ -354,6 +498,13 @@ MakeBoundCallbackTarget5 (int a, int b)
   return 1234;
 }
 
+/**
+ * MakeBoundCallback 5 target function.
+ * \param a The value passed by the callback.
+ * \param b The value passed by the callback.
+ * \param c The value passed by the callback.
+ * \return the value 1234.
+ */
 int
 MakeBoundCallbackTarget6 (int a, int b, int c)
 {
@@ -363,6 +514,12 @@ MakeBoundCallbackTarget6 (int a, int b, int c)
   return 1234;
 }
 
+/**
+ * MakeBoundCallback 7 target function.
+ * \param a The value passed by the callback.
+ * \param b The value passed by the callback.
+ * \param c The value passed by the callback.
+ */
 void
 MakeBoundCallbackTarget7 (int a, int b, int c)
 {
@@ -371,6 +528,13 @@ MakeBoundCallbackTarget7 (int a, int b, int c)
   gMakeBoundCallbackTest7c = c;
 }
 
+/**
+ * MakeBoundCallback 8 target function.
+ * \param a The value passed by the callback.
+ * \param b The value passed by the callback.
+ * \param c The value passed by the callback.
+ * \return the value 1234.
+ */
 int
 MakeBoundCallbackTarget8 (int a, int b, int c)
 {
@@ -380,6 +544,14 @@ MakeBoundCallbackTarget8 (int a, int b, int c)
   return 1234;
 }
 
+/**
+ * MakeBoundCallback 5 target function.
+ * \param a The value passed by the callback.
+ * \param b The value passed by the callback.
+ * \param c The value passed by the callback.
+ * \param d The value passed by the callback.
+ * \return the value 1234.
+ */
 int
 MakeBoundCallbackTarget9 (int a, int b, int c, int d)
 {
@@ -392,8 +564,7 @@ MakeBoundCallbackTarget9 (int a, int b, int c, int d)
 
 MakeBoundCallbackTestCase::MakeBoundCallbackTestCase ()
   : TestCase ("Check MakeBoundCallback() mechanism")
-{
-}
+{}
 
 void
 MakeBoundCallbackTestCase::DoSetup (void)
@@ -429,18 +600,18 @@ MakeBoundCallbackTestCase::DoRun (void)
   // This is slightly tricky to explain.  A bound Callback allows us to package
   // up arguments for use later.  The arguments are bound when the callback is
   // created and the code that fires the Callback does not know they are there.
-  // 
+  //
   // Since the callback is *declared* according to the way it will be used, the
   // arguments are not seen there.  However, the target function of the callback
   // will have the provided arguments present.  The MakeBoundCallback template
-  // function is what connects the two together and where you provide the 
+  // function is what connects the two together and where you provide the
   // arguments to be bound.
   //
   // Here we declare a Callback that returns a void and takes no parameters.
   // MakeBoundCallback connects this Callback to a target function that returns
-  // void and takes an integer argument.  That integer argument is bound to the 
+  // void and takes an integer argument.  That integer argument is bound to the
   // value 1234.  When the Callback is fired, no integer argument is provided
-  // directly.  The argument is provided by bound Callback mechanism. 
+  // directly.  The argument is provided by bound Callback mechanism.
   //
   Callback<void> target1 = MakeBoundCallback (&MakeBoundCallbackTarget1, 1234);
   target1 ();
@@ -510,28 +681,36 @@ MakeBoundCallbackTestCase::DoRun (void)
   NS_TEST_ASSERT_MSG_EQ (gMakeBoundCallbackTest9d, 5678, "Callback did not fire or binding not correct");
 }
 
-// ===========================================================================
-// Test the Nullify mechanism
-// ===========================================================================
+/**
+ * \ingroup callback-tests
+ * 
+ * Test the Nullify mechanism.
+ */
 class NullifyCallbackTestCase : public TestCase
 {
 public:
   NullifyCallbackTestCase ();
-  virtual ~NullifyCallbackTestCase () {}
+  virtual ~NullifyCallbackTestCase ()
+  {}
 
-  void Target1 (void) { m_test1 = true; }
+  /**
+   * Callback 1 target function.
+   */
+  void Target1 (void)
+  {
+    m_test1 = true;
+  }
 
 private:
   virtual void DoRun (void);
   virtual void DoSetup (void);
 
-  bool m_test1;
+  bool m_test1; //!< true if Target1 has been called, false otherwise.
 };
 
 NullifyCallbackTestCase::NullifyCallbackTestCase ()
   : TestCase ("Check Nullify() and IsNull()")
-{
-}
+{}
 
 void
 NullifyCallbackTestCase::DoSetup (void)
@@ -543,7 +722,7 @@ void
 NullifyCallbackTestCase::DoRun (void)
 {
   //
-  // Make sure we can declare and make a Callback pointing to a member 
+  // Make sure we can declare and make a Callback pointing to a member
   // function returning void and execute it.
   //
   Callback<void> target1 = MakeCallback (&NullifyCallbackTestCase::Target1, this);
@@ -557,24 +736,38 @@ NullifyCallbackTestCase::DoRun (void)
   NS_TEST_ASSERT_MSG_EQ (target1.IsNull (), true, "Nullified Callback reports not IsNull()");
 }
 
-// ===========================================================================
-// Make sure that various MakeCallback template functions compile and execute.
-// Doesn't check an results of the execution.
-// ===========================================================================
+/**
+ * \ingroup callback-tests
+ * 
+ * Make sure that various MakeCallback template functions compile and execute;
+ * doesn't check an results of the execution.
+ */
 class MakeCallbackTemplatesTestCase : public TestCase
 {
 public:
   MakeCallbackTemplatesTestCase ();
-  virtual ~MakeCallbackTemplatesTestCase () {}
+  virtual ~MakeCallbackTemplatesTestCase ()
+  {}
 
-  void Target1 (void) { m_test1 = true; }
+  /**
+   * Callback 1 target function.
+   */
+  void Target1 (void)
+  {
+    m_test1 = true;
+  }
 
 private:
   virtual void DoRun (void);
 
-  bool m_test1;
+  bool m_test1; //!< true if Target1 has been called, false otherwise.
 };
 
+/* *NS_CHECK_STYLE_OFF* */
+/**
+ * Test function - does nothing.
+ * @{
+ */
 void TestFZero (void) {}
 void TestFOne (int) {}
 void TestFTwo (int, int) {}
@@ -589,21 +782,50 @@ void TestFRThree (int &, int &, int &) {}
 void TestFRFour (int &, int &, int &, int &) {}
 void TestFRFive (int &, int &, int &, int &, int &) {}
 void TestFRSix (int &, int &, int &, int &, int &, int &) {}
+/** @} */
+/* *NS_CHECK_STYLE_ON* */
 
+/**
+ * \ingroup callback-tests
+ * 
+ * Class used to check the capability of callbacks to call 
+ * public, protected, and private functions.
+ */
 class CallbackTestParent
 {
 public:
-  void PublicParent (void) {}
+  /// A public function.
+  void PublicParent (void)
+  {}
+
 protected:
-  void ProtectedParent (void) {}
-  static void StaticProtectedParent (void) {}
+  /// A protected function.
+  void ProtectedParent (void)
+  {}
+  /// A static protected function.
+  static void StaticProtectedParent (void)
+  {}
+
 private:
-  void PrivateParent (void) {}
+  /// A private function.
+  void PrivateParent (void)
+  {}
 };
 
+/**
+ * \ingroup callback-tests
+ * 
+ * Derived class used to check the capability of callbacks to call 
+ * public, protected, and private functions.
+ */
 class CallbackTestClass : public CallbackTestParent
 {
 public:
+  /* *NS_CHECK_STYLE_OFF* */
+  /**
+   * Test function - does nothing.
+   * @{
+   */
   void TestZero (void) {}
   void TestOne (int) {}
   void TestTwo (int, int) {}
@@ -618,7 +840,13 @@ public:
   void TestCFour (int, int, int, int) const {}
   void TestCFive (int, int, int, int, int) const {}
   void TestCSix (int, int, int, int, int, int) const {}
+  /** @} */
+  /* *NS_CHECK_STYLE_ON* */
 
+  /**
+   * Tries to make a callback to public and protected functions of a class.
+   * Private are not tested because, as expected, the compilation fails.
+   */
   void CheckParentalRights (void)
   {
     MakeCallback (&CallbackTestParent::StaticProtectedParent);
@@ -626,7 +854,10 @@ public:
     MakeCallback (&CallbackTestClass::ProtectedParent, this);
     // as expected, fails.
     // MakeCallback (&CallbackTestParent::PrivateParent, this);
-    // unexpected, but fails too.  It does fumble me.
+    // as expected, fails.
+    // Pointers do not carry the access restriction info, so it is forbidden
+    // to generate a pointer to a parent's protected function, because
+    // this could lead to un-protect them, e.g., by making it public.
     // MakeCallback (&CallbackTestParent::ProtectedParent, this);
   }
 
@@ -634,8 +865,7 @@ public:
 
 MakeCallbackTemplatesTestCase::MakeCallbackTemplatesTestCase ()
   : TestCase ("Check various MakeCallback() template functions")
-{
-}
+{}
 
 void
 MakeCallbackTemplatesTestCase::DoRun (void)
@@ -688,9 +918,11 @@ MakeCallbackTemplatesTestCase::DoRun (void)
   that.CheckParentalRights ();
 }
 
-// ===========================================================================
-// The Test Suite that glues all of the Test Cases together.
-// ===========================================================================
+/**
+ * \ingroup callback-tests
+ *  
+ * \brief The callback Test Suite.
+ */
 class CallbackTestSuite : public TestSuite
 {
 public:
@@ -707,4 +939,4 @@ CallbackTestSuite::CallbackTestSuite ()
   AddTestCase (new MakeCallbackTemplatesTestCase, TestCase::QUICK);
 }
 
-static CallbackTestSuite CallbackTestSuite;
+static CallbackTestSuite g_gallbackTestSuite; //!< Static variable for test initialization

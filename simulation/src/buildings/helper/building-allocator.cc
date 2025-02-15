@@ -52,7 +52,7 @@ GridBuildingAllocator::GetTypeId (void)
     .SetParent<Object> ()
     .AddConstructor<GridBuildingAllocator> ()
     .SetGroupName ("Buildings")
-    .AddAttribute ("GridWidth", "The number of objects layed out on a line.",
+    .AddAttribute ("GridWidth", "The number of objects laid out on a line.",
                    UintegerValue (10),
                    MakeUintegerAccessor (&GridBuildingAllocator::m_n),
                    MakeUintegerChecker<uint32_t> ())
@@ -64,11 +64,11 @@ GridBuildingAllocator::GetTypeId (void)
                    DoubleValue (0.0),
                    MakeDoubleAccessor (&GridBuildingAllocator::m_yMin),
                    MakeDoubleChecker<double> ())
-    .AddAttribute ("LengthX", " the length of the wall of each building along the X axis.",
+    .AddAttribute ("LengthX", "The length of the wall of each building along the X axis.",
                    DoubleValue (1.0),
                    MakeDoubleAccessor (&GridBuildingAllocator::m_lengthX),
                    MakeDoubleChecker<double> ())
-    .AddAttribute ("LengthY", " the length of the wall of each building along the X axis.",
+    .AddAttribute ("LengthY", "The length of the wall of each building along the X axis.",
                    DoubleValue (1.0),
                    MakeDoubleAccessor (&GridBuildingAllocator::m_lengthY),
                    MakeDoubleChecker<double> ())

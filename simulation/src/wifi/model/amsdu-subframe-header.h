@@ -28,6 +28,7 @@ namespace ns3 {
 
 /**
  * \ingroup wifi
+ * \brief Headers for A-MSDU subframes
  */
 class AmsduSubframeHeader : public Header
 {
@@ -40,11 +41,12 @@ public:
    * \return the object TypeId
    */
   static TypeId GetTypeId (void);
-  TypeId GetInstanceTypeId (void) const;
-  void Print (std::ostream &os) const;
-  uint32_t GetSerializedSize (void) const;
-  void Serialize (Buffer::Iterator start) const;
-  uint32_t Deserialize (Buffer::Iterator start);
+
+  TypeId GetInstanceTypeId (void) const override;
+  void Print (std::ostream &os) const override;
+  uint32_t GetSerializedSize (void) const override;
+  void Serialize (Buffer::Iterator start) const override;
+  uint32_t Deserialize (Buffer::Iterator start) override;
 
   /**
    * Set destination address function
@@ -58,7 +60,7 @@ public:
   void SetSourceAddr (Mac48Address to);
   /**
    * Set length function
-   * \param length the length
+   * \param length the length in bytes
    */
   void SetLength (uint16_t length);
   /**
@@ -73,14 +75,14 @@ public:
   Mac48Address GetSourceAddr (void) const;
   /**
    * Get length function
-   * \returns the length
+   * \returns the length in bytes
    */
   uint16_t GetLength (void) const;
 
 private:
   Mac48Address m_da; ///< destination address
-  Mac48Address m_sa; ///< source addresss
-  uint16_t m_length; ///< length
+  Mac48Address m_sa; ///< source address
+  uint16_t m_length; ///< length in bytes
 };
 
 } //namespace ns3

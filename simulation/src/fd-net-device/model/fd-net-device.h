@@ -31,11 +31,10 @@
 #include "ns3/node.h"
 #include "ns3/packet.h"
 #include "ns3/ptr.h"
-#include "ns3/system-condition.h"
 #include "ns3/traced-callback.h"
 #include "ns3/unix-fd-reader.h"
-#include "ns3/system-mutex.h"
 
+#include <mutex>
 #include <utility>
 #include <queue>
 
@@ -59,6 +58,7 @@ public:
 
   /**
    * Set size of the read buffer.
+   * \param bufferSize the buffer size
    */
   void SetBufferSize (uint32_t bufferSize);
 
@@ -115,6 +115,9 @@ public:
    */
   virtual ~FdNetDevice ();
 
+  // Delete assignment operator to avoid misuse
+  FdNetDevice (FdNetDevice const &) = delete;
+
   /**
    * Set the link layer encapsulation mode of this device.
    *
@@ -132,7 +135,7 @@ public:
 
   /**
    * Set the associated file descriptor.
-   *
+   * \param fd the file descriptor
    */
   void SetFileDescriptor (int fd);
 
@@ -187,18 +190,59 @@ public:
    */
   virtual void SetIsMulticast (bool multicast);
 
+  /**
+   * Write packet data to device.
+   * \param buffer The data.
+   * \param length The data length.
+   * \return The size of data written.
+   */
+  virtual ssize_t Write (uint8_t *buffer, size_t length);
+
 protected:
+  /**
+   * Method Initialization for start and stop attributes.
+   */
+  virtual void DoInitialize (void);
+  
   virtual void DoDispose (void);
 
-private:
   /**
-   * \brief Copy constructor
-   *
-   * Defined and unimplemented to avoid misuse as suggested in
-   * http://www.nsnam.org/wiki/NS-3_Python_Bindings#.22invalid_use_of_incomplete_type.22
+   * Get the associated file descriptor.
+   * \return the associated file descriptor
    */
-  FdNetDevice (FdNetDevice const &);
+  int GetFileDescriptor (void) const;
 
+  /**
+   * Allocate packet buffer.
+   * \param len the length of the buffer
+   * \return A pointer to the newly allocated buffer.
+   */
+  virtual uint8_t* AllocateBuffer (size_t len);
+
+  /**
+   * Free the given packet buffer.
+   * \param buf the buffer to free
+   */
+  virtual void FreeBuffer (uint8_t* buf);
+
+  /**
+   * Callback to invoke when a new frame is received
+   * \param buf a buffer containing the received frame
+   * \param len the length of the frame
+   */
+  void ReceiveCallback (uint8_t *buf, ssize_t len);
+
+  /**
+   * Mutex to increase pending read counter.
+   */
+  std::mutex m_pendingReadMutex;
+
+  /**
+   * Number of packets that were received and scheduled for read but not yet read.
+   */
+  std::queue< std::pair<uint8_t *, ssize_t> > m_pendingQueue;
+
+private:
   /**
    * Spin up the device
    */
@@ -210,9 +254,20 @@ private:
   void StopDevice (void);
 
   /**
-   * Callback to invoke when a new frame is received
+   * Create the FdReader object
+   * \return the created FdReader object
    */
-  void ReceiveCallback (uint8_t *buf, ssize_t len);
+  virtual Ptr<FdReader> DoCreateFdReader (void);
+
+  /**
+   * Complete additional actions, if any, to spin up down the device
+   */
+  virtual void DoFinishStartingDevice (void);
+
+  /**
+   * Complete additional actions, if any, to tear down the device
+   */
+  virtual void DoFinishStoppingDevice (void);
 
   /**
    * Forward the frame to the appropriate callback for processing
@@ -261,7 +316,7 @@ private:
   /**
    * Reader for the file descriptor.
    */
-  Ptr<FdNetDeviceFdReader> m_fdReader;
+  Ptr<FdReader> m_fdReader;
 
   /**
    * The net device mac address.
@@ -297,19 +352,9 @@ private:
   bool m_isMulticast;
 
   /**
-   * Number of packets that were received and scheduled for read but not yet read.
-   */
-  std::queue< std::pair<uint8_t *, ssize_t> > m_pendingQueue;
-
-  /**
    * Maximum number of packets that can be received and scheduled for read but not yet read.
    */
   uint32_t m_maxPendingReads;
-
-  /**
-   * Mutex to increase pending read counter.
-   */
-  SystemMutex m_pendingReadMutex;
 
   /**
    * Time to start spinning up the device

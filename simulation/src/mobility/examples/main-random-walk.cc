@@ -21,8 +21,13 @@
 
 using namespace ns3;
 
+/**
+ * Function called when there is a course change
+ * \param context event context
+ * \param mobility a pointer to the mobility model
+ */
 static void 
-CourseChange (std::string foo, Ptr<const MobilityModel> mobility)
+CourseChange (std::string context, Ptr<const MobilityModel> mobility)
 {
   Vector pos = mobility->GetPosition ();
   Vector vel = mobility->GetVelocity ();
@@ -38,7 +43,7 @@ int main (int argc, char *argv[])
   Config::SetDefault ("ns3::RandomWalk2dMobilityModel::Speed", StringValue ("ns3::ConstantRandomVariable[Constant=1.0]"));
   Config::SetDefault ("ns3::RandomWalk2dMobilityModel::Bounds", StringValue ("0|200|0|200"));
 
-  CommandLine cmd;
+  CommandLine cmd (__FILE__);
   cmd.Parse (argc, argv);
 
   NodeContainer c;

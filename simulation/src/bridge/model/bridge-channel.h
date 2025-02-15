@@ -22,6 +22,12 @@
 #include "ns3/channel.h"
 #include <vector>
 
+/**
+ * \file
+ * \ingroup bridge
+ * ns3::BridgeChannel declaration.
+ */
+
 namespace ns3 {
 
 /**
@@ -44,6 +50,10 @@ public:
   BridgeChannel ();
   virtual ~BridgeChannel ();
 
+  // Delete copy constructor and assignment operator to avoid misuse
+  BridgeChannel (const BridgeChannel &) = delete;
+  BridgeChannel & operator = (const BridgeChannel &) = delete;
+
   /**
    * Adds a channel to the bridged pool
    * \param bridgedChannel  the channel to add to the pool
@@ -51,28 +61,11 @@ public:
   void AddChannel (Ptr<Channel> bridgedChannel);
 
   // virtual methods implementation, from Channel
-  virtual uint32_t GetNDevices (void) const;
-  virtual Ptr<NetDevice> GetDevice (uint32_t i) const;
+  virtual std::size_t GetNDevices (void) const;
+  virtual Ptr<NetDevice> GetDevice (std::size_t i) const;
 
 private:
-
-  /**
-   * \brief Copy constructor
-   *
-   * Defined and unimplemented to avoid misuse
-   */
-  BridgeChannel (const BridgeChannel &);
-
-  /**
-   * \brief Copy constructor
-   *
-   * Defined and unimplemented to avoid misuse
-   * \returns
-   */
-  BridgeChannel &operator = (const BridgeChannel &);
-
   std::vector< Ptr<Channel> > m_bridgedChannels; //!< pool of bridged channels
-
 };
 
 } // namespace ns3

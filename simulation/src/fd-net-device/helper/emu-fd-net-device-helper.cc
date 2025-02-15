@@ -34,12 +34,12 @@
 #include <iostream>
 #include <iomanip>
 #include <limits>
-#include <linux/if_tun.h>
 #include <memory>
 #include <net/ethernet.h>
 #include <net/if.h>
 #include <netinet/in.h>
 #include <netpacket/packet.h>
+#include <linux/if_tun.h>
 
 #include <stdlib.h>
 #include <string.h>
@@ -62,12 +62,19 @@ NS_LOG_COMPONENT_DEFINE ("EmuFdNetDeviceHelper");
 EmuFdNetDeviceHelper::EmuFdNetDeviceHelper ()
 {
   m_deviceName = "undefined";
+  m_hostQdiscBypass = false;
 }
 
 void
 EmuFdNetDeviceHelper::SetDeviceName (std::string deviceName)
 {
   m_deviceName = deviceName;
+}
+
+void
+EmuFdNetDeviceHelper::HostQdiscBypass (bool hostQdiscBypass)
+{
+  m_hostQdiscBypass = hostQdiscBypass;
 }
 
 std::string
@@ -107,7 +114,7 @@ EmuFdNetDeviceHelper::SetFileDescriptor (Ptr<FdNetDevice> device) const
   //
   struct ifreq ifr;
   bzero (&ifr, sizeof(ifr));
-  strncpy ((char *)ifr.ifr_name, m_deviceName.c_str (), IFNAMSIZ);
+  strncpy ((char *)ifr.ifr_name, m_deviceName.c_str (), IFNAMSIZ - 1);
 
   NS_LOG_LOGIC ("Getting interface index");
   int32_t rc = ioctl (fd, SIOCGIFINDEX, &ifr);
@@ -138,6 +145,23 @@ EmuFdNetDeviceHelper::SetFileDescriptor (Ptr<FdNetDevice> device) const
   if (rc == -1)
     {
       NS_FATAL_ERROR ("EmuFdNetDeviceHelper::SetFileDescriptor (): Can't get interface flags");
+    }
+
+  if (m_hostQdiscBypass)
+    {
+#ifdef PACKET_QDISC_BYPASS
+      static const int32_t sock_qdisc_bypass = 1;
+      int32_t sock_qdisc_ret = setsockopt (fd, SOL_PACKET, PACKET_QDISC_BYPASS, &sock_qdisc_bypass,
+                                           sizeof (sock_qdisc_bypass));
+
+      if (sock_qdisc_ret == -1)
+        {
+          NS_LOG_ERROR ("Cannot use the qdisc bypass option");
+        }
+#else
+      // PACKET_QDISC_BYPASS is defined since Linux 3.14
+      NS_LOG_ERROR ("PACKET_QDISC_BYPASS undefined; cannot use the qdisc bypass option");
+#endif
     }
 
   //
@@ -173,7 +197,7 @@ EmuFdNetDeviceHelper::SetFileDescriptor (Ptr<FdNetDevice> device) const
 
   // Set the MTU of the device to the mtu of the associated network interface
   struct ifreq ifr2;
-  
+
   bzero (&ifr2, sizeof (ifr2));
   strcpy (ifr2.ifr_name, m_deviceName.c_str ());
 
@@ -184,9 +208,9 @@ EmuFdNetDeviceHelper::SetFileDescriptor (Ptr<FdNetDevice> device) const
     {
       NS_FATAL_ERROR ("FdNetDevice::SetFileDescriptor (): Can't ioctl SIOCGIFMTU");
     }
- 
+
   close (mtufd);
-  device->SetMtu (ifr.ifr_mtu);
+  device->SetMtu (ifr2.ifr_mtu);
 }
 
 int
@@ -248,7 +272,7 @@ EmuFdNetDeviceHelper::CreateFileDescriptor (void) const
   // we wait for the child (the socket creator) to complete and read the
   // socket it created using the ancillary data mechanism.
   //
-  // Tom Goff reports the possiblility of a deadlock when trying to acquire the
+  // Tom Goff reports the possibility of a deadlock when trying to acquire the
   // python GIL here.  He says that this might be due to trying to access Python
   // objects after fork() without calling PyOS_AfterFork() to properly reset
   // Python state (including the GIL).  There is no code to cause the problem
@@ -406,6 +430,8 @@ EmuFdNetDeviceHelper::CreateFileDescriptor (void) const
         }
       NS_FATAL_ERROR ("Did not get the raw socket from the socket creator");
     }
+  NS_FATAL_ERROR ("Should be unreachable");
+  return 0; // Silence compiler warning about lack of return value
 }
 
 } // namespace ns3

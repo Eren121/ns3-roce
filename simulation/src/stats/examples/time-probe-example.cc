@@ -45,11 +45,11 @@ using namespace ns3;
 
 NS_LOG_COMPONENT_DEFINE ("TimeProbeExample");
 
-//
-// This is our test object, an object that emits values according to
-// a Poisson arrival process.   It emits a traced Time value as a 
-// trace source; this takes the value of interarrival time
-//
+/**
+ * This is our test object, an object that emits values according to
+ * a Poisson arrival process.   It emits a traced Time value as a 
+ * trace source; this takes the value of interarrival time
+ */
 class Emitter : public Object
 {
 public:
@@ -61,12 +61,12 @@ public:
   Emitter ();
 private:
   void DoInitialize (void);
-//  void Emit (void);
+  /// Generate data.
   void Emit (void);
 
-  TracedValue<Time> m_interval;  
-  Time m_last;  
-  Ptr<ExponentialRandomVariable> m_var;
+  TracedValue<Time> m_interval;  //!< Interarrival time between events.
+  Time m_last;                   //!< Current interarrival time.
+  Ptr<ExponentialRandomVariable> m_var; //!< Random number generator.
 };
 
 NS_OBJECT_ENSURE_REGISTERED (Emitter);
@@ -102,7 +102,7 @@ Emitter::DoInitialize (void)
 void
 Emitter::Emit (void)
 {
-  NS_LOG_DEBUG ("Emitting at " << Simulator::Now ().GetSeconds () << " seconds");
+  NS_LOG_DEBUG ("Emitting at " << Simulator::Now ().As (Time::S));
   m_interval = Simulator::Now () - m_last;
   m_last = Simulator::Now ();
   TimeProbe::SetValueByPath ("/Names/probe3", m_interval);
@@ -117,7 +117,7 @@ NotifyViaTraceSource (std::string context, Time oldVal, Time newVal)
   GlobalValue::GetValueByName ("verbose", verbose);
   if (verbose.Get ())
     {
-      std::cout << "context: " << context << " old " << oldVal.GetSeconds () << " new " << newVal.GetSeconds () << std::endl;
+      std::cout << "context: " << context << " old " << oldVal.As (Time::S) << " new " << newVal.As (Time::S) << std::endl;
     }
 }
 
@@ -143,7 +143,7 @@ int main (int argc, char *argv[])
   double stopTime = 100.0;
   bool verbose = false;
 
-  CommandLine cmd;
+  CommandLine cmd (__FILE__);
   cmd.AddValue ("stopTime", "Time (seconds) to terminate simulation", stopTime);
   cmd.AddValue ("verbose", "Whether to enable verbose output", verbose);
   cmd.Parse (argc, argv);

@@ -18,33 +18,83 @@
  * Author: Guangyu Pei <guangyu.pei@boeing.com>
  */
 
-#include "ns3/core-module.h"
-#include "ns3/mobility-module.h"
-#include "ns3/stats-module.h"
-#include "ns3/wifi-module.h"
-#include "ns3/internet-module.h"
+#include "ns3/gnuplot.h"
+#include "ns3/command-line.h"
+#include "ns3/config.h"
+#include "ns3/double.h"
+#include "ns3/string.h"
+#include "ns3/log.h"
+#include "ns3/yans-wifi-helper.h"
+#include "ns3/mobility-helper.h"
+#include "ns3/yans-wifi-channel.h"
+#include "ns3/mobility-model.h"
+#include "ns3/internet-stack-helper.h"
+#include "ns3/ipv4-address-helper.h"
 
 using namespace ns3;
 
-NS_LOG_COMPONENT_DEFINE ("Main");
+NS_LOG_COMPONENT_DEFINE ("ClearChannelCmu");
 
+/**
+ * WiFi clear channel cmu experiment class.
+ * 
+ * It handles the creation and run of an experiment.
+ */
 class Experiment
 {
 public:
   Experiment ();
+  /**
+   * Constructor.
+   * \param name The name of the experiment.
+   */
   Experiment (std::string name);
+  /**
+   * Run an experiment.
+   * \param wifi      //!< The WifiHelper class.
+   * \param wifiPhy   //!< The YansWifiPhyHelper class.
+   * \param wifiMac   //!< The WifiMacHelper class.
+   * \param wifiChannel //!< The YansWifiChannelHelper class.
+   * \return the number of received packets. 
+   */
   uint32_t Run (const WifiHelper &wifi, const YansWifiPhyHelper &wifiPhy,
                 const WifiMacHelper &wifiMac, const YansWifiChannelHelper &wifiChannel);
 private:
+  /**
+   * Receive a packet.
+   * \param socket The recieving socket.
+   */
   void ReceivePacket (Ptr<Socket> socket);
+  /**
+   * Set the position of a node.
+   * \param node The node.
+   * \param position The position of the node.
+   */
   void SetPosition (Ptr<Node> node, Vector position);
+  /**
+   * Get the position of a node.
+   * \param node The node.
+   * \return the position of the node.
+   */
   Vector GetPosition (Ptr<Node> node);
+  /**
+   * Setup the receiving socket.
+   * \param node The receiving node.
+   * \return the socket.
+   */
   Ptr<Socket> SetupPacketReceive (Ptr<Node> node);
+  /**
+   * Generate the traffic.
+   * \param socket The sending socket.
+   * \param pktSize The packet size.
+   * \param pktCount The number of packets to send.
+   * \param pktInterval The time between packets.
+   */
   void GenerateTraffic (Ptr<Socket> socket, uint32_t pktSize,
                         uint32_t pktCount, Time pktInterval );
 
-  uint32_t m_pktsTotal;
-  Gnuplot2dDataset m_output;
+  uint32_t m_pktsTotal;       //!< Total number of received packets
+  Gnuplot2dDataset m_output;  //!< Output dataset.
 };
 
 Experiment::Experiment ()
@@ -167,11 +217,8 @@ int main (int argc, char *argv[])
   modes.push_back ("DsssRate2Mbps");
   modes.push_back ("DsssRate5_5Mbps");
   modes.push_back ("DsssRate11Mbps");
-  // disable fragmentation
-  Config::SetDefault ("ns3::WifiRemoteStationManager::FragmentationThreshold", StringValue ("2200"));
-  Config::SetDefault ("ns3::WifiRemoteStationManager::RtsCtsThreshold", StringValue ("2200"));
 
-  CommandLine cmd;
+  CommandLine cmd (__FILE__);
   cmd.Parse (argc, argv);
 
   Gnuplot gnuplot = Gnuplot ("clear-channel.eps");
@@ -187,7 +234,7 @@ int main (int argc, char *argv[])
           dataset.SetStyle (Gnuplot2dDataset::LINES);
 
           WifiHelper wifi;
-          wifi.SetStandard (WIFI_PHY_STANDARD_80211b);
+          wifi.SetStandard (WIFI_STANDARD_80211b);
           WifiMacHelper wifiMac;
           Config::SetDefault ("ns3::WifiRemoteStationManager::NonUnicastMode",
                               StringValue (modes[i]));
@@ -196,7 +243,7 @@ int main (int argc, char *argv[])
                                         "ControlMode",StringValue (modes[i]));
           wifiMac.SetType ("ns3::AdhocWifiMac");
 
-          YansWifiPhyHelper wifiPhy = YansWifiPhyHelper::Default ();
+          YansWifiPhyHelper wifiPhy;
           YansWifiChannelHelper wifiChannel;
           wifiChannel.SetPropagationDelay ("ns3::ConstantSpeedPropagationDelayModel");
           wifiChannel.AddPropagationLoss ("ns3::FixedRssLossModel","Rss",DoubleValue (rss));
@@ -204,8 +251,6 @@ int main (int argc, char *argv[])
 
           NS_LOG_DEBUG (modes[i]);
           experiment = Experiment (modes[i]);
-          wifiPhy.Set ("EnergyDetectionThreshold", DoubleValue (-110.0) );
-          wifiPhy.Set ("CcaMode1Threshold", DoubleValue (-110.0) );
           wifiPhy.Set ("TxPowerStart", DoubleValue (15.0) );
           wifiPhy.Set ("TxPowerEnd", DoubleValue (15.0) );
           wifiPhy.Set ("RxGain", DoubleValue (0) );

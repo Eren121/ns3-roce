@@ -38,11 +38,9 @@ using namespace ns3;
 NS_LOG_COMPONENT_DEFINE ("BuildingsShadowingTest");
 
 
-/**
+/*
 * Test 1.1 Shadowing compound test
-*/
-
-/**
+*
 * This TestSuite tests the shadowing model of BuildingPathlossModel 
 * by reproducing several communication scenarios 
 */
@@ -65,10 +63,11 @@ BuildingsShadowingTestSuite::BuildingsShadowingTestSuite ()
 
 }
 
+/// Static variable for test initialization
 static BuildingsShadowingTestSuite buildingsShadowingTestSuite;
 
 
-/**
+/*
 * TestCase
 */
 
@@ -223,6 +222,6 @@ BuildingsShadowingTestCase::CreateMobilityModel (uint16_t index)
     }
   Ptr<MobilityBuildingInfo> buildingInfo = CreateObject<MobilityBuildingInfo> ();
   mm->AggregateObject (buildingInfo); // operation usually done by BuildingsHelper::Install
-  BuildingsHelper::MakeConsistent (mm); 
+  buildingInfo->MakeConsistent (mm);
   return mm;
 }

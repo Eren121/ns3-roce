@@ -35,6 +35,7 @@ class NetDevice;
 class Node;
 class Packet;
 class Ipv4Interface;
+class TrafficControlLayer;
 
 /**
  * \ingroup ipv4
@@ -62,11 +63,21 @@ public:
   ArpL3Protocol ();
   virtual ~ArpL3Protocol ();
 
+  // Delete copy constructor and assignment operator to avoid misuse
+  ArpL3Protocol (const ArpL3Protocol &) = delete;
+  ArpL3Protocol & operator = (const ArpL3Protocol &) = delete;
+
   /**
    * \brief Set the node the ARP L3 protocol is associated with
    * \param node the node
    */
   void SetNode (Ptr<Node> node);
+
+  /**
+   * \brief Set the TrafficControlLayer.
+   * \param tc TrafficControlLayer object
+   */
+  void SetTrafficControl (Ptr<TrafficControlLayer> tc);
 
   /**
    * \brief Create an ARP cache for the device/interface
@@ -121,21 +132,6 @@ protected:
   virtual void NotifyNewAggregate ();
 private:
   typedef std::list<Ptr<ArpCache> > CacheList; //!< container of the ARP caches
-  /**
-   * \brief Copy constructor
-   *
-   * Defined and unimplemented to avoid misuse
-   * \param o
-   */
-  ArpL3Protocol (const ArpL3Protocol &o);
-  /**
-   * \brief Copy constructor
-   *
-   * Defined and unimplemented to avoid misuse
-   * \param o
-   * \returns
-   */
-  ArpL3Protocol &operator = (const ArpL3Protocol &o);
 
   /**
    * \brief Finds the cache associated with a NetDevice
@@ -163,6 +159,7 @@ private:
   Ptr<Node> m_node; //!< node the ARP L3 protocol is associated with
   TracedCallback<Ptr<const Packet> > m_dropTrace; //!< trace for packets dropped by ARP
   Ptr<RandomVariableStream> m_requestJitter; //!< jitter to de-sync ARP requests
+  Ptr<TrafficControlLayer> m_tc; //!< The associated TrafficControlLayer
 
 };
 

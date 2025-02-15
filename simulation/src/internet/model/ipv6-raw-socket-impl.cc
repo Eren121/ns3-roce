@@ -57,7 +57,7 @@ TypeId Ipv6RawSocketImpl::GetTypeId ()
 
 Ipv6RawSocketImpl::Ipv6RawSocketImpl ()
 {
-  NS_LOG_FUNCTION_NOARGS ();
+  NS_LOG_FUNCTION (this);
   m_err = Socket::ERROR_NOTERROR;
   m_node = 0;
   m_src = Ipv6Address::GetAny ();
@@ -74,7 +74,7 @@ Ipv6RawSocketImpl::~Ipv6RawSocketImpl ()
 
 void Ipv6RawSocketImpl::DoDispose ()
 {
-  NS_LOG_FUNCTION_NOARGS ();
+  NS_LOG_FUNCTION (this);
   m_node = 0;
   Socket::DoDispose ();
 }
@@ -92,7 +92,7 @@ Ptr<Node> Ipv6RawSocketImpl::GetNode () const
 
 enum Socket::SocketErrno Ipv6RawSocketImpl::GetErrno () const
 {
-  NS_LOG_FUNCTION_NOARGS ();
+  NS_LOG_FUNCTION (this);
   return m_err;
 }
 
@@ -117,7 +117,7 @@ int Ipv6RawSocketImpl::Bind (const Address& address)
 
 int Ipv6RawSocketImpl::Bind ()
 {
-  NS_LOG_FUNCTION_NOARGS ();
+  NS_LOG_FUNCTION (this);
   m_src = Ipv6Address::GetAny ();
   return 0;
 }
@@ -129,7 +129,7 @@ int Ipv6RawSocketImpl::Bind6 ()
 
 int Ipv6RawSocketImpl::GetSockName (Address& address) const
 {
-  NS_LOG_FUNCTION_NOARGS ();
+  NS_LOG_FUNCTION (this);
   address = Inet6SocketAddress (m_src, 0);
   return 0;
 }
@@ -152,7 +152,7 @@ Ipv6RawSocketImpl::GetPeerName (Address& address) const
 
 int Ipv6RawSocketImpl::Close ()
 {
-  NS_LOG_FUNCTION_NOARGS ();
+  NS_LOG_FUNCTION (this);
   Ptr<Ipv6L3Protocol> ipv6 = m_node->GetObject<Ipv6L3Protocol> ();
 
   Ipv6LeaveGroup ();
@@ -165,14 +165,14 @@ int Ipv6RawSocketImpl::Close ()
 
 int Ipv6RawSocketImpl::ShutdownSend ()
 {
-  NS_LOG_FUNCTION_NOARGS ();
+  NS_LOG_FUNCTION (this);
   m_shutdownSend = true;
   return 0;
 }
 
 int Ipv6RawSocketImpl::ShutdownRecv ()
 {
-  NS_LOG_FUNCTION_NOARGS ();
+  NS_LOG_FUNCTION (this);
   m_shutdownRecv = true;
   return 0;
 }
@@ -194,7 +194,7 @@ int Ipv6RawSocketImpl::Connect (const Address& address)
 
 int Ipv6RawSocketImpl::Listen ()
 {
-  NS_LOG_FUNCTION_NOARGS ();
+  NS_LOG_FUNCTION (this);
   m_err = Socket::ERROR_OPNOTSUPP;
   return -1;
 }
@@ -242,7 +242,7 @@ int Ipv6RawSocketImpl::SendTo (Ptr<Packet> p, uint32_t flags, const Address& toA
   if (ipv6->GetRoutingProtocol ())
     {
       Ipv6Header hdr;
-      hdr.SetDestinationAddress (dst);
+      hdr.SetDestination (dst);
       SocketErrno err = ERROR_NOTERROR;
       Ptr<Ipv6Route> route = 0;
       Ptr<NetDevice> oif = m_boundnetdevice; //specify non-zero if bound to a specific device
@@ -377,13 +377,13 @@ Ipv6RawSocketImpl::Ipv6JoinGroup (Ipv6Address address, Socket::Ipv6MulticastFilt
 
 uint32_t Ipv6RawSocketImpl::GetTxAvailable () const
 {
-  NS_LOG_FUNCTION_NOARGS ();
+  NS_LOG_FUNCTION (this);
   return 0xffffffff;
 }
 
 uint32_t Ipv6RawSocketImpl::GetRxAvailable () const
 {
-  NS_LOG_FUNCTION_NOARGS ();
+  NS_LOG_FUNCTION (this);
   uint32_t rx = 0;
 
   for (std::list<Data>::const_iterator it = m_data.begin (); it != m_data.end (); ++it)
@@ -412,8 +412,8 @@ bool Ipv6RawSocketImpl::ForwardUp (Ptr<const Packet> p, Ipv6Header hdr, Ptr<NetD
         }
     }
 
-  if ((m_src == Ipv6Address::GetAny () || hdr.GetDestinationAddress () == m_src) && 
-      (m_dst == Ipv6Address::GetAny () || hdr.GetSourceAddress () == m_dst) &&
+  if ((m_src == Ipv6Address::GetAny () || hdr.GetDestination () == m_src) && 
+      (m_dst == Ipv6Address::GetAny () || hdr.GetSource () == m_dst) &&
       hdr.GetNextHeader () == m_protocol)
     {
       Ptr<Packet> copy = p->Copy ();
@@ -437,6 +437,9 @@ bool Ipv6RawSocketImpl::ForwardUp (Ptr<const Packet> p, Ipv6Header hdr, Ptr<NetD
         {
           Ipv6PacketInfoTag tag;
           copy->RemovePacketTag (tag);
+          tag.SetAddress (hdr.GetDestination ());
+          tag.SetHoplimit (hdr.GetHopLimit ());
+          tag.SetTrafficClass (hdr.GetTrafficClass ());
           tag.SetRecvIf (device->GetIfIndex ());
           copy->AddPacketTag (tag);
         }
@@ -459,7 +462,7 @@ bool Ipv6RawSocketImpl::ForwardUp (Ptr<const Packet> p, Ipv6Header hdr, Ptr<NetD
       copy->AddHeader (hdr);
       Data data;
       data.packet = copy;
-      data.fromIp = hdr.GetSourceAddress ();
+      data.fromIp = hdr.GetSource ();
       data.fromProtocol = hdr.GetNextHeader ();
       m_data.push_back (data);
       NotifyDataRecv ();

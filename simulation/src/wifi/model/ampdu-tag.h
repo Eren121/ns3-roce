@@ -41,29 +41,29 @@ public:
    * \return the object TypeId
    */
   static TypeId GetTypeId (void);
-  TypeId GetInstanceTypeId (void) const;
+
+  TypeId GetInstanceTypeId (void) const override;
+  void Serialize (TagBuffer i) const override;
+  void Deserialize (TagBuffer i) override;
+  uint32_t GetSerializedSize () const override;
+  void Print (std::ostream &os) const override;
 
   /**
-   * Create a AmpduTag with the default =0 no Ampdu
+   * Create a AmpduTag with the default =0 no A-MPDU
    */
   AmpduTag ();
   /**
-   * \param nbofmpdus the remaining number of MPDUs
+   * \param nbOfMpdus the remaining number of MPDUs
    *
    * Set the remaining number of MPDUs in the A-MPDU.
    */
-  void SetRemainingNbOfMpdus (uint8_t nbofmpdus);
+  void SetRemainingNbOfMpdus (uint8_t nbOfMpdus);
   /**
    * \param duration the remaining duration of the A-MPDU
    *
    * Set the remaining duration of the A-MPDU.
    */
   void SetRemainingAmpduDuration (Time duration);
-
-  void Serialize (TagBuffer i) const;
-  void Deserialize (TagBuffer i);
-  uint32_t GetSerializedSize () const;
-  void Print (std::ostream &os) const;
 
   /**
    * \return the remaining number of MPDUs in an A-MPDU
@@ -81,7 +81,7 @@ public:
 
 private:
   uint8_t m_nbOfMpdus; //!< Remaining number of MPDUs in the A-MPDU
-  Time m_duration;     //!< Remaining duration of the A-MPDU in nanoseconds
+  Time m_duration;     //!< Remaining duration of the A-MPDU
 };
 
 } //namespace ns3

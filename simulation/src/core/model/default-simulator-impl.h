@@ -22,14 +22,9 @@
 #define DEFAULT_SIMULATOR_IMPL_H
 
 #include "simulator-impl.h"
-#include "scheduler.h"
-#include "event-impl.h"
-#include "system-thread.h"
-#include "system-mutex.h"
-
-#include "ptr.h"
-
 #include <list>
+#include <mutex>
+#include <thread>
 
 /**
  * \file
@@ -38,6 +33,9 @@
  */
 
 namespace ns3 {
+
+// Forward
+class Scheduler;
 
 /**
  * \ingroup simulator
@@ -75,8 +73,9 @@ public:
   virtual Time GetDelayLeft (const EventId &id) const;
   virtual Time GetMaximumSimulationTime (void) const;
   virtual void SetScheduler (ObjectFactory schedulerFactory);
-  virtual uint32_t GetSystemId (void) const; 
+  virtual uint32_t GetSystemId (void) const;
   virtual uint32_t GetContext (void) const;
+  virtual uint64_t GetEventCount (void) const;
 
 private:
   virtual void DoDispose (void);
@@ -85,9 +84,10 @@ private:
   void ProcessOneEvent (void);
   /** Move events from a different context into the main event queue. */
   void ProcessEventsWithContext (void);
- 
+
   /** Wrap an event with its execution context. */
-  struct EventWithContext {
+  struct EventWithContext
+  {
     /** The event context. */
     uint32_t context;
     /** Event timestamp. */
@@ -105,7 +105,7 @@ private:
    */
   bool m_eventsWithContextEmpty;
   /** Mutex to control access to the list of events with context. */
-  SystemMutex m_eventsWithContextMutex;
+  std::mutex m_eventsWithContextMutex;
 
   /** Container type for the events to run at Simulator::Destroy() */
   typedef std::list<EventId> DestroyEvents;
@@ -124,6 +124,8 @@ private:
   uint64_t m_currentTs;
   /** Execution context of the current event. */
   uint32_t m_currentContext;
+  /** The event count. */
+  uint64_t m_eventCount;
   /**
    * Number of events that have been inserted but not yet scheduled,
    *  not counting the Destroy events; this is used for validation
@@ -131,7 +133,7 @@ private:
   int m_unscheduledEvents;
 
   /** Main execution thread. */
-  SystemThread::ThreadId m_main;
+  std::thread::id m_mainThreadId;
 };
 
 } // namespace ns3

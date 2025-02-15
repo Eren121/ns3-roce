@@ -23,15 +23,16 @@
 #define OCB_WIFI_MAC_H
 
 #include "ns3/object-factory.h"
-#include "ns3/regular-wifi-mac.h"
+#include "ns3/wifi-mac.h"
 #include "ns3/wifi-mac-queue.h"
-#include "ns3/qos-utils.h"
 #include "vendor-specific-action.h"
 #include "wave-net-device.h"
 
 namespace ns3 {
+
 class OrganizationIdentifier;
 class WaveNetDevice;
+
 /**
  * \brief STAs communicate with each directly outside the context of a BSS
  * \ingroup wave
@@ -45,7 +46,7 @@ class WaveNetDevice;
  * However in simulation nodes are supposed to have GPS synchronization ability,
  * so we will not implement this feature.
  */
-class OcbWifiMac : public RegularWifiMac
+class OcbWifiMac : public WifiMac
 {
 public:
   /**
@@ -100,6 +101,7 @@ public:
   /**
    * This method shall not be used in WAVE environment and
    * here it will overloaded to log warn message
+   * \return An invalid BSSID.
    */
   virtual Mac48Address GetBssid (void) const;
   /**
@@ -123,7 +125,8 @@ public:
    * dequeued as soon as the channel access function determines that
    * access is granted to this MAC.
    */
-  virtual void Enqueue (Ptr<const Packet> packet, Mac48Address to);
+  virtual void Enqueue (Ptr<Packet> packet, Mac48Address to);
+  virtual bool CanForwardPacketsTo (Mac48Address to) const;
   /**
     * \param cwmin the min contention window
     * \param cwmax the max contention window
@@ -172,10 +175,12 @@ public:
    */
   void Reset (void);
 
+  // Inherited from base class
+  virtual void ConfigureStandard (enum WifiStandard standard);
 protected:
-  virtual void FinishConfigureStandard (enum WifiPhyStandard standard);
+  virtual void DoDispose (void);
 private:
-  virtual void Receive (Ptr<Packet> packet, const WifiMacHeader *hdr);
+  virtual void Receive (Ptr<WifiMacQueueItem> mpdu);
 
   VendorSpecificContentManager m_vscManager; ///< VSC manager
 };

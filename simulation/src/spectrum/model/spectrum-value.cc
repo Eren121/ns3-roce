@@ -110,10 +110,10 @@ SpectrumValue::Add (const SpectrumValue& x)
   Values::const_iterator it2 = x.m_values.begin ();
 
   NS_ASSERT (m_spectrumModel == x.m_spectrumModel);
+  NS_ASSERT (m_values.size () == x.m_values.size ());
 
   while (it1 != m_values.end ())
     {
-      NS_ASSERT ( it2 != x.m_values.end ());
       *it1 += *it2;
       ++it1;
       ++it2;
@@ -142,10 +142,10 @@ SpectrumValue::Subtract (const SpectrumValue& x)
   Values::const_iterator it2 = x.m_values.begin ();
 
   NS_ASSERT (m_spectrumModel == x.m_spectrumModel);
+  NS_ASSERT (m_values.size () == x.m_values.size ());
 
   while (it1 != m_values.end ())
     {
-      NS_ASSERT ( it2 != x.m_values.end ());
       *it1 -= *it2;
       ++it1;
       ++it2;
@@ -168,10 +168,10 @@ SpectrumValue::Multiply (const SpectrumValue& x)
   Values::const_iterator it2 = x.m_values.begin ();
 
   NS_ASSERT (m_spectrumModel == x.m_spectrumModel);
+  NS_ASSERT (m_values.size () == x.m_values.size ());
 
   while (it1 != m_values.end ())
     {
-      NS_ASSERT ( it2 != x.m_values.end ());
       *it1 *= *it2;
       ++it1;
       ++it2;
@@ -201,10 +201,10 @@ SpectrumValue::Divide (const SpectrumValue& x)
   Values::const_iterator it2 = x.m_values.begin ();
 
   NS_ASSERT (m_spectrumModel == x.m_spectrumModel);
+  NS_ASSERT (m_values.size () == x.m_values.size ());
 
   while (it1 != m_values.end ())
     {
-      NS_ASSERT ( it2 != x.m_values.end ());
       *it1 /= *it2;
       ++it1;
       ++it2;
@@ -692,8 +692,17 @@ SpectrumValue::operator>> (int n) const
   return res;
 }
 
+uint32_t
+SpectrumValue::GetValuesN () const
+{
+  return m_values.size ();
+}
 
-
+const double &
+SpectrumValue::ValuesAt (uint32_t pos) const
+{
+  return m_values.at (pos);
+}
 
 } // namespace ns3
 

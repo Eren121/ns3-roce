@@ -20,17 +20,31 @@
  *          Sebastien Deronne <sebastien.deronne@gmail.com>
  *          Tom Henderson <tomhend@u.washington.edu>
  *
- * Adapted from ht-wifi-network.cc example
+ * Adapted from wifi-ht-network.cc example
  */
 
 #include <iomanip>
-#include "ns3/core-module.h"
-#include "ns3/network-module.h"
-#include "ns3/applications-module.h"
-#include "ns3/wifi-module.h"
-#include "ns3/mobility-module.h"
-#include "ns3/spectrum-module.h"
-#include "ns3/internet-module.h"
+#include "ns3/command-line.h"
+#include "ns3/config.h"
+#include "ns3/uinteger.h"
+#include "ns3/boolean.h"
+#include "ns3/double.h"
+#include "ns3/string.h"
+#include "ns3/log.h"
+#include "ns3/yans-wifi-helper.h"
+#include "ns3/spectrum-wifi-helper.h"
+#include "ns3/ssid.h"
+#include "ns3/mobility-helper.h"
+#include "ns3/internet-stack-helper.h"
+#include "ns3/ipv4-address-helper.h"
+#include "ns3/udp-client-server-helper.h"
+#include "ns3/packet-sink-helper.h"
+#include "ns3/on-off-helper.h"
+#include "ns3/ipv4-global-routing-helper.h"
+#include "ns3/packet-sink.h"
+#include "ns3/yans-wifi-channel.h"
+#include "ns3/multi-model-spectrum-channel.h"
+#include "ns3/propagation-loss-model.h"
 
 // This is a simple example of an IEEE 802.11n Wi-Fi network.
 //
@@ -87,7 +101,8 @@ void MonitorSniffRx (Ptr<const Packet> packet,
                      uint16_t channelFreqMhz,
                      WifiTxVector txVector,
                      MpduInfo aMpdu,
-                     SignalNoiseDbm signalNoise)
+                     SignalNoiseDbm signalNoise,
+                     uint16_t staId)
 
 {
   g_samples++;
@@ -108,7 +123,7 @@ int main (int argc, char *argv[])
   bool enablePcap = false;
   const uint32_t tcpPacketSize = 1448;
 
-  CommandLine cmd;
+  CommandLine cmd (__FILE__);
   cmd.AddValue ("simulationTime", "Simulation time in seconds", simulationTime);
   cmd.AddValue ("udp", "UDP if set to 1, TCP otherwise", udp);
   cmd.AddValue ("distance", "meters separation between nodes", distance);
@@ -154,8 +169,8 @@ int main (int argc, char *argv[])
       NodeContainer wifiApNode;
       wifiApNode.Create (1);
 
-      YansWifiPhyHelper phy = YansWifiPhyHelper::Default ();
-      SpectrumWifiPhyHelper spectrumPhy = SpectrumWifiPhyHelper::Default ();
+      YansWifiPhyHelper phy;
+      SpectrumWifiPhyHelper spectrumPhy;
       if (wifiType == "ns3::YansWifiPhy")
         {
           YansWifiChannelHelper channel;
@@ -165,34 +180,9 @@ int main (int argc, char *argv[])
           phy.SetChannel (channel.Create ());
           phy.Set ("TxPowerStart", DoubleValue (1)); // dBm (1.26 mW)
           phy.Set ("TxPowerEnd", DoubleValue (1));
-          phy.Set ("Frequency", UintegerValue (5180));
-
-          if (i <= 7)
-            {
-              phy.Set ("ShortGuardEnabled", BooleanValue (false));
-              phy.Set ("ChannelWidth", UintegerValue (20));
-            }
-          else if (i > 7 && i <= 15)
-            {
-              phy.Set ("ShortGuardEnabled", BooleanValue (true));
-              phy.Set ("ChannelWidth", UintegerValue (20));
-            }
-          else if (i > 15 && i <= 23)
-            {
-              phy.Set ("ShortGuardEnabled", BooleanValue (false));
-              phy.Set ("ChannelWidth", UintegerValue (40));
-            }
-          else
-            {
-              phy.Set ("ShortGuardEnabled", BooleanValue (true));
-              phy.Set ("ChannelWidth", UintegerValue (40));
-            }
         }
       else if (wifiType == "ns3::SpectrumWifiPhy")
         {
-          //Bug 2460: CcaMode1Threshold default should be set to -62 dBm when using Spectrum
-          Config::SetDefault ("ns3::WifiPhy::CcaMode1Threshold", DoubleValue (-62.0));
-
           Ptr<MultiModelSpectrumChannel> spectrumChannel
             = CreateObject<MultiModelSpectrumChannel> ();
           Ptr<FriisPropagationLossModel> lossModel
@@ -206,30 +196,8 @@ int main (int argc, char *argv[])
 
           spectrumPhy.SetChannel (spectrumChannel);
           spectrumPhy.SetErrorRateModel (errorModelType);
-          spectrumPhy.Set ("Frequency", UintegerValue (5180));
           spectrumPhy.Set ("TxPowerStart", DoubleValue (1)); // dBm  (1.26 mW)
           spectrumPhy.Set ("TxPowerEnd", DoubleValue (1));
-
-          if (i <= 7)
-            {
-              spectrumPhy.Set ("ShortGuardEnabled", BooleanValue (false));
-              spectrumPhy.Set ("ChannelWidth", UintegerValue (20));
-            }
-          else if (i > 7 && i <= 15)
-            {
-              spectrumPhy.Set ("ShortGuardEnabled", BooleanValue (true));
-              spectrumPhy.Set ("ChannelWidth", UintegerValue (20));
-            }
-          else if (i > 15 && i <= 23)
-            {
-              spectrumPhy.Set ("ShortGuardEnabled", BooleanValue (false));
-              spectrumPhy.Set ("ChannelWidth", UintegerValue (40));
-            }
-          else
-            {
-              spectrumPhy.Set ("ShortGuardEnabled", BooleanValue (true));
-              spectrumPhy.Set ("ChannelWidth", UintegerValue (40));
-            }
         }
       else
         {
@@ -238,7 +206,7 @@ int main (int argc, char *argv[])
 
 
       WifiHelper wifi;
-      wifi.SetStandard (WIFI_PHY_STANDARD_80211n_5GHZ);
+      wifi.SetStandard (WIFI_STANDARD_80211n);
       WifiMacHelper mac;
 
       Ssid ssid = Ssid ("ns380211n");
@@ -416,6 +384,8 @@ int main (int argc, char *argv[])
         {
           mac.SetType ("ns3::StaWifiMac",
                        "Ssid", SsidValue (ssid));
+          phy.Set ("ChannelSettings", StringValue (std::string ("{0, ") + (i <= 15 ? "20" : "40")
+                                                   + ", BAND_5GHZ, 0}"));
           staDevice = wifi.Install (phy, mac, wifiStaNode);
           mac.SetType ("ns3::ApWifiMac",
                        "Ssid", SsidValue (ssid));
@@ -426,10 +396,29 @@ int main (int argc, char *argv[])
         {
           mac.SetType ("ns3::StaWifiMac",
                        "Ssid", SsidValue (ssid));
+          phy.Set ("ChannelSettings", StringValue (std::string ("{0, ") + (i <= 15 ? "20" : "40")
+                                                   + ", BAND_5GHZ, 0}"));
           staDevice = wifi.Install (spectrumPhy, mac, wifiStaNode);
           mac.SetType ("ns3::ApWifiMac",
                        "Ssid", SsidValue (ssid));
           apDevice = wifi.Install (spectrumPhy, mac, wifiApNode);
+        }
+
+      if (i <= 7)
+        {
+          Config::Set ("/NodeList/*/DeviceList/*/$ns3::WifiNetDevice/HtConfiguration/ShortGuardIntervalSupported", BooleanValue (false));
+        }
+      else if (i > 7 && i <= 15)
+        {
+          Config::Set ("/NodeList/*/DeviceList/*/$ns3::WifiNetDevice/HtConfiguration/ShortGuardIntervalSupported", BooleanValue (true));
+        }
+      else if (i > 15 && i <= 23)
+        {
+          Config::Set ("/NodeList/*/DeviceList/*/$ns3::WifiNetDevice/HtConfiguration/ShortGuardIntervalSupported", BooleanValue (false));
+        }
+      else
+        {
+          Config::Set ("/NodeList/*/DeviceList/*/$ns3::WifiNetDevice/HtConfiguration/ShortGuardIntervalSupported", BooleanValue (true));
         }
 
       // mobility.
@@ -471,7 +460,7 @@ int main (int argc, char *argv[])
 
           UdpClientHelper client (staNodeInterface.GetAddress (0), port);
           client.SetAttribute ("MaxPackets", UintegerValue (4294967295u));
-          client.SetAttribute ("Interval", TimeValue (Time ("0.00001"))); //packets/s
+          client.SetAttribute ("Interval", TimeValue (Time ("0.0001"))); //packets/s
           client.SetAttribute ("PacketSize", UintegerValue (payloadSize));
           ApplicationContainer clientApp = client.Install (wifiApNode.Get (0));
           clientApp.Start (Seconds (1.0));
@@ -503,6 +492,7 @@ int main (int argc, char *argv[])
 
       if (enablePcap)
         {
+          phy.SetPcapDataLinkType (WifiPhyHelper::DLT_IEEE802_11_RADIO);
           std::stringstream ss;
           ss << "wifi-spectrum-per-example-" << i;
           phy.EnablePcap (ss.str (), apDevice);
@@ -525,7 +515,7 @@ int main (int argc, char *argv[])
       else
         {
           //TCP
-          uint32_t totalBytesRx = DynamicCast<PacketSink> (serverApp.Get (0))->GetTotalRx ();
+          uint64_t totalBytesRx = DynamicCast<PacketSink> (serverApp.Get (0))->GetTotalRx ();
           totalPacketsThrough = totalBytesRx / tcpPacketSize;
           throughput = totalBytesRx * 8 / (simulationTime * 1000000.0); //Mbit/s
         }

@@ -26,16 +26,13 @@
 #define DHCP_SERVER_H
 
 #include "ns3/application.h"
-#include "ns3/event-id.h"
-#include "ns3/ptr.h"
-#include "ns3/address.h"
-#include "ns3/traced-value.h"
-#include "ns3/inet-socket-address.h"
+#include "ns3/ipv4-address.h"
 #include "dhcp-header.h"
 #include <map>
 
 namespace ns3 {
 
+class InetSocketAddress;
 class Socket;
 class Packet;
 

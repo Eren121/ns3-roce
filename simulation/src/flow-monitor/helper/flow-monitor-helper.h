@@ -43,10 +43,14 @@ public:
   FlowMonitorHelper ();
   ~FlowMonitorHelper ();
 
+  // Delete copy constructor and assignment operator to avoid misuse
+  FlowMonitorHelper (const FlowMonitorHelper &) = delete;
+  FlowMonitorHelper& operator= (const FlowMonitorHelper &) = delete;
+
   /**
    * \brief Set an attribute for the to-be-created FlowMonitor object
    * \param n1 attribute name
-   * \param v1 attibute value
+   * \param v1 attribute value
    */
   void SetMonitorAttribute (std::string n1, const AttributeValue &v1);
 
@@ -113,20 +117,6 @@ public:
   void SerializeToXmlFile (std::string fileName, bool enableHistograms, bool enableProbes);
 
 private:
-  /**
-   * \brief Copy constructor
-   *
-   * Defined and unimplemented to avoid misuse
-   */
-  FlowMonitorHelper (const FlowMonitorHelper&);
-  /**
-   * \brief Copy constructor
-   *
-   * Defined and unimplemented to avoid misuse
-   * \returns
-   */
-  FlowMonitorHelper& operator= (const FlowMonitorHelper&);
-
   ObjectFactory m_monitorFactory;        //!< Object factory
   Ptr<FlowMonitor> m_flowMonitor;        //!< the FlowMonitor object
   Ptr<FlowClassifier> m_flowClassifier4; //!< the FlowClassifier object for IPv4

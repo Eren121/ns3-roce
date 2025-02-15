@@ -19,8 +19,10 @@
 #ifndef WALL_CLOCK_CLOCK_SYNCHRONIZER_H
 #define WALL_CLOCK_CLOCK_SYNCHRONIZER_H
 
-#include "system-condition.h"
 #include "synchronizer.h"
+
+#include <condition_variable>
+#include <mutex>
 
 /**
  * @file
@@ -36,7 +38,7 @@ namespace ns3 {
  * "wall clock" using Posix clock functions.
  *
  * This synchronizer is used as part of the RealtimeSimulatorImpl.  It is
- * typically not explicitly enabled by users but instead is implicitly 
+ * typically not explicitly enabled by users but instead is implicitly
  * enabled when the simulator implementation type is set to real-time; e.g.:
  *
  * @code
@@ -58,7 +60,7 @@ namespace ns3 {
  * Now, just because we can measure time in nanoseconds doesn't mean we can
  * put our process to sleep to nanosecond resolution.  We are eventually going
  * to use the function @c clock_nanosleep() to sleep until a simulation Time
- * specified by the caller. 
+ * specified by the caller.
  *
  * @todo Add more on jiffies, sleep, processes, etc.
  *
@@ -92,7 +94,7 @@ protected:
   /**
    * @brief Do a busy-wait until the normalized realtime equals the argument
    * or the condition variable becomes @c true.
-  
+
    * The condition becomes @c true if an outside entity (a network device
    * receives a packet), sets the condition and signals the scheduler
    * it needs to re-evaluate.
@@ -113,10 +115,11 @@ protected:
    * event happens that causes a Schedule event in the simulator.  This newly
    * scheduled event might be before the time we are waiting until, so we have
    * to break out of both the SleepWait and the following SpinWait to go back
-   * and reschedule/resynchronize taking the new event into account.  The 
-   * SystemCondition we have saved in m_condition takes care of this for us.
+   * and reschedule/resynchronize taking the new event into account.  The
+   * condition we have saved in m_condition, along with the condition variable
+   * m_conditionVariable take care of this for us.
    *
-   * This call will return if the timeout expires OR if the condition is 
+   * This call will return if the timeout expires OR if the condition is
    * set @c true by a call to SetCondition (true) followed by a call to
    * Signal().  In either case, we are done waiting.  If the timeout happened,
    * we return @c true; if a Signal happened we return @c false.
@@ -143,7 +146,7 @@ protected:
    * realtime drift since the last DoSynchronize.
    *
    * @param [in] nsNow The current simulation time (in nanosecond units).
-   * @param [in] nsDelay The simulation time we need to wait for (normalized to 
+   * @param [in] nsDelay The simulation time we need to wait for (normalized to
    * nanosecond units).
    * @returns The corrected delay.
    */
@@ -185,7 +188,7 @@ protected:
    * @param [out] result The sum of @c tv1 and @c tv2.
    */
   void TimevalAdd (
-    struct timeval *tv1, 
+    struct timeval *tv1,
     struct timeval *tv2,
     struct timeval *result);
 
@@ -194,8 +197,12 @@ protected:
   /** Time recorded by DoEventStart. */
   uint64_t m_nsEventStart;
 
-  /** Thread synchronizer. */
-  SystemCondition m_condition;
+  /** Condition variable for thread synchronizer. */
+  std::condition_variable m_conditionVariable;
+  /** Mutex controlling access to the condition variable. */
+  std::mutex m_mutex;
+  /** The condition state. */
+  bool m_condition;
 };
 
 } // namespace ns3

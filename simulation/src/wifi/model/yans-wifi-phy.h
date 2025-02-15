@@ -35,9 +35,9 @@ class YansWifiChannel;
  *
  * This PHY implements a model of 802.11a. The model
  * implemented here is based on the model described
- * in "Yet Another Network Simulator",
- * (http://cutebugs.net/files/wns2-yans.pdf).
- *
+ * in "Yet Another Network Simulator" published in WNS2 2006;
+ * an author-prepared version of this paper is at:
+ * https://hal.inria.fr/file/index/docid/78318/filename/yans-rr.pdf
  *
  * This PHY model depends on a channel loss and delay
  * model as provided by the ns3::PropagationLossModel
@@ -56,6 +56,12 @@ public:
   YansWifiPhy ();
   virtual ~YansWifiPhy ();
 
+  void SetInterferenceHelper (const Ptr<InterferenceHelper> helper) override;
+  void StartTx (Ptr<WifiPpdu> ppdu) override;
+  Ptr<Channel> GetChannel (void) const override;
+  uint16_t GetGuardBandwidth (uint16_t currentChannelWidth) const override;
+  std::tuple<double, double, double> GetTxMaskRejectionParams (void) const override;
+
   /**
    * Set the YansWifiChannel this YansWifiPhy is to be connected to.
    *
@@ -63,21 +69,8 @@ public:
    */
   void SetChannel (const Ptr<YansWifiChannel> channel);
 
-  /**
-   * \param packet the packet to send
-   * \param txVector the TXVECTOR that has tx parameters such as mode, the transmission mode to use to send
-   *        this packet, and txPowerLevel, a power level to use to send this packet. The real transmission
-   *        power is calculated as txPowerMin + txPowerLevel * (txPowerMax - txPowerMin) / nTxLevels
-   * \param txDuration duration of the transmission.
-   */
-  void StartTx (Ptr<Packet> packet, WifiTxVector txVector, Time txDuration);
-
-  virtual Ptr<Channel> GetChannel (void) const;
-
-
 protected:
-  // Inherited
-  virtual void DoDispose (void);
+  void DoDispose (void) override;
 
 
 private:

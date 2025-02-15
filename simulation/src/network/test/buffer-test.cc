@@ -42,11 +42,9 @@ private:
    * Checks the buffer content
    * \param b The buffer to check
    * \param n The number of bytes to check
-   * \param array The aray of bytes that should be in the buffer
-   * \param file The file name
-   * \param line The line number
+   * \param array The array of bytes that should be in the buffer
    */
-  void EnsureWrittenBytes (Buffer b, uint32_t n, uint8_t array[], const char *file, int line);
+  void EnsureWrittenBytes (Buffer b, uint32_t n, uint8_t array[]);
 public:
   virtual void DoRun (void);
   BufferTest ();
@@ -58,39 +56,39 @@ BufferTest::BufferTest ()
 }
 
 void
-BufferTest::EnsureWrittenBytes (Buffer b, uint32_t n, uint8_t array[], const char *file, int line)
+BufferTest::EnsureWrittenBytes (Buffer b, uint32_t n, uint8_t array[])
 {
   bool success = true;
   uint8_t *expected = array;
   uint8_t const*got;
   got = b.PeekData ();
-  for (uint32_t j = 0; j < n; j++) 
+  for (uint32_t j = 0; j < n; j++)
     {
-      if (got[j] != expected[j]) 
+      if (got[j] != expected[j])
         {
           success = false;
         }
     }
-  if (!success) 
+  if (!success)
     {
       std::ostringstream failure;
       failure << "Buffer -- ";
       failure << "expected: n=";
       failure << n << ", ";
       failure.setf (std::ios::hex, std::ios::basefield);
-      for (uint32_t j = 0; j < n; j++) 
+      for (uint32_t j = 0; j < n; j++)
         {
           failure << (uint16_t)expected[j] << " ";
         }
       failure.setf (std::ios::dec, std::ios::basefield);
       failure << "got: ";
       failure.setf (std::ios::hex, std::ios::basefield);
-      for (uint32_t j = 0; j < n; j++) 
+      for (uint32_t j = 0; j < n; j++)
         {
           failure << (uint16_t)got[j] << " ";
         }
       failure << std::endl;
-      NS_TEST_ASSERT_MSG_EQ_INTERNAL (true, false, failure.str (), file, line);
+      NS_TEST_ASSERT_MSG_EQ (true, false, failure.str ());
     }
 }
 
@@ -98,10 +96,10 @@ BufferTest::EnsureWrittenBytes (Buffer b, uint32_t n, uint8_t array[], const cha
  * Works only when variadic macros are
  * available which is the case for gcc.
  */
-#define ENSURE_WRITTEN_BYTES(buffer, n, ...)                    \
-  {                                                             \
-    uint8_t bytes[] = { __VA_ARGS__};                            \
-    EnsureWrittenBytes (buffer, n, bytes, __FILE__, __LINE__);  \
+#define ENSURE_WRITTEN_BYTES(buffer, n, ...) \
+  {                                          \
+    uint8_t bytes[] = { __VA_ARGS__};        \
+    EnsureWrittenBytes (buffer, n, bytes);   \
   }
 
 void
@@ -189,7 +187,18 @@ BufferTest::DoRun (void)
   // test self-assignment
   {
     Buffer a = o;
+#if defined(__clang__)
+  #if __has_warning("-Wself-assign-overloaded")
+    #pragma clang diagnostic push
+    #pragma clang diagnostic ignored "-Wself-assign-overloaded"
+  #endif
+#endif
     a = a;
+#if defined(__clang__)
+  #if __has_warning("-Wself-assign-overloaded")
+    #pragma clang diagnostic pop
+  #endif
+#endif
   }
 
   // test Remove start.

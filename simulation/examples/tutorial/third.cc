@@ -18,10 +18,11 @@
 #include "ns3/point-to-point-module.h"
 #include "ns3/network-module.h"
 #include "ns3/applications-module.h"
-#include "ns3/wifi-module.h"
 #include "ns3/mobility-module.h"
 #include "ns3/csma-module.h"
 #include "ns3/internet-module.h"
+#include "ns3/yans-wifi-helper.h"
+#include "ns3/ssid.h"
 
 // Default Network Topology
 //
@@ -46,7 +47,7 @@ main (int argc, char *argv[])
   uint32_t nWifi = 3;
   bool tracing = false;
 
-  CommandLine cmd;
+  CommandLine cmd (__FILE__);
   cmd.AddValue ("nCsma", "Number of \"extra\" CSMA nodes/devices", nCsma);
   cmd.AddValue ("nWifi", "Number of wifi STA devices", nWifi);
   cmd.AddValue ("verbose", "Tell echo applications to log if true", verbose);
@@ -95,25 +96,23 @@ main (int argc, char *argv[])
   NodeContainer wifiApNode = p2pNodes.Get (0);
 
   YansWifiChannelHelper channel = YansWifiChannelHelper::Default ();
-  YansWifiPhyHelper phy = YansWifiPhyHelper::Default ();
+  YansWifiPhyHelper phy;
   phy.SetChannel (channel.Create ());
-
-  WifiHelper wifi;
-  wifi.SetRemoteStationManager ("ns3::AarfWifiManager");
 
   WifiMacHelper mac;
   Ssid ssid = Ssid ("ns-3-ssid");
+
+  WifiHelper wifi;
+
+  NetDeviceContainer staDevices;
   mac.SetType ("ns3::StaWifiMac",
                "Ssid", SsidValue (ssid),
                "ActiveProbing", BooleanValue (false));
-
-  NetDeviceContainer staDevices;
   staDevices = wifi.Install (phy, mac, wifiStaNodes);
 
+  NetDeviceContainer apDevices;
   mac.SetType ("ns3::ApWifiMac",
                "Ssid", SsidValue (ssid));
-
-  NetDeviceContainer apDevices;
   apDevices = wifi.Install (phy, mac, wifiApNode);
 
   MobilityHelper mobility;
@@ -172,8 +171,9 @@ main (int argc, char *argv[])
 
   Simulator::Stop (Seconds (10.0));
 
-  if (tracing == true)
+  if (tracing)
     {
+      phy.SetPcapDataLinkType (WifiPhyHelper::DLT_IEEE802_11_RADIO);
       pointToPoint.EnablePcapAll ("third");
       phy.EnablePcap ("third", apDevices.Get (0));
       csma.EnablePcap ("third", csmaDevices.Get (0), true);

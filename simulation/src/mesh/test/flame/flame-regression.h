@@ -40,6 +40,7 @@ using namespace ns3;
  * <-----------|----------->   Broadcast frame
  *             |----------->|  Unicast frame
  *           Source                   Destination
+ * (node ID)   2            1            0
  * <-----------|----------->|            |             ARP request
  *             |<-----------|----------->|             ARP request
  *             |            |<-----------|             ARP reply
@@ -81,7 +82,7 @@ private:
 
   /// Create nodes function
   void CreateNodes ();
-  /// Creat devices function
+  /// Create devices function
   void CreateDevices ();
   /// Install application function
   void InstallApplications ();

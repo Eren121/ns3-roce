@@ -31,6 +31,9 @@
 #include "ns3/trace-source-accessor.h"
 #include "ns3/udp-socket-factory.h"
 #include "packet-sink.h"
+#include "ns3/boolean.h"
+#include "ns3/ipv4-packet-info-tag.h"
+#include "ns3/ipv6-packet-info-tag.h"
 
 namespace ns3 {
 
@@ -55,10 +58,22 @@ PacketSink::GetTypeId (void)
                    TypeIdValue (UdpSocketFactory::GetTypeId ()),
                    MakeTypeIdAccessor (&PacketSink::m_tid),
                    MakeTypeIdChecker ())
+    .AddAttribute ("EnableSeqTsSizeHeader",
+                   "Enable optional header tracing of SeqTsSizeHeader",
+                   BooleanValue (false),
+                   MakeBooleanAccessor (&PacketSink::m_enableSeqTsSizeHeader),
+                   MakeBooleanChecker ())
     .AddTraceSource ("Rx",
                      "A packet has been received",
                      MakeTraceSourceAccessor (&PacketSink::m_rxTrace),
                      "ns3::Packet::AddressTracedCallback")
+    .AddTraceSource ("RxWithAddresses", "A packet has been received",
+                     MakeTraceSourceAccessor (&PacketSink::m_rxTraceWithAddresses),
+                     "ns3::Packet::TwoAddressTracedCallback")
+    .AddTraceSource ("RxWithSeqTsSize",
+                     "A packet with SeqTsSize header has been received",
+                     MakeTraceSourceAccessor (&PacketSink::m_rxTraceWithSeqTsSize),
+                     "ns3::PacketSink::SeqTsSizeCallback")
   ;
   return tid;
 }
@@ -135,7 +150,20 @@ void PacketSink::StartApplication ()    // Called at time specified by Start
         }
     }
 
+  if (InetSocketAddress::IsMatchingType (m_local))
+    {
+      m_localPort = InetSocketAddress::ConvertFrom (m_local).GetPort ();
+    }
+  else if (Inet6SocketAddress::IsMatchingType (m_local))
+    {
+      m_localPort = Inet6SocketAddress::ConvertFrom (m_local).GetPort ();
+    }
+  else
+    {
+      m_localPort = 0;
+    }
   m_socket->SetRecvCallback (MakeCallback (&PacketSink::HandleRead, this));
+  m_socket->SetRecvPktInfo (true);
   m_socket->SetAcceptCallback (
     MakeNullCallback<bool, Ptr<Socket>, const Address &> (),
     MakeCallback (&PacketSink::HandleAccept, this));
@@ -165,6 +193,7 @@ void PacketSink::HandleRead (Ptr<Socket> socket)
   NS_LOG_FUNCTION (this << socket);
   Ptr<Packet> packet;
   Address from;
+  Address localAddress;
   while ((packet = socket->RecvFrom (from)))
     {
       if (packet->GetSize () == 0)
@@ -174,8 +203,8 @@ void PacketSink::HandleRead (Ptr<Socket> socket)
       m_totalRx += packet->GetSize ();
       if (InetSocketAddress::IsMatchingType (from))
         {
-          NS_LOG_INFO ("At time " << Simulator::Now ().GetSeconds ()
-                       << "s packet sink received "
+          NS_LOG_INFO ("At time " << Simulator::Now ().As (Time::S)
+                       << " packet sink received "
                        <<  packet->GetSize () << " bytes from "
                        << InetSocketAddress::ConvertFrom(from).GetIpv4 ()
                        << " port " << InetSocketAddress::ConvertFrom (from).GetPort ()
@@ -183,17 +212,81 @@ void PacketSink::HandleRead (Ptr<Socket> socket)
         }
       else if (Inet6SocketAddress::IsMatchingType (from))
         {
-          NS_LOG_INFO ("At time " << Simulator::Now ().GetSeconds ()
-                       << "s packet sink received "
+          NS_LOG_INFO ("At time " << Simulator::Now ().As (Time::S)
+                       << " packet sink received "
                        <<  packet->GetSize () << " bytes from "
                        << Inet6SocketAddress::ConvertFrom(from).GetIpv6 ()
                        << " port " << Inet6SocketAddress::ConvertFrom (from).GetPort ()
                        << " total Rx " << m_totalRx << " bytes");
         }
-      m_rxTrace (packet, from);
+
+      if (!m_rxTrace.IsEmpty () || !m_rxTraceWithAddresses.IsEmpty () ||
+          (!m_rxTraceWithSeqTsSize.IsEmpty () && m_enableSeqTsSizeHeader))
+        {
+          Ipv4PacketInfoTag interfaceInfo;
+          Ipv6PacketInfoTag interface6Info;
+          if (packet->RemovePacketTag (interfaceInfo))
+            {
+              localAddress = InetSocketAddress (interfaceInfo.GetAddress (), m_localPort);
+            }
+          else if (packet->RemovePacketTag (interface6Info))
+            {
+              localAddress = Inet6SocketAddress (interface6Info.GetAddress (), m_localPort);
+            }
+          else
+            {
+              socket->GetSockName (localAddress);
+            }
+          m_rxTrace (packet, from);
+          m_rxTraceWithAddresses (packet, from, localAddress);
+
+          if (!m_rxTraceWithSeqTsSize.IsEmpty () && m_enableSeqTsSizeHeader)
+            {
+              PacketReceived (packet, from, localAddress);
+            }
+        }
     }
 }
 
+void
+PacketSink::PacketReceived (const Ptr<Packet> &p, const Address &from,
+                            const Address &localAddress)
+{
+  SeqTsSizeHeader header;
+  Ptr<Packet> buffer;
+
+  auto itBuffer = m_buffer.find (from);
+  if (itBuffer == m_buffer.end ())
+    {
+      itBuffer = m_buffer.insert (std::make_pair (from, Create<Packet> (0))).first;
+    }
+
+  buffer = itBuffer->second;
+  buffer->AddAtEnd (p);
+  buffer->PeekHeader (header);
+
+  NS_ABORT_IF (header.GetSize () == 0);
+
+  while (buffer->GetSize () >= header.GetSize ())
+    {
+      NS_LOG_DEBUG ("Removing packet of size " << header.GetSize () << " from buffer of size " << buffer->GetSize ());
+      Ptr<Packet> complete = buffer->CreateFragment (0, static_cast<uint32_t> (header.GetSize ()));
+      buffer->RemoveAtStart (static_cast<uint32_t> (header.GetSize ()));
+
+      complete->RemoveHeader (header);
+
+      m_rxTraceWithSeqTsSize (complete, from, localAddress, header);
+
+      if (buffer->GetSize () > header.GetSerializedSize ())
+        {
+          buffer->PeekHeader (header);
+        }
+      else
+        {
+          break;
+        }
+    }
+}
 
 void PacketSink::HandlePeerClose (Ptr<Socket> socket)
 {
@@ -204,7 +297,6 @@ void PacketSink::HandlePeerError (Ptr<Socket> socket)
 {
   NS_LOG_FUNCTION (this << socket);
 }
- 
 
 void PacketSink::HandleAccept (Ptr<Socket> s, const Address& from)
 {

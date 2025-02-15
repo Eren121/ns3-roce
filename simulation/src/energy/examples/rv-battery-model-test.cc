@@ -39,6 +39,8 @@ using namespace ns3;
 NS_LOG_COMPONENT_DEFINE ("RvBatteryModelTestSuite");
 
 /**
+ * \ingroup energy
+ * 
  * This example was originally devised as a test, then it was converted
  * to an example.
  *
@@ -86,17 +88,18 @@ public:
                          std::vector<Time> timeStamps,
                          Time expLifetime);
 
+  /// Load profile of the battery
   typedef struct LoadProfile
   {
-    std::vector<double> loads;
-    std::vector<Time> timeStamps;
-    Time itsyLifetime;
-    Time dualFoilLifeTime;
+    std::vector<double> loads;      //!< Loads container
+    std::vector<Time> timeStamps;   //!< Timestamps container
+    Time itsyLifetime;              //!< Expected lifetime for an ITSY battery
+    Time dualFoilLifeTime;          //!< Expected lifetime for a Dualfoil battery
   } LoadProfile;
 
-  std::vector<LoadProfile> m_loadProfiles;
-  double m_alpha;
-  double m_beta;
+  std::vector<LoadProfile> m_loadProfiles; //!< Load profiles
+  double m_alpha; //!< Alpha parameter of the battery model
+  double m_beta;  //!< Beta parameter of the battery model
 };
 
 BatteryLifetimeTest::BatteryLifetimeTest ()
@@ -637,7 +640,7 @@ BatteryLifetimeTest::CreateLoadProfiles (void)
 int
 main (int argc, char **argv)
 {
-  CommandLine cmd;
+  CommandLine cmd (__FILE__);
   cmd.Parse (argc, argv);
   
   NS_LOG_DEBUG ("Constant load run.");
@@ -732,9 +735,9 @@ BatteryLifetimeTest::ConstantLoadTest (double load, Time expLifetime)
 
   // install YansWifiPhy
   WifiHelper wifi;
-  wifi.SetStandard (WIFI_PHY_STANDARD_80211b);
+  wifi.SetStandard (WIFI_STANDARD_80211b);
 
-  YansWifiPhyHelper wifiPhy =  YansWifiPhyHelper::Default ();
+  YansWifiPhyHelper wifiPhy;
   /*
    * This is one parameter that matters when using FixedRssLossModel, set it to
    * zero; otherwise, gain will be added.
@@ -780,8 +783,8 @@ BatteryLifetimeTest::ConstantLoadTest (double load, Time expLifetime)
   Ptr<RvBatteryModel> srcPtr = DynamicCast<RvBatteryModel> (sources.Get (0));
   actualLifetime = srcPtr->GetLifetime ();
 
-  NS_LOG_DEBUG ("Expected lifetime = " << expLifetime.GetSeconds () << "s");
-  NS_LOG_DEBUG ("Actual lifetime = " << actualLifetime.GetSeconds () << "s");
+  NS_LOG_DEBUG ("Expected lifetime = " << expLifetime.As (Time::S));
+  NS_LOG_DEBUG ("Actual lifetime = " << actualLifetime.As (Time::S));
 
   Simulator::Destroy ();
 
@@ -819,9 +822,9 @@ BatteryLifetimeTest::VariableLoadTest (std::vector<double> loads,
 
   // install YansWifiPhy
   WifiHelper wifi;
-  wifi.SetStandard (WIFI_PHY_STANDARD_80211b);
+  wifi.SetStandard (WIFI_STANDARD_80211b);
 
-  YansWifiPhyHelper wifiPhy =  YansWifiPhyHelper::Default ();
+  YansWifiPhyHelper wifiPhy;
   /*
    * This is one parameter that matters when using FixedRssLossModel, set it to
    * zero; otherwise, gain will be added.
@@ -876,15 +879,14 @@ BatteryLifetimeTest::VariableLoadTest (std::vector<double> loads,
   Ptr<RvBatteryModel> srcPtr = DynamicCast<RvBatteryModel> (sources.Get (0));
   actualLifetime = srcPtr->GetLifetime ();
 
-  NS_LOG_DEBUG ("Expected lifetime = " << expLifetime.GetSeconds () << "s");
-  NS_LOG_DEBUG ("Actual lifetime = " << actualLifetime.GetSeconds () << "s");
-  NS_LOG_DEBUG ("Difference = " << expLifetime.GetSeconds () - actualLifetime.GetSeconds () << "s");
+  NS_LOG_DEBUG ("Expected lifetime = " << expLifetime.As (Time::S));
+  NS_LOG_DEBUG ("Actual lifetime = " << actualLifetime.As (Time::S));
+  NS_LOG_DEBUG ("Difference = " << (expLifetime - actualLifetime).As (Time::S));
 
   Simulator::Destroy ();
 
   // error tolerance = 120s
-  if ((actualLifetime.GetSeconds ()) > (expLifetime.GetSeconds ()) + (120) ||
-      (actualLifetime.GetSeconds ()) < (expLifetime.GetSeconds ()) - (120))
+  if (Abs (actualLifetime - expLifetime)  > Seconds (120))
     {
       std::cerr << "VariableLoadTest: Incorrect lifetime." << std::endl;
       return true;

@@ -60,7 +60,7 @@ be invoked as follows (please note the use of double quotes):
 
 ::
 
-  ./waf --run "seventh --help"
+  ./ns3 run "seventh --help"
 
 which produces:
 
@@ -84,7 +84,7 @@ toggling the boolean value as follows:
 
 ::
 
-  ./waf --run "seventh --useIpv6=1"
+  ./ns3 run "seventh --useIpv6=1"
 
 and have a look at the pcap generated, such as with ``tcpdump``:
 
@@ -101,7 +101,7 @@ Now back to data collection.  In the ``examples/tutorial/`` directory,
 type the following command: ``diff -u sixth.cc seventh.cc``, and examine
 some of the new lines of this diff:
 
-::
+.. sourcecode:: diff
 
   +  std::string probeType;
   +  std::string tracePath;
@@ -222,7 +222,7 @@ The PNG image title states that this plot is a plot of
 "Packet Byte Count vs. Time", and that it is plotting the probed data
 corresponding to the trace source path:
 
-::
+.. sourcecode:: text
 
   /NodeList/*/$ns3::Ipv6L3Protocol/Tx
 

@@ -69,7 +69,7 @@ Icmpv4L4Protocol::SetNode (Ptr<Node> node)
 }
 
 /*
- * This method is called by AddAgregate and completes the aggregation
+ * This method is called by AggregateObject and completes the aggregation
  * by setting the node in the ICMP stack and adding ICMP factory to
  * IPv4 stack connected to the node
  */
@@ -288,7 +288,7 @@ Icmpv4L4Protocol::Receive (Ptr<Packet> p,
                            Ipv6Header const &header,
                            Ptr<Ipv6Interface> incomingInterface)
 {
-  NS_LOG_FUNCTION (this << p << header.GetSourceAddress () << header.GetDestinationAddress () << incomingInterface);
+  NS_LOG_FUNCTION (this << p << header.GetSource () << header.GetDestination () << incomingInterface);
   return IpL4Protocol::RX_ENDPOINT_UNREACH;
 }
 void 

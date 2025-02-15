@@ -69,17 +69,17 @@ protected:
   /**
    * Convert from bandwidth (in RBs) to ENUMERATED value
    *
-   * \param bandwidth Bandwith in RBs: 6, 15, 25, 50, 75, 100
+   * \param bandwidth Bandwidth in RBs: 6, 15, 25, 50, 75, 100
    * \returns ENUMERATED value: 0, 1, 2, 3, 4, 5
    */
-  int BandwidthToEnum (uint8_t bandwidth) const;
+  int BandwidthToEnum (uint16_t bandwidth) const;
   /**
    * Convert from ENUMERATED value to bandwidth (in RBs)
    *
    * \param n ENUMERATED value: 0, 1, 2, 3, 4, 5
-   * \returns bandwidth Bandwith in RBs: 6, 15, 25, 50, 75, 100
+   * \returns bandwidth Bandwidth in RBs: 6, 15, 25, 50, 75, 100
    */
-  uint8_t EnumToBandwidth (int n) const;
+  uint16_t EnumToBandwidth (int n) const;
 
 
   // Serialization functions
@@ -827,8 +827,8 @@ private:
   LteRrcSap::MobilityControlInfo m_mobilityControlInfo; ///< the modility control info
   bool m_haveRadioResourceConfigDedicated; ///< have radio resource config dedicated?
   LteRrcSap::RadioResourceConfigDedicated m_radioResourceConfigDedicated; ///< the radio resource config dedicated
-  bool m_haveNonCriticalExtension; ///< Have critical extension
-  LteRrcSap::NonCriticalExtensionConfiguration m_nonCriticalExtension; ///< the critical extension
+  bool m_haveNonCriticalExtension; ///< Have non-critical extension
+  LteRrcSap::NonCriticalExtensionConfiguration m_nonCriticalExtension; ///< the non-critical extension
 };
 
 /**

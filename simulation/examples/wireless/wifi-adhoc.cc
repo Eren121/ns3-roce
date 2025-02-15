@@ -18,33 +18,82 @@
  * Author: Mathieu Lacage <mathieu.lacage@sophia.inria.fr>
  */
 
-#include "ns3/core-module.h"
-#include "ns3/network-module.h"
-#include "ns3/applications-module.h"
-#include "ns3/mobility-module.h"
-#include "ns3/stats-module.h"
-#include "ns3/wifi-module.h"
+#include "ns3/gnuplot.h"
+#include "ns3/command-line.h"
+#include "ns3/config.h"
+#include "ns3/uinteger.h"
+#include "ns3/string.h"
+#include "ns3/log.h"
+#include "ns3/yans-wifi-helper.h"
+#include "ns3/mobility-helper.h"
+#include "ns3/ipv4-address-helper.h"
+#include "ns3/on-off-helper.h"
+#include "ns3/yans-wifi-channel.h"
+#include "ns3/mobility-model.h"
+#include "ns3/packet-socket-helper.h"
+#include "ns3/packet-socket-address.h"
 
 using namespace ns3;
 
-NS_LOG_COMPONENT_DEFINE ("Main");
+NS_LOG_COMPONENT_DEFINE ("Wifi-Adhoc");
 
+/**
+ * WiFi adhoc experiment class.
+ * 
+ * It handles the creation and run of an experiment.
+ */
 class Experiment
 {
 public:
   Experiment ();
+  /**
+   * Constructor.
+   * \param name The name of the experiment.
+   */
   Experiment (std::string name);
+
+  /**
+   * Run an experiment.
+   * \param wifi      //!< The WifiHelper class.
+   * \param wifiPhy   //!< The YansWifiPhyHelper class.
+   * \param wifiMac   //!< The WifiMacHelper class.
+   * \param wifiChannel //!< The YansWifiChannelHelper class.
+   * \return a 2D dataset of the experiment data. 
+   */
   Gnuplot2dDataset Run (const WifiHelper &wifi, const YansWifiPhyHelper &wifiPhy,
                         const WifiMacHelper &wifiMac, const YansWifiChannelHelper &wifiChannel);
 private:
+  /**
+   * Receive a packet.
+   * \param socket The recieving socket.
+   */
   void ReceivePacket (Ptr<Socket> socket);
+  /**
+   * Set the position of a node.
+   * \param node The node.
+   * \param position The position of the node.
+   */
   void SetPosition (Ptr<Node> node, Vector position);
+  /**
+   * Get the position of a node.
+   * \param node The node.
+   * \return the position of the node.
+   */
   Vector GetPosition (Ptr<Node> node);
+  /**
+   * Move a node by 1m on the x axis, stops at 210m.
+   * \param node The node.
+   */
   void AdvancePosition (Ptr<Node> node);
+  /**
+   * Setup the receiving socket.
+   * \param node The receiving node.
+   * \return the socket.
+   */
   Ptr<Socket> SetupPacketReceive (Ptr<Node> node);
 
-  uint32_t m_bytesTotal;
-  Gnuplot2dDataset m_output;
+  uint32_t m_bytesTotal;      //!< The number of received bytes.
+  Gnuplot2dDataset m_output;  //!< The output dataset.
 };
 
 Experiment::Experiment ()
@@ -159,20 +208,16 @@ Experiment::Run (const WifiHelper &wifi, const YansWifiPhyHelper &wifiPhy,
 
 int main (int argc, char *argv[])
 {
-  // disable fragmentation
-  Config::SetDefault ("ns3::WifiRemoteStationManager::FragmentationThreshold", StringValue ("2200"));
-  Config::SetDefault ("ns3::WifiRemoteStationManager::RtsCtsThreshold", StringValue ("2200"));
-
-  CommandLine cmd;
+  CommandLine cmd (__FILE__);
   cmd.Parse (argc, argv);
 
   Gnuplot gnuplot = Gnuplot ("reference-rates.png");
 
   Experiment experiment;
   WifiHelper wifi;
-  wifi.SetStandard (WIFI_PHY_STANDARD_80211a);
+  wifi.SetStandard (WIFI_STANDARD_80211a);
   WifiMacHelper wifiMac;
-  YansWifiPhyHelper wifiPhy = YansWifiPhyHelper::Default ();
+  YansWifiPhyHelper wifiPhy;
   YansWifiChannelHelper wifiChannel = YansWifiChannelHelper::Default ();
   Gnuplot2dDataset dataset;
 
@@ -237,7 +282,6 @@ int main (int argc, char *argv[])
   gnuplot.GenerateOutput (std::cout);
 
   gnuplot = Gnuplot ("rate-control.png");
-  wifi.SetStandard (WIFI_PHY_STANDARD_holland);
 
   NS_LOG_DEBUG ("arf");
   experiment = Experiment ("arf");

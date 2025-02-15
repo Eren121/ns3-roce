@@ -57,7 +57,7 @@ NS_OBJECT_ENSURE_REGISTERED (LteEnbPhy);
  * Data portion is fixed to 11 symbols out of the available 14 symbols.
  * 1 nanosecond margin is added to avoid overlapping simulator events.
  */
-static const Time DL_DATA_DURATION = NanoSeconds (785714 -1);
+static const Time DL_DATA_DURATION = NanoSeconds (785714 - 1);
 
 /**
  * Delay from the start of a DL subframe to transmission of the data portion.
@@ -91,7 +91,7 @@ public:
    * \param ulBandwidth the UL bandwidth
    * \param dlBandwidth the DL bandwidth
    */
-  virtual void SetBandwidth (uint8_t ulBandwidth, uint8_t dlBandwidth);
+  virtual void SetBandwidth (uint16_t ulBandwidth, uint16_t dlBandwidth);
   /**
    * Set Cell ID function
    *
@@ -99,15 +99,12 @@ public:
    */
   virtual void SetCellId (uint16_t cellId);
 
-
 private:
   LteEnbPhy* m_phy; ///< the ENB Phy
 };
 
 EnbMemberLteEnbPhySapProvider::EnbMemberLteEnbPhySapProvider (LteEnbPhy* phy) : m_phy (phy)
-{
-
-}
+{}
 
 void
 EnbMemberLteEnbPhySapProvider::SendMacPdu (Ptr<Packet> p)
@@ -116,7 +113,7 @@ EnbMemberLteEnbPhySapProvider::SendMacPdu (Ptr<Packet> p)
 }
 
 void
-EnbMemberLteEnbPhySapProvider::SetBandwidth (uint8_t ulBandwidth, uint8_t dlBandwidth)
+EnbMemberLteEnbPhySapProvider::SetBandwidth (uint16_t ulBandwidth, uint16_t dlBandwidth)
 {
   m_phy->DoSetBandwidth (ulBandwidth, dlBandwidth);
 }
@@ -175,12 +172,12 @@ LteEnbPhy::GetTypeId (void)
 {
   static TypeId tid = TypeId ("ns3::LteEnbPhy")
     .SetParent<LtePhy> ()
-    .SetGroupName("Lte")
+    .SetGroupName ("Lte")
     .AddConstructor<LteEnbPhy> ()
     .AddAttribute ("TxPower",
                    "Transmission power in dBm",
                    DoubleValue (30.0),
-                   MakeDoubleAccessor (&LteEnbPhy::SetTxPower, 
+                   MakeDoubleAccessor (&LteEnbPhy::SetTxPower,
                                        &LteEnbPhy::GetTxPower),
                    MakeDoubleChecker<double> ())
     .AddAttribute ("NoiseFigure",
@@ -194,7 +191,7 @@ LteEnbPhy::GetTypeId (void)
                    "are connected to sources at the standard noise "
                    "temperature T0.\"  In this model, we consider T0 = 290K.",
                    DoubleValue (5.0),
-                   MakeDoubleAccessor (&LteEnbPhy::SetNoiseFigure, 
+                   MakeDoubleAccessor (&LteEnbPhy::SetNoiseFigure,
                                        &LteEnbPhy::GetNoiseFigure),
                    MakeDoubleChecker<double> ())
     .AddAttribute ("MacToChannelDelay",
@@ -204,7 +201,7 @@ LteEnbPhy::GetTypeId (void)
                    "intended to be used to model the latency of real PHY "
                    "and MAC implementations.",
                    UintegerValue (2),
-                   MakeUintegerAccessor (&LteEnbPhy::SetMacChDelay, 
+                   MakeUintegerAccessor (&LteEnbPhy::SetMacChDelay,
                                          &LteEnbPhy::GetMacChDelay),
                    MakeUintegerChecker<uint8_t> ())
     .AddTraceSource ("ReportUeSinr",
@@ -247,8 +244,7 @@ LteEnbPhy::GetTypeId (void)
 
 
 LteEnbPhy::~LteEnbPhy ()
-{
-}
+{}
 
 void
 LteEnbPhy::DoDispose ()
@@ -265,25 +261,17 @@ void
 LteEnbPhy::DoInitialize ()
 {
   NS_LOG_FUNCTION (this);
-  bool haveNodeId = false;
-  uint32_t nodeId = 0;
-  if (m_netDevice != 0)
-    {
-      Ptr<Node> node = m_netDevice->GetNode ();
-      if (node != 0)
-        {
-          nodeId = node->GetId ();
-          haveNodeId = true;
-        }
-    }
-  if (haveNodeId)
-    {
-      Simulator::ScheduleWithContext (nodeId, Seconds (0), &LteEnbPhy::StartFrame, this);
-    }
-  else
-    {
-      Simulator::ScheduleNow (&LteEnbPhy::StartFrame, this);
-    }
+
+  NS_ABORT_MSG_IF (m_netDevice == nullptr, "LteEnbDevice is not available in LteEnbPhy");
+  Ptr<Node> node = m_netDevice->GetNode ();
+  NS_ABORT_MSG_IF (node == nullptr, "Node is not available in the LteNetDevice of LteEnbPhy");
+  uint32_t nodeId = node->GetId ();
+
+  //ScheduleWithContext() is needed here to set context for logs,
+  //because Initialize() is called outside of Node::AddDevice().
+
+  Simulator::ScheduleWithContext (nodeId, Seconds (0), &LteEnbPhy::StartFrame, this);
+
   Ptr<SpectrumValue> noisePsd = LteSpectrumValueHelper::CreateNoisePowerSpectralDensity (m_ulEarfcn, m_ulBandwidth, m_noiseFigure);
   m_uplinkSpectrumPhy->SetNoisePowerSpectralDensity (noisePsd);
   LtePhy::DoInitialize ();
@@ -544,48 +532,48 @@ LteEnbPhy::ReceiveLteControlMessageList (std::list<Ptr<LteControlMessage> > msgL
     {
       switch ((*it)->GetMessageType ())
         {
-        case LteControlMessage::RACH_PREAMBLE:
-          {
-            Ptr<RachPreambleLteControlMessage> rachPreamble = DynamicCast<RachPreambleLteControlMessage> (*it);
-            m_enbPhySapUser->ReceiveRachPreamble (rachPreamble->GetRapId ());
-          }
-          break;
-        case LteControlMessage::DL_CQI:
-          {
-            Ptr<DlCqiLteControlMessage> dlcqiMsg = DynamicCast<DlCqiLteControlMessage> (*it);
-            CqiListElement_s dlcqi = dlcqiMsg->GetDlCqi ();
-            // check whether the UE is connected
-            if (m_ueAttached.find (dlcqi.m_rnti) != m_ueAttached.end ())
-              {
-                m_enbPhySapUser->ReceiveLteControlMessage (*it);
-              }
-          }
-          break;
-        case LteControlMessage::BSR:
-          {
-            Ptr<BsrLteControlMessage> bsrMsg = DynamicCast<BsrLteControlMessage> (*it);
-            MacCeListElement_s bsr = bsrMsg->GetBsr ();
-            // check whether the UE is connected
-            if (m_ueAttached.find (bsr.m_rnti) != m_ueAttached.end ())
-              {
-                m_enbPhySapUser->ReceiveLteControlMessage (*it);
-              }
-          }
-          break;
-        case LteControlMessage::DL_HARQ:
-          {
-            Ptr<DlHarqFeedbackLteControlMessage> dlharqMsg = DynamicCast<DlHarqFeedbackLteControlMessage> (*it);
-            DlInfoListElement_s dlharq = dlharqMsg->GetDlHarqFeedback ();
-            // check whether the UE is connected
-            if (m_ueAttached.find (dlharq.m_rnti) != m_ueAttached.end ())
-              {
-                m_enbPhySapUser->ReceiveLteControlMessage (*it);
-              }
-          }
-          break;
-        default:
-          NS_FATAL_ERROR ("Unexpected LteControlMessage type");
-          break;
+          case LteControlMessage::RACH_PREAMBLE:
+            {
+              Ptr<RachPreambleLteControlMessage> rachPreamble = DynamicCast<RachPreambleLteControlMessage> (*it);
+              m_enbPhySapUser->ReceiveRachPreamble (rachPreamble->GetRapId ());
+            }
+            break;
+          case LteControlMessage::DL_CQI:
+            {
+              Ptr<DlCqiLteControlMessage> dlcqiMsg = DynamicCast<DlCqiLteControlMessage> (*it);
+              CqiListElement_s dlcqi = dlcqiMsg->GetDlCqi ();
+              // check whether the UE is connected
+              if (m_ueAttached.find (dlcqi.m_rnti) != m_ueAttached.end ())
+                {
+                  m_enbPhySapUser->ReceiveLteControlMessage (*it);
+                }
+            }
+            break;
+          case LteControlMessage::BSR:
+            {
+              Ptr<BsrLteControlMessage> bsrMsg = DynamicCast<BsrLteControlMessage> (*it);
+              MacCeListElement_s bsr = bsrMsg->GetBsr ();
+              // check whether the UE is connected
+              if (m_ueAttached.find (bsr.m_rnti) != m_ueAttached.end ())
+                {
+                  m_enbPhySapUser->ReceiveLteControlMessage (*it);
+                }
+            }
+            break;
+          case LteControlMessage::DL_HARQ:
+            {
+              Ptr<DlHarqFeedbackLteControlMessage> dlharqMsg = DynamicCast<DlHarqFeedbackLteControlMessage> (*it);
+              DlInfoListElement_s dlharq = dlharqMsg->GetDlHarqFeedback ();
+              // check whether the UE is connected
+              if (m_ueAttached.find (dlharq.m_rnti) != m_ueAttached.end ())
+                {
+                  m_enbPhySapUser->ReceiveLteControlMessage (*it);
+                }
+            }
+            break;
+          default:
+            NS_FATAL_ERROR ("Unexpected LteControlMessage type");
+            break;
         }
     }
 }
@@ -632,12 +620,12 @@ LteEnbPhy::StartSubFrame (void)
       m_controlMessagesQueue.at (0).push_back (msg);
     }
 
-  if (m_srsPeriodicity>0)
-    { 
+  if (m_srsPeriodicity > 0)
+    {
       // might be 0 in case the eNB has no UEs attached
       NS_ASSERT_MSG (m_nrFrames > 1, "the SRS index check code assumes that frameNo starts at 1");
       NS_ASSERT_MSG (m_nrSubFrames > 0 && m_nrSubFrames <= 10, "the SRS index check code assumes that subframeNo starts at 1");
-      m_currentSrsOffset = (((m_nrFrames-1)*10 + (m_nrSubFrames-1)) % m_srsPeriodicity);
+      m_currentSrsOffset = (((m_nrFrames - 1) * 10 + (m_nrSubFrames - 1)) % m_srsPeriodicity);
     }
   NS_LOG_INFO ("-----sub frame " << m_nrSubFrames << "-----");
   m_harqPhyModule->SubframeIndication (m_nrFrames, m_nrSubFrames);
@@ -646,7 +634,7 @@ LteEnbPhy::StartSubFrame (void)
   std::list<UlDciLteControlMessage> uldcilist = DequeueUlDci ();
   std::list<UlDciLteControlMessage>::iterator dciIt = uldcilist.begin ();
   NS_LOG_DEBUG (this << " eNB Expected TBs " << uldcilist.size ());
-  for (dciIt = uldcilist.begin (); dciIt!=uldcilist.end (); dciIt++)
+  for (dciIt = uldcilist.begin (); dciIt != uldcilist.end (); dciIt++)
     {
       std::set <uint16_t>::iterator it2;
       it2 = m_ueAttached.find ((*dciIt).GetDci ().m_rnti);
@@ -657,7 +645,7 @@ LteEnbPhy::StartSubFrame (void)
         }
       else
         {
-          // send info of TB to LteSpectrumPhy 
+          // send info of TB to LteSpectrumPhy
           // translate to allocation map
           std::vector <int> rbMap;
           for (int i = (*dciIt).GetDci ().m_rbStart; i < (*dciIt).GetDci ().m_rbStart + (*dciIt).GetDci ().m_rbLen; i++)
@@ -665,7 +653,7 @@ LteEnbPhy::StartSubFrame (void)
               rbMap.push_back (i);
             }
           m_uplinkSpectrumPhy->AddExpectedTb ((*dciIt).GetDci ().m_rnti, (*dciIt).GetDci ().m_ndi, (*dciIt).GetDci ().m_tbSize, (*dciIt).GetDci ().m_mcs, rbMap, 0 /* always SISO*/, 0 /* no HARQ proc id in UL*/, 0 /*evaluated by LteSpectrumPhy*/, false /* UL*/);
-          if ((*dciIt).GetDci ().m_ndi==1)
+          if ((*dciIt).GetDci ().m_ndi == 1)
             {
               NS_LOG_DEBUG (this << " RNTI " << (*dciIt).GetDci ().m_rnti << " NEW TB");
             }
@@ -818,7 +806,7 @@ LteEnbPhy::SendDataChannels (Ptr<PacketBurst> pb)
 void
 LteEnbPhy::EndSubFrame (void)
 {
-  NS_LOG_FUNCTION (this << Simulator::Now ().GetSeconds ());
+  NS_LOG_FUNCTION (this << Simulator::Now ().As (Time::S));
   if (m_nrSubFrames == 10)
     {
       Simulator::ScheduleNow (&LteEnbPhy::EndFrame, this);
@@ -833,12 +821,12 @@ LteEnbPhy::EndSubFrame (void)
 void
 LteEnbPhy::EndFrame (void)
 {
-  NS_LOG_FUNCTION (this << Simulator::Now ().GetSeconds ());
+  NS_LOG_FUNCTION (this << Simulator::Now ().As (Time::S));
   Simulator::ScheduleNow (&LteEnbPhy::StartFrame, this);
 }
 
 
-void 
+void
 LteEnbPhy::GenerateCtrlCqiReport (const SpectrumValue& sinr)
 {
   NS_LOG_FUNCTION (this << sinr << Simulator::Now () << m_srsStartTime);
@@ -897,12 +885,12 @@ LteEnbPhy::CreatePuschCqiReport (const SpectrumValue& sinr)
       i++;
     }
   return (ulcqi);
-	
+
 }
 
 
 void
-LteEnbPhy::DoSetBandwidth (uint8_t ulBandwidth, uint8_t dlBandwidth)
+LteEnbPhy::DoSetBandwidth (uint16_t ulBandwidth, uint16_t dlBandwidth)
 {
   NS_LOG_FUNCTION (this << (uint32_t) ulBandwidth << (uint32_t) dlBandwidth);
   m_ulBandwidth = ulBandwidth;
@@ -924,7 +912,7 @@ LteEnbPhy::DoSetBandwidth (uint8_t ulBandwidth, uint8_t dlBandwidth)
     }
 }
 
-void 
+void
 LteEnbPhy::DoSetEarfcn (uint32_t ulEarfcn, uint32_t dlEarfcn)
 {
   NS_LOG_FUNCTION (this << ulEarfcn << dlEarfcn);
@@ -933,11 +921,11 @@ LteEnbPhy::DoSetEarfcn (uint32_t ulEarfcn, uint32_t dlEarfcn)
 }
 
 
-void 
+void
 LteEnbPhy::DoAddUe (uint16_t rnti)
 {
   NS_LOG_FUNCTION (this << rnti);
- 
+
   bool success = AddUePhy (rnti);
   NS_ASSERT_MSG (success, "AddUePhy() failed");
 
@@ -945,11 +933,11 @@ LteEnbPhy::DoAddUe (uint16_t rnti)
   DoSetPa (rnti, 0);
 }
 
-void 
+void
 LteEnbPhy::DoRemoveUe (uint16_t rnti)
 {
   NS_LOG_FUNCTION (this << rnti);
- 
+
   bool success = DeleteUePhy (rnti);
   NS_ASSERT_MSG (success, "DeleteUePhy() failed");
 
@@ -958,6 +946,58 @@ LteEnbPhy::DoRemoveUe (uint16_t rnti)
   if (it != m_paMap.end ())
     {
       m_paMap.erase (it);
+    }
+
+  //additional data to be removed
+  m_uplinkSpectrumPhy->RemoveExpectedTb (rnti);
+  //remove srs info to avoid trace errors
+  std::map<uint16_t, uint16_t>::iterator sit = m_srsSampleCounterMap.find (rnti);
+  if (sit != m_srsSampleCounterMap.end ())
+    {
+      m_srsSampleCounterMap.erase (rnti);
+    }
+  //remove DL_DCI message otherwise errors occur for m_dlPhyTransmission trace
+  //remove also any UL_DCI message for the UE to be removed
+
+  for (auto & ctrlMessageList : m_controlMessagesQueue)
+    {
+      std::list<Ptr<LteControlMessage> >::iterator ctrlMsgListIt = ctrlMessageList.begin ();
+      while (ctrlMsgListIt != ctrlMessageList.end ())
+        {
+          Ptr<LteControlMessage> msg = (*ctrlMsgListIt);
+          if (msg->GetMessageType () == LteControlMessage::DL_DCI)
+            {
+              auto dci = DynamicCast<DlDciLteControlMessage> (msg);
+              if (dci->GetDci ().m_rnti == rnti)
+                {
+                  NS_LOG_INFO ("DL_DCI to be sent from cell id : "
+                               << m_cellId << " to RNTI : " << rnti << " is deleted");
+                  ctrlMsgListIt = ctrlMessageList.erase (ctrlMsgListIt);
+                }
+              else
+                {
+                  ++ctrlMsgListIt;
+                }
+            }
+          else if (msg->GetMessageType () == LteControlMessage::UL_DCI)
+            {
+              auto dci = DynamicCast<UlDciLteControlMessage> (msg);
+              if (dci->GetDci ().m_rnti == rnti)
+                {
+                  NS_LOG_INFO ("UL_DCI to be sent from cell id : "
+                               << m_cellId << " to RNTI : " << rnti << " is deleted");
+                  ctrlMsgListIt = ctrlMessageList.erase (ctrlMsgListIt);
+                }
+              else
+                {
+                  ++ctrlMsgListIt;
+                }
+            }
+          else
+            {
+              ++ctrlMsgListIt;
+            }
+        }
     }
 
 }
@@ -1020,7 +1060,7 @@ LteEnbPhy::CreateSrsReport (uint16_t rnti, double srs)
 {
   NS_LOG_FUNCTION (this << rnti << srs);
   std::map <uint16_t,uint16_t>::iterator it = m_srsSampleCounterMap.find (rnti);
-  if (it==m_srsSampleCounterMap.end ())
+  if (it == m_srsSampleCounterMap.end ())
     {
       // create new entry
       m_srsSampleCounterMap.insert (std::pair <uint16_t,uint16_t> (rnti, 0));
@@ -1052,7 +1092,7 @@ std::list<UlDciLteControlMessage>
 LteEnbPhy::DequeueUlDci (void)
 {
   NS_LOG_FUNCTION (this);
-  if (m_ulDciQueue.at (0).size ()>0)
+  if (m_ulDciQueue.at (0).size () > 0)
     {
       std::list<UlDciLteControlMessage> ret = m_ulDciQueue.at (0);
       m_ulDciQueue.erase (m_ulDciQueue.begin ());
@@ -1075,7 +1115,7 @@ LteEnbPhy::DoSetSrsConfigurationIndex (uint16_t  rnti, uint16_t srcCi)
 {
   NS_LOG_FUNCTION (this);
   uint16_t p = GetSrsPeriodicity (srcCi);
-  if (p!=m_srsPeriodicity)
+  if (p != m_srsPeriodicity)
     {
       // resize the array of offset -> re-initialize variables
       m_srsUeOffset.clear ();
@@ -1103,7 +1143,7 @@ LteEnbPhy::DoSetSrsConfigurationIndex (uint16_t  rnti, uint16_t srcCi)
 }
 
 
-void 
+void
 LteEnbPhy::DoSetMasterInformationBlock (LteRrcSap::MasterInformationBlock mib)
 {
   NS_LOG_FUNCTION (this);
@@ -1127,11 +1167,11 @@ LteEnbPhy::SetHarqPhyModule (Ptr<LteHarqPhy> harq)
 
 
 void
-LteEnbPhy::ReceiveLteUlHarqFeedback (UlInfoListElement_s mes)
+LteEnbPhy::ReportUlHarqFeedback (UlInfoListElement_s mes)
 {
   NS_LOG_FUNCTION (this);
   // forward to scheduler
   m_enbPhySapUser->UlInfoListElementHarqFeeback (mes);
 }
 
-};
+}

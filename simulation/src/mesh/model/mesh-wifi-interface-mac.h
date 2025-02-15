@@ -29,16 +29,12 @@
 #include "ns3/callback.h"
 #include "ns3/packet.h"
 #include "ns3/nstime.h"
-#include "ns3/wifi-remote-station-manager.h"
-#include "ns3/regular-wifi-mac.h"
+#include "ns3/wifi-mac.h"
 #include "ns3/mesh-wifi-interface-mac-plugin.h"
 #include "ns3/event-id.h"
-#include "qos-utils.h"
 
 namespace ns3 {
 
-class WifiMacHeader;
-class DcaTxop;
 class UniformRandomVariable;
 /**
  * \ingroup mesh
@@ -51,7 +47,7 @@ class UniformRandomVariable;
  *  - management and priority traffic.
  *
  */
-class MeshWifiInterfaceMac : public RegularWifiMac
+class MeshWifiInterfaceMac : public WifiMac
 {
 public:
   /**
@@ -65,20 +61,37 @@ public:
   virtual ~MeshWifiInterfaceMac ();
 
   // Inherited from WifiMac
-  virtual void  Enqueue (Ptr<const Packet> packet, Mac48Address to, Mac48Address from);
-  virtual void  Enqueue (Ptr<const Packet> packet, Mac48Address to);
+  virtual void  Enqueue (Ptr<Packet> packet, Mac48Address to, Mac48Address from);
+  virtual void  Enqueue (Ptr<Packet> packet, Mac48Address to);
   virtual bool  SupportsSendFrom () const;
   virtual void  SetLinkUpCallback (Callback<void> linkUp);
-  ///\name Each mesh point interface must know the mesh point address
-  // \{
-  void SetMeshPointAddress (Mac48Address);
+  virtual bool CanForwardPacketsTo (Mac48Address to) const;
+
+  /// \name Each mesh point interface must know the mesh point address
+  ///@{
+  /**
+   * Set the mesh point address
+   * \param addr the mesh point address
+   */
+  void SetMeshPointAddress (Mac48Address addr);
+  /**
+   * Get the mesh point address
+   * \return The mesh point address
+   */
   Mac48Address GetMeshPointAddress () const;
-  // \}
-  ///\name Beacons
-  // \{
-  /// Set maximum initial random delay before first beacon
+  ///@}
+
+  /// \name Beacons
+  ///@{
+  /**
+   *  Set maximum initial random delay before first beacon
+   *  \param interval maximum random interval
+   */
   void SetRandomStartDelay (Time interval);
-  /// Set interval between two successive beacons
+  /**
+   *  Set interval between two successive beacons
+   *  \param interval beacon interval
+   */
   void SetBeaconInterval (Time interval);
   /// \return interval between two beacons
   Time GetBeaconInterval () const;
@@ -98,7 +111,7 @@ public:
    * \attention User of ShiftTbtt () must take care to not shift it to the past.
    */
   void ShiftTbtt (Time shift);
-  // \}
+  ///@}
 
   /**
    * Install plugin.
@@ -144,15 +157,30 @@ public:
   bool CheckSupportedRates (SupportedRates rates) const;
   /// \return list of supported bitrates
   SupportedRates GetSupportedRates () const;
-  ///\name Metric Calculation routines:
-  // \{
+
+  /// \name Metric Calculation routines:
+  ///@{
+  /**
+   * Set the link metric callback
+   * \param cb the callback
+   */
   void SetLinkMetricCallback (Callback<uint32_t, Mac48Address, Ptr<MeshWifiInterfaceMac> > cb);
+  /**
+   * Get the link metric
+   * \param peerAddress the peer address
+   * \return The metric
+   */
   uint32_t GetLinkMetric (Mac48Address peerAddress);
-  // \}
-  ///\brief Statistics:
-  void Report (std::ostream &) const;
-  /// Reset statistics
+  ///@}
+
+  /**
+   * \brief Report statistics
+   * \param os the output stream
+   */
+  void Report (std::ostream & os) const;
+  /// Reset statistics function
   void ResetStats ();
+
   /**
    * Enable/disable beacons
    *
@@ -160,17 +188,20 @@ public:
    */
   void SetBeaconGeneration (bool enable);
   /**
-   * Get phy standard in use
+   * Finish configuration based on the WifiStandard being provided
    *
-   * \returns the wifi phy standard
+   * \param standard the WifiStandard being configured
    */
-  WifiPhyStandard GetPhyStandard () const;
+  virtual void ConfigureStandard (enum WifiStandard standard);
   /**
-   * Finish configuration based on the WifiPhyStandard being provided
+   * \param cwMin the minimum contention window size
+   * \param cwMax the maximum contention window size
    *
-   * \param standard the WifiPhyStandard being configured
+   * This method is called to set the minimum and the maximum
+   * contention window size.
    */
-  virtual void FinishConfigureStandard (enum WifiPhyStandard standard);
+  virtual void ConfigureContentionWindow (uint32_t cwMin, uint32_t cwMax);
+
   /**
    * Assign a fixed random variable stream number to the random variables
    * used by this model.  Return the number of streams (possibly zero) that
@@ -184,10 +215,9 @@ private:
   /**
    * Frame receive handler
    *
-   * \param packet the received packet
-   * \param hdr the wifi MAC header
+   * \param mpdu the received MPDU
    */
-  void Receive (Ptr<Packet> packet, WifiMacHeader const *hdr);
+  void Receive (Ptr<WifiMacQueueItem> mpdu);
   /**
    * Send frame. Frame is supposed to be tagged by routing information.
    *
@@ -195,7 +225,7 @@ private:
    * \param from the from address
    * \param to the to address
    */
-  void ForwardDown (Ptr<const Packet> packet, Mac48Address from, Mac48Address to);
+  void ForwardDown (Ptr<Packet> packet, Mac48Address from, Mac48Address to);
   /// Send beacon
   void SendBeacon ();
   /// Schedule next beacon
@@ -214,8 +244,8 @@ private:
 
   virtual void DoInitialize ();
 
-  ///\name Mesh timing intervals
-  // \{
+  /// \name Mesh timing intervals
+  ///@{
   /// whether beaconing is enabled
   bool m_beaconEnable;
   /// Beaconing interval.
@@ -224,7 +254,7 @@ private:
   Time m_randomStart;
   /// Time for the next frame
   Time m_tbtt;
-  // \}
+  ///@}
 
   /// Mesh point address
   Mac48Address m_mpAddress;
@@ -253,8 +283,8 @@ private:
   };
   Statistics m_stats; ///< statistics
 
-  /// Current PHY standard: needed to configure metric
-  WifiPhyStandard m_standard;
+  /// Current standard: needed to configure metric
+  WifiStandard m_standard;
 
   /// Add randomness to beacon generation
   Ptr<UniformRandomVariable> m_coefficient;

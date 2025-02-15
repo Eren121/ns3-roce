@@ -61,13 +61,13 @@ three "extra" nodes as seen below:
 
 ::
 
-// Default Network Topology
-//
-//       10.1.1.0
-// n0 -------------- n1   n2   n3   n4
-//    point-to-point  |    |    |    |
-//                    ================
-//                      LAN 10.1.2.0
+  // Default Network Topology
+  //
+  //       10.1.1.0
+  // n0 -------------- n1   n2   n3   n4
+  //    point-to-point  |    |    |    |
+  //                    ================
+  //                      LAN 10.1.2.0
 
 Then the ns-3 namespace is ``used`` and a logging component is defined.
 This is all just as it was in ``first.cc``, so there is nothing new yet.
@@ -167,7 +167,7 @@ rate is specified by a *channel* ``Attribute`` instead of a device
 for example, 10Base-T and 100Base-T devices on a given channel.  We first set 
 the data rate to 100 megabits per second, and then set the speed-of-light delay
 of the channel to 6560 nano-seconds (arbitrarily chosen as 1 nanosecond per foot
-over a 100 meter segment).  Notice that you can set an ``Attribute`` using 
+over a 2000 meter segment).  Notice that you can set an ``Attribute`` using 
 its native data type.
 
 ::
@@ -335,14 +335,14 @@ the ``first.cc`` example.
   }
 
 In order to run this example, copy the ``second.cc`` example script into 
-the scratch directory and use waf to build just as you did with
+the scratch directory and use ns3 to build just as you did with
 the ``first.cc`` example.  If you are in the top-level directory of the
 repository you just type,
 
 .. sourcecode:: bash
 
   $ cp examples/tutorial/second.cc scratch/mysecond.cc
-  $ ./waf
+  $ ./ns3
 
 Warning:  We use the file ``second.cc`` as one of our regression tests to
 verify that it works exactly as we think it should in order to make your
@@ -358,7 +358,7 @@ run the program.
 .. sourcecode:: bash
 
   $ export NS_LOG=
-  $ ./waf --run scratch/mysecond
+  $ ./ns3 run scratch/mysecond
 
 Since we have set up the UDP echo applications to log just as we did in 
 ``first.cc``, you will see similar output when you run the script.
@@ -540,7 +540,7 @@ devices set to four:
 
 .. sourcecode:: bash
 
-  $ ./waf --run "scratch/mysecond --nCsma=4"
+  $ ./ns3 run "scratch/mysecond --nCsma=4"
 
 You should now see,
 
@@ -615,7 +615,7 @@ If you build the new script and run the simulation setting ``nCsma`` to 100,
 
 .. sourcecode:: bash
 
-  $ ./waf --run "scratch/mysecond --nCsma=100"
+  $ ./ns3 run "scratch/mysecond --nCsma=100"
 
 you will see the following output:
 
@@ -812,14 +812,14 @@ to the wifi module and the mobility module which we will discuss below.
 
 ::
 
-#include "ns3/core-module.h"
-#include "ns3/point-to-point-module.h"
-#include "ns3/network-module.h"
-#include "ns3/applications-module.h"
-#include "ns3/wifi-module.h"
-#include "ns3/mobility-module.h"
-#include "ns3/csma-module.h"
-#include "ns3/internet-module.h"
+  #include "ns3/core-module.h"
+  #include "ns3/point-to-point-module.h"
+  #include "ns3/network-module.h"
+  #include "ns3/applications-module.h"
+  #include "ns3/wifi-module.h"
+  #include "ns3/mobility-module.h"
+  #include "ns3/csma-module.h"
+  #include "ns3/internet-module.h"
 
 The network topology illustration follows:
 
@@ -952,47 +952,57 @@ methods. Once these objects are created, we create a channel object
 and associate it to our PHY layer object manager to make sure
 that all the PHY layer objects created by the ``YansWifiPhyHelper``
 share the same underlying channel, that is, they share the same
-wireless medium and can communication and interfere:
+wireless medium and can communicate and interfere:
 
 ::
 
   phy.SetChannel (channel.Create ());
 
-Once the PHY helper is configured, we can focus on the MAC layer. Here we choose to
-work with non-Qos MACs. WifiMacHelper object is used to set MAC parameters. 
+Once the PHY helper is configured, we can focus on the MAC layer. The
+WifiMacHelper object is used to set MAC parameters.
+The second statement below creates an 802.11 service set identifier (SSID)
+object that will be used to set the value of the "Ssid" ``Attribute`` of
+the MAC layer implementation.  
+
+
+::
+
+  WifiMacHelper mac;
+  Ssid ssid = Ssid ("ns-3-ssid");
+
+WifiHelper will, by default, configure
+the standard in use to be 802.11ax (known commercially as Wi-Fi 6) and configure
+a compatible rate control algorithm (IdealWifiManager).
 
 ::
 
   WifiHelper wifi;
-  wifi.SetRemoteStationManager ("ns3::AarfWifiManager");
 
-  WifiMacHelper mac;
-
-The ``SetRemoteStationManager`` method tells the helper the type of 
-rate control algorithm to use.  Here, it is asking the helper to use the AARF
-algorithm --- details are, of course, available in Doxygen.
-
-Next, we configure the type of MAC, the SSID of the infrastructure network we
-want to setup and make sure that our stations don't perform active probing:
+We are now ready to install Wi-Fi models on the nodes, using these four 
+helper objects (YansWifiChannelHelper, YansWifiPhyHelper, WifiMacHelper,
+WifiHelper) and the Ssid object created above.  These helpers have
+encapsulated a lot of default configuration,
+and can be further tailored using additional attribute configuration if
+desired.  We also will create NetDevice containers to store pointers to
+the WifiNetDevice objects that the helper create.
 
 ::
 
-  Ssid ssid = Ssid ("ns-3-ssid");
+  NetDeviceContainer staDevices
   mac.SetType ("ns3::StaWifiMac",
     "Ssid", SsidValue (ssid),
     "ActiveProbing", BooleanValue (false));
 
-This code first creates an 802.11 service set identifier (SSID) object
-that will be used to set the value of the "Ssid" ``Attribute`` of
-the MAC layer implementation.  The particular kind of MAC layer that
-will be created by the helper is specified by ``Attribute`` as
-being of the "ns3::StaWifiMac" type.  "QosSupported" ``Attribute`` is
-set to false by default for ``WifiMacHelper`` objects. The combination
+In the above code, the specific kind of MAC layer that
+will be created by the helper is specified by the TypeId value
+of `ns3::StaWifiMac` type.  The "QosSupported" attribute is
+set to true by default for ``WifiMacHelper`` objects when the standard
+is at least 802.11n or newer. The combination
 of these two configurations means that the MAC instance next created
-will be a non-QoS non-AP station (STA) in an infrastructure BSS (i.e.,
+will be a QoS-aware, non-AP station (STA) in an infrastructure BSS (i.e.,
 a BSS with an AP).  Finally, the "ActiveProbing" ``Attribute`` is
 set to false.  This means that probe requests will not be sent by MACs
-created by this helper.
+created by this helper, and stations will listen for AP beacons.
 
 Once all the station-specific parameters are fully configured, both at the
 MAC and PHY layers, we can invoke our now-familiar ``Install`` method to 
@@ -1015,9 +1025,7 @@ requirements of the AP.
 
 In this case, the ``WifiMacHelper`` is going to create MAC
 layers of the "ns3::ApWifiMac", the latter specifying that a MAC
-instance configured as an AP should be created. We do not change
-the default setting of "QosSupported" ``Attribute``, so it remains
-false - disabling 802.11e/WMM-style QoS support at created APs.  
+instance configured as an AP should be created.
 
 The next lines create the single AP which shares the same set of PHY-level
 ``Attributes`` (and channel) as the stations:
@@ -1180,15 +1188,14 @@ Finally, we actually run the simulation, clean up and then exit the program.
   }
 
 In order to run this example, you have to copy the ``third.cc`` example
-script into the scratch directory and use Waf to build just as you did with
+script into the scratch directory and use CMake to build just as you did with
 the ``second.cc`` example.  If you are in the top-level directory of the
 repository you would type,
 
 .. sourcecode:: bash
 
   $ cp examples/tutorial/third.cc scratch/mythird.cc
-  $ ./waf
-  $ ./waf --run scratch/mythird
+  $ ./ns3 run scratch/mythird
 
 Again, since we have set up the UDP echo applications just as we did in the 
 ``second.cc`` script, you will see similar output.
@@ -1367,7 +1374,7 @@ case of the default number of CSMA and wireless nodes, this turns out to be
 node seven and the tracing namespace path to the mobility model would look
 like,
 
-::
+.. sourcecode:: text
 
   /NodeList/7/$ns3::MobilityModel/CourseChange
 
@@ -1486,7 +1493,7 @@ At the traffic-control layer, these are the options:
 * FifoQueueDisc: The default maximum size is 1000 packets
 * RedQueueDisc: The default maximum size is 25 packets
 * CoDelQueueDisc: The default maximum size is 1500 kilobytes
-* FqCoDelQueueDisc: The default maximum size is 10024 packets
+* FqCoDelQueueDisc: The default maximum size is 10240 packets
 * PieQueueDisc: The default maximum size is 25 packets
 * MqQueueDisc: This queue disc has no limits on its capacity
 * TbfQueueDisc: The default maximum size is 1000 packets
@@ -1513,39 +1520,32 @@ At the device layer, there are device specific queues:
 Changing from the defaults
 ++++++++++++++++++++++++++
 
-* The type of queue used by a NetDevice can be usually modified through the device helper:
+* The type of queue used by a NetDevice can be usually modified through the device helper::
 
-.. sourcecode:: cpp
+    NodeContainer nodes;
+    nodes.Create (2);
 
-  NodeContainer nodes;
-  nodes.Create (2);
+    PointToPointHelper p2p;
+    p2p.SetQueue ("ns3::DropTailQueue", "MaxSize", StringValue ("50p"));
 
-  PointToPointHelper p2p;
-  p2p.SetQueue ("ns3::DropTailQueue", "MaxSize", StringValue ("50p"));
-
-  NetDeviceContainer devices = p2p.Install (nodes);
+    NetDeviceContainer devices = p2p.Install (nodes);
 
 * The type of queue disc installed on a NetDevice can be modified through the
-  traffic control helper
+  traffic control helper::
 
-.. sourcecode:: cpp
+    InternetStackHelper stack;
+    stack.Install (nodes);
 
-  InternetStackHelper stack;
-  stack.Install (nodes);
+    TrafficControlHelper tch;
+    tch.SetRootQueueDisc ("ns3::CoDelQueueDisc", "MaxSize", StringValue ("1000p"));
+    tch.Install (devices);
 
-  TrafficControlHelper tch;
-  tch.SetRootQueueDisc ("ns3::CoDelQueueDisc", "MaxSize", StringValue ("1000p"));
-  tch.Install (devices);
+* BQL can be enabled on a device that supports it through the traffic control helper::
 
-* BQL can be enabled on a device that supports it through the traffic control helper
+    InternetStackHelper stack;
+    stack.Install (nodes);
 
-.. sourcecode:: cpp
-
-  InternetStackHelper stack;
-  stack.Install (nodes);
-
-  TrafficControlHelper tch;
-  tch.SetRootQueueDisc ("ns3::CoDelQueueDisc", "MaxSize", StringValue ("1000p"));
-  tch.SetQueueLimits ("ns3::DynamicQueueLimits", "HoldTime", StringValue ("4ms"));
-  tch.Install (devices);
-
+    TrafficControlHelper tch;
+    tch.SetRootQueueDisc ("ns3::CoDelQueueDisc", "MaxSize", StringValue ("1000p"));
+    tch.SetQueueLimits ("ns3::DynamicQueueLimits", "HoldTime", StringValue ("4ms"));
+    tch.Install (devices);

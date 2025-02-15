@@ -21,35 +21,35 @@ In |ns3| simulations, there are two main aspects to configuration:
 This chapter focuses on the second item above: how the many values in use in
 |ns3| are organized, documented, and modifiable by |ns3| users. The |ns3|
 attribute system is also the underpinning of how traces and statistics are
-gathered in the simulator. 
+gathered in the simulator.
 
 In the course of this chapter we will discuss the various ways to set or
 modify the values used by |ns3| model objects.  In increasing order of
 specificity, these are:
 
-+---------------------------------------+-------------------------------------+
-| Method                                | Scope                               |
-+=======================================+=====================================+
-| Default Attribute values set when     | Affect all instances of the class.  |
-| Attributes are defined in             |                                     |
-| :cpp:func:`GetTypeId ()`.             |                                     |
-+---------------------------------------+-------------------------------------+
-| | :cpp:class:`CommandLine`            | Affect all future instances.        |
-| | :cpp:func:`Config::SetDefault()`    |                                     |
-| | :cpp:class:`ConfigStore`            |                                     |
-+---------------------------------------+-------------------------------------+
-| :cpp:class:`ObjectFactory`            | Affects all instances created with  |
-|                                       | the factory.                        |
-+---------------------------------------+-------------------------------------+
-| Helper methods with (string/          | Affects all instances created by    |
-| AttributeValue) parameter pairs       | the helper.                         |
-+---------------------------------------+-------------------------------------+
-| | :cpp:func:`MyClass::SetX ()`        | Alters this particular instance.    |
-| | :cpp:func:`Object::SetAttribute ()` | Generally this is the only form     |
-| | :cpp:func:`Config::Set()`           | which can be scheduled to alter     |
-|                                       | an instance once the simulation     |
-|                                       | is running.                         |
-+---------------------------------------+-------------------------------------+
++-------------------------------------+------------------------------------+
+| Method                              | Scope                              |
++=====================================+====================================+
+| Default Attribute values set when   | Affect all instances of the class. |
+| Attributes are defined in           |                                    |
+| :cpp:func:`GetTypeId ()`.           |                                    |
++-------------------------------------+------------------------------------+
+| :cpp:class:`CommandLine`            | Affect all future instances.       |
+| :cpp:func:`Config::SetDefault()`    |                                    |
+| :cpp:class:`ConfigStore`            |                                    |
++-------------------------------------+------------------------------------+
+| :cpp:class:`ObjectFactory`          | Affects all instances created with |
+|                                     | the factory.                       |
++-------------------------------------+------------------------------------+
+| Helper methods with (string/        | Affects all instances created by   |
+| AttributeValue) parameter pairs     | the helper.                        |
++-------------------------------------+------------------------------------+
+| :cpp:func:`MyClass::SetX ()`        | Alters this particular instance.   |
+| :cpp:func:`Object::SetAttribute ()` | Generally this is the only form    |
+| :cpp:func:`Config::Set()`           | which can be scheduled to alter    |
+|                                     | an instance once the simulation    |
+|                                     | is running.                        |
++-------------------------------------+------------------------------------+
 
 By "specificity" we mean that methods in later rows in the table
 override the values set by, and typically affect fewer instances than,
@@ -70,13 +70,13 @@ system and improving the memory management of our objects:
 
 * "Metadata" system that links the class name to a lot of meta-information
   about the object, including:
-  
+
   * The base class of the subclass,
   * The set of accessible constructors in the subclass,
   * The set of "attributes" of the subclass,
   * Whether each attribute can be set, or is read-only,
   * The allowed range of values for each attribute.
-  
+
 * Reference counting smart pointer implementation, for memory management.
 
 |ns3| objects that use the attribute system derive from either
@@ -92,10 +92,10 @@ Smart Pointers
 
 As introduced in the |ns3| tutorial, |ns3| objects are memory managed by a
 `reference counting smart pointer implementation
-<http://en.wikipedia.org/wiki/Smart_pointer>`_, class :cpp:class:`Ptr`. 
+<http://en.wikipedia.org/wiki/Smart_pointer>`_, class :cpp:class:`Ptr`.
 
 Smart pointers are used extensively in the |ns3| APIs, to avoid passing
-references to heap-allocated objects that may cause memory leaks.  
+references to heap-allocated objects that may cause memory leaks.
 For most basic usage (syntax), treat a smart pointer like a regular pointer::
 
   Ptr<WifiNetDevice> nd = ...;
@@ -104,7 +104,7 @@ For most basic usage (syntax), treat a smart pointer like a regular pointer::
 
 So how do you get a smart pointer to an object, as in the first line
 of this example?
-  
+
 CreateObject
 ============
 
@@ -124,7 +124,7 @@ You can think of this as being functionally equivalent to::
 Objects that derive from :cpp:class:`Object` must be allocated on the heap
 using :cpp:func:`CreateObject ()`. Those deriving from :cpp:class:`ObjectBase`,
 such as |ns3| helper functions and packet headers and trailers,
-can be allocated on the stack.  
+can be allocated on the stack.
 
 In some scripts, you may not see a lot of :cpp:func:`CreateObject ()` calls
 in the code; this is because there are some helper objects in effect
@@ -160,7 +160,7 @@ a static :cpp:func:`GetTypeId ()` function call::
 
 This is defined in the ``node.cc`` file as follows::
 
-    TypeId 
+    TypeId
     Node::GetTypeId (void)
     {
       static TypeId tid = TypeId ("ns3::Node")
@@ -212,7 +212,7 @@ code how to get to the node ID above). There are also "Checker" methods which
 are used to validate values against range limitations, such as maximum
 and minimum allowed values.
 
-When users want to create Nodes, they will usually call some form of 
+When users want to create Nodes, they will usually call some form of
 :cpp:func:`CreateObject ()`,::
 
     Ptr<Node> n = CreateObject<Node> ();
@@ -225,7 +225,7 @@ or more abstractly, using an object factory, you can create a
     factory.SetTypeId (typeId);
     Ptr<Object> node = factory.Create <Object> ();
 
-Both of these methods result in fully initialized attributes being available 
+Both of these methods result in fully initialized attributes being available
 in the resulting :cpp:class:`Object` instances.
 
 We next discuss how attributes (values associated with member variables or
@@ -238,7 +238,7 @@ The goal of the attribute system is to organize the access of
 internal member objects of a simulation. This goal arises because,
 typically in simulation, users will cut and paste/modify existing
 simulation scripts, or will use higher-level simulation constructs,
-but often will be interested in studying or tracing particular 
+but often will be interested in studying or tracing particular
 internal variables.  For instance, use cases such as:
 
 * *"I want to trace the packets on the wireless interface only on the first
@@ -258,13 +258,101 @@ canvas and see a hierarchical, organized list of parameters that are settable on
 the node and its constituent member objects, and help text and default values
 for each parameter.
 
+Available AttributeValue Types
+++++++++++++++++++++++++++++++
+
+* AddressValue
+
+* AttributeContainerValue
+
+* BooleanValue
+
+* BoxValue
+
+* CallbackValue
+
+* DataRateValue
+
+* DoubleValue
+
+* EmptyAttributeValue
+
+* EnumValue
+
+* IntegerValue
+
+* Ipv4AddressValue
+
+* Ipv4MaskValue
+
+* Ipv6AddressValue
+
+* Ipv6PrefixValue
+
+* LengthValue
+
+* Mac16AddressValue
+
+* Mac48AddressValue
+
+* Mac64AddressValue
+
+* ObjectFactoryValue
+
+* ObjectPtrContainerValue
+
+* PairValue<A, B>
+
+* PointerValue
+
+* PriomapValue
+
+* QueueSizeValue
+
+* RectangleValue
+
+* SsidValue
+
+* TimeValue
+
+* TupleValue<Args...>
+
+  A TupleValue is capable of storing values of different types, hence it is suitable for
+  structured data. A prominent example is the ChannelSettings attribute of WifiPhy, which
+  consists of channel number, channel width, PHY band and primary 20 MHz channel index.
+  In this case the values have to be mutually consistent, which makes it difficult to set them
+  as individual Attributes. Capturing them in a TupleValue simplifies this problem, see
+  ``src/wifi/model/wifi-phy.cc``.
+
+  Values stored in a TupleValue object can be set/get through a std::tuple object or
+  can be serialized to/deserialized from a string containing a comma-separated sequence of
+  the values enclosed in a pair of curly braces (e.g., "{36, 20, BAND_5GHZ, 0}").
+
+  The usage of the TupleValue attribute is illustrated in
+  ``src/core/test/tuple-value-test-suite.cc``.
+
+* TypeIdValue
+
+* UanModesListValue
+
+* UintegerValue
+
+* Vector2DValue
+
+* Vector3DValue
+
+* WaypointValue
+
+* WifiModeValue
+
+
 Defining Attributes
 +++++++++++++++++++
 
 We provide a way for users to access values deep in the system, without having
 to plumb accessors (pointers) through the system and walk pointer chains to get
 to them. Consider a class :cpp:class:`QueueBase` that has a member variable
-:cpp:member:`m_maxSize` controlling the depth of the queue.  
+:cpp:member:`m_maxSize` controlling the depth of the queue.
 
 If we look at the declaration of :cpp:class:`QueueBase`, we see
 the following::
@@ -288,7 +376,7 @@ to be represented in different units::
       PACKETS,     /**< Use number of packets for queue size */
       BYTES,       /**< Use number of bytes for queue size */
     };
- 
+
     class QueueSize
     {
       ...
@@ -329,7 +417,7 @@ registrations are moved into the :cpp:class:`TypeId` class; *e.g*.::
     NS_OBJECT_ENSURE_REGISTERED (QueueBase);
 
     TypeId
-    QueueBase::GetTypeId (void) 
+    QueueBase::GetTypeId (void)
     {
       static TypeId tid = TypeId ("ns3::DropTailQueue")
         .SetParent<Queue> ()
@@ -343,7 +431,7 @@ registrations are moved into the :cpp:class:`TypeId` class; *e.g*.::
                        MakeQueueSizeChecker ())
         ...
         ;
-      
+
       return tid;
     }
 
@@ -397,7 +485,7 @@ function begins::
     // size of the FIFO queue in the PointToPointNetDevice
     //
 
-    int 
+    int
     main (int argc, char *argv[])
     {
 
@@ -411,7 +499,7 @@ function begins::
       // hold queue size values in either unit (bytes or packets).  The
       // queue base class ns3::QueueBase has a MaxSize attribute that can
       // be set to a QueueSize.
-    
+
       // By default, the MaxSize attribute has a value of 100 packets ('100p')
       // (this default can be observed in the function QueueBase::GetTypeId)
       //
@@ -420,8 +508,8 @@ function begins::
       Config::SetDefault ("ns3::QueueBase::MaxSize", StringValue ("80p"));
       // The below function call is redundant
       Config::SetDefault ("ns3::QueueBase::MaxSize", QueueSizeValue (QueueSize (QueueSizeUnit::PACKETS, 80)));
-    
-The main thing to notice in the above are the two equivalent calls to 
+
+The main thing to notice in the above are the two equivalent calls to
 :cpp:func:`Config::SetDefault ()`.  This is how we set the default value
 for all subsequently instantiated :cpp:class:`DropTailQueue`\s.  We illustrate
 that two types of ``Value`` classes, a :cpp:class:`StringValue` and
@@ -463,7 +551,15 @@ default values.::
 
 At this point, we have created a single :cpp:class:`Node` (``n0``)
 and a single :cpp:class:`PointToPointNetDevice` (``net0``),
-and added a :cpp:class:`DropTailQueue` (``q``) to ``net0``.
+added a :cpp:class:`DropTailQueue` (``q``) to ``net0``,
+which will be configured with a queue size limit of 80 packets.
+
+As a final note, the `Config::Set...()` functions
+will throw an error if the targeted Attribute does not exist at the path
+given.  There are also "fail-safe" versions,
+`Config::Set...FailSafe()`, if you can't be sure the Attribute
+exists.  The fail-safe versions return `true` if at least one instance
+could be set.
 
 Constructors, Helpers and ObjectFactory
 =======================================
@@ -517,11 +613,11 @@ SmartPointer
 ============
 
 Assume that a smart pointer (:cpp:class:`Ptr`) to a relevant network device
-is in hand; in the current example, it is the ``net0`` pointer. 
+is in hand; in the current example, it is the ``net0`` pointer.
 
 One way to change the value is to access a pointer to the underlying queue and
 modify its attribute.
- 
+
 First, we observe that we can get a pointer to the (base class)
 :cpp:class:`Queue` *via* the
 :cpp:class:`PointToPointNetDevice` attributes, where it is called
@@ -551,7 +647,7 @@ the variable `limit` is written into by the GetAttribute method.::
     QueueSizeValue limit;
     dtq->GetAttribute ("MaxSize", limit);
     NS_LOG_INFO ("1.  dtq limit: " << limit.Get ());
-  
+
 Note that the above downcast is not really needed; we could have gotten
 the attribute value directly from ``txQueue``::
 
@@ -575,11 +671,13 @@ Config Namespace Path
 An alternative way to get at the attribute is to use the configuration
 namespace.  Here, this attribute resides on a known path in this namespace; this
 approach is useful if one doesn't have access to the underlying pointers and
-would like to configure a specific attribute with a single statement.::
+would like to configure a specific attribute with a single statement.
+
+::
 
     Config::Set ("/NodeList/0/DeviceList/0/TxQueue/MaxSize",
                  StringValue ("25p"));
-    txQueue->GetAttribute ("MaxSize", limit); 
+    txQueue->GetAttribute ("MaxSize", limit);
     NS_LOG_INFO ("4.  txQueue limit changed through namespace: "
                  << limit.Get ());
 
@@ -591,23 +689,23 @@ the second container is the list of all :cpp:class:`NetDevice`\s on
 the chosen :cpp:class:`Node`.  Finally, the configuration path usually
 ends with a succession of member attributes, in this case the ``"MaxSize"``
 attribute of the ``"TxQueue"`` of the chosen :cpp:class:`NetDevice`.
-	
+
 We could have also used wildcards to set this value for all nodes and all net
 devices (which in this simple example has the same effect as the previous
 :cpp:func:`Config::Set ()`)::
 
     Config::Set ("/NodeList/*/DeviceList/*/TxQueue/MaxSize",
                  StringValue ("15p"));
-    txQueue->GetAttribute ("MaxSize", limit); 
+    txQueue->GetAttribute ("MaxSize", limit);
     NS_LOG_INFO ("5.  txQueue limit changed through wildcarded namespace: "
                  << limit.Get ());
 
 If you run this program from the command line, you should see the following
-output corresponding to the steps we took above::
+output corresponding to the steps we took above:
 
-.. sourcecode:: text
+.. sourcecode:: bash
 
-    $ ./waf --run main-attribute-value
+    $ ./ns3 run main-attribute-value
     1.  dtq limit: 80p
     2.  txQueue limit: 80p
     3.  txQueue limit changed: 60p
@@ -662,7 +760,7 @@ So in the above, users have a choice of using strings or values::
 
 The system provides some macros that help users declare and define
 new AttributeValue subclasses for new types that they want to introduce into
-the attribute system: 
+the attribute system:
 
 * ``ATTRIBUTE_HELPER_HEADER``
 * ``ATTRIBUTE_HELPER_CPP``
@@ -678,7 +776,7 @@ specified, nor enforced, by the system. A specific example of this can be seen
 in automated configuration programs such as :cpp:class:`ConfigStore`.
 Although a given model may arrange it so that Attributes are initialized in a
 particular order, another automatic configurator may decide independently to
-change Attributes in, for example, alphabetic order.  
+change Attributes in, for example, alphabetic order.
 
 Because of this non-specific ordering, no Attribute in the system may have any
 dependence on any other Attribute. As a corollary, Attribute setters must never
@@ -736,7 +834,7 @@ variable using the metadata system. If it were not already provided by |ns3|,
 the user could declare the following addition in the runtime metadata system (to
 the :cpp:func:`GetTypeId` definition for :cpp:class:`TcpSocket`)::
 
-    .AddAttribute ("Congestion window", 
+    .AddAttribute ("Congestion window",
                    "Tcp congestion window (bytes)",
                    UintegerValue (1),
                    MakeUintegerAccessor (&TcpSocket::m_cWnd),
@@ -761,11 +859,11 @@ its parent class, :cpp:class:`ns3::MobilityModel`.
 In the ``my-mobility.h`` header file::
 
     namespace ns3 {
-    
+
     class MyMobility : public MobilityModel
     {
 
-This requires we declare the :cpp:func:`GetTypeId ()` function. 
+This requires we declare the :cpp:func:`GetTypeId ()` function.
 This is a one-line public function declaration::
 
     public:
@@ -806,7 +904,7 @@ If we don't want to subclass from an existing class, in the header file
 we just inherit from :cpp:class:`ns3::Object`, and in the object file
 we set the parent class to :cpp:class:`ns3::Object` with
 ``.SetParent<Object> ()``.
-    
+
 Typical mistakes here involve:
 
 * Not calling ``NS_OBJECT_ENSURE_REGISTERED ()``
@@ -848,7 +946,7 @@ Header File
       double yMin;
       double yMax;
     };
- 
+
 One macro call and two operators, must be added below the class declaration in
 order to turn a Rectangle into a value usable by the ``Attribute`` system::
 
@@ -875,7 +973,7 @@ In the class definition (``.cc`` file), the code looks like this::
     operator >> (std::istream &is, Rectangle &rectangle)
      {
       char c1, c2, c3;
-      is >> rectangle.xMin >> c1 >> rectangle.xMax >> c2 >> rectangle.yMin >> c3 
+      is >> rectangle.xMin >> c1 >> rectangle.xMax >> c2 >> rectangle.yMin >> c3
          >> rectangle.yMax;
       if (c1 != '|' ||
           c2 != '|' ||
@@ -899,7 +997,7 @@ and loaded into a future simulation run.  This feature is known as the
 |ns3| ConfigStore.  The :cpp:class:`ConfigStore` is a specialized database for attribute values and default values.
 
 Although it is a separately maintained module in the
-``src/config-store/`` directory, we document it here because of its 
+``src/config-store/`` directory, we document it here because of its
 sole dependency on |ns3| core module and attributes.
 
 We can explore this system by using an example from
@@ -928,25 +1026,25 @@ to show how the system is extended::
         }
       int16_t m_int16;
     };
-    
+
     NS_OBJECT_ENSURE_REGISTERED (ConfigExample);
 
 Next, we use the Config subsystem to override the defaults in a couple of
 ways::
-     
+
       Config::SetDefault ("ns3::ConfigExample::TestInt16", IntegerValue (-5));
-    
+
       Ptr<ConfigExample> a_obj = CreateObject<ConfigExample> ();
       NS_ABORT_MSG_UNLESS (a_obj->m_int16 == -5,
                            "Cannot set ConfigExample's integer attribute via Config::SetDefault");
-    
+
       Ptr<ConfigExample> a2_obj = CreateObject<ConfigExample> ();
       a2_obj->SetAttribute ("TestInt16", IntegerValue (-3));
       IntegerValue iv;
       a2_obj->GetAttribute ("TestInt16", iv);
       NS_ABORT_MSG_UNLESS (iv.Get () == -3,
                            "Cannot set ConfigExample's integer attribute via SetAttribute");
-    
+
 The next statement is necessary to make sure that (one of) the objects
 created is rooted in the configuration namespace as an object instance.
 This normally happens when you aggregate objects to a :cpp:class:`ns3::Node`
@@ -958,7 +1056,7 @@ new root namespace object::
 
 Writing
 +++++++
-      
+
 Next, we want to output the configuration store.  The examples show how
 to do it in two formats, XML and raw text.  In practice, one should perform
 this step just before calling :cpp:func:`Simulator::Run ()` to save the
@@ -980,7 +1078,7 @@ The example shows::
       ConfigStore outputConfig;
       outputConfig.ConfigureDefaults ();
       outputConfig.ConfigureAttributes ();
-    
+
       // Output config store to txt format
       Config::SetDefault ("ns3::ConfigStore::Filename", StringValue ("output-attributes.txt"));
       Config::SetDefault ("ns3::ConfigStore::FileFormat", StringValue ("RawText"));
@@ -988,12 +1086,12 @@ The example shows::
       ConfigStore outputConfig2;
       outputConfig2.ConfigureDefaults ();
       outputConfig2.ConfigureAttributes ();
-    
+
       Simulator::Run ();
-    
+
       Simulator::Destroy ();
-    
-Note the placement of these statements just prior to the 
+
+Note the placement of these statements just prior to the
 :cpp:func:`Simulator::Run ()` statement.  This output logs all of the
 values in place just prior to starting the simulation (*i.e*. after
 all of the configuration has taken place).
@@ -1031,7 +1129,7 @@ After running, you can open the ``output-attributes.txt`` file and see:
     global ChecksumEnabled "false"
     value /$ns3::ConfigExample/TestInt16 "-3"
 
-In the above, several of the default values for attributes for the core 
+In the above, several of the default values for attributes for the core
 and network modules are shown.  Then, all the values for the |ns3| global values
 are recorded.  Finally, the value of the instance of :cpp:class:`ConfigExample`
 that was rooted in the configuration namespace is shown.  In a real
@@ -1071,7 +1169,7 @@ An XML version also exists in ``output-attributes.xml``:
      <global name="ChecksumEnabled" value="false"/>
      <value path="/$ns3::ConfigExample/TestInt16" value="-3"/>
     </ns3>
-    
+
 This file can be archived with your simulation script and output data.
 
 Reading
@@ -1105,11 +1203,11 @@ for input file configuration is to generate an initial configuration
 using the output (``"Save"``) ``"Mode"`` described above, extract from
 that configuration file only the elements one wishes to change,
 and move these minimal elements to a new configuration file
-which can then safely be edited and loaded in a subsequent simulation run. 
+which can then safely be edited and loaded in a subsequent simulation run.
 
 When the :cpp:class:`ConfigStore` object is instantiated, its attributes
 ``"Filename"``, ``"Mode"``, and ``"FileFormat"`` must be set,
-either *via* command-line or *via* program statements.  
+either *via* command-line or *via* program statements.
 
 Reading/Writing Example
 +++++++++++++++++++++++
@@ -1129,7 +1227,7 @@ write out the resulting attributes to a separate file called
       Config::SetDefault ("ns3::ConfigStore::FileFormat", StringValue ("Xml"));
       ConfigStore inputConfig;
       inputConfig.ConfigureDefaults ();
-      
+
       //
       // Allow the user to override any of the defaults and the above Bind () at
       // run-time, viacommand-line arguments
@@ -1148,40 +1246,81 @@ write out the resulting attributes to a separate file called
       Simulator::Run ();
     }
 
+ConfigStore use cases (pre- and post-simulation)
+++++++++++++++++++++++++++++++++++++++++++++++++
+
+It is worth stressing that ConfigStore can be used for different purposes, and this is
+reflected in where in the script ConfigStore is invoked.
+
+The typical use-cases are:
+
+* Change an Object default attributes
+* Inspect/change a *specific* Object attributes
+* Inspect the simulation Objects and their attributes
+
+As a matter of fact, some Objects might be created when the simulation starts.
+Hence, ConfigStore will not "report" their attributes if invoked earlier in the code.
+
+A typical workflow might involve running the simulation, calling ConfigStore 
+at the end of the simulation (after ``Simulator::Run ()`` and before ``Simulator::Destroy ()``)
+This will show all the attributes in the Objects, both those with default values, and those
+with values changed during the simulation execution.
+
+To change these values, you'll need to either change the default (class-wide) attribute values
+(in this case call ConfigStore before the Object creation), or  specific object attribute
+(in this case call ConfigStore after the Object creation, typically just before ``Simulator::Run ()``.
+
+
 ConfigStore GUI
 +++++++++++++++
 
 There is a GTK-based front end for the ConfigStore.  This allows users to use a
-GUI to access and change variables.  Screenshots of this feature are available
-in the `|ns3| Overview <http://www.nsnam.org/docs/ns-3-overview.pdf>`_
-presentation.
+GUI to access and change variables.
 
-To use this feature, one must install ``libgtk`` and ``libgtk-dev``; an example
+Some screenshots are presented here. They are the result of using GtkConfig on 
+``src/lte/examples/lena-dual-stripe.cc`` after ``Simulator::Run ()``.
+
+.. _GtkConfig:
+
+.. figure:: figures/gtk-config-lena-dual-stripe-device-view.*
+
+.. figure:: figures/gtk-config-lena-dual-stripe-eNB-tx-power.*
+
+
+To use this feature, one must install ``libgtk-3-dev``; an example
 Ubuntu installation command is:
 
 .. sourcecode:: bash
 
-  $ sudo apt-get install libgtk2.0-0 libgtk2.0-dev
+  $ sudo apt-get install libgtk-3-dev
+
+On a MacOS it is possible to install GTK-3 using `Homebrew <https://brew.sh>`_.
+The installation command is:
+
+.. sourcecode:: bash
+
+  $ brew install gtk+3 adwaita-icon-theme
+
 
 To check whether it is configured or not, check the output of the step:
 
 .. sourcecode:: bash
 
-  $ ./waf configure --enable-examples --enable-tests
+  $ ./ns3 configure --enable-examples --enable-tests
 
   ---- Summary of optional NS-3 features:
   Python Bindings               : enabled
   Python API Scanning Support   : enabled
   NS-3 Click Integration        : enabled
-  GtkConfigStore                : not enabled (library 'gtk+-2.0 >= 2.12' not found)
+  GtkConfigStore                : not enabled (library 'gtk+-3.0 >= 3.0' not found)
 
 In the above example, it was not enabled, so it cannot be used until a suitable
 version is installed and:
 
 .. sourcecode:: bash
 
-  $ ./waf configure --enable-examples --enable-tests
-  $ ./waf
+  $ ./ns3 configure --enable-examples --enable-tests
+  $ ./ns3
 
 is rerun.
 
@@ -1195,5 +1334,10 @@ are no :cpp:class:`ConfigStore` attributes involved::
 
 Now, when you run the script, a GUI should pop up, allowing you to open menus of
 attributes on different nodes/objects, and then launch the simulation execution
-when you are done.  
+when you are done.
+
+Note that "launch the simulation" means to proceed with the simulation script.
+If GtkConfigStore has been called after ``Simulator::Run ()`` the simulation will
+not be started again - it will just end.
+
 

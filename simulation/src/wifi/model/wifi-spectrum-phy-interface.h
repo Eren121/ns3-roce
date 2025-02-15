@@ -21,7 +21,7 @@
 #ifndef WIFI_SPECTRUM_PHY_INTERFACE_H
 #define WIFI_SPECTRUM_PHY_INTERFACE_H
 
-#include <ns3/spectrum-phy.h>
+#include "ns3/spectrum-phy.h"
 
 namespace ns3 {
 
@@ -53,20 +53,20 @@ public:
    */
   void SetSpectrumWifiPhy (const Ptr<SpectrumWifiPhy> phy);
 
-  // Inherited from SpectrumPhy
-  Ptr<NetDevice> GetDevice () const;
-  void SetDevice (const Ptr<NetDevice> d);
-  void SetMobility (const Ptr<MobilityModel> m);
-  Ptr<MobilityModel> GetMobility ();
-  void SetChannel (const Ptr<SpectrumChannel> c);
-  Ptr<const SpectrumModel> GetRxSpectrumModel () const;
-  Ptr<AntennaModel> GetRxAntenna ();
-  void StartRx (Ptr<SpectrumSignalParameters> params);
+  Ptr<NetDevice> GetDevice () const override;
+  void SetDevice (const Ptr<NetDevice> d) override;
+  void SetMobility (const Ptr<MobilityModel> m) override;
+  Ptr<MobilityModel> GetMobility () const override;
+  void SetChannel (const Ptr<SpectrumChannel> c) override;
+  Ptr<const SpectrumModel> GetRxSpectrumModel () const override;
+  Ptr<Object> GetAntenna () const override;
+  void StartRx (Ptr<SpectrumSignalParameters> params) override;
 
 
 private:
-  virtual void DoDispose (void);
-  Ptr<SpectrumWifiPhy> m_spectrumWifiPhy; ///< spectrum phy
+  void DoDispose (void) override;
+
+  Ptr<SpectrumWifiPhy> m_spectrumWifiPhy; ///< spectrum PHY
   Ptr<NetDevice> m_netDevice; ///< the device
   Ptr<SpectrumChannel> m_channel; ///< spectrum channel
 };

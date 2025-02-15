@@ -50,7 +50,7 @@ NS_LOG_COMPONENT_DEFINE ("LteAntennaTest");
  * \ingroup tests
  *
  * \brief Tests that the propagation model and the antenna parameters are 
- * generate the correct values. Different test cases are created by specifing different 
+ * generate the correct values. Different test cases are created by specifying different 
  * antenna configurations and it is tested if for the given information the pathloss 
  * value is as expected.
  */
@@ -158,8 +158,12 @@ LteEnbAntennaTestCase::DoRun (void)
   lteHelper->SetSchedulerAttribute ("UlCqiFilter", EnumValue (FfMacScheduler::PUSCH_UL_CQI));
   lteHelper->SetEnbAntennaModelType ("ns3::CosineAntennaModel");
   lteHelper->SetEnbAntennaModelAttribute ("Orientation", DoubleValue (m_orientationDegrees));
-  lteHelper->SetEnbAntennaModelAttribute ("Beamwidth",   DoubleValue (m_beamwidthDegrees));
-  lteHelper->SetEnbAntennaModelAttribute ("MaxGain",     DoubleValue (0.0));
+  lteHelper->SetEnbAntennaModelAttribute ("HorizontalBeamwidth", DoubleValue (m_beamwidthDegrees));
+  lteHelper->SetEnbAntennaModelAttribute ("MaxGain", DoubleValue (0.0));
+
+  // set DL and UL bandwidth. 
+  lteHelper->SetEnbDeviceAttribute ("DlBandwidth", UintegerValue (25));
+  lteHelper->SetEnbDeviceAttribute ("UlBandwidth", UintegerValue (25));
 
   enbDevs = lteHelper->InstallEnbDevice (enbNodes);
   ueDevs = lteHelper->InstallUeDevice (ueNodes);
@@ -220,6 +224,7 @@ LteEnbAntennaTestCase::DoRun (void)
         }      
       // remember that propagation loss is 0dB
       double calculatedAntennaGainDbDl = - (enbTxPowerDbm - calculatedSinrDbDl - noisePowerDbm - ueNoiseFigureDb);      
+      NS_LOG_INFO ("expected " << m_antennaGainDb << " actual " << calculatedAntennaGainDbDl << " tol " << tolerance);
       NS_TEST_ASSERT_MSG_EQ_TOL (calculatedAntennaGainDbDl, m_antennaGainDb, tolerance, "Wrong DL antenna gain!");
     }
   double expectedSinrUl = ueTxPowerDbm + m_antennaGainDb - noisePowerDbm + enbNoiseFigureDb;

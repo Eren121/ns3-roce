@@ -258,13 +258,6 @@ InternetStackHelper::SetTcp (const std::string tid)
 }
 
 void 
-InternetStackHelper::SetTcp (std::string tid, std::string n0, const AttributeValue &v0)
-{
-  m_tcpFactory.SetTypeId (tid);
-  m_tcpFactory.Set (n0,v0);
-}
-
-void 
 InternetStackHelper::Install (NodeContainer c) const
 {
   for (NodeContainer::Iterator i = c.Begin (); i != c.End (); ++i)
@@ -350,6 +343,15 @@ InternetStackHelper::Install (Ptr<Node> node) const
       node->AggregateObject (m_tcpFactory.Create<Object> ());
       Ptr<PacketSocketFactory> factory = CreateObject<PacketSocketFactory> ();
       node->AggregateObject (factory);
+    }
+
+  if (m_ipv4Enabled)
+    {
+      Ptr<ArpL3Protocol> arp = node->GetObject<ArpL3Protocol> ();
+      Ptr<TrafficControlLayer> tc = node->GetObject<TrafficControlLayer> ();
+      NS_ASSERT (arp);
+      NS_ASSERT (tc);
+      arp->SetTrafficControl (tc);
     }
 }
 

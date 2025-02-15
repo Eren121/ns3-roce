@@ -134,9 +134,16 @@ QueueDiscItem::Print (std::ostream& os) const
 {
   os << GetPacket () << " "
      << "Dst addr " << m_address << " "
-     << "proto " << (uint16_t) m_protocol << " "
-     << "txq " << (uint8_t) m_txq
+     << "proto " << m_protocol << " "
+     << "txq " << +m_txq
   ;
+}
+
+uint32_t
+QueueDiscItem::Hash (uint32_t perturbation) const
+{
+  NS_LOG_WARN ("The Hash method should be redefined by subclasses");
+  return 0;
 }
 
 } // namespace ns3

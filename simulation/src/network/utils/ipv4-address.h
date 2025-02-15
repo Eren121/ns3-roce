@@ -25,6 +25,7 @@
 #include <ostream>
 #include "ns3/address.h"
 #include "ns3/attribute-helper.h"
+#include "ns3/deprecated.h"
 
 namespace ns3 {
 
@@ -76,15 +77,6 @@ public:
     */
   void Set (char const *address);
   /**
-   * \brief Comparison operation between two Ipv4Addresses
-   * \param other address to which to compare this address
-   * \return True if the addresses are equal. False otherwise.
-   */
-  bool IsEqual (const Ipv4Address &other) const
-  {
-    return m_address == other.m_address;
-  }
-  /**
    * Serialize this address to a 4-byte buffer
    *
    * \param buf output buffer to which this address gets overwritten with this
@@ -105,6 +97,11 @@ public:
    * \param os The output stream to which this Ipv4Address is printed
    */
   void Print (std::ostream &os) const;
+
+  /**
+   * \return true if address is initialized (i.e., set to something), false otherwise
+   */
+  bool IsInitialized (void) const;
   /**
     * \return true if address is 0.0.0.0; false otherwise
     */
@@ -215,6 +212,7 @@ private:
    */
   static uint8_t GetType (void);
   uint32_t m_address; //!< IPv4 address
+  bool m_initialized; //!< IPv4 address has been explicitly initialized to a valid value.
 
   /**
    * \brief Equal to operator.
@@ -278,11 +276,6 @@ public:
    * corresponding to this mask
    */
   bool IsMatch (Ipv4Address a, Ipv4Address b) const;
-  /**
-   * \param other a mask to compare 
-   * \return true if the mask equals the mask passed as input parameter
-   */
-  bool IsEqual (Ipv4Mask other) const;
   /** 
    * Get the host-order 32-bit IP mask
    * \return the host-order 32-bit IP mask
@@ -321,6 +314,25 @@ public:
    * \return the 255.255.255.255 mask
    */
   static Ipv4Mask GetOnes (void);
+
+  /**
+   * \brief Equal to operator.
+   *
+   * \param a the first operand.
+   * \param b the first operand.
+   * \returns true if the operands are equal.
+   */
+  friend bool operator == (Ipv4Mask const &a, Ipv4Mask const &b);
+
+  /**
+   * \brief Not equal to operator.
+   *
+   * \param a the first operand.
+   * \param b the first operand.
+   * \returns true if the operands are not equal.
+   */
+  friend bool operator != (Ipv4Mask const &a, Ipv4Mask const &b);
+
 
 private:
   uint32_t m_mask; //!< IP mask
@@ -362,35 +374,16 @@ std::istream & operator >> (std::istream &is, Ipv4Address &address);
  */
 std::istream & operator >> (std::istream &is, Ipv4Mask &mask);
 
-/**
- * \brief Equal to operator.
- *
- * \param a the first operand
- * \param b the first operand
- * \returns true if the operands are equal
- */
 inline bool operator == (const Ipv4Address &a, const Ipv4Address &b)
 {
   return (a.m_address == b.m_address);
 }
-/**
- * \brief Not equal to operator.
- *
- * \param a the first operand
- * \param b the first operand
- * \returns true if the operands are not equal
- */
+
 inline bool operator != (const Ipv4Address &a, const Ipv4Address &b)
 {
   return (a.m_address != b.m_address);
 }
-/**
- * \brief Less than operator.
- *
- * \param a the first operand
- * \param b the first operand
- * \returns true if the operand a is less than operand b
- */
+
 inline bool operator < (const Ipv4Address &a, const Ipv4Address &b)
 {
   return (a.m_address < b.m_address);
@@ -401,32 +394,29 @@ inline bool operator < (const Ipv4Address &a, const Ipv4Address &b)
  *
  * \brief Class providing an hash for IPv4 addresses
  */
-class Ipv4AddressHash : public std::unary_function<Ipv4Address, size_t> {
+class Ipv4AddressHash {
 public:
   /**
-   * Returns the hash of the address
+   * \brief Returns the hash of an IPv4 address.
    * \param x the address
    * \return the hash
+   *
+   * This method uses std::hash rather than class Hash
+   * as speed is more important than cryptographic robustness.
    */
   size_t operator() (Ipv4Address const &x) const;
 };
 
-/**
- * \brief Equal to operator.
- *
- * \param a the first operand
- * \param b the first operand
- * \returns true if the operands are equal
- */
-bool operator == (Ipv4Mask const &a, Ipv4Mask const &b);
-/**
- * \brief Not equal to operator.
- *
- * \param a the first operand
- * \param b the first operand
- * \returns true if the operands are not equal
- */
-bool operator != (Ipv4Mask const &a, Ipv4Mask const &b);
+inline bool operator == (Ipv4Mask const &a, Ipv4Mask const &b)
+{
+  return (a.m_mask == b.m_mask);
+}
+
+inline bool operator != (Ipv4Mask const &a, Ipv4Mask const &b)
+{
+  return (a.m_mask != b.m_mask);
+}
+
 
 } // namespace ns3
 

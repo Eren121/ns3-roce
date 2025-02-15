@@ -24,12 +24,12 @@
 #define MAC_TX_MIDDLE_H
 
 #include <map>
-#include "ns3/mac48-address.h"
 #include "ns3/simple-ref-count.h"
 
 namespace ns3 {
 
 class WifiMacHeader;
+class Mac48Address;
 
 /**
  * \ingroup wifi
@@ -65,7 +65,13 @@ public:
    * \return the next sequence number
    */
   uint16_t GetNextSeqNumberByTidAndAddress (uint8_t tid, Mac48Address addr) const;
-
+  /**
+   * Set the sequence number of the given MAC header as the next sequence
+   * number for the Traffic ID and destination of the given MAC header.
+   *
+   * \param hdr the given MAC header
+   */
+  void SetSequenceNumberFor (const WifiMacHeader *hdr);
 
 private:
   std::map <Mac48Address,uint16_t*> m_qosSequences; ///< QOS sequences

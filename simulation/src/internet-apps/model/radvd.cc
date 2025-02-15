@@ -39,6 +39,8 @@
 #include "ns3/icmpv6-header.h"
 #include "ns3/string.h"
 #include "ns3/pointer.h"
+#include "ns3/random-variable-stream.h"
+#include "ns3/socket.h"
 
 
 namespace ns3
@@ -225,17 +227,17 @@ void Radvd::Send (Ptr<RadvdInterface> config, Ipv6Address dst, bool reschedule)
 
       if ((*jt)->IsOnLinkFlag ())
         {
-          flags += 1 << 7;
+          flags |= Icmpv6OptionPrefixInformation::ONLINK;
         }
 
       if ((*jt)->IsAutonomousFlag ())
         {
-          flags += 1 << 6;
+          flags |= Icmpv6OptionPrefixInformation::AUTADDRCONF;
         }
 
       if ((*jt)->IsRouterAddrFlag ())
         {
-          flags += 1 << 5;
+          flags |= Icmpv6OptionPrefixInformation::ROUTERADDR;
         }
 
       prefixHdr.SetFlags (flags);
@@ -313,7 +315,7 @@ void Radvd::HandleRead (Ptr<Socket> socket)
             {
             case Icmpv6Header::ICMPV6_ND_ROUTER_SOLICITATION:
               packet->RemoveHeader (rsHdr);
-              NS_LOG_INFO ("Received ICMPv6 Router Solicitation from " << hdr.GetSourceAddress () << " code = " << (uint32_t)rsHdr.GetCode ());
+              NS_LOG_INFO ("Received ICMPv6 Router Solicitation from " << hdr.GetSource () << " code = " << (uint32_t)rsHdr.GetCode ());
 
               for (RadvdInterfaceListCI it = m_configurations.begin (); it != m_configurations.end (); it++)
                 {

@@ -37,8 +37,8 @@
 //
 // Steps to run the experiment:
 //
-// $ ./waf --run="fd2fd-onoff"
-// $ ./waf --run="fd2fd-onoff --tcpMode=1"
+// $ ./ns3 run="fd2fd-onoff"
+// $ ./ns3 run="fd2fd-onoff --tcpMode=1"
 //
 
 #include <sys/socket.h>
@@ -61,7 +61,7 @@ main (int argc, char *argv[])
   // Command-line arguments
   //
   bool tcpMode = false;
-  CommandLine cmd;
+  CommandLine cmd (__FILE__);
   cmd.AddValue ("tcpMode", "1:true, 0:false, default mode UDP",tcpMode);
   cmd.Parse (argc, argv);
    

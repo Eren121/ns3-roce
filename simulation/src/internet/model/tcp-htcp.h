@@ -27,9 +27,11 @@
 #ifndef TCP_HTCP_H
 #define TCP_HTCP_H
 
-#include "ns3/tcp-congestion-ops.h"
+#include "tcp-congestion-ops.h"
 
 namespace ns3 {
+
+class TcpSocketState;
 
 /**
  * \ingroup congestionOps

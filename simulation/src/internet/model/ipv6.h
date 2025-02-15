@@ -186,9 +186,10 @@ public:
    * \brief Add an address on the specified IPv6 interface.
    * \param interface Interface number of an IPv6 interface
    * \param address Ipv6InterfaceAddress address to associate with the underlying IPv6 interface
+   * \param addOnLinkRoute add on-link route to the network (default true)
    * \returns true if the operation succeeded
    */
-  virtual bool AddAddress (uint32_t interface, Ipv6InterfaceAddress address) = 0;
+  virtual bool AddAddress (uint32_t interface, Ipv6InterfaceAddress address, bool addOnLinkRoute = true) = 0;
 
   /**
    * \brief Get number of addresses on specified IPv6 interface.
@@ -364,7 +365,9 @@ public:
 
   /**
    * \brief Higher-level layers call this method to send a packet
-   * down the stack to the MAC and PHY layers.
+   * down the stack to the MAC and PHY layers. All PMTU values are
+   * stored at this level, so packet size calculations should be
+   * done mathematically at higher levels.
    *
    * \param packet packet to send
    * \param source source address of packet

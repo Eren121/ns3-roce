@@ -31,10 +31,12 @@
 #include "ns3/ipv6-header.h"
 #include "ns3/udp-header.h"
 #include "ns3/tcp-header.h"
+#include "ns3/ipv4-l3-protocol.h"
+#include "ns3/icmpv4-l4-protocol.h"
 #include "ns3/udp-l4-protocol.h"
 #include "ns3/tcp-l4-protocol.h"
+#include "ns3/ipv6-l3-protocol.h"
 #include "ns3/icmpv6-l4-protocol.h"
-#include "ns3/icmpv4-l4-protocol.h"
 
 namespace ns3 {
 
@@ -62,17 +64,12 @@ EpcTftClassifier::Delete (uint32_t id)
   m_tftMap.erase (id);
 }
 
- 
 uint32_t 
-EpcTftClassifier::Classify (Ptr<Packet> p, EpcTft::Direction direction)
+EpcTftClassifier::Classify (Ptr<Packet> p, EpcTft::Direction direction, uint16_t protocolNumber)
 {
   NS_LOG_FUNCTION (this << p << p->GetSize () << direction);
 
   Ptr<Packet> pCopy = p->Copy ();
-
-  uint8_t ipType;
-  pCopy->CopyData (&ipType, 1);
-  ipType = (ipType>>4) & 0x0f;
 
   Ipv4Address localAddressIpv4;
   Ipv4Address remoteAddressIpv4;
@@ -86,7 +83,7 @@ EpcTftClassifier::Classify (Ptr<Packet> p, EpcTft::Direction direction)
   uint16_t localPort = 0;
   uint16_t remotePort = 0;
 
-  if (ipType == 0x04)
+  if (protocolNumber == Ipv4L3Protocol::PROT_NUMBER)
     {
       Ipv4Header ipv4Header;
       pCopy->RemoveHeader (ipv4Header);
@@ -202,21 +199,21 @@ EpcTftClassifier::Classify (Ptr<Packet> p, EpcTft::Direction direction)
             }
         }
     }
-  else if (ipType == 0x06)
+  else if (protocolNumber == Ipv6L3Protocol::PROT_NUMBER)
     {
       Ipv6Header ipv6Header;
       pCopy->RemoveHeader (ipv6Header);
 
       if (direction ==  EpcTft::UPLINK)
         {
-          localAddressIpv6 = ipv6Header.GetSourceAddress ();
-          remoteAddressIpv6 = ipv6Header.GetDestinationAddress ();
+          localAddressIpv6 = ipv6Header.GetSource ();
+          remoteAddressIpv6 = ipv6Header.GetDestination ();
         }
       else
         {
           NS_ASSERT (direction ==  EpcTft::DOWNLINK);
-          remoteAddressIpv6 = ipv6Header.GetSourceAddress ();
-          localAddressIpv6 = ipv6Header.GetDestinationAddress ();
+          remoteAddressIpv6 = ipv6Header.GetSource ();
+          localAddressIpv6 = ipv6Header.GetDestination ();
         }
       NS_LOG_INFO ("local address: " << localAddressIpv6 << " remote address: " << remoteAddressIpv6);
 
@@ -261,7 +258,7 @@ EpcTftClassifier::Classify (Ptr<Packet> p, EpcTft::Direction direction)
     }
 
 
-  if (ipType == 0x04)
+  if (protocolNumber == Ipv4L3Protocol::PROT_NUMBER)
     {
       NS_LOG_INFO ("Classifying packet:"
           << " localAddr="  << localAddressIpv4
@@ -288,7 +285,7 @@ EpcTftClassifier::Classify (Ptr<Packet> p, EpcTft::Direction direction)
             }
         }
     }
-  else if (ipType == 0x06)
+  else if (protocolNumber == Ipv6L3Protocol::PROT_NUMBER)
     {
       NS_LOG_INFO ("Classifying packet:"
           << " localAddr="  << localAddressIpv6

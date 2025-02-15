@@ -110,17 +110,6 @@ Ipv4Mask::Ipv4Mask (char const *mask)
 }
 
 bool 
-Ipv4Mask::IsEqual (Ipv4Mask other) const
-{
-  NS_LOG_FUNCTION (this << other);
-  if (other.m_mask == m_mask) {
-      return true;
-    } else {
-      return false;
-    }
-}
-
-bool 
 Ipv4Mask::IsMatch (Ipv4Address a, Ipv4Address b) const
 {
   NS_LOG_FUNCTION (this << a << b);
@@ -197,9 +186,14 @@ Ipv4Mask::GetPrefixLength (void) const
   return tmp; 
 }
 
+/**
+ *  Value of a not-yet-initialized IPv4 address, corresponding to 102.102.102.102.
+ *  This is totally arbitrary.
+ */
+static constexpr uint32_t UNINITIALIZED = 0x66666666U;
 
 Ipv4Address::Ipv4Address ()
-  : m_address (0x66666666)
+  : m_address (UNINITIALIZED), m_initialized (false)
 {
   NS_LOG_FUNCTION (this);
 }
@@ -207,11 +201,13 @@ Ipv4Address::Ipv4Address (uint32_t address)
 {
   NS_LOG_FUNCTION (this << address);
   m_address = address;
+  m_initialized = true;
 }
 Ipv4Address::Ipv4Address (char const *address)
 {
   NS_LOG_FUNCTION (this << address);
   m_address = AsciiToIpv4Host (address);
+  m_initialized = true;
 }
 
 uint32_t
@@ -225,12 +221,14 @@ Ipv4Address::Set (uint32_t address)
 {
   NS_LOG_FUNCTION (this << address);
   m_address = address;
+  m_initialized = true;
 }
 void
 Ipv4Address::Set (char const *address)
 {
   NS_LOG_FUNCTION (this << address);
   m_address = AsciiToIpv4Host (address);
+  m_initialized = true;
 }
 
 Ipv4Address
@@ -262,6 +260,13 @@ Ipv4Address::IsSubnetDirectedBroadcast (Ipv4Mask const &mask) const
       return false;
     }
   return ( (Get () | mask.GetInverse ()) == Get () );
+}
+
+bool
+Ipv4Address::IsInitialized (void) const
+{
+  NS_LOG_FUNCTION (this);
+  return (m_initialized);
 }
 
 bool
@@ -326,6 +331,8 @@ Ipv4Address::Deserialize (const uint8_t buf[4])
   ipv4.m_address |= buf[2];
   ipv4.m_address <<= 8;
   ipv4.m_address |= buf[3];
+  ipv4.m_initialized = true;
+
   return ipv4;
 }
 
@@ -408,7 +415,7 @@ Ipv4Address::GetLoopback (void)
 
 size_t Ipv4AddressHash::operator() (Ipv4Address const &x) const
 { 
-  return x.Get ();
+  return std::hash<uint32_t>()(x.Get ());
 }
 
 std::ostream& operator<< (std::ostream& os, Ipv4Address const& address)
@@ -434,15 +441,6 @@ std::istream & operator >> (std::istream &is, Ipv4Mask &mask)
   is >> str;
   mask = Ipv4Mask (str.c_str ());
   return is;
-}
-
-bool operator == (Ipv4Mask const &a, Ipv4Mask const &b)
-{
-  return a.IsEqual (b);
-}
-bool operator != (Ipv4Mask const &a, Ipv4Mask const &b)
-{
-  return !a.IsEqual (b);
 }
 
 ATTRIBUTE_HELPER_CPP (Ipv4Address);

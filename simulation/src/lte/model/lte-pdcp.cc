@@ -174,9 +174,13 @@ LtePdcp::SetStatus (Status s)
 ////////////////////////////////////////
 
 void
-LtePdcp::DoTransmitPdcpSdu (Ptr<Packet> p)
+LtePdcp::DoTransmitPdcpSdu (LtePdcpSapProvider::TransmitPdcpSduParameters params)
 {
-  NS_LOG_FUNCTION (this << m_rnti << (uint32_t) m_lcid << p->GetSize ());
+  NS_LOG_FUNCTION (this << m_rnti << static_cast <uint16_t> (m_lcid) << params.pdcpSdu->GetSize ());
+  Ptr<Packet> p = params.pdcpSdu;
+
+  // Sender timestamp
+  PdcpTag pdcpTag (Simulator::Now ());
 
   LtePdcpHeader pdcpHeader;
   pdcpHeader.SetSequenceNumber (m_txSequenceNumber);
@@ -191,18 +195,16 @@ LtePdcp::DoTransmitPdcpSdu (Ptr<Packet> p)
 
   NS_LOG_LOGIC ("PDCP header: " << pdcpHeader);
   p->AddHeader (pdcpHeader);
+  p->AddByteTag (pdcpTag, 1, pdcpHeader.GetSerializedSize ());
 
-  // Sender timestamp
-  PdcpTag pdcpTag (Simulator::Now ());
-  p->AddPacketTag (pdcpTag);
   m_txPdu (m_rnti, m_lcid, p->GetSize ());
 
-  LteRlcSapProvider::TransmitPdcpPduParameters params;
-  params.rnti = m_rnti;
-  params.lcid = m_lcid;
-  params.pdcpPdu = p;
+  LteRlcSapProvider::TransmitPdcpPduParameters txParams;
+  txParams.rnti = m_rnti;
+  txParams.lcid = m_lcid;
+  txParams.pdcpPdu = p;
 
-  m_rlcSapProvider->TransmitPdcpPdu (params);
+  m_rlcSapProvider->TransmitPdcpPdu (txParams);
 }
 
 void
@@ -213,8 +215,7 @@ LtePdcp::DoReceivePdu (Ptr<Packet> p)
   // Receiver timestamp
   PdcpTag pdcpTag;
   Time delay;
-  NS_ASSERT_MSG (p->PeekPacketTag (pdcpTag), "PdcpTag is missing");
-  p->RemovePacketTag (pdcpTag);
+  p->FindFirstMatchingByteTag (pdcpTag);
   delay = Simulator::Now() - pdcpTag.GetSenderTimestamp ();
   m_rxPdu(m_rnti, m_lcid, p->GetSize (), delay.GetNanoSeconds ());
 

@@ -59,8 +59,8 @@ HwmpDoRfRegressionTest::~HwmpDoRfRegressionTest ()
 void
 HwmpDoRfRegressionTest::DoRun ()
 {
-  RngSeedManager::SetSeed (12345);
-  RngSeedManager::SetRun (7);
+  RngSeedManager::SetSeed (1);
+  RngSeedManager::SetRun (1);
   CreateNodes ();
   CreateDevices ();
   InstallApplications ();
@@ -134,25 +134,26 @@ HwmpDoRfRegressionTest::CreateDevices ()
 {
   int64_t streamsUsed = 0;
   // 1. setup WiFi
-  YansWifiPhyHelper wifiPhy = YansWifiPhyHelper::Default ();
+  YansWifiPhyHelper wifiPhy;
   // This test suite output was originally based on YansErrorRateModel
   wifiPhy.SetErrorRateModel ("ns3::YansErrorRateModel");
   YansWifiChannelHelper wifiChannel = YansWifiChannelHelper::Default ();
   Ptr<YansWifiChannel> chan = wifiChannel.Create ();
   wifiPhy.SetChannel (chan);
-  wifiPhy.Set ("TxGain", DoubleValue (1.0)); //this configuration should go away in future revision to the test
-  wifiPhy.Set ("RxGain", DoubleValue (1.0)); //this configuration should go away in future revision to the test
+  // This scenario setup predates the preamble detection model
+  wifiPhy.DisablePreambleDetectionModel ();
+
   // 2. setup mesh
   MeshHelper mesh = MeshHelper::Default ();
   mesh.SetStackInstaller ("ns3::Dot11sStack");
   mesh.SetMacType ("RandomStart", TimeValue (Seconds (0.1)));
   mesh.SetNumberOfInterfaces (1);
   NetDeviceContainer meshDevices = mesh.Install (wifiPhy, *m_nodes);
-  // Four devices, nine streams per mac
+  // Four devices, ten streams per mac
   streamsUsed += mesh.AssignStreams (meshDevices, streamsUsed);
-  NS_TEST_ASSERT_MSG_EQ (streamsUsed, (meshDevices.GetN () * 9), "Stream assignment mismatch");
+  NS_TEST_ASSERT_MSG_EQ (streamsUsed, (meshDevices.GetN () * 10), "Stream assignment mismatch");
   streamsUsed += wifiChannel.AssignStreams (chan, streamsUsed);
-  NS_TEST_ASSERT_MSG_EQ (streamsUsed, (meshDevices.GetN () * 9), "Stream assignment mismatch");
+  NS_TEST_ASSERT_MSG_EQ (streamsUsed, (meshDevices.GetN () * 10), "Stream assignment mismatch");
 
   // 3. setup TCP/IP
   InternetStackHelper internetStack;

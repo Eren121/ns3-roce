@@ -21,8 +21,13 @@
 #ifndef ROCKETFUEL_TOPOLOGY_READER_H
 #define ROCKETFUEL_TOPOLOGY_READER_H
 
-#include "ns3/nstime.h"
 #include "topology-reader.h"
+
+/**
+ * \file
+ * \ingroup topology
+ * ns3::RocketfuelTopologyReader declaration.
+ */
 
 namespace ns3 {
 
@@ -51,6 +56,10 @@ public:
 
   RocketfuelTopologyReader ();
   virtual ~RocketfuelTopologyReader ();
+
+  // Delete copy constructor and assignment operator to avoid misuse
+  RocketfuelTopologyReader (const RocketfuelTopologyReader &) = delete;
+  RocketfuelTopologyReader & operator = (const RocketfuelTopologyReader &) = delete;
 
   /**
    * \brief Main topology reading function.
@@ -103,29 +112,14 @@ private:
   /**
    * \brief Classifies the file type according to its content.
    *
+   * \param buf the first line of the file being read
    * \return The file type (RF_MAPS, RF_WEIGHTS, or RF_UNKNOWN)
    */
-  enum RF_FileType GetFileType (const char *);
+  enum RF_FileType GetFileType (const char *buf);
 
   int m_linksNumber; //!< Number of links.
   int m_nodesNumber; //!< Number of nodes.
   std::map<std::string, Ptr<Node> > m_nodeMap; //!< Map of the nodes (name, node).
-
-private:
-  /**
-   * \brief Copy constructor
-   *
-   * Defined and unimplemented to avoid misuse.
-   */
-  RocketfuelTopologyReader (const RocketfuelTopologyReader&);
-  /**
-   * \brief Copy constructor
-   *
-   * Defined and unimplemented to avoid misuse.
-   * \returns
-   */
-  RocketfuelTopologyReader& operator= (const RocketfuelTopologyReader&);
-
 
   // end class RocketfuelTopologyReader
 };

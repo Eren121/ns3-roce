@@ -51,7 +51,7 @@
 //
 // 1) Ping one of the simulated nodes
 //
-//    ./waf --run tap-csma&
+//    ./ns3 run tap-csma&
 //    ping 10.1.1.2
 //
 #include <iostream>
@@ -75,7 +75,7 @@ main (int argc, char *argv[])
   std::string mode = "ConfigureLocal";
   std::string tapName = "thetap";
 
-  CommandLine cmd;
+  CommandLine cmd (__FILE__);
   cmd.AddValue ("mode", "Mode setting of TapBridge", mode);
   cmd.AddValue ("tapName", "Name of the OS tap device", tapName);
   cmd.Parse (argc, argv);

@@ -34,7 +34,6 @@
 namespace ns3 {
 
 template <typename Item> class Queue;
-class NetDeviceQueueInterface;
 class PointToPointChannel;
 class ErrorModel;
 
@@ -107,7 +106,7 @@ public:
    * Attach the device to a channel.
    *
    * \param ch Ptr to the channel to which this object is being attached.
-   * \return true if the operation was successfull (always true actually)
+   * \return true if the operation was successful (always true actually)
    */
   bool Attach (Ptr<PointToPointChannel> ch);
 
@@ -148,7 +147,7 @@ public:
    *
    * \param p Ptr to the received packet.
    */
-  virtual void Receive (Ptr<Packet> p);
+  void Receive (Ptr<Packet> p);
 
   // The remaining methods are documented in ns3::NetDevice*
 
@@ -199,9 +198,6 @@ protected:
    */
   void DoMpiReceive (Ptr<Packet> p);
 
-  virtual void DoInitialize (void);
-  virtual void NotifyNewAggregate (void);
-
 private:
 
   /**
@@ -228,7 +224,7 @@ private:
    */
   virtual void DoDispose (void);
 
-protected:
+private:
 
   /**
    * \returns the address of the remote device connected to this device
@@ -254,7 +250,6 @@ protected:
    */
   bool ProcessHeader (Ptr<Packet> p, uint16_t& param);
 
-private:
   /**
    * Start Sending a Packet Down the Wire.
    *
@@ -280,7 +275,6 @@ private:
    */
   void TransmitComplete (void);
 
-protected:
   /**
    * \brief Make the link up and running
    *
@@ -288,7 +282,6 @@ protected:
    */
   void NotifyLinkUp (void);
 
-protected:
   /**
    * Enumeration of the states of the transmit machine of the net device.
    */
@@ -442,7 +435,6 @@ protected:
   TracedCallback<Ptr<const Packet> > m_promiscSnifferTrace;
 
   Ptr<Node> m_node;         //!< Node owning this NetDevice
-  Ptr<NetDeviceQueueInterface> m_queueInterface;   //!< NetDevice queue interface
   Mac48Address m_address;   //!< Mac48Address of this NetDevice
   NetDevice::ReceiveCallback m_rxCallback;   //!< Receive callback
   NetDevice::PromiscReceiveCallback m_promiscCallback;  //!< Receive callback

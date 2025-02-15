@@ -31,7 +31,7 @@ using namespace ns3;
 
 NS_LOG_COMPONENT_DEFINE ("DoubleProbeExample");
 
-/*
+/**
  * This is our test object, an object that increments counters at
  * various times and emits one of them as a trace source.
  */
@@ -46,11 +46,14 @@ public:
   Emitter ();
 private:
   void DoInitialize (void);
+
+  /// Generate data - actually this function is not traced.
   void Emit (void);
+  /// Counts how many times this function is called.
   void Count (void);
 
-  TracedValue<double> m_counter;  // normally this would be integer type
-  Ptr<ExponentialRandomVariable> m_var;
+  TracedValue<double> m_counter;  //!< Sample counter, normally this would be integer type
+  Ptr<ExponentialRandomVariable> m_var; //!< Random number generator
 
 };
 
@@ -90,7 +93,7 @@ void
 Emitter::Emit (void)
 {
   NS_LOG_FUNCTION (this);
-  NS_LOG_DEBUG ("Emitting at " << Simulator::Now ().GetSeconds ());
+  NS_LOG_DEBUG ("Emitting at " << Simulator::Now ().As (Time::S));
   Simulator::Schedule (Seconds (m_var->GetValue ()), &Emitter::Emit, this);
 }
 
@@ -98,7 +101,7 @@ void
 Emitter::Count (void)
 {
   NS_LOG_FUNCTION (this);
-  NS_LOG_DEBUG ("Counting at " << Simulator::Now ().GetSeconds ());
+  NS_LOG_DEBUG ("Counting at " << Simulator::Now ().As (Time::S));
   m_counter += 1.0;
   DoubleProbe::SetValueByPath ("/Names/StaticallyAccessedProbe", m_counter);
   Simulator::Schedule (Seconds (m_var->GetValue ()), &Emitter::Count, this);
@@ -120,7 +123,7 @@ NotifyViaProbe (std::string context, double oldVal, double newVal)
 
 int main (int argc, char *argv[])
 {
-  CommandLine cmd;
+  CommandLine cmd (__FILE__);
   cmd.Parse (argc, argv);
   bool connected;
 

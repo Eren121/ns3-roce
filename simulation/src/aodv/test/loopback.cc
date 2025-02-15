@@ -130,10 +130,11 @@ LoopbackTestCase::DoRun ()
   // Setup WiFi
   WifiMacHelper wifiMac;
   wifiMac.SetType ("ns3::AdhocWifiMac");
-  YansWifiPhyHelper wifiPhy = YansWifiPhyHelper::Default ();
+  YansWifiPhyHelper wifiPhy;
   YansWifiChannelHelper wifiChannel = YansWifiChannelHelper::Default ();
   wifiPhy.SetChannel (wifiChannel.Create ());
   WifiHelper wifi;
+  wifi.SetStandard (WIFI_STANDARD_80211a);
   wifi.SetRemoteStationManager ("ns3::ConstantRateWifiManager", "DataMode", StringValue ("OfdmRate6Mbps"), "RtsCtsThreshold", StringValue ("2200"));
   NetDeviceContainer devices = wifi.Install (wifiPhy, wifiMac, nodes);
 

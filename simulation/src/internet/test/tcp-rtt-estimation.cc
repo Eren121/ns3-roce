@@ -20,6 +20,7 @@
 #include "tcp-general-test.h"
 #include "ns3/node.h"
 #include "ns3/log.h"
+#include "ns3/rtt-estimator.h"
 #include "tcp-error-model.h"
 
 using namespace ns3;
@@ -126,7 +127,7 @@ TcpRttEstimationTest::Tx (const Ptr<const Packet> p, const TcpHeader &h, SocketW
         }
 
       Ptr<RttEstimator> rttEstimator = GetRttEstimator (SENDER);
-      NS_ASSERT (rttEstimator != 0);
+      NS_TEST_ASSERT_MSG_NE (rttEstimator, 0, "rtt is 0 (and should be different from zero)");
       NS_LOG_DEBUG ("S Tx: seq=" << h.GetSequenceNumber () << " ack=" << h.GetAckNumber ());
       NS_TEST_ASSERT_MSG_NE (rttEstimator->GetEstimate (), Seconds (1),
                              "Default Estimate for the RTT");

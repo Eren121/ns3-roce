@@ -39,19 +39,35 @@
 
 using namespace ns3;
 
+/**
+ * Function called when a Data indication is invoked
+ * \param params MCPS data indication parameters
+ * \param p packet
+ */
 static void DataIndication (McpsDataIndicationParams params, Ptr<Packet> p)
 {
   NS_LOG_UNCOND ("Received packet of size " << p->GetSize ());
 }
 
+/**
+ * Function called when a Data confirm is invoked
+ * \param params MCPS data confirm parameters
+ */
 static void DataConfirm (McpsDataConfirmParams params)
 {
   NS_LOG_UNCOND ("LrWpanMcpsDataConfirmStatus = " << params.m_status);
 }
 
+/**
+ * Function called when a the PHY state changes
+ * \param context context
+ * \param now time at which the function is called
+ * \param oldState old PHY state
+ * \param newState new PHY state
+ */
 static void StateChangeNotification (std::string context, Time now, LrWpanPhyEnumeration oldState, LrWpanPhyEnumeration newState)
 {
-  NS_LOG_UNCOND (context << " state change at " << now.GetSeconds ()
+  NS_LOG_UNCOND (context << " state change at " << now.As (Time::S)
                          << " from " << LrWpanHelper::LrWpanPhyEnumerationPrinter (oldState)
                          << " to " << LrWpanHelper::LrWpanPhyEnumerationPrinter (newState));
 }
@@ -61,7 +77,7 @@ int main (int argc, char *argv[])
   bool verbose = false;
   bool extended = false;
 
-  CommandLine cmd;
+  CommandLine cmd (__FILE__);
 
   cmd.AddValue ("verbose", "turn on all log components", verbose);
   cmd.AddValue ("extended", "use extended addressing", extended);
@@ -91,8 +107,8 @@ int main (int argc, char *argv[])
     }
   else
     {
-      Ptr<LrWpanMac> mac0 = dev0->GetMac();
-      Ptr<LrWpanMac> mac1 = dev1->GetMac();
+      Ptr<LrWpanMac> mac0 = dev0->GetMac ();
+      Ptr<LrWpanMac> mac1 = dev1->GetMac ();
       mac0->SetExtendedAddress (Mac64Address ("00:00:00:00:00:00:00:01"));
       mac1->SetExtendedAddress (Mac64Address ("00:00:00:00:00:00:00:02"));
     }

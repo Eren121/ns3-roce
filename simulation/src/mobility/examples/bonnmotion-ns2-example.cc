@@ -37,7 +37,7 @@
  *
  * Finally, note that you can visualize this program using the pyviz
  * visualizer:
- *  ./waf --run bonnmotion-ns2-example --vis
+ *  ./ns3 run bonnmotion-ns2-example --vis
  */
 
 #include "ns3/core-module.h"
@@ -67,7 +67,7 @@ int main (int argc, char *argv[])
   double deltaTime = 100;
   std::string traceFile = "src/mobility/examples/bonnmotion.ns_movements";
 
-  CommandLine cmd;
+  CommandLine cmd (__FILE__);
   cmd.AddValue ("traceFile", "Ns2 movement trace file", traceFile);
   cmd.AddValue ("deltaTime", "time interval (s) between updates (default 100)", deltaTime);
   cmd.Parse (argc, argv);

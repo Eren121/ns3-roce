@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 ## -*- Mode: python; py-indent-offset: 4; indent-tabs-mode: nil; coding: utf-8; -*-
 
@@ -10,6 +10,8 @@
 # See test.py for more information.
 cpp_examples = [
     ("buildings-pathloss-profiler", "True", "True"),
+    ("outdoor-group-mobility-example --useHelper=0", "True", "True"),
+    ("outdoor-group-mobility-example --useHelper=1", "True", "True"),
 ]
 
 # A list of Python examples to run in order to ensure that they remain

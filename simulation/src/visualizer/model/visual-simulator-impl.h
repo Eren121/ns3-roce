@@ -69,8 +69,9 @@ public:
   virtual Time GetDelayLeft (const EventId &id) const;
   virtual Time GetMaximumSimulationTime (void) const;
   virtual void SetScheduler (ObjectFactory schedulerFactory);
-  virtual uint32_t GetSystemId (void) const; 
+  virtual uint32_t GetSystemId (void) const;
   virtual uint32_t GetContext (void) const;
+  virtual uint64_t GetEventCount (void) const;
 
   /// calls Run() in the wrapped simulator
   void RunRealSimulator (void);
@@ -80,7 +81,11 @@ protected:
   void NotifyConstructionCompleted (void);
 
 private:
-  Ptr<SimulatorImpl> GetSim (); ///< get the simulator implementation
+  /**
+   * Get the simulator implementation
+   * \return a pointer to the simulator implementation
+   */
+  Ptr<SimulatorImpl> GetSim ();
   Ptr<SimulatorImpl> m_simulator; ///< the simulator implementation
   ObjectFactory m_simulatorImplFactory; ///< simulator implementation factory
 

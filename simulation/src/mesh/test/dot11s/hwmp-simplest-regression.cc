@@ -55,8 +55,8 @@ HwmpSimplestRegressionTest::~HwmpSimplestRegressionTest ()
 void
 HwmpSimplestRegressionTest::DoRun ()
 {
-  RngSeedManager::SetSeed (12345);
-  RngSeedManager::SetRun (7);
+  RngSeedManager::SetSeed (1);
+  RngSeedManager::SetRun (1);
   CreateNodes ();
   CreateDevices ();
   InstallApplications ();
@@ -118,23 +118,22 @@ HwmpSimplestRegressionTest::CreateDevices ()
 {
   int64_t streamsUsed = 0;
   // 1. setup WiFi
-  YansWifiPhyHelper wifiPhy = YansWifiPhyHelper::Default ();
+  YansWifiPhyHelper wifiPhy;
   YansWifiChannelHelper wifiChannel = YansWifiChannelHelper::Default ();
   Ptr<YansWifiChannel> chan = wifiChannel.Create ();
   wifiPhy.SetChannel (chan);
-  wifiPhy.Set ("TxGain", DoubleValue (1.0)); //this configuration should go away in future revision to the test
-  wifiPhy.Set ("RxGain", DoubleValue (1.0)); //this configuration should go away in future revision to the test
+
   // 2. setup mesh
   MeshHelper mesh = MeshHelper::Default ();
   mesh.SetStackInstaller ("ns3::Dot11sStack");
   mesh.SetMacType ("RandomStart", TimeValue (Seconds (0.1)));
   mesh.SetNumberOfInterfaces (1);
   NetDeviceContainer meshDevices = mesh.Install (wifiPhy, *m_nodes);
-  // Two devices, nine streams per mesh device
+  // Two devices, ten streams per mesh device
   streamsUsed += mesh.AssignStreams (meshDevices, streamsUsed);
-  NS_TEST_ASSERT_MSG_EQ (streamsUsed, (meshDevices.GetN () * 9), "Stream assignment mismatch");
+  NS_TEST_ASSERT_MSG_EQ (streamsUsed, (meshDevices.GetN () * 10), "Stream assignment mismatch");
   streamsUsed += wifiChannel.AssignStreams (chan, streamsUsed);
-  NS_TEST_ASSERT_MSG_EQ (streamsUsed, (meshDevices.GetN () * 9), "Stream assignment mismatch");
+  NS_TEST_ASSERT_MSG_EQ (streamsUsed, (meshDevices.GetN () * 10), "Stream assignment mismatch");
 
   // 3. setup TCP/IP
   InternetStackHelper internetStack;

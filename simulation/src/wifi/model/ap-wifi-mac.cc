@@ -20,13 +20,25 @@
  *          Mirko Banchi <mk.banchi@gmail.com>
  */
 
-#include "ap-wifi-mac.h"
 #include "ns3/log.h"
+#include "ns3/packet.h"
 #include "ns3/simulator.h"
-#include "ns3/string.h"
 #include "ns3/pointer.h"
-#include "mac-low.h"
+#include "ns3/string.h"
+#include "ns3/random-variable-stream.h"
+#include "ap-wifi-mac.h"
+#include "channel-access-manager.h"
 #include "mac-tx-middle.h"
+#include "mac-rx-middle.h"
+#include "mgt-headers.h"
+#include "msdu-aggregator.h"
+#include "amsdu-subframe-header.h"
+#include "wifi-phy.h"
+#include "wifi-net-device.h"
+#include "wifi-mac-queue.h"
+#include "ns3/ht-configuration.h"
+#include "ns3/he-configuration.h"
+#include "qos-txop.h"
 
 namespace ns3 {
 
@@ -38,7 +50,7 @@ TypeId
 ApWifiMac::GetTypeId (void)
 {
   static TypeId tid = TypeId ("ns3::ApWifiMac")
-    .SetParent<RegularWifiMac> ()
+    .SetParent<WifiMac> ()
     .SetGroupName ("Wifi")
     .AddConstructor<ApWifiMac> ()
     .AddAttribute ("BeaconInterval",
@@ -61,34 +73,45 @@ ApWifiMac::GetTypeId (void)
     .AddAttribute ("BeaconGeneration",
                    "Whether or not beacons are generated.",
                    BooleanValue (true),
-                   MakeBooleanAccessor (&ApWifiMac::SetBeaconGeneration,
-                                        &ApWifiMac::GetBeaconGeneration),
+                   MakeBooleanAccessor (&ApWifiMac::SetBeaconGeneration),
                    MakeBooleanChecker ())
     .AddAttribute ("EnableNonErpProtection", "Whether or not protection mechanism should be used when non-ERP STAs are present within the BSS."
                    "This parameter is only used when ERP is supported by the AP.",
                    BooleanValue (true),
                    MakeBooleanAccessor (&ApWifiMac::m_enableNonErpProtection),
                    MakeBooleanChecker ())
-    .AddAttribute ("RifsMode", "If non-HT STAs are detected, whether to force RIFS to be disabled within the BSS."
-                   "This parameter is only used when HT is supported by the AP.",
-                   BooleanValue (true),
-                   MakeBooleanAccessor (&ApWifiMac::m_disableRifs),
-                   MakeBooleanChecker ())
+    .AddAttribute ("BsrLifetime",
+                   "Lifetime of Buffer Status Reports received from stations.",
+                   TimeValue (MilliSeconds (20)),
+                   MakeTimeAccessor (&ApWifiMac::m_bsrLifetime),
+                   MakeTimeChecker ())
+    .AddTraceSource ("AssociatedSta",
+                     "A station associated with this access point.",
+                     MakeTraceSourceAccessor (&ApWifiMac::m_assocLogger),
+                     "ns3::ApWifiMac::AssociationCallback")
+    .AddTraceSource ("DeAssociatedSta",
+                     "A station lost association with this access point.",
+                     MakeTraceSourceAccessor (&ApWifiMac::m_deAssocLogger),
+                     "ns3::ApWifiMac::AssociationCallback")
   ;
   return tid;
 }
 
 ApWifiMac::ApWifiMac ()
-  : m_enableBeaconGeneration (false)
+  : m_enableBeaconGeneration (false),
+    m_numNonErpStations (0),
+    m_numNonHtStations (0),
+    m_shortSlotTimeEnabled (false),
+    m_shortPreambleEnabled (false)
 {
   NS_LOG_FUNCTION (this);
-  m_beaconDca = CreateObject<DcaTxop> ();
-  m_beaconDca->SetAifsn (1);
-  m_beaconDca->SetMinCw (0);
-  m_beaconDca->SetMaxCw (0);
-  m_beaconDca->SetLow (m_low);
-  m_beaconDca->SetManager (m_dcfManager);
-  m_beaconDca->SetTxMiddle (m_txMiddle);
+  m_beaconTxop = CreateObject<Txop> (CreateObject<WifiMacQueue> (AC_BEACON));
+  m_beaconTxop->SetWifiMac (this);
+  m_beaconTxop->SetAifsn (1);
+  m_beaconTxop->SetMinCw (0);
+  m_beaconTxop->SetMaxCw (0);
+  m_beaconTxop->SetChannelAccessManager (m_channelAccessManager);
+  m_beaconTxop->SetTxMiddle (m_txMiddle);
 
   //Let the lower layers know that we are acting as an AP.
   SetTypeOfStation (AP);
@@ -98,19 +121,17 @@ ApWifiMac::~ApWifiMac ()
 {
   NS_LOG_FUNCTION (this);
   m_staList.clear ();
-  m_nonErpStations.clear ();
-  m_nonHtStations.clear ();
 }
 
 void
 ApWifiMac::DoDispose ()
 {
   NS_LOG_FUNCTION (this);
-  m_beaconDca->Dispose ();
-  m_beaconDca = 0;
+  m_beaconTxop->Dispose ();
+  m_beaconTxop = 0;
   m_enableBeaconGeneration = false;
   m_beaconEvent.Cancel ();
-  RegularWifiMac::DoDispose ();
+  WifiMac::DoDispose ();
 }
 
 void
@@ -119,8 +140,18 @@ ApWifiMac::SetAddress (Mac48Address address)
   NS_LOG_FUNCTION (this << address);
   //As an AP, our MAC address is also the BSSID. Hence we are
   //overriding this function and setting both in our parent class.
-  RegularWifiMac::SetAddress (address);
-  RegularWifiMac::SetBssid (address);
+  WifiMac::SetAddress (address);
+  WifiMac::SetBssid (address);
+}
+
+Ptr<WifiMacQueue>
+ApWifiMac::GetTxopQueue (AcIndex ac) const
+{
+  if (ac == AC_BEACON)
+    {
+      return m_beaconTxop->GetWifiMacQueue ();
+    }
+  return WifiMac::GetTxopQueue (ac);
 }
 
 void
@@ -138,13 +169,6 @@ ApWifiMac::SetBeaconGeneration (bool enable)
   m_enableBeaconGeneration = enable;
 }
 
-bool
-ApWifiMac::GetBeaconGeneration (void) const
-{
-  NS_LOG_FUNCTION (this);
-  return m_enableBeaconGeneration;
-}
-
 Time
 ApWifiMac::GetBeaconInterval (void) const
 {
@@ -153,18 +177,10 @@ ApWifiMac::GetBeaconInterval (void) const
 }
 
 void
-ApWifiMac::SetWifiRemoteStationManager (const Ptr<WifiRemoteStationManager> stationManager)
-{
-  NS_LOG_FUNCTION (this << stationManager);
-  m_beaconDca->SetWifiRemoteStationManager (stationManager);
-  RegularWifiMac::SetWifiRemoteStationManager (stationManager);
-}
-
-void
 ApWifiMac::SetLinkUpCallback (Callback<void> linkUp)
 {
   NS_LOG_FUNCTION (this << &linkUp);
-  RegularWifiMac::SetLinkUpCallback (linkUp);
+  WifiMac::SetLinkUpCallback (linkUp);
 
   //The approach taken here is that, from the point of view of an AP,
   //the link is always up, so we immediately invoke the callback if
@@ -178,7 +194,11 @@ ApWifiMac::SetBeaconInterval (Time interval)
   NS_LOG_FUNCTION (this << interval);
   if ((interval.GetMicroSeconds () % 1024) != 0)
     {
-      NS_LOG_WARN ("beacon interval should be multiple of 1024us (802.11 time unit), see IEEE Std. 802.11-2012");
+      NS_FATAL_ERROR ("beacon interval should be multiple of 1024us (802.11 time unit), see IEEE Std. 802.11-2012");
+    }
+  if (interval.GetMicroSeconds () > (1024 * 65535))
+    {
+      NS_FATAL_ERROR ("beacon interval should be smaller then or equal to 65535 * 1024us (802.11 time unit)");
     }
   m_beaconInterval = interval;
 }
@@ -191,79 +211,53 @@ ApWifiMac::AssignStreams (int64_t stream)
   return 1;
 }
 
-bool
-ApWifiMac::GetShortSlotTimeEnabled (void) const
+void
+ApWifiMac::UpdateShortSlotTimeEnabled (void)
 {
-  if (m_nonErpStations.size () != 0)
+  NS_LOG_FUNCTION (this);
+  if (GetErpSupported () && GetShortSlotTimeSupported () && (m_numNonErpStations == 0))
     {
-      return false;
-    }
-  if (m_erpSupported == true && GetShortSlotTimeSupported () == true)
-    {
-      for (std::map<uint16_t, Mac48Address>::const_iterator i = m_staList.begin (); i != m_staList.end (); i++)
+      for (const auto& sta : m_staList)
         {
-          if (m_stationManager->GetShortSlotTimeSupported (i->second) == false)
+          if (!GetWifiRemoteStationManager ()->GetShortSlotTimeSupported (sta.second))
             {
-              return false;
+              m_shortSlotTimeEnabled = false;
+              return;
             }
         }
-      return true;
+      m_shortSlotTimeEnabled = true;
     }
-  return false;
-}
-
-bool
-ApWifiMac::GetShortPreambleEnabled (void) const
-{
-  if (m_erpSupported || m_phy->GetShortPlcpPreambleSupported ())
+  else
     {
-      for (std::list<Mac48Address>::const_iterator i = m_nonErpStations.begin (); i != m_nonErpStations.end (); i++)
-        {
-          if (m_stationManager->GetShortPreambleSupported (*i) == false)
-            {
-              return false;
-            }
-        }
-      return true;
+      m_shortSlotTimeEnabled = false;
     }
-  return false;
-}
-
-bool
-ApWifiMac::IsNonGfHtStasPresent (void) const
-{
-  bool isNonGfHtStasPresent = false;
-  for (std::map<uint16_t, Mac48Address>::const_iterator i = m_staList.begin (); i != m_staList.end (); i++)
-    {
-      if (m_stationManager->GetGreenfieldSupported (i->second) == false)
-        {
-          isNonGfHtStasPresent = true;
-          break;
-        }
-    }
-  m_stationManager->SetUseGreenfieldProtection (isNonGfHtStasPresent);
-  return isNonGfHtStasPresent;
-}
-
-uint8_t
-ApWifiMac::GetVhtOperationalChannelWidth (void) const
-{
-  uint8_t channelWidth = m_phy->GetChannelWidth ();
-  for (std::map<uint16_t, Mac48Address>::const_iterator i = m_staList.begin (); i != m_staList.end (); i++)
-    {
-      if (m_stationManager->GetVhtSupported (i->second))
-        {
-          if (m_stationManager->GetChannelWidthSupported (i->second) < channelWidth)
-            {
-              channelWidth = m_stationManager->GetChannelWidthSupported (i->second);
-            }
-        }
-    }
-  return channelWidth;
 }
 
 void
-ApWifiMac::ForwardDown (Ptr<const Packet> packet, Mac48Address from,
+ApWifiMac::UpdateShortPreambleEnabled (void)
+{
+  NS_LOG_FUNCTION (this);
+  if (GetErpSupported () && GetWifiPhy ()->GetShortPhyPreambleSupported ())
+    {
+      for (const auto& sta : m_staList)
+        {
+          if (!GetWifiRemoteStationManager ()->GetErpOfdmSupported (sta.second) ||
+              !GetWifiRemoteStationManager ()->GetShortPreambleSupported (sta.second))
+            {
+              m_shortPreambleEnabled = false;
+              return;
+            }
+        }
+      m_shortPreambleEnabled = true;
+    }
+  else
+    {
+      m_shortPreambleEnabled = false;
+    }
+}
+
+void
+ApWifiMac::ForwardDown (Ptr<Packet> packet, Mac48Address from,
                         Mac48Address to)
 {
   NS_LOG_FUNCTION (this << packet << from << to);
@@ -273,7 +267,7 @@ ApWifiMac::ForwardDown (Ptr<const Packet> packet, Mac48Address from,
   uint8_t tid = 0;
 
   //If we are a QoS AP then we attempt to get a TID for this packet
-  if (m_qosSupported)
+  if (GetQosSupported ())
     {
       tid = QosUtilsGetTidForPacket (packet);
       //Any value greater than 7 is invalid and likely indicates that
@@ -289,7 +283,7 @@ ApWifiMac::ForwardDown (Ptr<const Packet> packet, Mac48Address from,
 }
 
 void
-ApWifiMac::ForwardDown (Ptr<const Packet> packet, Mac48Address from,
+ApWifiMac::ForwardDown (Ptr<Packet> packet, Mac48Address from,
                         Mac48Address to, uint8_t tid)
 {
   NS_LOG_FUNCTION (this << packet << from << to << +tid);
@@ -300,7 +294,7 @@ ApWifiMac::ForwardDown (Ptr<const Packet> packet, Mac48Address from,
   //support simultaneously associated QoS and non-QoS STAs, at which
   //point there will need to be per-association QoS state maintained
   //by the association state machine, and consulted here.
-  if (m_qosSupported)
+  if (GetQosSupported ())
     {
       hdr.SetType (WIFI_MAC_QOSDATA);
       hdr.SetQosAckPolicy (WifiMacHeader::NORMAL_ACK);
@@ -316,9 +310,9 @@ ApWifiMac::ForwardDown (Ptr<const Packet> packet, Mac48Address from,
       hdr.SetType (WIFI_MAC_DATA);
     }
 
-  if (m_qosSupported || m_htSupported || m_vhtSupported || m_heSupported)
+  if (GetQosSupported ())
     {
-      hdr.SetNoOrder ();
+      hdr.SetNoOrder (); // explicitly set to 0 for the time being since HT control field is not yet implemented (set it to 1 when implemented)
     }
   hdr.SetAddr1 (to);
   hdr.SetAddr2 (GetAddress ());
@@ -326,23 +320,29 @@ ApWifiMac::ForwardDown (Ptr<const Packet> packet, Mac48Address from,
   hdr.SetDsFrom ();
   hdr.SetDsNotTo ();
 
-  if (m_qosSupported)
+  if (GetQosSupported ())
     {
       //Sanity check that the TID is valid
       NS_ASSERT (tid < 8);
-      m_edca[QosUtilsMapTidToAc (tid)]->Queue (packet, hdr);
+      GetQosTxop (tid)->Queue (packet, hdr);
     }
   else
     {
-      m_dca->Queue (packet, hdr);
+      GetTxop ()->Queue (packet, hdr);
     }
 }
 
+bool
+ApWifiMac::CanForwardPacketsTo (Mac48Address to) const
+{
+  return (to.IsGroup () || GetWifiRemoteStationManager ()->IsAssociated (to));
+}
+
 void
-ApWifiMac::Enqueue (Ptr<const Packet> packet, Mac48Address to, Mac48Address from)
+ApWifiMac::Enqueue (Ptr<Packet> packet, Mac48Address to, Mac48Address from)
 {
   NS_LOG_FUNCTION (this << packet << to << from);
-  if (to.IsBroadcast () || m_stationManager->IsAssociated (to))
+  if (CanForwardPacketsTo (to))
     {
       ForwardDown (packet, from, to);
     }
@@ -353,13 +353,13 @@ ApWifiMac::Enqueue (Ptr<const Packet> packet, Mac48Address to, Mac48Address from
 }
 
 void
-ApWifiMac::Enqueue (Ptr<const Packet> packet, Mac48Address to)
+ApWifiMac::Enqueue (Ptr<Packet> packet, Mac48Address to)
 {
   NS_LOG_FUNCTION (this << packet << to);
   //We're sending this packet with a from address that is our own. We
   //get that address from the lower MAC and make use of the
   //from-spoofing Enqueue() method to avoid duplicated code.
-  Enqueue (packet, to, m_low->GetAddress ());
+  Enqueue (packet, to, GetAddress ());
 }
 
 bool
@@ -374,24 +374,11 @@ ApWifiMac::GetSupportedRates (void) const
 {
   NS_LOG_FUNCTION (this);
   SupportedRates rates;
-  //If it is an HT-AP or VHT-AP or HE-AP, then add the BSSMembershipSelectorSet
-  //The standard says that the BSSMembershipSelectorSet
-  //must have its MSB set to 1 (must be treated as a Basic Rate)
-  //Also the standard mentioned that at least 1 element should be included in the SupportedRates the rest can be in the ExtendedSupportedRates
-  if (m_htSupported || m_vhtSupported || m_heSupported)
-    {
-      for (uint8_t i = 0; i < m_phy->GetNBssMembershipSelectors (); i++)
-        {
-          rates.AddBssMembershipSelectorRate (m_phy->GetBssMembershipSelector (i));
-        }
-    }
-  //
   //Send the set of supported rates and make sure that we indicate
   //the Basic Rate set in this set of supported rates.
-  for (uint8_t i = 0; i < m_phy->GetNModes (); i++)
+  for (const auto & mode : GetWifiPhy ()->GetModeList ())
     {
-      WifiMode mode = m_phy->GetMode (i);
-      uint64_t modeDataRate = mode.GetDataRate (m_phy->GetChannelWidth ());
+      uint64_t modeDataRate = mode.GetDataRate (GetWifiPhy ()->GetChannelWidth ());
       NS_LOG_DEBUG ("Adding supported rate of " << modeDataRate);
       rates.AddSupportedRate (modeDataRate);
       //Add rates that are part of the BSSBasicRateSet (manufacturer dependent!)
@@ -400,18 +387,28 @@ ApWifiMac::GetSupportedRates (void) const
       if (mode.IsMandatory () && (mode.GetModulationClass () != WIFI_MOD_CLASS_HR_DSSS))
         {
           NS_LOG_DEBUG ("Adding basic mode " << mode.GetUniqueName ());
-          m_stationManager->AddBasicMode (mode);
+          GetWifiRemoteStationManager ()->AddBasicMode (mode);
         }
     }
   //set the basic rates
-  for (uint8_t j = 0; j < m_stationManager->GetNBasicModes (); j++)
+  for (uint8_t j = 0; j < GetWifiRemoteStationManager ()->GetNBasicModes (); j++)
     {
-      WifiMode mode = m_stationManager->GetBasicMode (j);
-      uint64_t modeDataRate = mode.GetDataRate (m_phy->GetChannelWidth ());
+      WifiMode mode = GetWifiRemoteStationManager ()->GetBasicMode (j);
+      uint64_t modeDataRate = mode.GetDataRate (GetWifiPhy ()->GetChannelWidth ());
       NS_LOG_DEBUG ("Setting basic rate " << mode.GetUniqueName ());
       rates.SetBasicRate (modeDataRate);
     }
-
+  //If it is a HT AP, then add the BSSMembershipSelectorSet
+  //The standard says that the BSSMembershipSelectorSet
+  //must have its MSB set to 1 (must be treated as a Basic Rate)
+  //Also the standard mentioned that at least 1 element should be included in the SupportedRates the rest can be in the ExtendedSupportedRates
+  if (GetHtSupported ())
+    {
+      for (const auto & selector : GetWifiPhy ()->GetBssMembershipSelectorList ())
+        {
+          rates.AddBssMembershipSelectorRate (selector);
+        }
+    }
   return rates;
 }
 
@@ -420,10 +417,10 @@ ApWifiMac::GetDsssParameterSet (void) const
 {
   NS_LOG_FUNCTION (this);
   DsssParameterSet dsssParameters;
-  if (m_dsssSupported)
+  if (GetDsssSupported ())
     {
       dsssParameters.SetDsssSupported (1);
-      dsssParameters.SetCurrentChannel (m_phy->GetChannelNumber ());
+      dsssParameters.SetCurrentChannel (GetWifiPhy ()->GetChannelNumber ());
     }
   return dsssParameters;
 }
@@ -433,8 +430,8 @@ ApWifiMac::GetCapabilities (void) const
 {
   NS_LOG_FUNCTION (this);
   CapabilityInformation capabilities;
-  capabilities.SetShortPreamble (GetShortPreambleEnabled ());
-  capabilities.SetShortSlotTime (GetShortSlotTimeEnabled ());
+  capabilities.SetShortPreamble (m_shortPreambleEnabled);
+  capabilities.SetShortSlotTime (m_shortSlotTimeEnabled);
   capabilities.SetEss ();
   return capabilities;
 }
@@ -445,11 +442,11 @@ ApWifiMac::GetErpInformation (void) const
   NS_LOG_FUNCTION (this);
   ErpInformation information;
   information.SetErpSupported (1);
-  if (m_erpSupported)
+  if (GetErpSupported ())
     {
-      information.SetNonErpPresent (!m_nonErpStations.empty ());
+      information.SetNonErpPresent (m_numNonErpStations > 0);
       information.SetUseProtection (GetUseNonErpProtection ());
-      if (GetShortPreambleEnabled ())
+      if (m_shortPreambleEnabled)
         {
           information.SetBarkerPreambleMode (0);
         }
@@ -466,51 +463,101 @@ ApWifiMac::GetEdcaParameterSet (void) const
 {
   NS_LOG_FUNCTION (this);
   EdcaParameterSet edcaParameters;
-  if (m_qosSupported)
+  if (GetQosSupported ())
     {
       edcaParameters.SetQosSupported (1);
-      Ptr<EdcaTxopN> edca;
+      Ptr<QosTxop> edca;
       Time txopLimit;
 
-      edca = m_edca.find (AC_BE)->second;
+      edca = GetQosTxop (AC_BE);
       txopLimit = edca->GetTxopLimit ();
       edcaParameters.SetBeAci (0);
       edcaParameters.SetBeCWmin (edca->GetMinCw ());
       edcaParameters.SetBeCWmax (edca->GetMaxCw ());
       edcaParameters.SetBeAifsn (edca->GetAifsn ());
-      edcaParameters.SetBeTXOPLimit (txopLimit.GetMicroSeconds () / 32);
-      edcaParameters.SetBeAcm (0);
+      edcaParameters.SetBeTxopLimit (static_cast<uint16_t> (txopLimit.GetMicroSeconds () / 32));
 
-      edca = m_edca.find (AC_BK)->second;
+      edca = GetQosTxop (AC_BK);
       txopLimit = edca->GetTxopLimit ();
       edcaParameters.SetBkAci (1);
       edcaParameters.SetBkCWmin (edca->GetMinCw ());
       edcaParameters.SetBkCWmax (edca->GetMaxCw ());
       edcaParameters.SetBkAifsn (edca->GetAifsn ());
-      edcaParameters.SetBkTXOPLimit (txopLimit.GetMicroSeconds () / 32);
-      edcaParameters.SetBkAcm (0);
+      edcaParameters.SetBkTxopLimit (static_cast<uint16_t> (txopLimit.GetMicroSeconds () / 32));
 
-      edca = m_edca.find (AC_VI)->second;
+      edca = GetQosTxop (AC_VI);
       txopLimit = edca->GetTxopLimit ();
       edcaParameters.SetViAci (2);
       edcaParameters.SetViCWmin (edca->GetMinCw ());
       edcaParameters.SetViCWmax (edca->GetMaxCw ());
       edcaParameters.SetViAifsn (edca->GetAifsn ());
-      edcaParameters.SetViTXOPLimit (txopLimit.GetMicroSeconds () / 32);
-      edcaParameters.SetViAcm (0);
+      edcaParameters.SetViTxopLimit (static_cast<uint16_t> (txopLimit.GetMicroSeconds () / 32));
 
-      edca = m_edca.find (AC_VO)->second;
+      edca = GetQosTxop (AC_VO);
       txopLimit = edca->GetTxopLimit ();
       edcaParameters.SetVoAci (3);
       edcaParameters.SetVoCWmin (edca->GetMinCw ());
       edcaParameters.SetVoCWmax (edca->GetMaxCw ());
       edcaParameters.SetVoAifsn (edca->GetAifsn ());
-      edcaParameters.SetVoTXOPLimit (txopLimit.GetMicroSeconds () / 32);
-      edcaParameters.SetVoAcm (0);
+      edcaParameters.SetVoTxopLimit (static_cast<uint16_t> (txopLimit.GetMicroSeconds () / 32));
 
       edcaParameters.SetQosInfo (0);
     }
   return edcaParameters;
+}
+
+MuEdcaParameterSet
+ApWifiMac::GetMuEdcaParameterSet (void) const
+{
+  NS_LOG_FUNCTION (this);
+  MuEdcaParameterSet muEdcaParameters;
+  if (GetHeSupported ())
+    {
+      Ptr<HeConfiguration> heConfiguration = GetHeConfiguration ();
+      NS_ASSERT (heConfiguration != 0);
+
+      muEdcaParameters.SetQosInfo (0);
+
+      UintegerValue uintegerValue;
+      TimeValue timeValue;
+
+      heConfiguration->GetAttribute ("MuBeAifsn", uintegerValue);
+      muEdcaParameters.SetMuAifsn (AC_BE, uintegerValue.Get ());
+      heConfiguration->GetAttribute ("MuBeCwMin", uintegerValue);
+      muEdcaParameters.SetMuCwMin (AC_BE, uintegerValue.Get ());
+      heConfiguration->GetAttribute ("MuBeCwMax", uintegerValue);
+      muEdcaParameters.SetMuCwMax (AC_BE, uintegerValue.Get ());
+      heConfiguration->GetAttribute ("BeMuEdcaTimer", timeValue);
+      muEdcaParameters.SetMuEdcaTimer (AC_BE, timeValue.Get ());
+
+      heConfiguration->GetAttribute ("MuBkAifsn", uintegerValue);
+      muEdcaParameters.SetMuAifsn (AC_BK, uintegerValue.Get ());
+      heConfiguration->GetAttribute ("MuBkCwMin", uintegerValue);
+      muEdcaParameters.SetMuCwMin (AC_BK, uintegerValue.Get ());
+      heConfiguration->GetAttribute ("MuBkCwMax", uintegerValue);
+      muEdcaParameters.SetMuCwMax (AC_BK, uintegerValue.Get ());
+      heConfiguration->GetAttribute ("BkMuEdcaTimer", timeValue);
+      muEdcaParameters.SetMuEdcaTimer (AC_BK, timeValue.Get ());
+
+      heConfiguration->GetAttribute ("MuViAifsn", uintegerValue);
+      muEdcaParameters.SetMuAifsn (AC_VI, uintegerValue.Get ());
+      heConfiguration->GetAttribute ("MuViCwMin", uintegerValue);
+      muEdcaParameters.SetMuCwMin (AC_VI, uintegerValue.Get ());
+      heConfiguration->GetAttribute ("MuViCwMax", uintegerValue);
+      muEdcaParameters.SetMuCwMax (AC_VI, uintegerValue.Get ());
+      heConfiguration->GetAttribute ("ViMuEdcaTimer", timeValue);
+      muEdcaParameters.SetMuEdcaTimer (AC_VI, timeValue.Get ());
+
+      heConfiguration->GetAttribute ("MuVoAifsn", uintegerValue);
+      muEdcaParameters.SetMuAifsn (AC_VO, uintegerValue.Get ());
+      heConfiguration->GetAttribute ("MuVoCwMin", uintegerValue);
+      muEdcaParameters.SetMuCwMin (AC_VO, uintegerValue.Get ());
+      heConfiguration->GetAttribute ("MuVoCwMax", uintegerValue);
+      muEdcaParameters.SetMuCwMax (AC_VO, uintegerValue.Get ());
+      heConfiguration->GetAttribute ("VoMuEdcaTimer", timeValue);
+      muEdcaParameters.SetMuEdcaTimer (AC_VO, timeValue.Get ());
+    }
+  return muEdcaParameters;
 }
 
 HtOperation
@@ -518,17 +565,18 @@ ApWifiMac::GetHtOperation (void) const
 {
   NS_LOG_FUNCTION (this);
   HtOperation operation;
-  if (m_htSupported)
+  if (GetHtSupported ())
     {
       operation.SetHtSupported (1);
-      operation.SetRifsMode (GetRifsMode ());
-      operation.SetNonGfHtStasPresent (IsNonGfHtStasPresent ());
-      if (m_phy->GetChannelWidth () > 20)
+      operation.SetPrimaryChannel (GetWifiPhy ()->GetPrimaryChannelNumber (20));
+      operation.SetRifsMode (false);
+      operation.SetNonGfHtStasPresent (true);
+      if (GetWifiPhy ()->GetChannelWidth () > 20)
         {
           operation.SetSecondaryChannelOffset (1);
           operation.SetStaChannelWidth (1);
         }
-      if (m_nonHtStations.empty ())
+      if (m_numNonHtStations == 0)
         {
           operation.SetHtProtection (NO_PROTECTION);
         }
@@ -537,39 +585,33 @@ ApWifiMac::GetHtOperation (void) const
           operation.SetHtProtection (MIXED_MODE_PROTECTION);
         }
       uint64_t maxSupportedRate = 0; //in bit/s
-      for (uint8_t i = 0; i < m_phy->GetNMcs (); i++)
+      for (const auto & mcs : GetWifiPhy ()->GetMcsList (WIFI_MOD_CLASS_HT))
         {
-          WifiMode mcs = m_phy->GetMcs (i);
-          if (mcs.GetModulationClass () != WIFI_MOD_CLASS_HT)
-            {
-              continue;
-            }
           uint8_t nss = (mcs.GetMcsValue () / 8) + 1;
           NS_ASSERT (nss > 0 && nss < 5);
-          uint64_t dataRate = mcs.GetDataRate (m_phy->GetChannelWidth (), m_phy->GetShortGuardInterval () ? 400 : 800, nss);
+          uint64_t dataRate = mcs.GetDataRate (GetWifiPhy ()->GetChannelWidth (), GetHtConfiguration ()->GetShortGuardIntervalSupported () ? 400 : 800, nss);
           if (dataRate > maxSupportedRate)
             {
               maxSupportedRate = dataRate;
               NS_LOG_DEBUG ("Updating maxSupportedRate to " << maxSupportedRate);
             }
         }
-      uint8_t maxSpatialStream = m_phy->GetMaxSupportedTxSpatialStreams ();
-      uint8_t nMcs = m_phy->GetNMcs ();
-      for (std::map<uint16_t, Mac48Address>::const_iterator i = m_staList.begin (); i != m_staList.end (); i++)
+      uint8_t maxSpatialStream = GetWifiPhy ()->GetMaxSupportedTxSpatialStreams ();
+      auto mcsList = GetWifiPhy ()->GetMcsList (WIFI_MOD_CLASS_HT);
+      uint8_t nMcs = mcsList.size ();
+      for (const auto& sta : m_staList)
         {
-          if (m_stationManager->GetHtSupported (i->second))
+          if (GetWifiRemoteStationManager ()->GetHtSupported (sta.second))
             {
               uint64_t maxSupportedRateByHtSta = 0; //in bit/s
-              for (uint8_t j = 0; j < (std::min (nMcs, m_stationManager->GetNMcsSupported (i->second))); j++)
+              auto itMcs = mcsList.begin ();
+              for (uint8_t j = 0; j < (std::min (nMcs, GetWifiRemoteStationManager ()->GetNMcsSupported (sta.second))); j++)
                 {
-                  WifiMode mcs = m_phy->GetMcs (j);
-                  if (mcs.GetModulationClass () != WIFI_MOD_CLASS_HT)
-                    {
-                      continue;
-                    }
+                  WifiMode mcs = *itMcs++;
                   uint8_t nss = (mcs.GetMcsValue () / 8) + 1;
                   NS_ASSERT (nss > 0 && nss < 5);
-                  uint64_t dataRate = mcs.GetDataRate (m_stationManager->GetChannelWidthSupported (i->second), m_stationManager->GetShortGuardInterval (i->second) ? 400 : 800, nss);
+                  uint64_t dataRate = mcs.GetDataRate (GetWifiRemoteStationManager ()->GetChannelWidthSupported (sta.second),
+                                                       GetWifiRemoteStationManager ()->GetShortGuardIntervalSupported (sta.second) ? 400 : 800, nss);
                   if (dataRate > maxSupportedRateByHtSta)
                     {
                       maxSupportedRateByHtSta = dataRate;
@@ -579,17 +621,17 @@ ApWifiMac::GetHtOperation (void) const
                 {
                   maxSupportedRate = maxSupportedRateByHtSta;
                 }
-              if (m_stationManager->GetNMcsSupported (i->second) < nMcs)
+              if (GetWifiRemoteStationManager ()->GetNMcsSupported (sta.second) < nMcs)
                 {
-                  nMcs = m_stationManager->GetNMcsSupported (i->second);
+                  nMcs = GetWifiRemoteStationManager ()->GetNMcsSupported (sta.second);
                 }
-              if (m_stationManager->GetNumberOfSupportedStreams (i->second) < maxSpatialStream)
+              if (GetWifiRemoteStationManager ()->GetNumberOfSupportedStreams (sta.second) < maxSpatialStream)
                 {
-                  maxSpatialStream = m_stationManager->GetNumberOfSupportedStreams (i->second);
+                  maxSpatialStream = GetWifiRemoteStationManager ()->GetNumberOfSupportedStreams (sta.second);
                 }
             }
         }
-      operation.SetRxHighestSupportedDataRate (maxSupportedRate / 1e6); //in Mbit/s
+      operation.SetRxHighestSupportedDataRate (static_cast<uint16_t> (maxSupportedRate / 1e6)); //in Mbit/s
       operation.SetTxMcsSetDefined (nMcs > 0);
       operation.SetTxMaxNSpatialStreams (maxSpatialStream);
       //To be filled in once supported
@@ -612,33 +654,40 @@ ApWifiMac::GetVhtOperation (void) const
 {
   NS_LOG_FUNCTION (this);
   VhtOperation operation;
-  if (m_vhtSupported)
+  if (GetVhtSupported ())
     {
       operation.SetVhtSupported (1);
-      uint8_t channelWidth = GetVhtOperationalChannelWidth ();
-      if (channelWidth == 160)
+      const uint16_t bssBandwidth = GetWifiPhy ()->GetChannelWidth ();
+      // Set to 0 for 20 MHz or 40 MHz BSS bandwidth.
+      // Set to 1 for 80 MHz, 160 MHz or 80+80 MHz BSS bandwidth.
+      operation.SetChannelWidth ((bssBandwidth > 40) ? 1 : 0);
+      // For 20, 40, or 80 MHz BSS bandwidth, indicates the channel center frequency
+      // index for the 20, 40, or 80 MHz channel on which the VHT BSS operates.
+      // For 160 MHz BSS bandwidth and the Channel Width subfield equal to 1,
+      // indicates the channel center frequency index of the 80 MHz channel
+      // segment that contains the primary channel.
+      operation.SetChannelCenterFrequencySegment0 ((bssBandwidth == 160) ?
+                                                   GetWifiPhy ()->GetOperatingChannel ().GetPrimaryChannelNumber (80, WIFI_STANDARD_80211ac) :
+                                                   GetWifiPhy ()->GetChannelNumber ());
+      // For a 20, 40, or 80 MHz BSS bandwidth, this subfield is set to 0.
+      // For a 160 MHz BSS bandwidth and the Channel Width subfield equal to 1,
+      // indicates the channel center frequency index of the 160 MHz channel on
+      // which the VHT BSS operates.
+      operation.SetChannelCenterFrequencySegment1 ((bssBandwidth == 160) ? GetWifiPhy ()->GetChannelNumber () : 0);
+      uint8_t maxSpatialStream = GetWifiPhy ()->GetMaxSupportedRxSpatialStreams ();
+      for (const auto& sta : m_staList)
         {
-          operation.SetChannelWidth (2);
-        }
-      else if (channelWidth == 80)
-        {
-          operation.SetChannelWidth (1);
-        }
-      else
-        {
-          operation.SetChannelWidth (0);
-        }
-      for (uint8_t nss = 1; nss <= 8; nss++)
-        {
-          uint8_t maxMcs;
-          if (nss <= m_phy->GetMaxSupportedRxSpatialStreams ())
+          if (GetWifiRemoteStationManager ()->GetVhtSupported (sta.second))
             {
-              maxMcs = 9; //TBD: hardcode to 9 for now since we assume all MCS values are supported
+              if (GetWifiRemoteStationManager ()->GetNumberOfSupportedStreams (sta.second) < maxSpatialStream)
+                {
+                  maxSpatialStream = GetWifiRemoteStationManager ()->GetNumberOfSupportedStreams (sta.second);
+                }
             }
-          else
-            {
-              maxMcs = 0;
-            }
+        }
+      for (uint8_t nss = 1; nss <= maxSpatialStream; nss++)
+        {
+          uint8_t maxMcs = 9; //TBD: hardcode to 9 for now since we assume all MCS values are supported
           operation.SetMaxVhtMcsPerNss (nss, maxMcs);
         }
     }
@@ -650,13 +699,25 @@ ApWifiMac::GetHeOperation (void) const
 {
   NS_LOG_FUNCTION (this);
   HeOperation operation;
-  if (m_heSupported)
+  if (GetHeSupported ())
     {
       operation.SetHeSupported (1);
-      for (uint8_t nss = 1; nss <= m_phy->GetMaxSupportedRxSpatialStreams (); nss++)
+      uint8_t maxSpatialStream = GetWifiPhy ()->GetMaxSupportedRxSpatialStreams ();
+      for (const auto& sta : m_staList)
+        {
+          if (GetWifiRemoteStationManager ()->GetHeSupported (sta.second))
+            {
+              if (GetWifiRemoteStationManager ()->GetNumberOfSupportedStreams (sta.second) < maxSpatialStream)
+                {
+                  maxSpatialStream = GetWifiRemoteStationManager ()->GetNumberOfSupportedStreams (sta.second);
+                }
+            }
+        }
+      for (uint8_t nss = 1; nss <= maxSpatialStream; nss++)
         {
           operation.SetMaxHeMcsPerNss (nss, 11); //TBD: hardcode to 11 for now since we assume all MCS values are supported
         }
+      operation.SetBssColor (GetHeConfiguration ()->GetBssColor ());
     }
   return operation;
 }
@@ -672,50 +733,64 @@ ApWifiMac::SendProbeResp (Mac48Address to)
   hdr.SetAddr3 (GetAddress ());
   hdr.SetDsNotFrom ();
   hdr.SetDsNotTo ();
-  hdr.SetNoOrder ();
   Ptr<Packet> packet = Create<Packet> ();
   MgtProbeResponseHeader probe;
   probe.SetSsid (GetSsid ());
   probe.SetSupportedRates (GetSupportedRates ());
-  probe.SetBeaconIntervalUs (m_beaconInterval.GetMicroSeconds ());
+  probe.SetBeaconIntervalUs (GetBeaconInterval ().GetMicroSeconds ());
   probe.SetCapabilities (GetCapabilities ());
-  m_stationManager->SetShortPreambleEnabled (GetShortPreambleEnabled ());
-  m_stationManager->SetShortSlotTimeEnabled (GetShortSlotTimeEnabled ());
-  if (m_dsssSupported)
+  GetWifiRemoteStationManager ()->SetShortPreambleEnabled (m_shortPreambleEnabled);
+  GetWifiRemoteStationManager ()->SetShortSlotTimeEnabled (m_shortSlotTimeEnabled);
+  if (GetDsssSupported ())
     {
       probe.SetDsssParameterSet (GetDsssParameterSet ());
     }
-  if (m_erpSupported)
+  if (GetErpSupported ())
     {
       probe.SetErpInformation (GetErpInformation ());
     }
-  if (m_qosSupported)
+  if (GetQosSupported ())
     {
       probe.SetEdcaParameterSet (GetEdcaParameterSet ());
     }
-  if (m_htSupported || m_vhtSupported || m_heSupported)
+  if (GetHtSupported ())
     {
       probe.SetExtendedCapabilities (GetExtendedCapabilities ());
       probe.SetHtCapabilities (GetHtCapabilities ());
       probe.SetHtOperation (GetHtOperation ());
     }
-  if (m_vhtSupported || m_heSupported)
+  if (GetVhtSupported ())
     {
       probe.SetVhtCapabilities (GetVhtCapabilities ());
       probe.SetVhtOperation (GetVhtOperation ());
     }
-  if (m_heSupported)
+  if (GetHeSupported ())
     {
       probe.SetHeCapabilities (GetHeCapabilities ());
       probe.SetHeOperation (GetHeOperation ());
+      probe.SetMuEdcaParameterSet (GetMuEdcaParameterSet ());
     }
   packet->AddHeader (probe);
 
-  //The standard is not clear on the correct queue for management
-  //frames if we are a QoS AP. The approach taken here is to always
-  //use the DCF for these regardless of whether we have a QoS
-  //association or not.
-  m_dca->Queue (packet, hdr);
+  if (!GetQosSupported ())
+    {
+      GetTxop ()->Queue (packet, hdr);
+    }
+  // "A QoS STA that transmits a Management frame determines access category used
+  // for medium access in transmission of the Management frame as follows
+  // (If dot11QMFActivated is false or not present)
+  // — If the Management frame is individually addressed to a non-QoS STA, category
+  //   AC_BE should be selected.
+  // — If category AC_BE was not selected by the previous step, category AC_VO
+  //   shall be selected." (Sec. 10.2.3.2 of 802.11-2020)
+  else if (!GetWifiRemoteStationManager ()->GetQosSupported (to))
+    {
+      GetBEQueue ()->Queue (packet, hdr);
+    }
+  else
+    {
+      GetVOQueue ()->Queue (packet, hdr);
+    }
 }
 
 void
@@ -729,22 +804,21 @@ ApWifiMac::SendAssocResp (Mac48Address to, bool success, bool isReassoc)
   hdr.SetAddr3 (GetAddress ());
   hdr.SetDsNotFrom ();
   hdr.SetDsNotTo ();
-  hdr.SetNoOrder ();
   Ptr<Packet> packet = Create<Packet> ();
   MgtAssocResponseHeader assoc;
   StatusCode code;
   if (success)
     {
       code.SetSuccess ();
-      uint16_t aid;
+      uint16_t aid = 0;
       bool found = false;
       if (isReassoc)
         {
-          for (std::map<uint16_t, Mac48Address>::const_iterator i = m_staList.begin (); i != m_staList.end (); ++i)
+          for (const auto& sta : m_staList)
             {
-              if (i->second == to)
+              if (sta.second == to)
                 {
-                  aid = i->first;
+                  aid = sta.first;
                   found = true;
                   break;
                 }
@@ -754,6 +828,18 @@ ApWifiMac::SendAssocResp (Mac48Address to, bool success, bool isReassoc)
         {
           aid = GetNextAssociationId ();
           m_staList.insert (std::make_pair (aid, to));
+          m_assocLogger (aid, to);
+          GetWifiRemoteStationManager ()->SetAssociationId (to, aid);
+          if (GetWifiRemoteStationManager ()->GetDsssSupported (to) && !GetWifiRemoteStationManager ()->GetErpOfdmSupported (to))
+            {
+              m_numNonErpStations++;
+            }
+          if (!GetWifiRemoteStationManager ()->GetHtSupported (to))
+            {
+              m_numNonHtStations++;
+            }
+          UpdateShortSlotTimeEnabled ();
+          UpdateShortPreambleEnabled ();
         }
       assoc.SetAssociationId (aid);
     }
@@ -764,37 +850,52 @@ ApWifiMac::SendAssocResp (Mac48Address to, bool success, bool isReassoc)
   assoc.SetSupportedRates (GetSupportedRates ());
   assoc.SetStatusCode (code);
   assoc.SetCapabilities (GetCapabilities ());
-  if (m_erpSupported)
+  if (GetErpSupported ())
     {
       assoc.SetErpInformation (GetErpInformation ());
     }
-  if (m_qosSupported)
+  if (GetQosSupported ())
     {
       assoc.SetEdcaParameterSet (GetEdcaParameterSet ());
     }
-  if (m_htSupported || m_vhtSupported || m_heSupported)
+  if (GetHtSupported ())
     {
       assoc.SetExtendedCapabilities (GetExtendedCapabilities ());
       assoc.SetHtCapabilities (GetHtCapabilities ());
       assoc.SetHtOperation (GetHtOperation ());
     }
-  if (m_vhtSupported || m_heSupported)
+  if (GetVhtSupported ())
     {
       assoc.SetVhtCapabilities (GetVhtCapabilities ());
       assoc.SetVhtOperation (GetVhtOperation ());
     }
-  if (m_heSupported)
+  if (GetHeSupported ())
     {
       assoc.SetHeCapabilities (GetHeCapabilities ());
       assoc.SetHeOperation (GetHeOperation ());
+      assoc.SetMuEdcaParameterSet (GetMuEdcaParameterSet ());
     }
   packet->AddHeader (assoc);
 
-  //The standard is not clear on the correct queue for management
-  //frames if we are a QoS AP. The approach taken here is to always
-  //use the DCF for these regardless of whether we have a QoS
-  //association or not.
-  m_dca->Queue (packet, hdr);
+  if (!GetQosSupported ())
+    {
+      GetTxop ()->Queue (packet, hdr);
+    }
+  // "A QoS STA that transmits a Management frame determines access category used
+  // for medium access in transmission of the Management frame as follows
+  // (If dot11QMFActivated is false or not present)
+  // — If the Management frame is individually addressed to a non-QoS STA, category
+  //   AC_BE should be selected.
+  // — If category AC_BE was not selected by the previous step, category AC_VO
+  //   shall be selected." (Sec. 10.2.3.2 of 802.11-2020)
+  else if (!GetWifiRemoteStationManager ()->GetQosSupported (to))
+    {
+      GetBEQueue ()->Queue (packet, hdr);
+    }
+  else
+    {
+      GetVOQueue ()->Queue (packet, hdr);
+    }
 }
 
 void
@@ -808,98 +909,100 @@ ApWifiMac::SendOneBeacon (void)
   hdr.SetAddr3 (GetAddress ());
   hdr.SetDsNotFrom ();
   hdr.SetDsNotTo ();
-  hdr.SetNoOrder ();
   Ptr<Packet> packet = Create<Packet> ();
   MgtBeaconHeader beacon;
   beacon.SetSsid (GetSsid ());
   beacon.SetSupportedRates (GetSupportedRates ());
-  beacon.SetBeaconIntervalUs (m_beaconInterval.GetMicroSeconds ());
+  beacon.SetBeaconIntervalUs (GetBeaconInterval ().GetMicroSeconds ());
   beacon.SetCapabilities (GetCapabilities ());
-  m_stationManager->SetShortPreambleEnabled (GetShortPreambleEnabled ());
-  m_stationManager->SetShortSlotTimeEnabled (GetShortSlotTimeEnabled ());
-  if (m_dsssSupported)
+  GetWifiRemoteStationManager ()->SetShortPreambleEnabled (m_shortPreambleEnabled);
+  GetWifiRemoteStationManager ()->SetShortSlotTimeEnabled (m_shortSlotTimeEnabled);
+  if (GetDsssSupported ())
     {
       beacon.SetDsssParameterSet (GetDsssParameterSet ());
     }
-  if (m_erpSupported)
+  if (GetErpSupported ())
     {
       beacon.SetErpInformation (GetErpInformation ());
     }
-  if (m_qosSupported)
+  if (GetQosSupported ())
     {
       beacon.SetEdcaParameterSet (GetEdcaParameterSet ());
     }
-  if (m_htSupported || m_vhtSupported)
+  if (GetHtSupported ())
     {
       beacon.SetExtendedCapabilities (GetExtendedCapabilities ());
       beacon.SetHtCapabilities (GetHtCapabilities ());
       beacon.SetHtOperation (GetHtOperation ());
     }
-  if (m_vhtSupported || m_heSupported)
+  if (GetVhtSupported ())
     {
       beacon.SetVhtCapabilities (GetVhtCapabilities ());
       beacon.SetVhtOperation (GetVhtOperation ());
     }
-  if (m_heSupported)
+  if (GetHeSupported ())
     {
       beacon.SetHeCapabilities (GetHeCapabilities ());
       beacon.SetHeOperation (GetHeOperation ());
+      beacon.SetMuEdcaParameterSet (GetMuEdcaParameterSet ());
     }
   packet->AddHeader (beacon);
 
   //The beacon has it's own special queue, so we load it in there
-  m_beaconDca->Queue (packet, hdr);
-  m_beaconEvent = Simulator::Schedule (m_beaconInterval, &ApWifiMac::SendOneBeacon, this);
+  m_beaconTxop->Queue (packet, hdr);
+  m_beaconEvent = Simulator::Schedule (GetBeaconInterval (), &ApWifiMac::SendOneBeacon, this);
 
   //If a STA that does not support Short Slot Time associates,
   //the AP shall use long slot time beginning at the first Beacon
   //subsequent to the association of the long slot time STA.
-  if (m_erpSupported)
+  if (GetErpSupported ())
     {
-      if (GetShortSlotTimeEnabled () == true)
+      if (m_shortSlotTimeEnabled)
         {
           //Enable short slot time
-          SetSlot (MicroSeconds (9));
+          GetWifiPhy ()->SetSlot (MicroSeconds (9));
         }
       else
         {
           //Disable short slot time
-          SetSlot (MicroSeconds (20));
+          GetWifiPhy ()->SetSlot (MicroSeconds (20));
         }
     }
 }
 
 void
-ApWifiMac::TxOk (const WifiMacHeader &hdr)
+ApWifiMac::TxOk (Ptr<const WifiMacQueueItem> mpdu)
 {
-  NS_LOG_FUNCTION (this);
-  RegularWifiMac::TxOk (hdr);
+  NS_LOG_FUNCTION (this << *mpdu);
+  const WifiMacHeader& hdr = mpdu->GetHeader ();
   if ((hdr.IsAssocResp () || hdr.IsReassocResp ())
-      && m_stationManager->IsWaitAssocTxOk (hdr.GetAddr1 ()))
+      && GetWifiRemoteStationManager ()->IsWaitAssocTxOk (hdr.GetAddr1 ()))
     {
       NS_LOG_DEBUG ("associated with sta=" << hdr.GetAddr1 ());
-      m_stationManager->RecordGotAssocTxOk (hdr.GetAddr1 ());
+      GetWifiRemoteStationManager ()->RecordGotAssocTxOk (hdr.GetAddr1 ());
     }
 }
 
 void
-ApWifiMac::TxFailed (const WifiMacHeader &hdr)
+ApWifiMac::TxFailed (WifiMacDropReason timeoutReason, Ptr<const WifiMacQueueItem> mpdu)
 {
-  NS_LOG_FUNCTION (this);
-  RegularWifiMac::TxFailed (hdr);
+  NS_LOG_FUNCTION (this << +timeoutReason << *mpdu);
+  const WifiMacHeader& hdr = mpdu->GetHeader ();
 
   if ((hdr.IsAssocResp () || hdr.IsReassocResp ())
-      && m_stationManager->IsWaitAssocTxOk (hdr.GetAddr1 ()))
+      && GetWifiRemoteStationManager ()->IsWaitAssocTxOk (hdr.GetAddr1 ()))
     {
       NS_LOG_DEBUG ("association failed with sta=" << hdr.GetAddr1 ());
-      m_stationManager->RecordGotAssocTxFailed (hdr.GetAddr1 ());
+      GetWifiRemoteStationManager ()->RecordGotAssocTxFailed (hdr.GetAddr1 ());
     }
 }
 
 void
-ApWifiMac::Receive (Ptr<Packet> packet, const WifiMacHeader *hdr)
+ApWifiMac::Receive (Ptr<WifiMacQueueItem> mpdu)
 {
-  NS_LOG_FUNCTION (this << packet << hdr);
+  NS_LOG_FUNCTION (this << *mpdu);
+  const WifiMacHeader* hdr = &mpdu->GetHeader ();
+  Ptr<const Packet> packet = mpdu->GetPacket ();
   Mac48Address from = hdr->GetAddr2 ();
   if (hdr->IsData ())
     {
@@ -907,7 +1010,7 @@ ApWifiMac::Receive (Ptr<Packet> packet, const WifiMacHeader *hdr)
       if (!hdr->IsFromDs ()
           && hdr->IsToDs ()
           && bssid == GetAddress ()
-          && m_stationManager->IsAssociated (from))
+          && GetWifiRemoteStationManager ()->IsAssociated (from))
         {
           Mac48Address to = hdr->GetAddr3 ();
           if (to == GetAddress ())
@@ -918,7 +1021,7 @@ ApWifiMac::Receive (Ptr<Packet> packet, const WifiMacHeader *hdr)
                   if (hdr->IsQosAmsdu ())
                     {
                       NS_LOG_DEBUG ("Received A-MSDU from=" << from << ", size=" << packet->GetSize ());
-                      DeaggregateAmsduAndForward (packet, hdr);
+                      DeaggregateAmsduAndForward (mpdu);
                       packet = 0;
                     }
                   else
@@ -926,13 +1029,13 @@ ApWifiMac::Receive (Ptr<Packet> packet, const WifiMacHeader *hdr)
                       ForwardUp (packet, from, bssid);
                     }
                 }
-              else
+              else if (hdr->HasData ())
                 {
                   ForwardUp (packet, from, bssid);
                 }
             }
           else if (to.IsGroup ()
-                   || m_stationManager->IsAssociated (to))
+                   || GetWifiRemoteStationManager ()->IsAssociated (to))
             {
               NS_LOG_DEBUG ("forwarding frame from=" << from << ", to=" << to);
               Ptr<Packet> copy = packet->Copy ();
@@ -942,13 +1045,13 @@ ApWifiMac::Receive (Ptr<Packet> packet, const WifiMacHeader *hdr)
               //header...
               if (hdr->IsQosData ())
                 {
-                  ForwardDown (packet, from, to, hdr->GetQosTid ());
+                  ForwardDown (copy, from, to, hdr->GetQosTid ());
                 }
               else
                 {
-                  ForwardDown (packet, from, to);
+                  ForwardDown (copy, from, to);
                 }
-              ForwardUp (copy, from, to);
+              ForwardUp (packet, from, to);
             }
           else
             {
@@ -972,11 +1075,27 @@ ApWifiMac::Receive (Ptr<Packet> packet, const WifiMacHeader *hdr)
     }
   else if (hdr->IsMgt ())
     {
-      if (hdr->IsProbeReq ())
+      if (hdr->IsProbeReq ()
+          && (hdr->GetAddr1 ().IsGroup () || hdr->GetAddr1 () == GetAddress ()))
         {
-          NS_ASSERT (hdr->GetAddr1 ().IsBroadcast ());
-          NS_LOG_DEBUG ("Probe request received from " << from << ": send probe response");
-          SendProbeResp (from);
+          // In the case where the Address 1 field contains a group address, the
+          // Address 3 field also is validated to verify that the group addressed
+          // frame originated from a STA in the BSS of which the receiving STA is
+          // a member (Section 9.3.3.1 of 802.11-2020)
+          if (hdr->GetAddr1 ().IsGroup ()
+              && !hdr->GetAddr3 ().IsBroadcast () && hdr->GetAddr3 () != GetAddress ())
+            {
+              // not addressed to us
+              return;
+            }
+          MgtProbeRequestHeader probeRequestHeader;
+          packet->PeekHeader (probeRequestHeader);
+          Ssid ssid = probeRequestHeader.GetSsid ();
+          if (ssid == GetSsid () || ssid.IsBroadcast ())
+            {
+              NS_LOG_DEBUG ("Probe request received from " << from << ": send probe response");
+              SendProbeResp (from);
+            }
           return;
         }
       else if (hdr->GetAddr1 () == GetAddress ())
@@ -987,65 +1106,24 @@ ApWifiMac::Receive (Ptr<Packet> packet, const WifiMacHeader *hdr)
               //first, verify that the the station's supported
               //rate set is compatible with our Basic Rate set
               MgtAssocRequestHeader assocReq;
-              packet->RemoveHeader (assocReq);
+              packet->PeekHeader (assocReq);
               CapabilityInformation capabilities = assocReq.GetCapabilities ();
-              m_stationManager->AddSupportedPlcpPreamble (from, capabilities.IsShortPreamble ());
+              GetWifiRemoteStationManager ()->AddSupportedPhyPreamble (from, capabilities.IsShortPreamble ());
               SupportedRates rates = assocReq.GetSupportedRates ();
               bool problem = false;
-              bool isHtStation = false;
-              bool isOfdmStation = false;
-              bool isErpStation = false;
-              bool isDsssStation = false;
-              for (uint8_t i = 0; i < m_stationManager->GetNBasicModes (); i++)
+              if (rates.GetNRates () == 0)
                 {
-                  WifiMode mode = m_stationManager->GetBasicMode (i);
-                  if (!rates.IsSupportedRate (mode.GetDataRate (m_phy->GetChannelWidth ())))
-                    {
-                      if ((mode.GetModulationClass () == WIFI_MOD_CLASS_DSSS) || (mode.GetModulationClass () == WIFI_MOD_CLASS_HR_DSSS))
-                        {
-                          isDsssStation = false;
-                        }
-                      else if (mode.GetModulationClass () == WIFI_MOD_CLASS_ERP_OFDM)
-                        {
-                          isErpStation = false;
-                        }
-                      else if (mode.GetModulationClass () == WIFI_MOD_CLASS_OFDM)
-                        {
-                          isOfdmStation = false;
-                        }
-                      if (isDsssStation == false && isErpStation == false && isOfdmStation == false)
-                        {
-                          problem = true;
-                          break;
-                        }
-                    }
-                  else
-                    {
-                      if ((mode.GetModulationClass () == WIFI_MOD_CLASS_DSSS) || (mode.GetModulationClass () == WIFI_MOD_CLASS_HR_DSSS))
-                        {
-                          isDsssStation = true;
-                        }
-                      else if (mode.GetModulationClass () == WIFI_MOD_CLASS_ERP_OFDM)
-                        {
-                          isErpStation = true;
-                        }
-                      else if (mode.GetModulationClass () == WIFI_MOD_CLASS_OFDM)
-                        {
-                          isOfdmStation = true;
-                        }
-                    }
+                  problem = true;
                 }
-              m_stationManager->AddSupportedErpSlotTime (from, capabilities.IsShortSlotTime () && isErpStation);
-              if (m_htSupported)
+              if (GetHtSupported ())
                 {
                   //check whether the HT STA supports all MCSs in Basic MCS Set
                   HtCapabilities htcapabilities = assocReq.GetHtCapabilities ();
                   if (htcapabilities.IsSupportedMcs (0))
                     {
-                      isHtStation = true;
-                      for (uint8_t i = 0; i < m_stationManager->GetNBasicMcs (); i++)
+                      for (uint8_t i = 0; i < GetWifiRemoteStationManager ()->GetNBasicMcs (); i++)
                         {
-                          WifiMode mcs = m_stationManager->GetBasicMcs (i);
+                          WifiMode mcs = GetWifiRemoteStationManager ()->GetBasicMcs (i);
                           if (!htcapabilities.IsSupportedMcs (mcs.GetMcsValue ()))
                             {
                               problem = true;
@@ -1054,15 +1132,15 @@ ApWifiMac::Receive (Ptr<Packet> packet, const WifiMacHeader *hdr)
                         }
                     }
                 }
-              if (m_vhtSupported)
+              if (GetVhtSupported ())
                 {
                   //check whether the VHT STA supports all MCSs in Basic MCS Set
                   VhtCapabilities vhtcapabilities = assocReq.GetVhtCapabilities ();
                   if (vhtcapabilities.GetVhtCapabilitiesInfo () != 0)
                     {
-                      for (uint8_t i = 0; i < m_stationManager->GetNBasicMcs (); i++)
+                      for (uint8_t i = 0; i < GetWifiRemoteStationManager ()->GetNBasicMcs (); i++)
                         {
-                          WifiMode mcs = m_stationManager->GetBasicMcs (i);
+                          WifiMode mcs = GetWifiRemoteStationManager ()->GetBasicMcs (i);
                           if (!vhtcapabilities.IsSupportedTxMcs (mcs.GetMcsValue ()))
                             {
                               problem = true;
@@ -1071,15 +1149,15 @@ ApWifiMac::Receive (Ptr<Packet> packet, const WifiMacHeader *hdr)
                         }
                     }
                 }
-              if (m_heSupported)
+              if (GetHeSupported ())
                 {
                   //check whether the HE STA supports all MCSs in Basic MCS Set
                   HeCapabilities hecapabilities = assocReq.GetHeCapabilities ();
                   if (hecapabilities.GetSupportedMcsAndNss () != 0)
                     {
-                      for (uint8_t i = 0; i < m_stationManager->GetNBasicMcs (); i++)
+                      for (uint8_t i = 0; i < GetWifiRemoteStationManager ()->GetNBasicMcs (); i++)
                         {
-                          WifiMode mcs = m_stationManager->GetBasicMcs (i);
+                          WifiMode mcs = GetWifiRemoteStationManager ()->GetBasicMcs (i);
                           if (!hecapabilities.IsSupportedTxMcs (mcs.GetMcsValue ()))
                             {
                               problem = true;
@@ -1097,71 +1175,64 @@ ApWifiMac::Receive (Ptr<Packet> packet, const WifiMacHeader *hdr)
                 {
                   NS_LOG_DEBUG ("The Basic Rate set modes are supported by the station");
                   //record all its supported modes in its associated WifiRemoteStation
-                  for (uint8_t j = 0; j < m_phy->GetNModes (); j++)
+                  for (const auto & mode : GetWifiPhy ()->GetModeList ())
                     {
-                      WifiMode mode = m_phy->GetMode (j);
-                      if (rates.IsSupportedRate (mode.GetDataRate (m_phy->GetChannelWidth ())))
+                      if (rates.IsSupportedRate (mode.GetDataRate (GetWifiPhy ()->GetChannelWidth ())))
                         {
-                          m_stationManager->AddSupportedMode (from, mode);
+                          GetWifiRemoteStationManager ()->AddSupportedMode (from, mode);
                         }
                     }
-                  if (m_htSupported)
+                  if (GetErpSupported () && GetWifiRemoteStationManager ()->GetErpOfdmSupported (from) && capabilities.IsShortSlotTime ())
+                    {
+                      GetWifiRemoteStationManager ()->AddSupportedErpSlotTime (from, true);
+                    }
+                  if (GetHtSupported ())
                     {
                       HtCapabilities htCapabilities = assocReq.GetHtCapabilities ();
                       if (htCapabilities.IsSupportedMcs (0))
                         {
-                          m_stationManager->AddStationHtCapabilities (from, htCapabilities);
+                          GetWifiRemoteStationManager ()->AddStationHtCapabilities (from, htCapabilities);
                         }
                     }
-                  if (m_vhtSupported)
+                  if (GetVhtSupported ())
                     {
                       VhtCapabilities vhtCapabilities = assocReq.GetVhtCapabilities ();
                       //we will always fill in RxHighestSupportedLgiDataRate field at TX, so this can be used to check whether it supports VHT
                       if (vhtCapabilities.GetRxHighestSupportedLgiDataRate () > 0)
                         {
-                          m_stationManager->AddStationVhtCapabilities (from, vhtCapabilities);
-                          for (uint8_t i = 0; i < m_phy->GetNMcs (); i++)
+                          GetWifiRemoteStationManager ()->AddStationVhtCapabilities (from, vhtCapabilities);
+                          for (const auto & mcs : GetWifiPhy ()->GetMcsList (WIFI_MOD_CLASS_VHT))
                             {
-                              WifiMode mcs = m_phy->GetMcs (i);
-                              if (mcs.GetModulationClass () == WIFI_MOD_CLASS_VHT && vhtCapabilities.IsSupportedTxMcs (mcs.GetMcsValue ()))
+                              if (vhtCapabilities.IsSupportedTxMcs (mcs.GetMcsValue ()))
                                 {
-                                  m_stationManager->AddSupportedMcs (hdr->GetAddr2 (), mcs);
+                                  GetWifiRemoteStationManager ()->AddSupportedMcs (hdr->GetAddr2 (), mcs);
                                   //here should add a control to add basic MCS when it is implemented
                                 }
                             }
                         }
                     }
-                  if (m_htSupported || m_vhtSupported)
+                  if (GetHtSupported ())
                     {
                       ExtendedCapabilities extendedCapabilities = assocReq.GetExtendedCapabilities ();
                       //TODO: to be completed
                     }
-                  if (m_heSupported)
+                  if (GetHeSupported ())
                     {
                       HeCapabilities heCapabilities = assocReq.GetHeCapabilities ();
-                      //todo: once we support non constant rate managers, we should add checks here whether HE is supported by the peer
-                      m_stationManager->AddStationHeCapabilities (from, heCapabilities);
-                      for (uint8_t i = 0; i < m_phy->GetNMcs (); i++)
+                      if (heCapabilities.GetSupportedMcsAndNss () != 0)
                         {
-                          WifiMode mcs = m_phy->GetMcs (i);
-                          if (mcs.GetModulationClass () == WIFI_MOD_CLASS_HE && heCapabilities.IsSupportedTxMcs (mcs.GetMcsValue ()))
+                          GetWifiRemoteStationManager ()->AddStationHeCapabilities (from, heCapabilities);
+                          for (const auto & mcs : GetWifiPhy ()->GetMcsList (WIFI_MOD_CLASS_HE))
                             {
-                              m_stationManager->AddSupportedMcs (hdr->GetAddr2 (), mcs);
-                              //here should add a control to add basic MCS when it is implemented
+                              if (heCapabilities.IsSupportedTxMcs (mcs.GetMcsValue ()))
+                                {
+                                  GetWifiRemoteStationManager ()->AddSupportedMcs (hdr->GetAddr2 (), mcs);
+                                  //here should add a control to add basic MCS when it is implemented
+                                }
                             }
                         }
                     }
-                  m_stationManager->RecordWaitAssocTxOk (from);
-                  if (!isHtStation)
-                    {
-                      m_nonHtStations.push_back (hdr->GetAddr2 ());
-                      m_nonHtStations.unique ();
-                    }
-                  if (!isErpStation && isDsssStation)
-                    {
-                      m_nonErpStations.push_back (hdr->GetAddr2 ());
-                      m_nonErpStations.unique ();
-                    }
+                  GetWifiRemoteStationManager ()->RecordWaitAssocTxOk (from);
                   NS_LOG_DEBUG ("Send association response with success status");
                   SendAssocResp (hdr->GetAddr2 (), true, false);
                 }
@@ -1173,65 +1244,24 @@ ApWifiMac::Receive (Ptr<Packet> packet, const WifiMacHeader *hdr)
               //first, verify that the the station's supported
               //rate set is compatible with our Basic Rate set
               MgtReassocRequestHeader reassocReq;
-              packet->RemoveHeader (reassocReq);
+              packet->PeekHeader (reassocReq);
               CapabilityInformation capabilities = reassocReq.GetCapabilities ();
-              m_stationManager->AddSupportedPlcpPreamble (from, capabilities.IsShortPreamble ());
+              GetWifiRemoteStationManager ()->AddSupportedPhyPreamble (from, capabilities.IsShortPreamble ());
               SupportedRates rates = reassocReq.GetSupportedRates ();
               bool problem = false;
-              bool isHtStation = false;
-              bool isOfdmStation = false;
-              bool isErpStation = false;
-              bool isDsssStation = false;
-              for (uint8_t i = 0; i < m_stationManager->GetNBasicModes (); i++)
+              if (rates.GetNRates () == 0)
                 {
-                  WifiMode mode = m_stationManager->GetBasicMode (i);
-                  if (!rates.IsSupportedRate (mode.GetDataRate (m_phy->GetChannelWidth ())))
-                    {
-                      if ((mode.GetModulationClass () == WIFI_MOD_CLASS_DSSS) || (mode.GetModulationClass () == WIFI_MOD_CLASS_HR_DSSS))
-                        {
-                          isDsssStation = false;
-                        }
-                      else if (mode.GetModulationClass () == WIFI_MOD_CLASS_ERP_OFDM)
-                        {
-                          isErpStation = false;
-                        }
-                      else if (mode.GetModulationClass () == WIFI_MOD_CLASS_OFDM)
-                        {
-                          isOfdmStation = false;
-                        }
-                      if (isDsssStation == false && isErpStation == false && isOfdmStation == false)
-                        {
-                          problem = true;
-                          break;
-                        }
-                    }
-                  else
-                    {
-                      if ((mode.GetModulationClass () == WIFI_MOD_CLASS_DSSS) || (mode.GetModulationClass () == WIFI_MOD_CLASS_HR_DSSS))
-                        {
-                          isDsssStation = true;
-                        }
-                      else if (mode.GetModulationClass () == WIFI_MOD_CLASS_ERP_OFDM)
-                        {
-                          isErpStation = true;
-                        }
-                      else if (mode.GetModulationClass () == WIFI_MOD_CLASS_OFDM)
-                        {
-                          isOfdmStation = true;
-                        }
-                    }
+                  problem = true;
                 }
-              m_stationManager->AddSupportedErpSlotTime (from, capabilities.IsShortSlotTime () && isErpStation);
-              if (m_htSupported)
+              if (GetHtSupported ())
                 {
                   //check whether the HT STA supports all MCSs in Basic MCS Set
                   HtCapabilities htcapabilities = reassocReq.GetHtCapabilities ();
                   if (htcapabilities.IsSupportedMcs (0))
                     {
-                      isHtStation = true;
-                      for (uint8_t i = 0; i < m_stationManager->GetNBasicMcs (); i++)
+                      for (uint8_t i = 0; i < GetWifiRemoteStationManager ()->GetNBasicMcs (); i++)
                         {
-                          WifiMode mcs = m_stationManager->GetBasicMcs (i);
+                          WifiMode mcs = GetWifiRemoteStationManager ()->GetBasicMcs (i);
                           if (!htcapabilities.IsSupportedMcs (mcs.GetMcsValue ()))
                             {
                               problem = true;
@@ -1240,15 +1270,15 @@ ApWifiMac::Receive (Ptr<Packet> packet, const WifiMacHeader *hdr)
                         }
                     }
                 }
-              if (m_vhtSupported)
+              if (GetVhtSupported ())
                 {
                   //check whether the VHT STA supports all MCSs in Basic MCS Set
                   VhtCapabilities vhtcapabilities = reassocReq.GetVhtCapabilities ();
                   if (vhtcapabilities.GetVhtCapabilitiesInfo () != 0)
                     {
-                      for (uint8_t i = 0; i < m_stationManager->GetNBasicMcs (); i++)
+                      for (uint8_t i = 0; i < GetWifiRemoteStationManager ()->GetNBasicMcs (); i++)
                         {
-                          WifiMode mcs = m_stationManager->GetBasicMcs (i);
+                          WifiMode mcs = GetWifiRemoteStationManager ()->GetBasicMcs (i);
                           if (!vhtcapabilities.IsSupportedTxMcs (mcs.GetMcsValue ()))
                             {
                               problem = true;
@@ -1257,15 +1287,15 @@ ApWifiMac::Receive (Ptr<Packet> packet, const WifiMacHeader *hdr)
                         }
                     }
                 }
-              if (m_heSupported)
+              if (GetHeSupported ())
                 {
                   //check whether the HE STA supports all MCSs in Basic MCS Set
                   HeCapabilities hecapabilities = reassocReq.GetHeCapabilities ();
                   if (hecapabilities.GetSupportedMcsAndNss () != 0)
                     {
-                      for (uint8_t i = 0; i < m_stationManager->GetNBasicMcs (); i++)
+                      for (uint8_t i = 0; i < GetWifiRemoteStationManager ()->GetNBasicMcs (); i++)
                         {
-                          WifiMode mcs = m_stationManager->GetBasicMcs (i);
+                          WifiMode mcs = GetWifiRemoteStationManager ()->GetBasicMcs (i);
                           if (!hecapabilities.IsSupportedTxMcs (mcs.GetMcsValue ()))
                             {
                               problem = true;
@@ -1283,71 +1313,64 @@ ApWifiMac::Receive (Ptr<Packet> packet, const WifiMacHeader *hdr)
                 {
                   NS_LOG_DEBUG ("The Basic Rate set modes are supported by the station");
                   //update all its supported modes in its associated WifiRemoteStation
-                  for (uint8_t j = 0; j < m_phy->GetNModes (); j++)
+                  for (const auto & mode : GetWifiPhy ()->GetModeList ())
                     {
-                      WifiMode mode = m_phy->GetMode (j);
-                      if (rates.IsSupportedRate (mode.GetDataRate (m_phy->GetChannelWidth ())))
+                      if (rates.IsSupportedRate (mode.GetDataRate (GetWifiPhy ()->GetChannelWidth ())))
                         {
-                          m_stationManager->AddSupportedMode (from, mode);
+                          GetWifiRemoteStationManager ()->AddSupportedMode (from, mode);
                         }
                     }
-                  if (m_htSupported)
+                  if (GetErpSupported () && GetWifiRemoteStationManager ()->GetErpOfdmSupported (from) && capabilities.IsShortSlotTime ())
+                    {
+                      GetWifiRemoteStationManager ()->AddSupportedErpSlotTime (from, true);
+                    }
+                  if (GetHtSupported ())
                     {
                       HtCapabilities htCapabilities = reassocReq.GetHtCapabilities ();
                       if (htCapabilities.IsSupportedMcs (0))
                         {
-                          m_stationManager->AddStationHtCapabilities (from, htCapabilities);
+                          GetWifiRemoteStationManager ()->AddStationHtCapabilities (from, htCapabilities);
                         }
                     }
-                  if (m_vhtSupported)
+                  if (GetVhtSupported ())
                     {
                       VhtCapabilities vhtCapabilities = reassocReq.GetVhtCapabilities ();
                       //we will always fill in RxHighestSupportedLgiDataRate field at TX, so this can be used to check whether it supports VHT
                       if (vhtCapabilities.GetRxHighestSupportedLgiDataRate () > 0)
                         {
-                          m_stationManager->AddStationVhtCapabilities (from, vhtCapabilities);
-                          for (uint8_t i = 0; i < m_phy->GetNMcs (); i++)
+                          GetWifiRemoteStationManager ()->AddStationVhtCapabilities (from, vhtCapabilities);
+                          for (const auto & mcs : GetWifiPhy ()->GetMcsList (WIFI_MOD_CLASS_VHT))
                             {
-                              WifiMode mcs = m_phy->GetMcs (i);
-                              if (mcs.GetModulationClass () == WIFI_MOD_CLASS_VHT && vhtCapabilities.IsSupportedTxMcs (mcs.GetMcsValue ()))
+                              if (vhtCapabilities.IsSupportedTxMcs (mcs.GetMcsValue ()))
                                 {
-                                  m_stationManager->AddSupportedMcs (hdr->GetAddr2 (), mcs);
+                                  GetWifiRemoteStationManager ()->AddSupportedMcs (hdr->GetAddr2 (), mcs);
                                   //here should add a control to add basic MCS when it is implemented
                                 }
                             }
                         }
                     }
-                  if (m_htSupported || m_vhtSupported)
+                  if (GetHtSupported ())
                     {
                       ExtendedCapabilities extendedCapabilities = reassocReq.GetExtendedCapabilities ();
                       //TODO: to be completed
                     }
-                  if (m_heSupported)
+                  if (GetHeSupported ())
                     {
                       HeCapabilities heCapabilities = reassocReq.GetHeCapabilities ();
-                      //todo: once we support non constant rate managers, we should add checks here whether HE is supported by the peer
-                      m_stationManager->AddStationHeCapabilities (from, heCapabilities);
-                      for (uint8_t i = 0; i < m_phy->GetNMcs (); i++)
+                      if (heCapabilities.GetSupportedMcsAndNss () != 0)
                         {
-                          WifiMode mcs = m_phy->GetMcs (i);
-                          if (mcs.GetModulationClass () == WIFI_MOD_CLASS_HE && heCapabilities.IsSupportedTxMcs (mcs.GetMcsValue ()))
+                          GetWifiRemoteStationManager ()->AddStationHeCapabilities (from, heCapabilities);
+                          for (const auto & mcs : GetWifiPhy ()->GetMcsList (WIFI_MOD_CLASS_HE))
                             {
-                              m_stationManager->AddSupportedMcs (hdr->GetAddr2 (), mcs);
-                              //here should add a control to add basic MCS when it is implemented
+                              if (heCapabilities.IsSupportedTxMcs (mcs.GetMcsValue ()))
+                                {
+                                  GetWifiRemoteStationManager ()->AddSupportedMcs (hdr->GetAddr2 (), mcs);
+                                  //here should add a control to add basic MCS when it is implemented
+                                }
                             }
                         }
                     }
-                  m_stationManager->RecordWaitAssocTxOk (from);
-                  if (!isHtStation)
-                    {
-                      m_nonHtStations.push_back (hdr->GetAddr2 ());
-                      m_nonHtStations.unique ();
-                    }
-                  if (!isErpStation && isDsssStation)
-                    {
-                      m_nonErpStations.push_back (hdr->GetAddr2 ());
-                      m_nonErpStations.unique ();
-                    }
+                  GetWifiRemoteStationManager ()->RecordWaitAssocTxOk (from);
                   NS_LOG_DEBUG ("Send reassociation response with success status");
                   SendAssocResp (hdr->GetAddr2 (), true, true);
                 }
@@ -1356,28 +1379,23 @@ ApWifiMac::Receive (Ptr<Packet> packet, const WifiMacHeader *hdr)
           else if (hdr->IsDisassociation ())
             {
               NS_LOG_DEBUG ("Disassociation received from " << from);
-              m_stationManager->RecordDisassociated (from);
-              for (std::map<uint16_t, Mac48Address>::const_iterator j = m_staList.begin (); j != m_staList.end (); j++)
+              GetWifiRemoteStationManager ()->RecordDisassociated (from);
+              for (auto it = m_staList.begin (); it != m_staList.end (); ++it)
                 {
-                  if (j->second == from)
+                  if (it->second == from)
                     {
-                      m_staList.erase (j);
-                      break;
-                    }
-                }
-              for (std::list<Mac48Address>::const_iterator j = m_nonErpStations.begin (); j != m_nonErpStations.end (); j++)
-                {
-                  if ((*j) == from)
-                    {
-                      m_nonErpStations.erase (j);
-                      break;
-                    }
-                }
-              for (std::list<Mac48Address>::const_iterator j = m_nonHtStations.begin (); j != m_nonHtStations.end (); j++)
-                {
-                  if ((*j) == from)
-                    {
-                      m_nonHtStations.erase (j);
+                      m_staList.erase (it);
+                      m_deAssocLogger (it->first, it->second);
+                      if (GetWifiRemoteStationManager ()->GetDsssSupported (from) && !GetWifiRemoteStationManager ()->GetErpOfdmSupported (from))
+                        {
+                          m_numNonErpStations--;
+                        }
+                      if (!GetWifiRemoteStationManager ()->GetHtSupported (from))
+                        {
+                          m_numNonHtStations--;
+                        }
+                      UpdateShortSlotTimeEnabled ();
+                      UpdateShortPreambleEnabled ();
                       break;
                     }
                 }
@@ -1389,28 +1407,26 @@ ApWifiMac::Receive (Ptr<Packet> packet, const WifiMacHeader *hdr)
   //Invoke the receive handler of our parent class to deal with any
   //other frames. Specifically, this will handle Block Ack-related
   //Management Action frames.
-  RegularWifiMac::Receive (packet, hdr);
+  WifiMac::Receive (Create<WifiMacQueueItem> (packet, *hdr));
 }
 
 void
-ApWifiMac::DeaggregateAmsduAndForward (Ptr<Packet> aggregatedPacket, const WifiMacHeader *hdr)
+ApWifiMac::DeaggregateAmsduAndForward (Ptr<WifiMacQueueItem> mpdu)
 {
-  NS_LOG_FUNCTION (this << aggregatedPacket << hdr);
-  MsduAggregator::DeaggregatedMsdus packets = MsduAggregator::Deaggregate (aggregatedPacket);
-  for (MsduAggregator::DeaggregatedMsdusCI i = packets.begin ();
-       i != packets.end (); ++i)
+  NS_LOG_FUNCTION (this << *mpdu);
+  for (auto& i : *PeekPointer (mpdu))
     {
-      if ((*i).second.GetDestinationAddr () == GetAddress ())
+      if (i.second.GetDestinationAddr () == GetAddress ())
         {
-          ForwardUp ((*i).first, (*i).second.GetSourceAddr (),
-                     (*i).second.GetDestinationAddr ());
+          ForwardUp (i.first, i.second.GetSourceAddr (),
+                     i.second.GetDestinationAddr ());
         }
       else
         {
-          Mac48Address from = (*i).second.GetSourceAddr ();
-          Mac48Address to = (*i).second.GetDestinationAddr ();
+          Mac48Address from = i.second.GetSourceAddr ();
+          Mac48Address to = i.second.GetDestinationAddr ();
           NS_LOG_DEBUG ("forwarding QoS frame from=" << from << ", to=" << to);
-          ForwardDown ((*i).first, from, to, hdr->GetQosTid ());
+          ForwardDown (i.first->Copy (), from, to, mpdu->GetHeader ().GetQosTid ());
         }
     }
 }
@@ -1419,15 +1435,15 @@ void
 ApWifiMac::DoInitialize (void)
 {
   NS_LOG_FUNCTION (this);
-  m_beaconDca->Initialize ();
+  m_beaconTxop->Initialize ();
   m_beaconEvent.Cancel ();
   if (m_enableBeaconGeneration)
     {
       if (m_enableBeaconJitter)
         {
-          int64_t jitter = m_beaconJitter->GetValue (0, m_beaconInterval.GetMicroSeconds ());
-          NS_LOG_DEBUG ("Scheduling initial beacon for access point " << GetAddress () << " at time " << jitter << " microseconds");
-          m_beaconEvent = Simulator::Schedule (MicroSeconds (jitter), &ApWifiMac::SendOneBeacon, this);
+          Time jitter = MicroSeconds (static_cast<int64_t> (m_beaconJitter->GetValue (0, 1) * (GetBeaconInterval ().GetMicroSeconds ())));
+          NS_LOG_DEBUG ("Scheduling initial beacon for access point " << GetAddress () << " at time " << jitter);
+          m_beaconEvent = Simulator::Schedule (jitter, &ApWifiMac::SendOneBeacon, this);
         }
       else
         {
@@ -1435,37 +1451,19 @@ ApWifiMac::DoInitialize (void)
           m_beaconEvent = Simulator::ScheduleNow (&ApWifiMac::SendOneBeacon, this);
         }
     }
-  RegularWifiMac::DoInitialize ();
+  NS_ABORT_IF (!TraceConnectWithoutContext ("AckedMpdu", MakeCallback (&ApWifiMac::TxOk, this)));
+  NS_ABORT_IF (!TraceConnectWithoutContext ("DroppedMpdu", MakeCallback (&ApWifiMac::TxFailed, this)));
+  WifiMac::DoInitialize ();
+  UpdateShortSlotTimeEnabled ();
+  UpdateShortPreambleEnabled ();
 }
 
 bool
 ApWifiMac::GetUseNonErpProtection (void) const
 {
-  bool useProtection = !m_nonErpStations.empty () && m_enableNonErpProtection;
-  m_stationManager->SetUseNonErpProtection (useProtection);
+  bool useProtection = (m_numNonErpStations > 0) && m_enableNonErpProtection;
+  GetWifiRemoteStationManager ()->SetUseNonErpProtection (useProtection);
   return useProtection;
-}
-
-bool
-ApWifiMac::GetRifsMode (void) const
-{
-  bool rifsMode = false;
-  if (m_htSupported && !m_vhtSupported) //RIFS mode is forbidden for VHT
-    {
-      if (m_nonHtStations.empty () || !m_disableRifs)
-        {
-          rifsMode = true;
-        }
-    }
-  if (GetRifsSupported () && rifsMode)
-    {
-      m_stationManager->SetRifsPermitted (true);
-    }
-  else
-    {
-      m_stationManager->SetRifsPermitted (false);
-    }
-  return rifsMode;
 }
 
 uint16_t
@@ -1479,8 +1477,69 @@ ApWifiMac::GetNextAssociationId (void)
           return nextAid;
         }
     }
-  NS_ASSERT_MSG (false, "No free association ID available!");
+  NS_FATAL_ERROR ("No free association ID available!");
   return 0;
+}
+
+const std::map<uint16_t, Mac48Address>&
+ApWifiMac::GetStaList (void) const
+{
+  return m_staList;
+}
+
+uint16_t
+ApWifiMac::GetAssociationId (Mac48Address addr) const
+{
+  return GetWifiRemoteStationManager ()->GetAssociationId (addr);
+}
+
+uint8_t
+ApWifiMac::GetBufferStatus (uint8_t tid, Mac48Address address) const
+{
+  auto it = m_bufferStatus.find (WifiAddressTidPair (address, tid));
+  if (it == m_bufferStatus.end ()
+      || it->second.timestamp + m_bsrLifetime < Simulator::Now ())
+    {
+      return 255;
+    }
+  return it->second.value;
+}
+
+void
+ApWifiMac::SetBufferStatus (uint8_t tid, Mac48Address address, uint8_t size)
+{
+  if (size == 255)
+    {
+      // no point in storing an unspecified size
+      m_bufferStatus.erase (WifiAddressTidPair (address, tid));
+    }
+  else
+    {
+      m_bufferStatus[WifiAddressTidPair (address, tid)] = {size, Simulator::Now ()};
+    }
+}
+
+uint8_t
+ApWifiMac::GetMaxBufferStatus (Mac48Address address) const
+{
+  uint8_t maxSize = 0;
+  bool found = false;
+
+  for (uint8_t tid = 0; tid < 8; tid++)
+    {
+      uint8_t size = GetBufferStatus (tid, address);
+      if (size != 255)
+        {
+          maxSize = std::max (maxSize, size);
+          found = true;
+        }
+    }
+
+  if (found)
+    {
+      return maxSize;
+    }
+  return 255;
 }
 
 } //namespace ns3

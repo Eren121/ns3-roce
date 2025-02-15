@@ -122,7 +122,7 @@ LrWpanPhy::GetTypeId (void)
 
 LrWpanPhy::LrWpanPhy (void)
   : m_edRequest (),
-    m_setTRXState ()
+  m_setTRXState ()
 {
   m_trxState = IEEE_802_15_4_PHY_TRX_OFF;
   m_trxStatePending = IEEE_802_15_4_PHY_IDLE;
@@ -146,7 +146,7 @@ LrWpanPhy::LrWpanPhy (void)
   // default -110 dBm in W for 2.4 GHz
   m_rxSensitivity = pow (10.0, -106.58 / 10.0) / 1000.0;
   LrWpanSpectrumValueHelper psdHelper;
-  m_txPsd = psdHelper.CreateTxPowerSpectralDensity (m_phyPIBAttributes.phyTransmitPower,
+  m_txPsd = psdHelper.CreateTxPowerSpectralDensity (GetNominalTxPowerFromPib (m_phyPIBAttributes.phyTransmitPower),
                                                     m_phyPIBAttributes.phyCurrentChannel);
   m_noise = psdHelper.CreateNoisePowerSpectralDensity (m_phyPIBAttributes.phyCurrentChannel);
   m_signal = Create<LrWpanInterferenceHelper> (m_noise->GetSpectrumModel ());
@@ -206,7 +206,7 @@ LrWpanPhy::GetDevice (void) const
 
 
 Ptr<MobilityModel>
-LrWpanPhy::GetMobility (void)
+LrWpanPhy::GetMobility (void) const
 {
   NS_LOG_FUNCTION (this);
   return m_mobility;
@@ -259,8 +259,8 @@ LrWpanPhy::GetRxSpectrumModel (void) const
     }
 }
 
-Ptr<AntennaModel>
-LrWpanPhy::GetRxAntenna (void)
+Ptr<Object>
+LrWpanPhy::GetAntenna (void) const
 {
   NS_LOG_FUNCTION (this);
   return m_antenna;
@@ -330,7 +330,7 @@ LrWpanPhy::StartRx (Ptr<SpectrumSignalParameters> spectrumRxParams)
 
       // Add any incoming packet to the current interference before checking the
       // SINR.
-      NS_LOG_DEBUG (this << " receiving packet with power: " << 10 * log10(LrWpanSpectrumValueHelper::TotalAvgPower (lrWpanRxParams->psd, m_phyPIBAttributes.phyCurrentChannel)) + 30 << "dBm");
+      NS_LOG_DEBUG (this << " receiving packet with power: " << 10 * log10 (LrWpanSpectrumValueHelper::TotalAvgPower (lrWpanRxParams->psd, m_phyPIBAttributes.phyCurrentChannel)) + 30 << "dBm");
       m_signal->AddSignal (lrWpanRxParams->psd);
       Ptr<SpectrumValue> interferenceAndNoise = m_signal->GetSignalPsd ();
       *interferenceAndNoise -= *lrWpanRxParams->psd;
@@ -363,7 +363,7 @@ LrWpanPhy::StartRx (Ptr<SpectrumSignalParameters> spectrumRxParams)
       CheckInterference ();
 
       // Add the incoming packet to the current interference after we have
-      // checked for successfull reception of the current packet for the time
+      // checked for successful reception of the current packet for the time
       // before the additional interference.
       m_signal->AddSignal (lrWpanRxParams->psd);
     }
@@ -465,7 +465,7 @@ LrWpanPhy::EndRx (Ptr<SpectrumSignalParameters> par)
 
   if (params == 0)
     {
-      NS_LOG_LOGIC ("Node: " << m_device->GetAddress() << " Removing interferent: " << *(par->psd));
+      NS_LOG_LOGIC ("Node: " << m_device->GetAddress () << " Removing interferent: " << *(par->psd));
       return;
     }
 
@@ -938,7 +938,8 @@ LrWpanPhy::PlmeSetAttributeRequest (LrWpanPibAttributeIdentifier id,
               }
             m_phyPIBAttributes.phyCurrentChannel = attribute->phyCurrentChannel;
             LrWpanSpectrumValueHelper psdHelper;
-            m_txPsd = psdHelper.CreateTxPowerSpectralDensity (m_phyPIBAttributes.phyTransmitPower, m_phyPIBAttributes.phyCurrentChannel);
+            m_txPsd = psdHelper.CreateTxPowerSpectralDensity (GetNominalTxPowerFromPib (m_phyPIBAttributes.phyTransmitPower),
+                                                                                        m_phyPIBAttributes.phyCurrentChannel);
           }
         break;
       }
@@ -956,15 +957,17 @@ LrWpanPhy::PlmeSetAttributeRequest (LrWpanPibAttributeIdentifier id,
       }
     case phyTransmitPower:
       {
-        if (attribute->phyTransmitPower > 0xbf)
+        if (attribute->phyTransmitPower & 0xC0)
           {
+            NS_LOG_LOGIC ("LrWpanPhy::PlmeSetAttributeRequest error - can not change read-only attribute bits.");
             status = IEEE_802_15_4_PHY_INVALID_PARAMETER;
           }
         else
           {
             m_phyPIBAttributes.phyTransmitPower = attribute->phyTransmitPower;
             LrWpanSpectrumValueHelper psdHelper;
-            m_txPsd = psdHelper.CreateTxPowerSpectralDensity (m_phyPIBAttributes.phyTransmitPower, m_phyPIBAttributes.phyCurrentChannel);
+            m_txPsd = psdHelper.CreateTxPowerSpectralDensity (GetNominalTxPowerFromPib (m_phyPIBAttributes.phyTransmitPower),
+                                                              m_phyPIBAttributes.phyCurrentChannel);
           }
         break;
       }
@@ -1415,6 +1418,29 @@ LrWpanPhy::GetPhySymbolsPerOctet (void) const
 
   return dataSymbolRates [m_phyOption].symbolRate / (dataSymbolRates [m_phyOption].bitRate / 8);
 }
+
+int8_t
+LrWpanPhy::GetNominalTxPowerFromPib (uint8_t phyTransmitPower)
+{
+  NS_LOG_FUNCTION (this << +phyTransmitPower);
+
+  // The nominal Tx power is stored in the PIB as a 6-bit
+  // twos-complement, signed number.
+
+  // The 5 LSBs can be copied - as their representation
+  // is the same for unsigned and signed integers.
+  int8_t nominalTxPower = phyTransmitPower & 0x1F;
+
+  // Now check the 6th LSB (the "sign" bit).
+  // It's a twos-complement format, so the "sign"
+  // bit represents -2^5 = -32.
+  if (phyTransmitPower & 0x20)
+    {
+      nominalTxPower -= 32;
+    }
+  return nominalTxPower;
+}
+
 
 int64_t
 LrWpanPhy::AssignStreams (int64_t stream)

@@ -80,8 +80,16 @@ We expect the typical use case for this environment will be to analyze the
 behavior of native applications and protocol suites in the presence of large
 simulated |ns3| networks.
 
+The basic testbed mode of emulation uses raw sockets.  Two other variants
+(netmap-based and DPDK-based emulation) have been recently added; these
+make use of more recent network interface cards that make use of
+directly-mapped memory capabilities to improve packet processing efficiency.
+
 For more details:
 
-* :doc:`FdNetDevice <fd-net-device>` chapter.
-* :doc:`TapBridge <tap>` chapter.
+.. toctree::
 
+   fd-net-device
+   netmap-net-device
+   dpdk-net-device
+   tap

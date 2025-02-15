@@ -310,10 +310,11 @@ private:
   /**
    * \brief Lookup in the forwarding table for destination.
    * \param dest destination address
+   * \param setSource set source address in the route
    * \param interface output interface if any (put 0 otherwise)
    * \return Ipv6Route to route the packet to reach dest address
    */
-  Ptr<Ipv6Route> Lookup (Ipv6Address dest, Ptr<NetDevice> = 0);
+  Ptr<Ipv6Route> Lookup (Ipv6Address dest, bool setSource, Ptr<NetDevice> = 0);
 
   /**
    * Receive and process unicast packet
@@ -395,8 +396,8 @@ private:
   /// Socket list type const iterator
   typedef std::map<Ptr<Socket>, uint32_t>::const_iterator SocketListCI;
 
-  SocketList m_sendSocketList; //!< list of sockets for sending (socket, interface index)
-  Ptr<Socket> m_recvSocket; //!< receive socket
+  SocketList m_unicastSocketList; //!< list of sockets for unicast messages (socket, interface index)
+  Ptr<Socket> m_multicastRecvSocket; //!< multicast receive socket
 
   EventId m_nextUnsolicitedUpdate; //!< Next Unsolicited Update event
   EventId m_nextTriggeredUpdate; //!< Next Triggered Update event

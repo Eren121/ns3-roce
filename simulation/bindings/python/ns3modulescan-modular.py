@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 
 import sys
 import os.path
@@ -110,7 +110,7 @@ class PreScanHook:
 
         ## classes
         if isinstance(pygccxml_definition, class_t):
-            print >> sys.stderr, pygccxml_definition
+            print(pygccxml_definition, file=sys.stderr)
             # no need for helper classes to allow subclassing in Python, I think...
             #if pygccxml_definition.name.endswith('Helper'):
             #    global_annotations['allow_subclassing'] = 'false'
@@ -199,7 +199,7 @@ class PreScanHook:
             except KeyError:
                 pass
             else:
-                for key,value in annotations.items():
+                for key,value in list(annotations.items()):
                     if key == 'params':
                         parameter_annotations.update (value)
                         del annotations['params']
@@ -232,12 +232,12 @@ def ns3_module_scan(top_builddir, module_name, headers_map, output_file_name, cf
     #module_parser.add_post_scan_hook(post_scan_hook)
 
     castxml_options = dict(
-        include_paths=[top_builddir],
+        include_paths=[top_builddir, os.path.join(top_builddir, "include")],
          define_symbols={
             #'NS3_ASSERT_ENABLE': None,
             #'NS3_LOG_ENABLE': None,
             },
-        cflags=('-std=c++14 %s' % cflags)
+        cflags=('-std=c++17 %s' % cflags)
         )
 
     try:
@@ -251,11 +251,13 @@ def ns3_module_scan(top_builddir, module_name, headers_map, output_file_name, cf
     output_file = open(output_file_name, "wt")
     output_sink = FileCodeSink(output_file)
 
-    # if there exists a scan-header.h file in src/<module>/bindings,
+    # if there exists a scan-header.h file in src/<module>/bindings or contrib/<module>/bindings,
     # scan it, otherwise scan ns3/xxxx-module.h.
     scan_header = os.path.join(os.path.dirname(output_file_name), "scan-header.h")
     if not os.path.exists(scan_header):
         scan_header = os.path.join(top_builddir, "ns3", "%s-module.h" % module_name)
+    if not os.path.exists(scan_header):
+        scan_header = os.path.join(top_builddir, "include", "ns3", "%s-module.h" % module_name)
 
     module_parser.parse_init([scan_header],
                              None, whitelist_paths=[top_builddir],
@@ -273,12 +275,18 @@ def ns3_module_scan(top_builddir, module_name, headers_map, output_file_name, cf
     module_parser.parse_finalize()
 
     output_file.close()
-    os.chmod(output_file_name, 0400)
+    os.chmod(output_file_name, 0o400)
 
 
 if __name__ == '__main__':
     if len(sys.argv) != 6:
-        print "ns3modulescan-modular.py top_builddir module_path module_headers output_file_name cflags"
+        print("ns3modulescan-modular.py top_builddir module_path module_headers output_file_name cflags")
         sys.exit(1)
-    ns3_module_scan(sys.argv[1], sys.argv[2], eval(sys.argv[3]), sys.argv[4], sys.argv[5])
+    if os.path.exists(sys.argv[3]):
+        import json
+        with open(sys.argv[3], "r") as f:
+            module_headers = json.load(f)
+    else:
+        module_headers = eval(sys.argv[3])
+    ns3_module_scan(sys.argv[1], sys.argv[2], module_headers, sys.argv[4], sys.argv[5])
     sys.exit(0)

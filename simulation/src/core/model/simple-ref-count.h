@@ -43,7 +43,7 @@ namespace ns3 {
  * This template can be used to give reference-counting powers
  * to a class. This template does not require this class to
  * have a virtual destructor or a specific (or any) parent class.
- * 
+ *
  * \note If you are moving to this template from the RefCountBase class,
  * you need to be careful to mark appropriately your destructor virtual
  * if needed. i.e., if your class has subclasses, _do_ mark your destructor
@@ -80,15 +80,16 @@ public:
    * Copy constructor
    * \param [in] o The object to copy into this one.
    */
-  SimpleRefCount (const SimpleRefCount &o)
+  SimpleRefCount (const SimpleRefCount & o [[maybe_unused]])
     : m_count (1)
-  {}
+  {
+  }
   /**
    * Assignment operator
    * \param [in] o The object to copy
-   * \returns The copy of \p o
+   * \returns The copy of \pname{o}
    */
-  SimpleRefCount &operator = (const SimpleRefCount &o)
+  SimpleRefCount &operator = ([[maybe_unused]] const SimpleRefCount &o)
   {
     return *this;
   }
@@ -100,12 +101,12 @@ public:
    */
   inline void Ref (void) const
   {
-    NS_ASSERT (m_count < std::numeric_limits<uint32_t>::max());
+    NS_ASSERT (m_count < std::numeric_limits<uint32_t>::max ());
     m_count++;
   }
   /**
    * Decrement the reference count. This method should not be called
-   * by user code. SimpleRefCount instances are expected to be used in 
+   * by user code. SimpleRefCount instances are expected to be used in
    * conjunction with the Ptr template which would make calling Ref
    * unnecessary and dangerous.
    */

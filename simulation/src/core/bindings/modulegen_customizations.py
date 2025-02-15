@@ -62,7 +62,7 @@ PyObject *item = PyList_GET_ITEM(%(py_name)s, %(idx)s);
                              '"argument %s must be a list of strings");') % self.name)
         wrapper.before_call.write_code(
             '#if PY_VERSION_HEX >= 0x03000000\n'
-            '{var}[{idx}] = PyUnicode_AsUTF8(item);\n'
+            '{var}[{idx}] = const_cast<char *> (PyUnicode_AsUTF8(item));\n'
             '#else\n'
             '{var}[{idx}] = PyString_AsString(item);\n'
             '#endif\n'
@@ -161,17 +161,14 @@ def post_register_types(root_module):
 
     enabled_features = os.environ['NS3_ENABLED_FEATURES'].split(',')    
 
-    if 'Threading' not in enabled_features:
-        for clsname in ['SystemThread', 'SystemMutex', 'SystemCondition', 'CriticalSection',
-                        'SimpleRefCount< ns3::SystemThread, ns3::empty, ns3::DefaultDeleter<ns3::SystemThread> >']:
-            root_module.classes.remove(root_module['ns3::%s' % clsname])
-
     if 'RealTime' not in enabled_features:
         for clsname in ['WallClockSynchronizer', 'RealtimeSimulatorImpl']:
             root_module.classes.remove(root_module['ns3::%s' % clsname])
         root_module.enums.remove(root_module['ns3::RealtimeSimulatorImpl::SynchronizationMode'])
 
-    root_module.after_init.write_code("PyEval_InitThreads();")
+    # Issue 318: PyEval_InitThreads deprecated after Python 3.6
+    if sys.hexversion < 0x03070000:
+        root_module.after_init.write_code("PyEval_InitThreads();")
 
 # these are already in the main script, so commented out here
 # Object_customizations(root_module)

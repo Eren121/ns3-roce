@@ -31,17 +31,13 @@
  */
 
 #include <ctime>
-
 #include <sstream>
-
 #include "ns3/core-module.h"
 #include "ns3/network-module.h"
 #include "ns3/mobility-module.h"
-#include "ns3/wifi-module.h"
 #include "ns3/internet-module.h"
-
 #include "ns3/stats-module.h"
-
+#include "ns3/yans-wifi-helper.h"
 #include "wifi-example-apps.h"
 
 using namespace ns3;
@@ -80,7 +76,7 @@ int main (int argc, char *argv[]) {
   }
 
   // Set up command line parameters used to control the experiment.
-  CommandLine cmd;
+  CommandLine cmd (__FILE__);
   cmd.AddValue ("distance", "Distance apart to place nodes (in meters).",
                 distance);
   cmd.AddValue ("format", "Format to use for data output.",
@@ -98,7 +94,7 @@ int main (int argc, char *argv[]) {
       return -1;
     }
 
-  #ifndef STATS_HAS_SQLITE3
+  #ifndef HAVE_SQLITE3
   if (format == "db") {
       NS_LOG_ERROR ("sqlite support not compiled in.");
       return -1;
@@ -125,7 +121,7 @@ int main (int argc, char *argv[]) {
   WifiHelper wifi;
   WifiMacHelper wifiMac;
   wifiMac.SetType ("ns3::AdhocWifiMac");
-  YansWifiPhyHelper wifiPhy = YansWifiPhyHelper::Default ();
+  YansWifiPhyHelper wifiPhy;
   YansWifiChannelHelper wifiChannel = YansWifiChannelHelper::Default ();
   wifiPhy.SetChannel (wifiChannel.Create ());
   NetDeviceContainer nodeDevices = wifi.Install (wifiPhy, wifiMac, nodes);
@@ -304,7 +300,7 @@ int main (int argc, char *argv[]) {
       NS_LOG_INFO ("Creating omnet formatted data output.");
       output = CreateObject<OmnetDataOutput>();
     } else if (format == "db") {
-    #ifdef STATS_HAS_SQLITE3
+    #ifdef HAVE_SQLITE3
       NS_LOG_INFO ("Creating sqlite formatted data output.");
       output = CreateObject<SqliteDataOutput>();
     #endif
@@ -321,4 +317,5 @@ int main (int argc, char *argv[]) {
   Simulator::Destroy ();
 
   // end main
+  return 0;
 }

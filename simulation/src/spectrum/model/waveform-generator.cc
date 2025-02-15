@@ -88,7 +88,7 @@ WaveformGenerator::GetTypeId (void)
                      MakeTraceSourceAccessor (&WaveformGenerator::m_phyTxStartTrace),
                      "ns3::Packet::TracedCallback")
     .AddTraceSource ("TxEnd",
-                     "Trace fired when a previosuly started transmission is finished",
+                     "Trace fired when a previously started transmission is finished",
                      MakeTraceSourceAccessor (&WaveformGenerator::m_phyTxEndTrace),
                      "ns3::Packet::TracedCallback")
   ;
@@ -105,7 +105,7 @@ WaveformGenerator::GetDevice () const
 
 
 Ptr<MobilityModel>
-WaveformGenerator::GetMobility ()
+WaveformGenerator::GetMobility () const
 {
   return m_mobility;
 }
@@ -154,8 +154,8 @@ WaveformGenerator::SetTxPowerSpectralDensity (Ptr<SpectrumValue> txPsd)
   m_txPowerSpectralDensity = txPsd;
 }
 
-Ptr<AntennaModel>
-WaveformGenerator::GetRxAntenna ()
+Ptr<Object>
+WaveformGenerator::GetAntenna () const
 {
   return m_antenna;
 }

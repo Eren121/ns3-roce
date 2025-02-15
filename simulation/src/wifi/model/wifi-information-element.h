@@ -185,10 +185,13 @@ typedef uint8_t WifiInformationElementId;
 #define IE_OPERATING_MODE_NOTIFICATION          ((WifiInformationElementId)199)
 // 200 to 220 are reserved
 #define IE_VENDOR_SPECIFIC                      ((WifiInformationElementId)221)
-// 222 to 255 are reserved
-#define IE_HE_CAPABILITIES                      ((WifiInformationElementId)255) //todo: not defined yet in the standard!
-#define IE_HE_OPERATION                         ((WifiInformationElementId)255) //todo: not defined yet in the standard!
+// 222 to 254 are reserved
+#define IE_EXTENSION                            ((WifiInformationElementId)255)
 
+#define IE_EXT_HE_CAPABILITIES                  ((WifiInformationElementId)35)
+#define IE_EXT_HE_OPERATION                     ((WifiInformationElementId)36)
+#define IE_EXT_UORA_PARAMETER_SET               ((WifiInformationElementId)37)
+#define IE_EXT_MU_EDCA_PARAMETER_SET            ((WifiInformationElementId)38)
 
 /**
  * \brief Information element, as defined in 802.11-2007 standard
@@ -238,7 +241,7 @@ public:
    *
    * \return an iterator
    */
-  Buffer::Iterator Serialize (Buffer::Iterator i) const;
+  virtual Buffer::Iterator Serialize (Buffer::Iterator i) const;
   /**
    * Deserialize entire IE, which must be present. The iterator
    * passed in must be pointing at the Element ID (i.e., the very
@@ -265,9 +268,9 @@ public:
    * Get the size of the serialized IE including Element ID and
    * length fields.
    *
-   * \return the size of the serialized IE
+   * \return the size of the serialized IE in bytes
    */
-  uint16_t GetSerializedSize () const;
+  virtual uint16_t GetSerializedSize () const;
 
   // Each subclass must implement these pure virtual functions:
   /**
@@ -302,6 +305,11 @@ public:
    */
   virtual uint8_t DeserializeInformationField (Buffer::Iterator start,
                                                uint8_t length) = 0;
+
+  /**
+   * \returns Own unique Element ID Extension
+   */
+  virtual WifiInformationElementId ElementIdExt () const;
 
   // In addition, a subclass may optionally override the following...
   /**

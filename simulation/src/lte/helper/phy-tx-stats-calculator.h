@@ -94,13 +94,13 @@ public:
   std::string GetDlTxOutputFilename (void);
 
   /**
-   * Notifies the stats calculator that an downlink trasmission has occurred.
+   * Notifies the stats calculator that an downlink transmission has occurred.
    * @param params Trace information regarding PHY transmission stats
    */
   void DlPhyTransmission (PhyTransmissionStatParameters params);
 
   /**
-   * Notifies the stats calculator that an uplink trasmission has occurred.
+   * Notifies the stats calculator that an uplink transmission has occurred.
    * @param params Trace information regarding PHY transmission stats
    */
   void UlPhyTransmission (PhyTransmissionStatParameters params);
@@ -143,6 +143,15 @@ private:
    */
   bool m_ulTxFirstWrite;
 
+  /**
+   * DL TX PHY statistics output trace file
+   */
+  std::ofstream m_dlTxOutFile;
+
+  /**
+   * UL TX PHY statistics output trace file
+   */
+  std::ofstream m_ulTxOutFile;
 };
 
 } // namespace ns3

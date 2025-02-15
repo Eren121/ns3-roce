@@ -25,17 +25,18 @@
 #include <stdint.h>
 #include <string>
 #include <map>
+#include <tuple>
 #include "ns3/traced-callback.h"
-#include "ns3/event-id.h"
 #include "ns3/nstime.h"
 #include "ns3/net-device.h"
-#include "ns3/packet.h"
-#include "sixlowpan-header.h"
 #include "ns3/random-variable-stream.h"
+#include "ns3/simulator.h"
 
 namespace ns3 {
 
 class Node;
+class UniformRandomVariable;
+class EventId;
 
 /**
  * \defgroup sixlowpan 6LoWPAN
@@ -49,6 +50,12 @@ class Node;
  * <li> HC2 encoding is not supported </li>
  * <li> IPHC's SAC and DAC are not supported </li>
  *</ul>
+ */
+
+/**
+ * \ingroup sixlowpan
+ * \ingroup tests
+ * \defgroup sixlowpan-tests 6LoWPAN module tests
  */
 
 /**
@@ -69,9 +76,11 @@ public:
    */
   enum DropReason
   {
-    DROP_FRAGMENT_TIMEOUT = 1, /**< Fragment timeout exceeded */
-    DROP_FRAGMENT_BUFFER_FULL, /**< Fragment buffer size exceeded */
-    DROP_UNKNOWN_EXTENSION /**< Unsupported compression kind */
+    DROP_FRAGMENT_TIMEOUT = 1,    /**< Fragment timeout exceeded */
+    DROP_FRAGMENT_BUFFER_FULL,    /**< Fragment buffer size exceeded */
+    DROP_UNKNOWN_EXTENSION,       /**< Unsupported compression kind */
+    DROP_DISALLOWED_COMPRESSION,  /**< HC1 while in IPHC mode or viceversa */
+    DROP_SATETFUL_DECOMPRESSION_PROBLEM, /**< Decompression failed due to missing or expired context */
   };
 
   /**
@@ -84,6 +93,10 @@ public:
    * Constructor for the SixLowPanNetDevice.
    */
   SixLowPanNetDevice ();
+
+  // Delete copy constructor and assignment operator to avoid misuse
+  SixLowPanNetDevice (SixLowPanNetDevice const &) = delete;
+  SixLowPanNetDevice & operator = (SixLowPanNetDevice const &) = delete;
 
   // inherited from NetDevice base class
   virtual void SetIfIndex (const uint32_t index);
@@ -155,12 +168,12 @@ public:
    * is deprecated and will be changed to \c Ptr<const SixLowPanNetDevice>
    * in a future release.
    */
-  typedef void (* RxTxTracedCallback)
-    (Ptr<const Packet> packet, Ptr<SixLowPanNetDevice> sixNetDevice,
-     uint32_t ifindex);
+  typedef void (* RxTxTracedCallback)(Ptr<const Packet> packet,
+                                      Ptr<SixLowPanNetDevice> sixNetDevice,
+                                      uint32_t ifindex);
 
   /**
-   * TracedCallback signature for
+   * TracedCallback signature fo packet drop events
    *
    * \param [in] reason The reason for the drop.
    * \param [in] packet The packet.
@@ -170,28 +183,67 @@ public:
    * is deprecated and will be changed to \c Ptr<const SixLowPanNetDevice>
    * in a future release.
    */
-  typedef void (* DropTracedCallback)
-    (DropReason reason, Ptr<const Packet> packet,
-     Ptr<SixLowPanNetDevice> sixNetDevice,
-     uint32_t ifindex);
-   
+  typedef void (* DropTracedCallback)(DropReason reason,
+                                      Ptr<const Packet> packet,
+                                      Ptr<SixLowPanNetDevice> sixNetDevice,
+                                      uint32_t ifindex);
+
+  /**
+   * Add, remove, or update a context used in IPHC stateful compression.
+   *
+   * A context with a zero validLifetime will be immediately removed.
+   *
+   * \param [in] contextId context id (most be between 0 and 15 included).
+   * \param [in] contextPrefix context prefix to be used in compression/decompression.
+   * \param [in] compressionAllowed compression and decompression allowed (true), decompression only (false).
+   * \param [in] validLifetime validity time (relative to the actual time).
+   *
+   */
+  void AddContext (uint8_t contextId, Ipv6Prefix contextPrefix, bool compressionAllowed, Time validLifetime);
+
+  /**
+   * Get a context used in IPHC stateful compression.
+   *
+   * \param [in] contextId context id (most be between 0 and 15 included).
+   * \param [out] contextPrefix context prefix to be used in compression/decompression.
+   * \param [out] compressionAllowed compression and decompression allowed (true), decompression only (false).
+   * \param [out] validLifetime validity time (relative to the actual time).
+   *
+   * \return false if the context has not been found.
+   *
+   */
+  bool GetContext (uint8_t contextId, Ipv6Prefix& contextPrefix, bool& compressionAllowed, Time& validLifetime);
+
+  /**
+   * Renew a context used in IPHC stateful compression.
+   *
+   * The context will have its lifetime extended and its validity for compression re-enabled.
+   *
+   * \param [in] contextId context id (most be between 0 and 15 included).
+   * \param [in] validLifetime validity time (relative to the actual time).
+   */
+  void RenewContext (uint8_t contextId, Time validLifetime);
+
+  /**
+   * Invalidate a context used in IPHC stateful compression.
+   *
+   * An invalid context will not be used for compression but it will be used for decompression.
+   *
+   * \param [in] contextId context id (most be between 0 and 15 included).
+   */
+  void InvalidateContext (uint8_t contextId);
+
+  /**
+   * Remove a context used in IPHC stateful compression.
+   *
+   * \param [in] contextId context id (most be between 0 and 15 included).
+   */
+  void RemoveContext (uint8_t contextId);
+
 protected:
   virtual void DoDispose (void);
 
 private:
-  /**
-   * \brief Copy constructor
-   *
-   * Defined and unimplemented to avoid misuse.
-   */
-  SixLowPanNetDevice (SixLowPanNetDevice const &);
-  /**
-   * \brief Copy constructor
-   *
-   * Defined and unimplemented to avoid misuse.
-   * \returns
-   */
-  SixLowPanNetDevice& operator= (SixLowPanNetDevice const &);
   /**
    * \brief Receives all the packets from a NetDevice for further processing.
    * \param [in] device The NetDevice the packet ws received from.
@@ -200,7 +252,6 @@ private:
    * \param [in] source The source address.
    * \param [in] destination The destination address.
    * \param [in] packetType The packet kind (e.g., HOST, BROADCAST, etc.).
-   * \return The IPv6 link-local address.
    */
   void ReceiveFromDevice (Ptr<NetDevice> device, Ptr<const Packet> packet, uint16_t protocol,
                           Address const &source, Address const &destination, PacketType packetType);
@@ -273,21 +324,6 @@ private:
   TracedCallback<DropReason, Ptr<const Packet>, Ptr<SixLowPanNetDevice>, uint32_t> m_dropTrace;
 
   /**
-   * \brief Make a link-local address from a MAC address.
-   * \param [in] addr The MAC address.
-   * \return The IPv6 link-local address.
-   */
-  Ipv6Address MakeLinkLocalAddressFromMac (Address const &addr);
-
-  /**
-   * \brief Make a global address from a MAC address.
-   * \param [in] addr the MAC address.
-   * \param [in] prefix The address prefix.
-   * \return The IPv6 address.
-   */
-  Ipv6Address MakeGlobalAddressFromMac (Address const &addr, Ipv6Address prefix);
-
-  /**
    * \brief Compress the headers according to HC1 compression.
    * \param [in] packet The packet to be compressed.
    * \param [in] src The MAC source address.
@@ -325,8 +361,9 @@ private:
    * \param [in] packet The packet to be compressed.
    * \param [in] src The MAC source address.
    * \param [in] dst The MAC destination address.
+   * \return true if the packet can not be decompressed due to wrong context informations.
    */
-  void DecompressLowPanIphc (Ptr<Packet> packet, Address const &src, Address const &dst);
+  bool DecompressLowPanIphc (Ptr<Packet> packet, Address const &src, Address const &dst);
 
   /**
    * \brief Compress the headers according to NHC compression.
@@ -345,9 +382,9 @@ private:
    * \param [in] dst The MAC destination address.
    * \param [in] srcAddress The IPv6 source address.
    * \param [in] dstAddress The IPv6 destination address.
-   * \return The decompressed header type.
+   * \return A std::pair containing the decompressed header type and a flag - true if the packet can not be decompressed due to wrong context informations.
    */
-  uint8_t DecompressLowPanNhc (Ptr<Packet> packet, Address const &src, Address const &dst, Ipv6Address srcAddress, Ipv6Address dstAddress);
+  std::pair<uint8_t, bool> DecompressLowPanNhc (Ptr<Packet> packet, Address const &src, Address const &dst, Ipv6Address srcAddress, Ipv6Address dstAddress);
 
   /**
    * \brief Compress the headers according to NHC compression.
@@ -368,7 +405,29 @@ private:
   /**
    * Fragment identifier type: src/dst address src/dst port.
    */
-  typedef std::pair< std::pair<Address, Address>, std::pair<uint16_t, uint16_t> > FragmentKey;
+  typedef std::pair< std::pair<Address, Address>, std::pair<uint16_t, uint16_t> > FragmentKey_t;
+
+  /// Container for fragment timeouts.
+  typedef std::list< std::tuple <Time, FragmentKey_t, uint32_t > > FragmentsTimeoutsList_t;
+  /// Container Iterator for fragment timeouts.
+  typedef std::list< std::tuple <Time, FragmentKey_t, uint32_t > >::iterator FragmentsTimeoutsListI_t;
+
+  /**
+   * \brief Set a new timeout "event" for a fragmented packet
+   * \param key the fragment identification
+   * \param iif input interface of the packet
+   * \return an iterator to the inserted "event"
+   */
+  FragmentsTimeoutsListI_t SetTimeout (FragmentKey_t key, uint32_t iif);
+
+  /**
+   * \brief Handles a fragmented packet timeout
+   */
+  void HandleTimeout (void);
+
+  FragmentsTimeoutsList_t m_timeoutEventList;  //!< Timeout "events" container
+
+  EventId m_timeoutEvent;  //!< Event for the next scheduled timeout
 
   /**
    * \brief A Set of Fragments.
@@ -424,6 +483,18 @@ public:
      */
     std::list< Ptr<Packet> > GetFraments () const;
 
+    /**
+     * \brief Set the Timeout iterator.
+     * \param iter The iterator.
+     */
+    void SetTimeoutIter (FragmentsTimeoutsListI_t iter);
+
+    /**
+     * \brief Get the Timeout iterator.
+     * \returns The iterator.
+     */
+    FragmentsTimeoutsListI_t GetTimeoutIter ();
+
 private:
     /**
      * \brief The size of the reconstructed packet (bytes).
@@ -440,6 +511,10 @@ private:
      */
     Ptr<Packet> m_firstFragment;
 
+    /**
+     * \brief Timeout iterator to "event" handler
+     */
+    FragmentsTimeoutsListI_t m_timeoutIter;
   };
 
   /**
@@ -447,9 +522,10 @@ private:
    * \param [in] packet the packet to be fragmented (with headers already compressed with 6LoWPAN).
    * \param [in] origPacketSize the size of the IP packet before the 6LoWPAN header compression, including the IP/L4 headers.
    * \param [in] origHdrSize the size of the IP header before the 6LoWPAN header compression.
+   * \param [in] extraHdrSize the sum of the sizes of BC0 header and MESH header if mesh routing is used or 0.
    * \param [out] listFragments A reference to the list of the resulting packets, all with the proper headers in place.
    */
-  void DoFragmentation (Ptr<Packet> packet, uint32_t origPacketSize, uint32_t origHdrSize,
+  void DoFragmentation (Ptr<Packet> packet, uint32_t origPacketSize, uint32_t origHdrSize, uint32_t extraHdrSize,
                         std::list<Ptr<Packet> >& listFragments);
 
   /**
@@ -467,7 +543,7 @@ private:
    * \param [in] key A key representing the packet fragments.
    * \param [in] iif Input Interface.
    */
-  void HandleFragmentsTimeout ( FragmentKey key, uint32_t iif);
+  void HandleFragmentsTimeout (FragmentKey_t key, uint32_t iif);
 
   /**
    * \brief Drops the oldest fragment set.
@@ -475,24 +551,22 @@ private:
   void DropOldestFragmentSet ();
 
   /**
+   * Get a Mac16 from its Mac48 pseudo-MAC
+   * \param addr the PseudoMac address
+   * \return the Mac16Address
+   */
+  Address Get16MacFrom48Mac (Address addr);
+
+  /**
    * Container for fragment key -> fragments.
    */
-  typedef std::map< FragmentKey, Ptr<Fragments> > MapFragments_t;
+  typedef std::map< FragmentKey_t, Ptr<Fragments> > MapFragments_t;
   /**
    * Container Iterator for fragment key -> fragments.
    */
-  typedef std::map< FragmentKey, Ptr<Fragments> >::iterator MapFragmentsI_t;
-  /**
-   * Container for fragment key -> expiration event.
-   */
-  typedef std::map< FragmentKey, EventId > MapFragmentsTimers_t;
-  /**
-   * Container Iterator for fragment key -> expiration event.
-   */
-  typedef std::map< FragmentKey, EventId >::iterator MapFragmentsTimersI_t;
+  typedef std::map< FragmentKey_t, Ptr<Fragments> >::iterator MapFragmentsI_t;
 
   MapFragments_t       m_fragments; //!< Fragments hold to be rebuilt.
-  MapFragmentsTimers_t m_fragmentsTimers; //!< Timers related to fragment rebuilding.
   Time                 m_fragmentExpirationTimeout; //!< Time limit for fragment rebuilding.
 
   /**
@@ -502,6 +576,13 @@ private:
   uint16_t             m_fragmentReassemblyListSize;
 
   bool m_useIphc; //!< Use IPHC or HC1.
+
+  bool m_meshUnder;               //!< Use a mesh-under routing.
+  uint8_t m_bc0Serial;            //!< Serial number used in BC0 header.
+  uint8_t m_meshUnderHopsLeft;    //!< Start value for mesh-under hops left.
+  uint16_t m_meshCacheLength;     //!< length of the cache for each source.
+  Ptr<RandomVariableStream> m_meshUnderJitter; //!< Random variable for the mesh-under packet retransmission.
+  std::map <Address /* OriginatorAdddress */, std::list <uint8_t  /* SequenceNumber */> > m_seenPkts; //!< Seen packets, memorized by OriginatorAdddress, SequenceNumber.
 
   Ptr<Node> m_node; //!< Smart pointer to the Node.
   Ptr<NetDevice> m_netDevice; //!< Smart pointer to the underlying NetDevice.
@@ -519,6 +600,48 @@ private:
   uint32_t m_compressionThreshold; //!< Minimum L2 payload size.
 
   Ptr<UniformRandomVariable> m_rng; //!< Rng for the fragments tag.
+
+  /**
+   * Structure holding the informations for a context (used in compression and decompression)
+   */
+  struct ContextEntry
+  {
+    Ipv6Prefix contextPrefix;    //!< context prefix to be used in compression/decompression
+    bool compressionAllowed;     //!< compression and decompression allowed (true), decompression only (false)
+    Time validLifetime;          //!< validity period
+  };
+
+  std::map<uint8_t, ContextEntry> m_contextTable; //!< Table of the contexts used in compression/decompression
+
+  /**
+   * \brief Finds if the given unicast address matches a context for compression
+   *
+   * \param[in] address the address to check
+   * \param[out] contextId the context found
+   * \return true if a valid context has been found
+   */
+  bool FindUnicastCompressionContext (Ipv6Address address, uint8_t& contextId);
+
+  /**
+   * \brief Finds if the given multicast address matches a context for compression
+   *
+   * \param[in] address the address to check
+   * \param[out] contextId the context found
+   * \return true if a valid context has been found
+   */
+  bool FindMulticastCompressionContext (Ipv6Address address, uint8_t& contextId);
+
+  /**
+   * \brief Clean an address from its prefix.
+   *
+   * This function is used to find the relevant bits to be sent in stateful IPHC compression.
+   * Only the pefix length is used - the address prefix is assumed to be matching the prefix.
+   *
+   * \param address the address to be cleaned
+   * \param prefix the prefix to remove
+   * \return An address with the prefix zeroed.
+   */
+  Ipv6Address CleanPrefix (Ipv6Address address, Ipv6Prefix prefix);
 };
 
 } // namespace ns3

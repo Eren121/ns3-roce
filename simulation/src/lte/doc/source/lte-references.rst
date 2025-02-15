@@ -6,7 +6,7 @@ References
 
 .. [TS25814] 3GPP TS 25.814 "Physical layer aspect for evolved Universal Terrestrial Radio Access"
 
-.. [TS29274] 3GPP TS 29.274 "Tunnelling Protocol for Control plane (GTPv2-C)"
+.. [TS29274] 3GPP TS 29.274 "GPRS Tunnelling Protocol for Control plane (GTPv2-C)"
 
 .. [TS36101] 3GPP TS 36.101 "E-UTRA User Equipment (UE) radio transmission and reception"
 
@@ -86,10 +86,10 @@ References
    March 2011 
 
 .. [PaduaPEM] `"Ns-developers - LTE error model contribution"
-   <http://mailman.isi.edu/pipermail/ns-developers/2011-November/009559.html>`_
+   <http://mailman.isi.edu/pipermail/ns-developers/2011-November/009397.html>`_
 
 .. [ViennaLteSim] `"The Vienna LTE Simulators"
-   <http://www.nt.tuwien.ac.at/about-us/staff/josep-colom-ikuno/lte-simulators/>`_
+   <https://www.nt.tuwien.ac.at/research/mobile-communications/vccs/vienna-lte-a-simulators/>`_
 
 .. [LozanoCost] Joan Olmos, Silvia Ruiz, Mario García-Lozano and David Martín-Sacristán,
    "Link Abstraction Models Based on Mutual Information for LTE Downlink",

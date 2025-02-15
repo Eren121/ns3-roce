@@ -23,7 +23,6 @@
 #include "ns3/log.h"
 #include "ns3/abort.h"
 #include "ns3/assert.h"
-#include "ns3/unused.h"
 #include "ns3/random-variable-stream.h"
 #include "ns3/ipv6-route.h"
 #include "ns3/node.h"
@@ -141,9 +140,10 @@ void RipNg::DoInitialize ()
               socket->BindToNetDevice (m_ipv6->GetNetDevice (i));
               int ret = socket->Bind (local);
               NS_ASSERT_MSG (ret == 0, "Bind unsuccessful");
-              socket->ShutdownRecv ();
+              socket->SetRecvCallback (MakeCallback (&RipNg::Receive, this));
               socket->SetIpv6RecvHopLimit (true);
-              m_sendSocketList[socket] = i;
+              socket->SetRecvPktInfo (true);
+              m_unicastSocketList[socket] = i;
             }
           else if (m_ipv6->GetAddress (i, j).GetScope() == Ipv6InterfaceAddress::GLOBAL)
             {
@@ -152,17 +152,17 @@ void RipNg::DoInitialize ()
         }
     }
 
-  if (!m_recvSocket)
+  if (!m_multicastRecvSocket)
     {
       NS_LOG_LOGIC ("RIPng: adding receiving socket");
       TypeId tid = TypeId::LookupByName ("ns3::UdpSocketFactory");
       Ptr<Node> theNode = GetObject<Node> ();
-      m_recvSocket = Socket::CreateSocket (theNode, tid);
+      m_multicastRecvSocket = Socket::CreateSocket (theNode, tid);
       Inet6SocketAddress local = Inet6SocketAddress (RIPNG_ALL_NODE, RIPNG_PORT);
-      m_recvSocket->Bind (local);
-      m_recvSocket->SetRecvCallback (MakeCallback (&RipNg::Receive, this));
-      m_recvSocket->SetIpv6RecvHopLimit (true);
-      m_recvSocket->SetRecvPktInfo (true);
+      m_multicastRecvSocket->Bind (local);
+      m_multicastRecvSocket->SetRecvCallback (MakeCallback (&RipNg::Receive, this));
+      m_multicastRecvSocket->SetIpv6RecvHopLimit (true);
+      m_multicastRecvSocket->SetRecvPktInfo (true);
     }
 
 
@@ -182,7 +182,7 @@ Ptr<Ipv6Route> RipNg::RouteOutput (Ptr<Packet> p, const Ipv6Header &header, Ptr<
 {
   NS_LOG_FUNCTION (this << header << oif);
 
-  Ipv6Address destination = header.GetDestinationAddress ();
+  Ipv6Address destination = header.GetDestination ();
   Ptr<Ipv6Route> rtentry = 0;
 
   if (destination.IsMulticast ())
@@ -196,7 +196,7 @@ Ptr<Ipv6Route> RipNg::RouteOutput (Ptr<Packet> p, const Ipv6Header &header, Ptr<
       NS_LOG_LOGIC ("RouteOutput (): Multicast destination");
     }
 
-  rtentry = Lookup (destination, oif);
+  rtentry = Lookup (destination, true, oif);
   if (rtentry)
     {
       sockerr = Socket::ERROR_NOTERROR;
@@ -212,13 +212,13 @@ bool RipNg::RouteInput (Ptr<const Packet> p, const Ipv6Header &header, Ptr<const
                         UnicastForwardCallback ucb, MulticastForwardCallback mcb,
                         LocalDeliverCallback lcb, ErrorCallback ecb)
 {
-  NS_LOG_FUNCTION (this << p << header << header.GetSourceAddress () << header.GetDestinationAddress () << idev);
+  NS_LOG_FUNCTION (this << p << header << header.GetSource () << header.GetDestination () << idev);
 
   NS_ASSERT (m_ipv6 != 0);
   // Check if input device supports IP
   NS_ASSERT (m_ipv6->GetInterfaceForDevice (idev) >= 0);
   uint32_t iif = m_ipv6->GetInterfaceForDevice (idev);
-  Ipv6Address dst = header.GetDestinationAddress ();
+  Ipv6Address dst = header.GetDestination ();
 
   if (dst.IsMulticast ())
     {
@@ -226,8 +226,8 @@ bool RipNg::RouteInput (Ptr<const Packet> p, const Ipv6Header &header, Ptr<const
       return false; // Let other routing protocols try to handle this
     }
 
-  if (header.GetDestinationAddress ().IsLinkLocal () ||
-      header.GetSourceAddress ().IsLinkLocal ())
+  if (header.GetDestination ().IsLinkLocal () ||
+      header.GetSource ().IsLinkLocal ())
     {
       NS_LOG_LOGIC ("Dropping packet not for me and with src or dst LinkLocal");
       if (!ecb.IsNull ())
@@ -249,7 +249,7 @@ bool RipNg::RouteInput (Ptr<const Packet> p, const Ipv6Header &header, Ptr<const
     }
   // Next, try to find a route
   NS_LOG_LOGIC ("Unicast destination");
-  Ptr<Ipv6Route> rtentry = Lookup (header.GetDestinationAddress ());
+  Ptr<Ipv6Route> rtentry = Lookup (header.GetDestination (), false);
 
   if (rtentry != 0)
     {
@@ -287,7 +287,7 @@ void RipNg::NotifyInterfaceUp (uint32_t i)
 
 
   bool sendSocketFound = false;
-  for (SocketListI iter = m_sendSocketList.begin (); iter != m_sendSocketList.end (); iter++ )
+  for (SocketListI iter = m_unicastSocketList.begin (); iter != m_unicastSocketList.end (); iter++ )
     {
       if (iter->second == i)
         {
@@ -316,9 +316,10 @@ void RipNg::NotifyInterfaceUp (uint32_t i)
           Inet6SocketAddress local = Inet6SocketAddress (address.GetAddress (), RIPNG_PORT);
           socket->BindToNetDevice (m_ipv6->GetNetDevice (i));
           socket->Bind (local);
-          socket->ShutdownRecv ();
+          socket->SetRecvCallback (MakeCallback (&RipNg::Receive, this));
           socket->SetIpv6RecvHopLimit (true);
-          m_sendSocketList[socket] = i;
+          socket->SetRecvPktInfo (true);
+          m_unicastSocketList[socket] = i;
         }
       else if (address.GetScope() == Ipv6InterfaceAddress::GLOBAL)
         {
@@ -326,17 +327,17 @@ void RipNg::NotifyInterfaceUp (uint32_t i)
         }
     }
 
-  if (!m_recvSocket)
+  if (!m_multicastRecvSocket)
     {
       NS_LOG_LOGIC ("RIPng: adding receiving socket");
       TypeId tid = TypeId::LookupByName ("ns3::UdpSocketFactory");
       Ptr<Node> theNode = GetObject<Node> ();
-      m_recvSocket = Socket::CreateSocket (theNode, tid);
+      m_multicastRecvSocket = Socket::CreateSocket (theNode, tid);
       Inet6SocketAddress local = Inet6SocketAddress (RIPNG_ALL_NODE, RIPNG_PORT);
-      m_recvSocket->Bind (local);
-      m_recvSocket->SetRecvCallback (MakeCallback (&RipNg::Receive, this));
-      m_recvSocket->SetIpv6RecvHopLimit (true);
-      m_recvSocket->SetRecvPktInfo (true);
+      m_multicastRecvSocket->Bind (local);
+      m_multicastRecvSocket->SetRecvCallback (MakeCallback (&RipNg::Receive, this));
+      m_multicastRecvSocket->SetIpv6RecvHopLimit (true);
+      m_multicastRecvSocket->SetRecvPktInfo (true);
     }
 }
 
@@ -353,14 +354,14 @@ void RipNg::NotifyInterfaceDown (uint32_t interface)
         }
     }
 
-  for (SocketListI iter = m_sendSocketList.begin (); iter != m_sendSocketList.end (); iter++ )
+  for (SocketListI iter = m_unicastSocketList.begin (); iter != m_unicastSocketList.end (); iter++ )
     {
       NS_LOG_INFO ("Checking socket for interface " << interface);
       if (iter->second == interface)
         {
           NS_LOG_INFO ("Removed socket for interface " << interface);
           iter->first->Close ();
-          m_sendSocketList.erase (iter);
+          m_unicastSocketList.erase (iter);
           break;
         }
     }
@@ -471,10 +472,11 @@ void RipNg::PrintRoutingTable (Ptr<OutputStreamWrapper> stream, Time::Unit unit)
   NS_LOG_FUNCTION (this << stream);
 
   std::ostream* os = stream->GetStream ();
+  *os << std::resetiosflags (std::ios::adjustfield) << std::setiosflags (std::ios::left);
 
   *os << "Node: " << m_ipv6->GetObject<Node> ()->GetId ()
       << ", Time: " << Now().As (unit)
-      << ", Local time: " << GetObject<Node> ()->GetLocalTime ().As (unit)
+      << ", Local time: " << m_ipv6->GetObject<Node> ()->GetLocalTime ().As (unit)
       << ", IPv6 RIPng table" << std::endl;
 
   if (!m_routes.empty ())
@@ -490,9 +492,9 @@ void RipNg::PrintRoutingTable (Ptr<OutputStreamWrapper> stream, Time::Unit unit)
               std::ostringstream dest, gw, mask, flags;
 
               dest << route->GetDest () << "/" << int(route->GetDestNetworkPrefix ().GetPrefixLength ());
-              *os << std::setiosflags (std::ios::left) << std::setw (31) << dest.str ();
+              *os << std::setw (31) << dest.str ();
               gw << route->GetGateway ();
-              *os << std::setiosflags (std::ios::left) << std::setw (27) << gw.str ();
+              *os << std::setw (27) << gw.str ();
               flags << "U";
               if (route->IsHost ())
                 {
@@ -502,8 +504,8 @@ void RipNg::PrintRoutingTable (Ptr<OutputStreamWrapper> stream, Time::Unit unit)
                 {
                   flags << "G";
                 }
-              *os << std::setiosflags (std::ios::left) << std::setw (5) << flags.str ();
-              *os << std::setiosflags (std::ios::left) << std::setw (4) << int(route->GetRouteMetric ());
+              *os << std::setw (5) << flags.str ();
+              *os << std::setw (4) << int(route->GetRouteMetric ());
               // Ref ct not implemented
               *os << "-" << "   ";
               // Use not implemented
@@ -538,22 +540,21 @@ void RipNg::DoDispose ()
   m_nextTriggeredUpdate = EventId ();
   m_nextUnsolicitedUpdate = EventId ();
 
-  for (SocketListI iter = m_sendSocketList.begin (); iter != m_sendSocketList.end (); iter++ )
+  for (SocketListI iter = m_unicastSocketList.begin (); iter != m_unicastSocketList.end (); iter++ )
     {
       iter->first->Close ();
     }
-  m_sendSocketList.clear ();
+  m_unicastSocketList.clear ();
 
-  m_recvSocket->Close ();
-  m_recvSocket = 0;
+  m_multicastRecvSocket->Close ();
+  m_multicastRecvSocket = 0;
 
   m_ipv6 = 0;
 
   Ipv6RoutingProtocol::DoDispose ();
 }
 
-
-Ptr<Ipv6Route> RipNg::Lookup (Ipv6Address dst, Ptr<NetDevice> interface)
+Ptr<Ipv6Route> RipNg::Lookup (Ipv6Address dst, bool setSource, Ptr<NetDevice> interface)
 {
   NS_LOG_FUNCTION (this << dst << interface);
 
@@ -603,17 +604,20 @@ Ptr<Ipv6Route> RipNg::Lookup (Ipv6Address dst, Ptr<NetDevice> interface)
                   uint32_t interfaceIdx = route->GetInterface ();
                   rtentry = Create<Ipv6Route> ();
 
-                  if (route->GetGateway ().IsAny ())
+                  if (setSource)
                     {
-                      rtentry->SetSource (m_ipv6->SourceAddressSelection (interfaceIdx, route->GetDest ()));
-                    }
-                  else if (route->GetDest ().IsAny ()) /* default route */
-                    {
-                      rtentry->SetSource (m_ipv6->SourceAddressSelection (interfaceIdx, route->GetPrefixToUse ().IsAny () ? dst : route->GetPrefixToUse ()));
-                    }
-                  else
-                    {
-                      rtentry->SetSource (m_ipv6->SourceAddressSelection (interfaceIdx, route->GetDest ()));
+                      if (route->GetGateway ().IsAny ())
+                        {
+                          rtentry->SetSource (m_ipv6->SourceAddressSelection (interfaceIdx, route->GetDest ()));
+                        }
+                      else if (route->GetDest ().IsAny ()) /* default route */
+                        {
+                          rtentry->SetSource (m_ipv6->SourceAddressSelection (interfaceIdx, route->GetPrefixToUse ().IsAny () ? dst : route->GetPrefixToUse ()));
+                        }
+                      else
+                        {
+                          rtentry->SetSource (m_ipv6->SourceAddressSelection (interfaceIdx, route->GetDest ()));
+                        }
                     }
 
                   rtentry->SetDestination (route->GetDest ());
@@ -777,7 +781,7 @@ void RipNg::HandleRequests (RipNgHeader requestHdr, Ipv6Address senderAddress, u
               // we use one of the sending sockets, as they're bound to the right interface
               // and the local address might be used on different interfaces.
               Ptr<Socket> sendingSocket;
-              for (SocketListI iter = m_sendSocketList.begin (); iter != m_sendSocketList.end (); iter++ )
+              for (SocketListI iter = m_unicastSocketList.begin (); iter != m_unicastSocketList.end (); iter++ )
                 {
                   if (iter->second == incomingInterface)
                     {
@@ -857,7 +861,7 @@ void RipNg::HandleRequests (RipNgHeader requestHdr, Ipv6Address senderAddress, u
       Ptr<Socket> sendingSocket;
       if (senderAddress.IsLinkLocal ())
         {
-          for (SocketListI iter = m_sendSocketList.begin (); iter != m_sendSocketList.end (); iter++ )
+          for (SocketListI iter = m_unicastSocketList.begin (); iter != m_unicastSocketList.end (); iter++ )
             {
               if (iter->second == incomingInterface)
                 {
@@ -867,7 +871,7 @@ void RipNg::HandleRequests (RipNgHeader requestHdr, Ipv6Address senderAddress, u
         }
       else
         {
-          sendingSocket = m_recvSocket;
+          sendingSocket = m_multicastRecvSocket;
         }
 
       Ptr<Packet> p = Create<Packet> ();
@@ -1078,7 +1082,7 @@ void RipNg::DoSendRouteUpdate (bool periodic)
 {
   NS_LOG_FUNCTION (this << (periodic ? " periodic" : " triggered"));
 
-  for (SocketListI iter = m_sendSocketList.begin (); iter != m_sendSocketList.end (); iter++ )
+  for (SocketListI iter = m_unicastSocketList.begin (); iter != m_unicastSocketList.end (); iter++ )
     {
       uint32_t interface = iter->second;
 
@@ -1254,7 +1258,7 @@ void RipNg::SendRouteRequest ()
   hdr.AddRte (rte);
   p->AddHeader (hdr);
 
-  for (SocketListI iter = m_sendSocketList.begin (); iter != m_sendSocketList.end (); iter++ )
+  for (SocketListI iter = m_unicastSocketList.begin (); iter != m_unicastSocketList.end (); iter++ )
     {
       uint32_t interface = iter->second;
 

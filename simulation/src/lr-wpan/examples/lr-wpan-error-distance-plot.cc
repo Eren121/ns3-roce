@@ -54,10 +54,15 @@
 using namespace ns3;
 using namespace std;
 
-static uint32_t g_received = 0;
+static uint32_t g_received = 0; //!< number of packets received
 
 NS_LOG_COMPONENT_DEFINE ("LrWpanErrorDistancePlot");
 
+/**
+ * Function called when a Data indication is invoked
+ * \param params MCPS data indication parameters
+ * \param p packet
+ */
 static void
 LrWpanErrorDistanceCallback (McpsDataIndicationParams params, Ptr<Packet> p)
 {
@@ -77,7 +82,7 @@ int main (int argc, char *argv[])
   double txPower = 0;
   uint32_t channelNumber = 11;
 
-  CommandLine cmd;
+  CommandLine cmd (__FILE__);
 
   cmd.AddValue ("txPower", "transmit power (dBm)", txPower);
   cmd.AddValue ("packetSize", "packet (MSDU) size (bytes)", packetSize);

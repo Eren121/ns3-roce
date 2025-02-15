@@ -548,7 +548,7 @@ Ipv6AddressGeneratorImpl::AddAllocated (const Ipv6Address address)
       // couldn't have been extended to include this new address since the
       // code immediately above would have been executed and that next lower
       // block extended upward.  So we know it's safe to extend the current
-      // block down to includ the new address.
+      // block down to include the new address.
       //
       for (uint32_t j = 0; j < 16; j++)
         {
@@ -677,7 +677,7 @@ Ipv6AddressGenerator::Init (
   const Ipv6Prefix prefix,
   const Ipv6Address interfaceId)
 {
-  NS_LOG_FUNCTION_NOARGS ();
+  NS_LOG_FUNCTION (net << prefix << interfaceId);
 
   SimulationSingleton<Ipv6AddressGeneratorImpl>::Get ()
   ->Init (net, prefix, interfaceId);
@@ -686,7 +686,7 @@ Ipv6AddressGenerator::Init (
 Ipv6Address
 Ipv6AddressGenerator::NextNetwork (const Ipv6Prefix prefix)
 {
-  NS_LOG_FUNCTION_NOARGS ();
+  NS_LOG_FUNCTION (prefix);
 
   return SimulationSingleton<Ipv6AddressGeneratorImpl>::Get ()
          ->NextNetwork (prefix);
@@ -695,7 +695,7 @@ Ipv6AddressGenerator::NextNetwork (const Ipv6Prefix prefix)
 Ipv6Address
 Ipv6AddressGenerator::GetNetwork (const Ipv6Prefix prefix)
 {
-  NS_LOG_FUNCTION_NOARGS ();
+  NS_LOG_FUNCTION (prefix);
 
   return SimulationSingleton<Ipv6AddressGeneratorImpl>::Get ()
          ->GetNetwork (prefix);
@@ -706,7 +706,7 @@ Ipv6AddressGenerator::InitAddress (
   const Ipv6Address interfaceId,
   const Ipv6Prefix prefix)
 {
-  NS_LOG_FUNCTION_NOARGS ();
+  NS_LOG_FUNCTION (interfaceId << prefix);
 
   SimulationSingleton<Ipv6AddressGeneratorImpl>::Get ()
   ->InitAddress (interfaceId, prefix);
@@ -715,7 +715,7 @@ Ipv6AddressGenerator::InitAddress (
 Ipv6Address
 Ipv6AddressGenerator::GetAddress (const Ipv6Prefix prefix)
 {
-  NS_LOG_FUNCTION_NOARGS ();
+  NS_LOG_FUNCTION (prefix);
 
   return SimulationSingleton<Ipv6AddressGeneratorImpl>::Get ()
          ->GetAddress (prefix);
@@ -724,7 +724,7 @@ Ipv6AddressGenerator::GetAddress (const Ipv6Prefix prefix)
 Ipv6Address
 Ipv6AddressGenerator::NextAddress (const Ipv6Prefix prefix)
 {
-  NS_LOG_FUNCTION_NOARGS ();
+  NS_LOG_FUNCTION (prefix);
 
   return SimulationSingleton<Ipv6AddressGeneratorImpl>::Get ()
          ->NextAddress (prefix);
@@ -742,7 +742,7 @@ Ipv6AddressGenerator::Reset (void)
 bool
 Ipv6AddressGenerator::AddAllocated (const Ipv6Address addr)
 {
-  NS_LOG_FUNCTION_NOARGS ();
+  NS_LOG_FUNCTION (addr);
 
   return SimulationSingleton<Ipv6AddressGeneratorImpl>::Get ()
          ->AddAllocated (addr);
@@ -751,7 +751,7 @@ Ipv6AddressGenerator::AddAllocated (const Ipv6Address addr)
 bool
 Ipv6AddressGenerator::IsAddressAllocated (const Ipv6Address addr)
 {
-  NS_LOG_FUNCTION_NOARGS ();
+  NS_LOG_FUNCTION (addr);
 
   return SimulationSingleton<Ipv6AddressGeneratorImpl>::Get ()
          ->IsAddressAllocated (addr);
@@ -760,7 +760,7 @@ Ipv6AddressGenerator::IsAddressAllocated (const Ipv6Address addr)
 bool
 Ipv6AddressGenerator::IsNetworkAllocated (const Ipv6Address addr, const Ipv6Prefix prefix)
 {
-  NS_LOG_FUNCTION_NOARGS ();
+  NS_LOG_FUNCTION (addr << prefix);
 
   return SimulationSingleton<Ipv6AddressGeneratorImpl>::Get ()
          ->IsNetworkAllocated (addr, prefix);

@@ -171,12 +171,12 @@ EventImpl * MakeEvent (MEM mem_ptr, OBJ obj,
                        T1 a1, T2 a2, T3 a3, T4 a4, T5 a5, T6 a6);
 
 /**@}*/
-  
+
 /**
  * \ingroup events
- * \defgroup makeeventfnptr MakeEvent from Function Pointers.
+ * \defgroup makeeventfnptr MakeEvent from Function Pointers and Lambdas.
  *
- * Create EventImpl instances from function pointers which take
+ * Create EventImpl instances from function pointers or lambdas which take
  * varying numbers of arguments.
  *
  * @{
@@ -306,6 +306,17 @@ EventImpl * MakeEvent (void (*f)(U1,U2,U3,U4,U5), T1 a1, T2 a2, T3 a3, T4 a4, T5
 template <typename U1, typename U2, typename U3, typename U4, typename U5, typename U6,
           typename T1, typename T2, typename T3, typename T4, typename T5, typename T6>
 EventImpl * MakeEvent (void (*f)(U1,U2,U3,U4,U5,U6), T1 a1, T2 a2, T3 a3, T4 a4, T5 a5, T6 a6);
+
+/**
+ * Make an EventImpl from a lambda.
+ *
+ * \param [in] function The lambda
+ * \returns The constructed EventImpl.
+ */
+template <typename T>
+EventImpl * MakeEvent (T function);
+
+
 /**@}*/
 
 } // namespace ns3
@@ -349,7 +360,7 @@ struct EventMemberImplObjTraits<T *>
    * \param [in] p Object pointer.
    * \return A reference to the object pointed to by p.
    */
-  static T &GetReference (T *p)
+  static T & GetReference (T *p)
   {
     return *p;
   }
@@ -361,16 +372,15 @@ EventImpl * MakeEvent (MEM mem_ptr, OBJ obj)
   // zero argument version
   class EventMemberImpl0 : public EventImpl
   {
-public:
+  public:
     EventMemberImpl0 (OBJ obj, MEM function)
       : m_obj (obj),
         m_function (function)
-    {
-    }
+    {}
     virtual ~EventMemberImpl0 ()
-    {
-    }
-private:
+    {}
+
+  private:
     virtual void Notify (void)
     {
       (EventMemberImplObjTraits<OBJ>::GetReference (m_obj).*m_function)();
@@ -389,18 +399,18 @@ EventImpl * MakeEvent (MEM mem_ptr, OBJ obj, T1 a1)
   // one argument version
   class EventMemberImpl1 : public EventImpl
   {
-public:
+  public:
     EventMemberImpl1 (OBJ obj, MEM function, T1 a1)
       : m_obj (obj),
         m_function (function),
         m_a1 (a1)
-    {
-    }
-protected:
+    {}
+
+  protected:
     virtual ~EventMemberImpl1 ()
-    {
-    }
-private:
+    {}
+
+  private:
     virtual void Notify (void)
     {
       (EventMemberImplObjTraits<OBJ>::GetReference (m_obj).*m_function)(m_a1);
@@ -419,19 +429,19 @@ EventImpl * MakeEvent (MEM mem_ptr, OBJ obj, T1 a1, T2 a2)
   // two argument version
   class EventMemberImpl2 : public EventImpl
   {
-public:
+  public:
     EventMemberImpl2 (OBJ obj, MEM function, T1 a1, T2 a2)
       : m_obj (obj),
         m_function (function),
         m_a1 (a1),
         m_a2 (a2)
-    {
-    }
-protected:
+    {}
+
+  protected:
     virtual ~EventMemberImpl2 ()
-    {
-    }
-private:
+    {}
+
+  private:
     virtual void Notify (void)
     {
       (EventMemberImplObjTraits<OBJ>::GetReference (m_obj).*m_function)(m_a1, m_a2);
@@ -451,20 +461,20 @@ EventImpl * MakeEvent (MEM mem_ptr, OBJ obj, T1 a1, T2 a2, T3 a3)
   // three argument version
   class EventMemberImpl3 : public EventImpl
   {
-public:
+  public:
     EventMemberImpl3 (OBJ obj, MEM function, T1 a1, T2 a2, T3 a3)
       : m_obj (obj),
         m_function (function),
         m_a1 (a1),
         m_a2 (a2),
         m_a3 (a3)
-    {
-    }
-protected:
+    {}
+
+  protected:
     virtual ~EventMemberImpl3 ()
-    {
-    }
-private:
+    {}
+
+  private:
     virtual void Notify (void)
     {
       (EventMemberImplObjTraits<OBJ>::GetReference (m_obj).*m_function)(m_a1, m_a2, m_a3);
@@ -485,7 +495,7 @@ EventImpl * MakeEvent (MEM mem_ptr, OBJ obj, T1 a1, T2 a2, T3 a3, T4 a4)
   // four argument version
   class EventMemberImpl4 : public EventImpl
   {
-public:
+  public:
     EventMemberImpl4 (OBJ obj, MEM function, T1 a1, T2 a2, T3 a3, T4 a4)
       : m_obj (obj),
         m_function (function),
@@ -493,13 +503,13 @@ public:
         m_a2 (a2),
         m_a3 (a3),
         m_a4 (a4)
-    {
-    }
-protected:
+    {}
+
+  protected:
     virtual ~EventMemberImpl4 ()
-    {
-    }
-private:
+    {}
+
+  private:
     virtual void Notify (void)
     {
       (EventMemberImplObjTraits<OBJ>::GetReference (m_obj).*m_function)(m_a1, m_a2, m_a3, m_a4);
@@ -522,7 +532,7 @@ EventImpl * MakeEvent (MEM mem_ptr, OBJ obj,
   // five argument version
   class EventMemberImpl5 : public EventImpl
   {
-public:
+  public:
     EventMemberImpl5 (OBJ obj, MEM function, T1 a1, T2 a2, T3 a3, T4 a4, T5 a5)
       : m_obj (obj),
         m_function (function),
@@ -531,13 +541,13 @@ public:
         m_a3 (a3),
         m_a4 (a4),
         m_a5 (a5)
-    {
-    }
-protected:
+    {}
+
+  protected:
     virtual ~EventMemberImpl5 ()
-    {
-    }
-private:
+    {}
+
+  private:
     virtual void Notify (void)
     {
       (EventMemberImplObjTraits<OBJ>::GetReference (m_obj).*m_function)(m_a1, m_a2, m_a3, m_a4, m_a5);
@@ -561,7 +571,7 @@ EventImpl * MakeEvent (MEM mem_ptr, OBJ obj,
   // six argument version
   class EventMemberImpl6 : public EventImpl
   {
-public:
+  public:
     EventMemberImpl6 (OBJ obj, MEM function, T1 a1, T2 a2, T3 a3, T4 a4, T5 a5, T6 a6)
       : m_obj (obj),
         m_function (function),
@@ -571,13 +581,13 @@ public:
         m_a4 (a4),
         m_a5 (a5),
         m_a6 (a6)
-    {
-    }
-protected:
+    {}
+
+  protected:
     virtual ~EventMemberImpl6 ()
-    {
-    }
-private:
+    {}
+
+  private:
     virtual void Notify (void)
     {
       (EventMemberImplObjTraits<OBJ>::GetReference (m_obj).*m_function)(m_a1, m_a2, m_a3, m_a4, m_a5, m_a6);
@@ -600,19 +610,20 @@ EventImpl * MakeEvent (void (*f)(U1), T1 a1)
   // one arg version
   class EventFunctionImpl1 : public EventImpl
   {
-public:
+  public:
+    [[maybe_unused]]
     typedef void (*F)(U1);
 
     EventFunctionImpl1 (F function, T1 a1)
       : m_function (function),
         m_a1 (a1)
-    {
-    }
-protected:
+    {}
+
+  protected:
     virtual ~EventFunctionImpl1 ()
-    {
-    }
-private:
+    {}
+
+  private:
     virtual void Notify (void)
     {
       (*m_function)(m_a1);
@@ -629,20 +640,21 @@ EventImpl * MakeEvent (void (*f)(U1,U2), T1 a1, T2 a2)
   // two arg version
   class EventFunctionImpl2 : public EventImpl
   {
-public:
+  public:
+    [[maybe_unused]]
     typedef void (*F)(U1, U2);
 
     EventFunctionImpl2 (F function, T1 a1, T2 a2)
       : m_function (function),
         m_a1 (a1),
         m_a2 (a2)
-    {
-    }
-protected:
+    {}
+
+  protected:
     virtual ~EventFunctionImpl2 ()
-    {
-    }
-private:
+    {}
+
+  private:
     virtual void Notify (void)
     {
       (*m_function)(m_a1, m_a2);
@@ -661,7 +673,8 @@ EventImpl * MakeEvent (void (*f)(U1,U2,U3), T1 a1, T2 a2, T3 a3)
   // three arg version
   class EventFunctionImpl3 : public EventImpl
   {
-public:
+  public:
+    [[maybe_unused]]
     typedef void (*F)(U1, U2, U3);
 
     EventFunctionImpl3 (F function, T1 a1, T2 a2, T3 a3)
@@ -669,13 +682,13 @@ public:
         m_a1 (a1),
         m_a2 (a2),
         m_a3 (a3)
-    {
-    }
-protected:
+    {}
+
+  protected:
     virtual ~EventFunctionImpl3 ()
-    {
-    }
-private:
+    {}
+
+  private:
     virtual void Notify (void)
     {
       (*m_function)(m_a1, m_a2, m_a3);
@@ -695,7 +708,8 @@ EventImpl * MakeEvent (void (*f)(U1,U2,U3,U4), T1 a1, T2 a2, T3 a3, T4 a4)
   // four arg version
   class EventFunctionImpl4 : public EventImpl
   {
-public:
+  public:
+    [[maybe_unused]]
     typedef void (*F)(U1, U2, U3, U4);
 
     EventFunctionImpl4 (F function, T1 a1, T2 a2, T3 a3, T4 a4)
@@ -704,13 +718,13 @@ public:
         m_a2 (a2),
         m_a3 (a3),
         m_a4 (a4)
-    {
-    }
-protected:
+    {}
+
+  protected:
     virtual ~EventFunctionImpl4 ()
-    {
-    }
-private:
+    {}
+
+  private:
     virtual void Notify (void)
     {
       (*m_function)(m_a1, m_a2, m_a3, m_a4);
@@ -731,7 +745,8 @@ EventImpl * MakeEvent (void (*f)(U1,U2,U3,U4,U5), T1 a1, T2 a2, T3 a3, T4 a4, T5
   // five arg version
   class EventFunctionImpl5 : public EventImpl
   {
-public:
+  public:
+    [[maybe_unused]]
     typedef void (*F)(U1,U2,U3,U4,U5);
 
     EventFunctionImpl5 (F function, T1 a1, T2 a2, T3 a3, T4 a4, T5 a5)
@@ -741,13 +756,13 @@ public:
         m_a3 (a3),
         m_a4 (a4),
         m_a5 (a5)
-    {
-    }
-protected:
+    {}
+
+  protected:
     virtual ~EventFunctionImpl5 ()
-    {
-    }
-private:
+    {}
+
+  private:
     virtual void Notify (void)
     {
       (*m_function)(m_a1, m_a2, m_a3, m_a4, m_a5);
@@ -769,7 +784,8 @@ EventImpl * MakeEvent (void (*f)(U1,U2,U3,U4,U5,U6), T1 a1, T2 a2, T3 a3, T4 a4,
   // six arg version
   class EventFunctionImpl6 : public EventImpl
   {
-public:
+  public:
+    [[maybe_unused]]
     typedef void (*F)(U1,U2,U3,U4,U5,U6);
 
     EventFunctionImpl6 (F function, T1 a1, T2 a2, T3 a3, T4 a4, T5 a5, T6 a6)
@@ -780,13 +796,13 @@ public:
         m_a4 (a4),
         m_a5 (a5),
         m_a6 (a6)
-    {
-    }
-protected:
+    {}
+
+  protected:
     virtual ~EventFunctionImpl6 ()
-    {
-    }
-private:
+    {}
+
+  private:
     virtual void Notify (void)
     {
       (*m_function)(m_a1, m_a2, m_a3, m_a4, m_a5, m_a6);
@@ -801,6 +817,30 @@ private:
   } *ev = new EventFunctionImpl6 (f, a1, a2, a3, a4, a5, a6);
   return ev;
 }
+
+template <typename T>
+EventImpl * MakeEvent (T function)
+{
+  class EventImplFunctional : public EventImpl
+  {
+public:
+    EventImplFunctional (T function)
+      : m_function (function)
+    {
+    }
+    virtual ~EventImplFunctional ()
+    {
+    }
+private:
+    virtual void Notify (void)
+    {
+      m_function();
+    }
+    T m_function;
+  } *ev = new EventImplFunctional (function);
+  return ev;
+}
+
 
 } // namespace ns3
 

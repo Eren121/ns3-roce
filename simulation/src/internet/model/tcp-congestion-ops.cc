@@ -17,7 +17,6 @@
  *
  */
 #include "tcp-congestion-ops.h"
-#include "tcp-socket-base.h"
 #include "ns3/log.h"
 
 namespace ns3 {
@@ -48,6 +47,46 @@ TcpCongestionOps::~TcpCongestionOps ()
 {
 }
 
+void
+TcpCongestionOps::IncreaseWindow (Ptr<TcpSocketState> tcb, uint32_t segmentsAcked)
+{
+  NS_LOG_FUNCTION (this << tcb << segmentsAcked);
+}
+
+void
+TcpCongestionOps::PktsAcked (Ptr<TcpSocketState> tcb, uint32_t segmentsAcked,
+                             const Time& rtt)
+{
+  NS_LOG_FUNCTION (this << tcb << segmentsAcked << rtt);
+}
+
+void
+TcpCongestionOps::CongestionStateSet (Ptr<TcpSocketState> tcb,
+                                      const TcpSocketState::TcpCongState_t newState)
+{
+  NS_LOG_FUNCTION (this << tcb << newState);
+}
+
+void
+TcpCongestionOps::CwndEvent (Ptr<TcpSocketState> tcb,
+                             const TcpSocketState::TcpCAEvent_t event)
+{
+  NS_LOG_FUNCTION (this << tcb << event);
+}
+
+bool
+TcpCongestionOps::HasCongControl () const
+{
+  return false;
+}
+
+void
+TcpCongestionOps::CongControl (Ptr<TcpSocketState> tcb,
+                               [[maybe_unused]] const TcpRateOps::TcpRateConnection &rc,
+                               [[maybe_unused]] const TcpRateOps::TcpRateSample &rs)
+{
+  NS_LOG_FUNCTION (this << tcb);
+}
 
 // RENO
 
@@ -189,7 +228,7 @@ TcpNewReno::IncreaseWindow (Ptr<TcpSocketState> tcb, uint32_t segmentsAcked)
    * slow start we receive a cumulative ACK, it counts only for 1 SMSS of
    * increase, wasting the others.
    *
-   * // Uncorrect assert, I am sorry
+   * // Incorrect assert, I am sorry
    * NS_ASSERT (segmentsAcked == 0);
    */
 }

@@ -404,6 +404,7 @@ public:
    * \brief Manual attachment of a UE device to the network via a given eNodeB.
    * \param ueDevice the UE device to be attached
    * \param enbDevice the destination eNodeB device
+   * \param componentCarrierId the destination eNodeB component carrier
    *
    * In addition, the function also instructs the UE to immediately enter
    * CONNECTED mode and activates the default EPS bearer.
@@ -412,7 +413,7 @@ public:
    * Note that this function will disable Idle mode initial cell selection
    * procedure.
    */
-  void Attach (Ptr<NetDevice> ueDevice, Ptr<NetDevice> enbDevice);
+  void Attach (Ptr<NetDevice> ueDevice, Ptr<NetDevice> enbDevice, uint8_t componentCarrierId = 0);
 
   /** 
    * \brief Manual attachment of a set of UE devices to the network via the
@@ -684,7 +685,7 @@ private:
    * \param ulbw uplink bandwidth for each CC
    * \param dlbw downlink bandwidth for each CC
    */
-  void DoComponentCarrierConfigure (uint32_t ulEarfcn, uint32_t dlEarfcn, uint8_t ulbw, uint8_t dlbw);
+  void DoComponentCarrierConfigure (uint32_t ulEarfcn, uint32_t dlEarfcn, uint16_t ulbw, uint16_t dlbw);
   /**
    * Create an eNodeB device (LteEnbNetDevice) on the given node.
    * \param n the node where the device is to be installed
@@ -770,7 +771,7 @@ private:
   /// Factory of fading model object for both the downlink and uplink channels.
   ObjectFactory m_fadingModelFactory;
   /// The fading model used in both the downlink and uplink channels.
-  Ptr<SpectrumPropagationLossModel> m_fadingModule;
+  Ptr<SpectrumPropagationLossModel> m_fadingModel;
   /**
    * True if a random variable stream number has been assigned for the fading
    * model. Used to prevent such assignment to be done more than once.

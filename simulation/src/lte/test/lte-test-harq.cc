@@ -46,7 +46,6 @@
 #include <ns3/config.h>
 #include <ns3/boolean.h>
 #include <ns3/enum.h>
-#include <ns3/unused.h>
 #include <ns3/ff-mac-scheduler.h>
 #include <ns3/buildings-helper.h>
 
@@ -110,6 +109,12 @@ LenaHarqTestCase::DoRun (void)
   Config::SetDefault ("ns3::LteSpectrumPhy::CtrlErrorModelEnabled", BooleanValue (false));
   Config::SetDefault ("ns3::LteSpectrumPhy::DataErrorModelEnabled", BooleanValue (true));
   Config::SetDefault ("ns3::LteHelper::UseIdealRrc", BooleanValue (true));
+  Config::SetDefault ("ns3::MacStatsCalculator::DlOutputFilename", StringValue (CreateTempDirFilename ("DlMacStats.txt")));
+  Config::SetDefault ("ns3::MacStatsCalculator::UlOutputFilename", StringValue (CreateTempDirFilename ("UlMacStats.txt")));
+  Config::SetDefault ("ns3::RadioBearerStatsCalculator::DlRlcOutputFilename", StringValue (CreateTempDirFilename ("DlRlcStats.txt")));
+  Config::SetDefault ("ns3::RadioBearerStatsCalculator::UlRlcOutputFilename", StringValue (CreateTempDirFilename ("UlRlcStats.txt")));
+
+
   //Disable Uplink Power Control
   Config::SetDefault ("ns3::LteUePhy::EnableUplinkPowerControl", BooleanValue (false));
 
@@ -240,7 +245,7 @@ LenaHarqTestCase::DoRun (void)
   Simulator::Run ();
 
   /**
-   * Check that the assignation is done in a RR fashion
+   * Check that the assignment is done in a RR fashion
    */
   NS_LOG_INFO ("\tTest on downlink data shared channels (PDSCH)");
   NS_LOG_INFO ("Test with " << m_nUser << " user(s) at distance " << m_dist << " expected Thr " << m_throughputRef);

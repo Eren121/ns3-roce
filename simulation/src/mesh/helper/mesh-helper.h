@@ -23,12 +23,17 @@
 #ifndef MESH_HELPER_H
 #define MESH_HELPER_H
 
-#include "ns3/wifi-helper.h"
 #include "ns3/mesh-stack-installer.h"
+#include "ns3/wifi-standards.h"
+#include "ns3/qos-utils.h"
+#include "ns3/object-factory.h"
 
 namespace ns3 {
 
-class WifiChannel;
+class NetDeviceContainer;
+class WifiPhyHelper;
+class WifiNetDevice;
+class NodeContainer;
 
 /** 
  * \ingroup dot11s
@@ -117,10 +122,10 @@ public:
                            std::string n6 = "", const AttributeValue &v6 = EmptyAttributeValue (),
                            std::string n7 = "", const AttributeValue &v7 = EmptyAttributeValue ());
   /**
-   * Set PHY standard
+   * Set standard
    * \param standard the wifi phy standard
    */
-  void SetStandard (enum WifiPhyStandard standard);
+  void SetStandard (enum WifiStandard standard);
   /// \todo SetMeshId 
   //void SetMeshId (std::string s);
   /** 
@@ -211,6 +216,11 @@ public:
    */
   int64_t AssignStreams (NetDeviceContainer c, int64_t stream);
 
+  /**
+   * Helper to enable all MeshPointDevice log components with one statement
+   */
+  static void EnableLogComponents (void);
+
 private:
   /**
    * \param phyHelper
@@ -227,7 +237,8 @@ private:
   // Interface factory
   ObjectFactory m_mac; ///< the MAC
   ObjectFactory m_stationManager; ///< the station manager
-  enum WifiPhyStandard m_standard; ///< phy standard
+  ObjectFactory m_ackPolicySelector[4]; ///< ack policy selector for all ACs
+  enum WifiStandard m_standard; ///< standard
 
 };
 } // namespace ns3

@@ -46,6 +46,11 @@ public:
 
   virtual ~Ipv4QueueDiscItem ();
 
+  // Delete default constructor, copy constructor and assignment operator to avoid misuse
+  Ipv4QueueDiscItem () = delete;
+  Ipv4QueueDiscItem (const Ipv4QueueDiscItem &) = delete;
+  Ipv4QueueDiscItem & operator = (const Ipv4QueueDiscItem &) = delete;
+
   /**
    * \return the correct packet size (header plus payload).
    */
@@ -77,32 +82,25 @@ public:
   virtual bool GetUint8Value (Uint8Values field, uint8_t &value) const;
 
   /**
-   * \brief Marks the packet by setting ECN_CE bits if the packet has ECN_ECT0 or ECN_ECT1 bits set
-   * \return true if the packet gets marked, false otherwise
+   * \brief Marks the packet by setting ECN_CE bits if the packet has
+   * ECN_ECT0 or ECN_ECT1 set.  If ECN_CE is already set, returns true.
+   * \return true if the method results in a marked packet, false otherwise
    */
   virtual bool Mark (void);
 
-private:
   /**
-   * \brief Default constructor
+   * \brief Computes the hash of the packet's 5-tuple
    *
-   * Defined and unimplemented to avoid misuse
-   */
-  Ipv4QueueDiscItem ();
-  /**
-   * \brief Copy constructor
+   * Computes the hash of the source and destination IP addresses, protocol
+   * number and, if the transport protocol is either UDP or TCP, the source
+   * and destination port
    *
-   * Defined and unimplemented to avoid misuse
+   * \param perturbation hash perturbation value
+   * \return the hash of the packet's 5-tuple
    */
-  Ipv4QueueDiscItem (const Ipv4QueueDiscItem &);
-  /**
-   * \brief Assignment operator
-   *
-   * Defined and unimplemented to avoid misuse
-   * \returns
-   */
-  Ipv4QueueDiscItem &operator = (const Ipv4QueueDiscItem &);
+  virtual uint32_t Hash (uint32_t perturbation) const;
 
+private:
   Ipv4Header m_header;  //!< The IPv4 header.
   bool m_headerAdded;   //!< True if the header has already been added to the packet.
 };

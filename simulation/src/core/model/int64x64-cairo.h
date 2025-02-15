@@ -1,6 +1,6 @@
 /* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
 /*
- * Copyright (c) 2010 INRIA 
+ * Copyright (c) 2010 INRIA
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -19,6 +19,7 @@
 
 #include "ns3/core-config.h"
 #if !defined(INT64X64_CAIRO_H) && defined (INT64X64_USE_CAIRO) && !defined(PYTHON_SCAN)
+/** Using the ns3::int64x64_t based on Cairo 128-bit integers. */
 #define INT64X64_CAIRO_H
 
 #include <cmath>  // pow
@@ -40,7 +41,7 @@ namespace ns3 {
 class int64x64_t
 {
   /// High bit of fractional part
-  static const uint64_t    HPCAIRO_MASK_HI_BIT = (((uint64_t)1)<<63);
+  static const uint64_t    HPCAIRO_MASK_HI_BIT = (((uint64_t)1) << 63);
   /// Mask for fraction part
   static const uint64_t    HP_MASK_LO = 0xffffffffffffffffULL;
   /**
@@ -65,7 +66,8 @@ public:
    * specifically the double implementation.  To handle this,
    * we expose the underlying implementation type here.
    */
-  enum impl_type {
+  enum impl_type
+  {
     int128_impl,  //!< Native int128_t implementation.
     cairo_impl,   //!< cairo wideint implementation
     ld_impl,      //!< long double implementation
@@ -80,11 +82,14 @@ public:
     _v.hi = 0;
     _v.lo = 0;
   }
-  /**@{*/
   /**
-   * Construct from a floating point value.
+   * \name Construct from a floating point value.
+   */
+  /**
+   * @{
+   * Constructor from a floating point.
    *
-   * \param [in] value floating value to represent
+   * \param [in] value Floating value to represent.
    */
   inline int64x64_t (const double value)
   {
@@ -108,12 +113,12 @@ public:
     //   TestSuite int64x64
     const long double round = 0.5;
     flo = flo * HP_MAX_64 + round;
-    cairo_int64_t  hi = fhi;
-    const cairo_uint64_t lo = flo;
+    cairo_int64_t  hi = (cairo_int64_t)fhi;
+    const cairo_uint64_t lo = (cairo_uint64_t)flo;
     if (flo >= HP_MAX_64)
       {
-	// conversion to uint64 rolled over
-	++hi;
+        // conversion to uint64 rolled over
+        ++hi;
       }
     _v.hi = hi;
     _v.lo = lo;
@@ -121,6 +126,9 @@ public:
   }
   /**@}*/
 
+  /**
+   * \name Construct from an integral type.
+   */
   /**@{*/
   /**
    * Construct from an integral type.
@@ -176,16 +184,24 @@ public:
    * \param [in] o Value to copy.
    */
   inline int64x64_t (const int64x64_t & o)
-    : _v (o._v) {}
+    : _v (o._v)
+  {}
   /**
    * Assignment.
    *
    * \param [in] o Value to assign to this int64x64_t.
+   * \returns a copy of \pname{o}
    */
   inline int64x64_t & operator = (const int64x64_t & o)
   {
     _v = o._v;
     return *this;
+  }
+
+  /** Explicit bool conversion. */
+  inline explicit operator bool () const
+  {
+    return (_v != 0);
   }
 
   /**
@@ -197,12 +213,12 @@ public:
   {
     const bool negative = _cairo_int128_negative (_v);
     const cairo_int128_t value = negative ? _cairo_int128_negate (_v) : _v;
-    const long double fhi = value.hi;
+    const long double fhi = static_cast<long double> (value.hi);
     const long double flo = value.lo / HP_MAX_64;
     long double retval = fhi;
     retval += flo;
     retval = negative ? -retval : retval;
-    return retval;
+    return static_cast<double> (retval);
   }
   /**
    * Get the integer portion.
@@ -221,6 +237,37 @@ public:
   inline uint64_t GetLow (void) const
   {
     return _v.lo;
+  }
+
+  /**
+   * Truncate to an integer.
+   * Truncation is always toward zero, 
+   * \return The value truncated toward zero.
+   */
+  int64_t GetInt (void) const
+  {
+    const bool negative = _cairo_int128_negative (_v);
+    const cairo_int128_t value = negative ? _cairo_int128_negate (_v) : _v;
+    int64_t retval = value.hi;
+    retval = negative ? - retval : retval;
+    return retval;
+  }
+
+  /**
+   * Round to the nearest int.
+   * Similar to std::round this rounds halfway cases away from zero,
+   * regardless of the current (floating) rounding mode.
+   * \return The value rounded to the nearest int.
+   */
+  int64_t Round (void) const
+  {
+    const bool negative = _cairo_int128_negative (_v);
+    cairo_uint128_t value = negative ? _cairo_int128_negate (_v) : _v;
+    cairo_uint128_t half {1ULL << 63, 0};  // lo, hi
+    value = _cairo_uint128_add (value, half);
+    int64_t retval = value.hi;
+    retval = negative ? - retval : retval;
+    return retval;
   }
 
   /**
@@ -249,24 +296,74 @@ public:
   static int64x64_t Invert (const uint64_t v);
 
 private:
-  friend bool         operator == (const int64x64_t & lhs, const int64x64_t & rhs);
 
-  friend bool         operator <  (const int64x64_t & lhs, const int64x64_t & rhs);
-  friend bool         operator >  (const int64x64_t & lhs, const int64x64_t & rhs);
-  
-  friend int64x64_t & operator += (      int64x64_t & lhs, const int64x64_t & rhs);
-  friend int64x64_t & operator -= (      int64x64_t & lhs, const int64x64_t & rhs);
-  friend int64x64_t & operator *= (      int64x64_t & lhs, const int64x64_t & rhs);
-  friend int64x64_t & operator /= (      int64x64_t & lhs, const int64x64_t & rhs);
+  /**
+   * \name Arithmetic Operators
+   * Arithmetic operators for int64x64_t.
+   */
+  /**
+   * @{
+   *  Arithmetic operator.
+   *  \param [in] lhs Left hand argument
+   *  \param [in] rhs Right hand argument
+   *  \return The result of the operator.
+   */
+  // *NS_CHECK_STYLE_OFF*
+  friend inline bool operator == (const int64x64_t & lhs, const int64x64_t & rhs) { return _cairo_int128_eq (lhs._v, rhs._v); };
+  friend inline bool operator <  (const int64x64_t & lhs, const int64x64_t & rhs) { return _cairo_int128_lt (lhs._v, rhs._v); };
+  friend inline bool operator >  (const int64x64_t & lhs, const int64x64_t & rhs) { return _cairo_int128_gt (lhs._v, rhs._v); };
 
-  friend int64x64_t   operator -  (const int64x64_t & lhs);
-  friend int64x64_t   operator !  (const int64x64_t & lhs);
+  friend inline int64x64_t & operator += (int64x64_t & lhs, const int64x64_t & rhs)
+    {
+      lhs._v = _cairo_int128_add ( lhs._v, rhs._v );
+      return lhs;
+    };
+  friend inline int64x64_t & operator -= (int64x64_t & lhs, const int64x64_t & rhs)
+    {
+      lhs._v = _cairo_int128_sub ( lhs._v, rhs._v );
+      return lhs;
+    };
+  friend inline int64x64_t & operator *= (int64x64_t & lhs, const int64x64_t & rhs)
+    {
+      lhs.Mul (rhs);
+      return lhs;
+    };
+  friend inline int64x64_t & operator /= (int64x64_t & lhs, const int64x64_t & rhs)
+    {
+      lhs.Div (rhs);
+      return lhs;
+    };
+  // *NS_CHECK_STYLE_ON*
+  /** @} */
+
+  /**
+   * \name Unary Operators
+   * Unary operators for int64x64_t.
+   */
+  /**
+   * @{
+   *  Unary operator.
+   *  \param [in] lhs Left hand argument
+   *  \return The result of the operator.
+   */
+  friend inline int64x64_t   operator +  (const int64x64_t & lhs) { return lhs; };
+  friend inline int64x64_t   operator -  (const int64x64_t & lhs)
+    {
+      int64x64_t tmp = lhs;
+      tmp._v = _cairo_int128_negate (tmp._v);
+      return tmp;
+    };
+  friend inline int64x64_t   operator !  (const int64x64_t & lhs)
+    {
+      return (lhs == int64x64_t ()) ? int64x64_t (1, 0) : int64x64_t ();
+    };
+  /** @} */
 
   /**
    * Implement `*=`.
    *
    * \param [in] o The other factor.
-   */   
+   */
   void Mul (const int64x64_t & o);
   /**
    * Implement `/=`.
@@ -321,96 +418,6 @@ private:
   cairo_int128_t _v;  //!< The Q64.64 value.
 
 };  // class int64x64_t
-
-
-/**
- * \ingroup highprec
- * Equality operator.
- */
-inline bool operator == (const int64x64_t & lhs, const int64x64_t & rhs)
-{
-  return _cairo_int128_eq (lhs._v, rhs._v);
-}
-/**
- * \ingroup highprec
- * Less than operator
- */
-inline bool operator < (const int64x64_t & lhs, const int64x64_t & rhs)
-{
-  return _cairo_int128_lt (lhs._v, rhs._v);
-}
-/**
- * \ingroup highprec
- * Greater operator
- */
-inline bool operator > (const int64x64_t & lhs, const int64x64_t & rhs)
-{
-  return _cairo_int128_gt (lhs._v, rhs._v);
-}
-
-/**
- * \ingroup highprec
- * Compound addition operator
- */
-inline int64x64_t & operator += (int64x64_t & lhs, const int64x64_t & rhs)
-{
-  lhs._v = _cairo_int128_add( lhs._v, rhs._v );
-  return lhs;
-}
-/**
- * \ingroup highprec
- * Compound subtraction operator
- */
-inline int64x64_t & operator -= (int64x64_t & lhs, const int64x64_t & rhs)
-{
-  lhs._v = _cairo_int128_sub( lhs._v, rhs._v );
-  return lhs;
-}
-/**
- * \ingroup highprec
- * Compound multiplication operator
- */
-inline int64x64_t & operator *= (int64x64_t & lhs, const int64x64_t & rhs)
-{
-  lhs.Mul (rhs);
-  return lhs;
-}
-/**
- * \ingroup highprec
- * Compound division operator
- */
-inline int64x64_t & operator /= (int64x64_t & lhs, const int64x64_t & rhs)
-{
-  lhs.Div (rhs);
-  return lhs;
-}
-
-/**
- * \ingroup highprec
- * Unary plus operator
- */
-inline int64x64_t operator + (const int64x64_t & lhs)
-{
-  return lhs;
-}
-/**
- * \ingroup highprec
- * Unary negation operator (change sign operator)
- */
-inline int64x64_t operator - (const int64x64_t & lhs)
-{
-  int64x64_t tmp = lhs;
-  tmp._v = _cairo_int128_negate (tmp._v);
-  return tmp;
-}
-/**
- * \ingroup highprec
- * Logical not operator
- */
-inline int64x64_t operator ! (const int64x64_t & lhs)
-{
-  return (lhs == int64x64_t ()) ? int64x64_t (1, 0) : int64x64_t ();
-}
 
 
 } // namespace ns3

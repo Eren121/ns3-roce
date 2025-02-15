@@ -588,7 +588,7 @@ uint8_t DsrOptionRreq::Process (Ptr<Packet> packet, Ptr<Packet> dsrP, Ipv4Addres
 
   if (dupRequest)
     {
-      // We have received this same route reqeust before, not forwarding it now
+      // We have received this same route request before, not forwarding it now
       NS_LOG_LOGIC ("Duplicate request. Drop!");
       m_dropTrace (packet); // call drop trace
       return 0;
@@ -1450,7 +1450,7 @@ uint8_t DsrOptionRerr::Process (Ptr<Packet> packet, Ptr<Packet> dsrP, Ipv4Addres
   /*
    * The error serialized size
    */
-  uint32_t rerrSize;
+  [[maybe_unused]] uint32_t rerrSize;
   NS_LOG_DEBUG ("The error type value here " << (uint32_t)errorType);
   if (errorType == 1) // unreachable ip address
     {
@@ -1494,7 +1494,6 @@ uint8_t DsrOptionRerr::Process (Ptr<Packet> packet, Ptr<Packet> dsrP, Ipv4Addres
       p->RemoveHeader (rerrUnsupport);
       rerrSize = rerrUnsupport.GetSerializedSize ();
 
-      NS_UNUSED (rerrSize);
       /// \todo This is for the other two error options, not supporting for now
       // uint32_t serialized = DoSendError (p, rerrUnsupport, rerrSize, ipv4Address, protocol);
       uint32_t serialized = 0;

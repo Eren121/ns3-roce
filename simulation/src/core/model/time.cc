@@ -21,16 +21,16 @@
  */
 #include "nstime.h"
 #include "abort.h"
-#include "system-mutex.h"
 #include "log.h"
-#include <cmath>
+#include <cmath>    // pow
 #include <iomanip>  // showpos
+#include <mutex>
 #include <sstream>
 
 /**
  * \file
  * \ingroup time
- * ns3::Time, ns3::TimeWithUnit 
+ * ns3::Time, ns3::TimeWithUnit
  * and ns3::TimeValue attribute value implementations.
  */
 
@@ -38,25 +38,58 @@ namespace ns3 {
 
 NS_LOG_COMPONENT_DEFINE_MASK ("Time", ns3::LOG_PREFIX_TIME);
 
+/** Unnamed namespace */
+namespace {
+
+  /** Scaling coefficients, exponents, and look up table for unit. */
+  /** @{ */
+  /** Scaling exponent, relative to smallest unit. */
+  //                                      Y,   D,  H, MIN,  S, MS, US, NS, PS, FS
+  const int8_t  UNIT_POWER[Time::LAST] = {     17,  17, 17,  16, 15, 12,  9,  6,  3,  0 };
+  /** Scaling coefficient, relative to smallest unit. */
+  const int32_t UNIT_COEFF[Time::LAST] = { 315360, 864, 36,   6,  1,  1,  1,  1,  1,  1 };
+
+
+  /**
+   * Scale a unit to the smallest unit.
+   * \param u The unit to scale
+   * \returns The value of \pname{u} in terms of the smallest defined unit.
+   */
+  long double
+  Scale (Time::Unit u)
+  {
+    return UNIT_COEFF[u] * std::pow (10L, UNIT_POWER[u]); 
+  }
+
+  /** 
+   * Initializer for \c UNIT_VALUE 
+   * \returns The array of scale factors between units.
+   */
+  long double *
+  InitUnitValue (void)
+  {
+    static long double values[Time::LAST];
+    for (auto u = static_cast<int> (Time::Y); u != static_cast<int> (Time::LAST); ++u)
+      {
+        values [u] = Scale (static_cast<Time::Unit> (u));
+      }
+    return values;
+  }
+
+  /** Value of each unit, in terms of the smallest defined unit. */
+  const long double * UNIT_VALUE = InitUnitValue ();
+
+  /** @} */
+
+}  // unnamed namespace
+
+
 // The set of marked times
 // static
 Time::MarkedTimes * Time::g_markingTimes = 0;
 
-/**
- * \internal
- * Get mutex for critical sections around modification of Time::g_markingTimes
- *
- * \returns The static mutex to control access to Time::g_markingTimes.
- *
- * \relates Time
- */
-SystemMutex &
-GetMarkingMutex ()
-{
-  static SystemMutex g_markingMutex;
-  return g_markingMutex;
-}
-
+/// The static mutex for critical sections around modification of Time::g_markingTimes.
+static std::mutex g_markingMutex;
 
 // Function called to force static initialization
 // static
@@ -64,14 +97,14 @@ bool Time::StaticInit ()
 {
   static bool firstTime = true;
 
-  CriticalSection critical (GetMarkingMutex ());
+  std::unique_lock lock {g_markingMutex};
 
   if (firstTime)
     {
-      if (! g_markingTimes)
+      if (!g_markingTimes)
         {
           static MarkedTimes markingTimes;
-          g_markingTimes = & markingTimes;
+          g_markingTimes = &markingTimes;
         }
       else
         {
@@ -197,28 +230,26 @@ Time::SetResolution (enum Unit unit, struct Resolution *resolution,
       ConvertTimes (unit);
     }
 
-  // Y, D, H, MIN, S, MS, US, NS, PS, FS
-  const int8_t power [LAST] = { 17, 17, 17, 16, 15, 12, 9, 6, 3, 0 };
-  const int32_t coefficient [LAST] = { 315360, 864, 36, 6, 1, 1, 1, 1, 1, 1 };
   for (int i = 0; i < Time::LAST; i++)
     {
-      int shift = power[i] - power[(int)unit];
+      int shift = UNIT_POWER[i] - UNIT_POWER[(int)unit];
       int quotient = 1;
-      if (coefficient[i] > coefficient[(int) unit])
+      if (UNIT_COEFF[i] > UNIT_COEFF[(int) unit])
         {
-          quotient = coefficient[i] / coefficient[(int) unit];
-          NS_ASSERT (quotient * coefficient[(int) unit] == coefficient[i]);
+          quotient = UNIT_COEFF[i] / UNIT_COEFF[(int) unit];
+          NS_ASSERT (quotient * UNIT_COEFF[(int) unit] == UNIT_COEFF[i]);
         }
-      else if (coefficient[i] < coefficient[(int) unit])
+      else if (UNIT_COEFF[i] < UNIT_COEFF[(int) unit])
         {
-          quotient = coefficient[(int) unit] / coefficient[i];
-          NS_ASSERT (quotient * coefficient[i] == coefficient[(int) unit]);
+          quotient = UNIT_COEFF[(int) unit] / UNIT_COEFF[i];
+          NS_ASSERT (quotient * UNIT_COEFF[i] == UNIT_COEFF[(int) unit]);
         }
-      NS_LOG_DEBUG ("SetResolution for unit " << (int) unit << " loop iteration " << i
-    		    << " has shift " << shift << " has quotient " << quotient);
+      NS_LOG_DEBUG ("SetResolution for unit " << (int) unit <<
+                    " loop iteration " << i <<
+                    " has shift " << shift << " has quotient " << quotient);
       int64_t factor = static_cast<int64_t> (std::pow (10, std::fabs (shift)) * quotient);
       double realFactor = std::pow (10, (double) shift)
-                        * static_cast<double> (coefficient[i]) / coefficient[(int) unit];
+        * static_cast<double> (UNIT_COEFF[i]) / UNIT_COEFF[(int) unit];
       NS_LOG_DEBUG ("SetResolution factor " << factor << " real factor " << realFactor);
       struct Information *info = &resolution->info[i];
       info->factor = factor;
@@ -263,20 +294,19 @@ Time::ClearMarkedTimes ()
    *
    * It would seem natural to use this function at the end of
    * ConvertTimes, but that function already has the mutex.
-   * Our SystemMutex throws a fatal error if we try to lock it more than
-   * once in the same thread (at least in the unix implementation),
+   * The mutex can not be locked more than once in the same thread,
    * so calling this function from ConvertTimes is a bad idea.
    *
    * Instead, we copy this body into ConvertTimes.
    */
 
-  CriticalSection critical (GetMarkingMutex ());
+  std::unique_lock lock {g_markingMutex};
 
   NS_LOG_FUNCTION_NOARGS ();
   if (g_markingTimes)
     {
       NS_LOG_LOGIC ("clearing MarkedTimes");
-      g_markingTimes->erase (g_markingTimes->begin(), g_markingTimes->end ());
+      g_markingTimes->erase (g_markingTimes->begin (), g_markingTimes->end ());
       g_markingTimes = 0;
     }
 }  // Time::ClearMarkedTimes
@@ -286,7 +316,7 @@ Time::ClearMarkedTimes ()
 void
 Time::Mark (Time * const time)
 {
-  CriticalSection critical (GetMarkingMutex ());
+  std::unique_lock lock {g_markingMutex};
 
   NS_LOG_FUNCTION (time);
   NS_ASSERT (time != 0);
@@ -304,7 +334,7 @@ Time::Mark (Time * const time)
         {
           NS_LOG_WARN ("already recorded " << time << "!");
         }
-   }
+    }
 }  // Time::Mark ()
 
 
@@ -312,7 +342,7 @@ Time::Mark (Time * const time)
 void
 Time::Clear (Time * const time)
 {
-  CriticalSection critical (GetMarkingMutex ());
+  std::unique_lock lock {g_markingMutex};
 
   NS_LOG_FUNCTION (time);
   NS_ASSERT (time != 0);
@@ -342,26 +372,26 @@ Time::Clear (Time * const time)
 void
 Time::ConvertTimes (const enum Unit unit)
 {
-  CriticalSection critical (GetMarkingMutex ());
+  std::unique_lock lock {g_markingMutex};
 
-  NS_LOG_FUNCTION_NOARGS();
+  NS_LOG_FUNCTION_NOARGS ();
 
   NS_ASSERT_MSG (g_markingTimes != 0,
                  "No MarkedTimes registry. "
                  "Time::SetResolution () called more than once?");
 
-  for ( MarkedTimes::iterator it = g_markingTimes->begin();
-        it != g_markingTimes->end();
+  for ( MarkedTimes::iterator it = g_markingTimes->begin ();
+        it != g_markingTimes->end ();
         it++ )
     {
       Time * const tp = *it;
-      if ( ! (    (tp->m_data == std::numeric_limits<int64_t>::min ())
-               || (tp->m_data == std::numeric_limits<int64_t>::max ())
+      if ( !((tp->m_data == std::numeric_limits<int64_t>::min ())
+             || (tp->m_data == std::numeric_limits<int64_t>::max ())
              )
-         )
+           )
         {
-      tp->m_data = tp->ToInteger (unit);
-    }
+          tp->m_data = tp->ToInteger (unit);
+        }
     }
 
   NS_LOG_LOGIC ("logged " << g_markingTimes->size () << " Time objects.");
@@ -369,7 +399,7 @@ Time::ConvertTimes (const enum Unit unit)
   // Body of ClearMarkedTimes
   // Assert above already guarantees g_markingTimes != 0
   NS_LOG_LOGIC ("clearing MarkedTimes");
-  g_markingTimes->erase (g_markingTimes->begin(), g_markingTimes->end ());
+  g_markingTimes->erase (g_markingTimes->begin (), g_markingTimes->end ());
   g_markingTimes = 0;
 
 }  // Time::ConvertTimes ()
@@ -385,11 +415,11 @@ Time::GetResolution (void)
 
 
 TimeWithUnit
-Time::As (const enum Unit unit) const
+Time::As (const enum Unit unit /* = Time::AUTO */) const
 {
   return TimeWithUnit (*this, unit);
 }
- 
+
 
 std::ostream &
 operator << (std::ostream & os, const Time & time)
@@ -402,31 +432,77 @@ operator << (std::ostream & os, const Time & time)
 std::ostream &
 operator << (std::ostream & os, const TimeWithUnit & timeU)
 {
-  std::string unit;
 
-  switch (timeU.m_unit)
+  std::string label;
+  Time::Unit unit = timeU.m_unit;
+
+  if (unit == Time::AUTO)
     {
-    case Time::Y:    unit = "y";    break;
-    case Time::D:    unit = "d";    break;
-    case Time::H:    unit = "h";    break;
-    case Time::MIN:  unit = "min";  break;
-    case Time::S:    unit = "s";    break;
-    case Time::MS:   unit = "ms";   break;
-    case Time::US:   unit = "us";   break;
-    case Time::NS:   unit = "ns";   break;
-    case Time::PS:   unit = "ps";   break;
-    case Time::FS:   unit = "fs";   break;
+      long double value = static_cast<long double> (timeU.m_time.GetTimeStep ());
+      // convert to finest scale (fs)
+      value *= Scale (Time::GetResolution ());
+      // find the best unit
+      int u = Time::Y;
+      while (u != Time::LAST && UNIT_VALUE[u] > value)
+        {
+          ++u;
+        }
+      if (u == Time::LAST)
+        {
+          --u;
+        }
+      unit = static_cast<Time::Unit> (u);
+    }
+
+  switch (unit)
+    {
+      // *NS_CHECK_STYLE_OFF*
+    case Time::Y:    label = "y";    break;
+    case Time::D:    label = "d";    break;
+    case Time::H:    label = "h";    break;
+    case Time::MIN:  label = "min";  break;
+    case Time::S:    label = "s";    break;
+    case Time::MS:   label = "ms";   break;
+    case Time::US:   label = "us";   break;
+    case Time::NS:   label = "ns";   break;
+    case Time::PS:   label = "ps";   break;
+    case Time::FS:   label = "fs";   break;
+      // *NS_CHECK_STYLE_ON*
 
     case Time::LAST:
+    case Time::AUTO:
     default:
       NS_ABORT_MSG ("can't be reached");
-      unit = "unreachable";
+      label = "unreachable";
       break;
     }
 
-  int64x64_t v = timeU.m_time.To (timeU.m_unit);
-  os << v << unit;
-  
+  double v = timeU.m_time.ToDouble (unit);
+
+  // Note: we must copy the "original" format flags because we have to modify them.
+  // std::ios_base::showpos is to print the "+" in front of the number for positive,
+  // std::ios_base::right is to add (eventual) extra space in front of the number.
+  //   the eventual extra space might be due to a std::setw (_number_), and
+  //   normally it would be printed after the number and before the time unit label.
+
+  std::ios_base::fmtflags ff = os.flags ();
+
+  os << std::showpos << std::right << v << label;
+
+  // And here we have to restore what we changed.
+  if (!(ff & std::ios_base::showpos))
+    {
+      os << std::noshowpos;
+    }
+  if (ff & std::ios_base::left)
+    {
+      os << std::left;
+    }
+  else if (ff & std::ios_base::internal)
+    {
+      os << std::internal;
+    }
+
   return os;
 }
 
@@ -451,8 +527,10 @@ MakeTimeChecker (const Time min, const Time max)
   {
     Checker (const Time minValue, const Time maxValue)
       : m_minValue (minValue),
-        m_maxValue (maxValue) {}
-    virtual bool Check (const AttributeValue &value) const {
+        m_maxValue (maxValue)
+    {}
+    virtual bool Check (const AttributeValue &value) const
+    {
       NS_LOG_FUNCTION (&value);
       const TimeValue *v = dynamic_cast<const TimeValue *> (&value);
       if (v == 0)
@@ -461,25 +539,30 @@ MakeTimeChecker (const Time min, const Time max)
         }
       return v->Get () >= m_minValue && v->Get () <= m_maxValue;
     }
-    virtual std::string GetValueTypeName (void) const {
+    virtual std::string GetValueTypeName (void) const
+    {
       NS_LOG_FUNCTION_NOARGS ();
       return "ns3::TimeValue";
     }
-    virtual bool HasUnderlyingTypeInformation (void) const {
+    virtual bool HasUnderlyingTypeInformation (void) const
+    {
       NS_LOG_FUNCTION_NOARGS ();
       return true;
     }
-    virtual std::string GetUnderlyingTypeInformation (void) const {
+    virtual std::string GetUnderlyingTypeInformation (void) const
+    {
       NS_LOG_FUNCTION_NOARGS ();
       std::ostringstream oss;
       oss << "Time" << " " << m_minValue << ":" << m_maxValue;
       return oss.str ();
     }
-    virtual Ptr<AttributeValue> Create (void) const {
+    virtual Ptr<AttributeValue> Create (void) const
+    {
       NS_LOG_FUNCTION_NOARGS ();
       return ns3::Create<TimeValue> ();
     }
-    virtual bool Copy (const AttributeValue &source, AttributeValue &destination) const {
+    virtual bool Copy (const AttributeValue &source, AttributeValue &destination) const
+    {
       NS_LOG_FUNCTION (&source << &destination);
       const TimeValue *src = dynamic_cast<const TimeValue *> (&source);
       TimeValue *dst = dynamic_cast<TimeValue *> (&destination);

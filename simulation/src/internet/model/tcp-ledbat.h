@@ -22,10 +22,13 @@
 #ifndef TCP_LEDBAT_H
 #define TCP_LEDBAT_H
 
+#include "tcp-congestion-ops.h"
+
 #include <vector>
-#include "ns3/tcp-congestion-ops.h"
 
 namespace ns3 {
+
+class TcpSocketState;
 
 /**
  * \ingroup congestionOps
@@ -191,6 +194,7 @@ private:
   OwdCircBuf m_baseHistory;   //!< Buffer to store the base delay
   OwdCircBuf m_noiseFilter;   //!< Buffer to store the current delay
   uint32_t m_flag;                   //!< LEDBAT Flag
+  uint32_t m_minCwnd;                //!< Minimum cWnd value mentioned in RFC 6817
 };
 
 } // namespace ns3

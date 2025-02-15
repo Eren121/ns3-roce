@@ -89,6 +89,19 @@ Vector2D::GetLength () const
 }
 
 double
+Vector3D::GetLengthSquared () const
+{
+  NS_LOG_FUNCTION (this);
+  return x * x + y * y + z * z;
+}
+double
+Vector2D::GetLengthSquared () const
+{
+  NS_LOG_FUNCTION (this);
+  return x * x + y * y;
+}
+
+double
 CalculateDistance (const Vector3D &a, const Vector3D &b)
 {
   NS_LOG_FUNCTION (a << b);
@@ -101,6 +114,19 @@ CalculateDistance (const Vector2D &a, const Vector2D &b)
   return (b - a).GetLength ();
 }
 
+double
+CalculateDistanceSquared (const Vector3D &a, const Vector3D &b)
+{
+  NS_LOG_FUNCTION (a << b);
+  return (b - a).GetLengthSquared ();
+}
+double
+CalculateDistanceSquared (const Vector2D &a, const Vector2D &b)
+{
+  NS_LOG_FUNCTION (a << b);
+  return (b - a).GetLengthSquared ();
+}
+
 std::ostream &operator << (std::ostream &os, const Vector3D &vector)
 {
   os << vector.x << ":" << vector.y << ":" << vector.z;
@@ -110,8 +136,8 @@ std::istream &operator >> (std::istream &is, Vector3D &vector)
 {
   char c1, c2;
   is >> vector.x >> c1 >> vector.y >> c2 >> vector.z;
-  if (c1 != ':' ||
-      c2 != ':')
+  if (c1 != ':'
+      || c2 != ':')
     {
       is.setstate (std::ios_base::failbit);
     }
@@ -121,6 +147,30 @@ bool operator < (const Vector3D &a, const Vector3D &b)
 {
   return std::tie (a.x, a.y, a.z) <
          std::tie (b.x, b.y, b.z);
+}
+bool operator <= (const Vector3D &a, const Vector3D &b)
+{
+  return std::tie (a.x, a.y, a.z) <=
+         std::tie (b.x, b.y, b.z);
+}
+bool operator > (const Vector3D &a, const Vector3D &b)
+{
+  return std::tie (a.x, a.y, a.z) >
+         std::tie (b.x, b.y, b.z);
+}
+bool operator >= (const Vector3D &a, const Vector3D &b)
+{
+  return std::tie (a.x, a.y, a.z) >=
+         std::tie (b.x, b.y, b.z);
+}
+bool operator == (const Vector3D &a, const Vector3D &b)
+{
+  return std::tie (a.x, a.y, a.z) ==
+         std::tie (b.x, b.y, b.z);
+}
+bool operator != (const Vector3D &a, const Vector3D &b)
+{
+  return !(a == b);
 }
 Vector3D
 operator + (const Vector3D &a, const Vector3D &b)
@@ -151,6 +201,30 @@ bool operator < (const Vector2D &a, const Vector2D &b)
 {
   return std::tie (a.x, a.y) <
          std::tie (b.x, b.y);
+}
+bool operator <= (const Vector2D &a, const Vector2D &b)
+{
+  return std::tie (a.x, a.y) <=
+         std::tie (b.x, b.y);
+}
+bool operator > (const Vector2D &a, const Vector2D &b)
+{
+  return std::tie (a.x, a.y) >
+         std::tie (b.x, b.y);
+}
+bool operator >= (const Vector2D &a, const Vector2D &b)
+{
+  return std::tie (a.x, a.y) >=
+         std::tie (b.x, b.y);
+}
+bool operator == (const Vector2D &a, const Vector2D &b)
+{
+  return std::tie (a.x, a.y) ==
+         std::tie (b.x, b.y);
+}
+bool operator != (const Vector2D &a, const Vector2D &b)
+{
+  return !(a == b);
 }
 Vector2D
 operator + (const Vector2D &a, const Vector2D &b)

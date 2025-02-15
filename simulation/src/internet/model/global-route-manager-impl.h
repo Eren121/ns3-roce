@@ -737,8 +737,9 @@ public:
 
 /**
  * @brief Debugging routine; allow client code to supply a pre-built LSDB
+ * @param lsdb the pre-built LSDB
  */
-  void DebugUseLsdb (GlobalRouteManagerLSDB*);
+  void DebugUseLsdb (GlobalRouteManagerLSDB* lsdb);
 
 /**
  * @brief Debugging routine; call the core SPF from the unit tests
@@ -864,7 +865,7 @@ private:
   void SPFVertexAddParent (SPFVertex* v);
 
   /**
-   * \brief Search for a link between two vertexes.
+   * \brief Search for a link between two vertices.
    *
    * This method is derived from quagga ospf_get_next_link ()
    *

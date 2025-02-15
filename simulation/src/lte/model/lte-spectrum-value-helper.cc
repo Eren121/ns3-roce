@@ -30,6 +30,16 @@
 // just needed to log a std::vector<int> properly...
 namespace std {
 
+/**
+ * \brief Stream insertion operator.
+ * 
+ * \note This function scope is stricly local, and can not be 
+ * used in other source files.
+ *
+ * \param [in] os The reference to the output stream.
+ * \param [in] v The std::vector<int>.
+ * \returns The reference to the output stream.
+ */
 ostream&
 operator << (ostream& os, const vector<int>& v)
 {
@@ -173,9 +183,9 @@ LteSpectrumValueHelper::GetUplinkCarrierFrequency (uint32_t nUl)
 }
 
 double 
-LteSpectrumValueHelper::GetChannelBandwidth (uint8_t transmissionBandwidth)
+LteSpectrumValueHelper::GetChannelBandwidth (uint16_t transmissionBandwidth)
 {
-  NS_LOG_FUNCTION ((uint16_t) transmissionBandwidth);
+  NS_LOG_FUNCTION (transmissionBandwidth);
   switch (transmissionBandwidth)
     { 
     case 6:
@@ -191,7 +201,7 @@ LteSpectrumValueHelper::GetChannelBandwidth (uint8_t transmissionBandwidth)
     case 100:
       return 20.0e6;
     default:
-      NS_FATAL_ERROR ("invalid bandwidth value " << (uint16_t) transmissionBandwidth);
+      NS_FATAL_ERROR ("invalid bandwidth value " << transmissionBandwidth);
     }
 }
 
@@ -209,7 +219,7 @@ struct LteSpectrumModelId
    */
   LteSpectrumModelId (uint32_t f, uint8_t b);
   uint32_t earfcn; ///< EARFCN
-  uint8_t  bandwidth; ///< bandwidth
+  uint16_t  bandwidth; ///< bandwidth
 };
 
 LteSpectrumModelId::LteSpectrumModelId (uint32_t f, uint8_t b)
@@ -236,9 +246,9 @@ static std::map<LteSpectrumModelId, Ptr<SpectrumModel> > g_lteSpectrumModelMap; 
 
 
 Ptr<SpectrumModel>
-LteSpectrumValueHelper::GetSpectrumModel (uint32_t earfcn, uint8_t txBandwidthConfiguration)
+LteSpectrumValueHelper::GetSpectrumModel (uint32_t earfcn, uint16_t txBandwidthConfiguration)
 {
-  NS_LOG_FUNCTION (earfcn << (uint16_t) txBandwidthConfiguration);
+  NS_LOG_FUNCTION (earfcn << txBandwidthConfiguration);
   Ptr<SpectrumModel> ret;
   LteSpectrumModelId key (earfcn, txBandwidthConfiguration);
   std::map<LteSpectrumModelId, Ptr<SpectrumModel> >::iterator it = g_lteSpectrumModelMap.find (key);
@@ -271,9 +281,9 @@ LteSpectrumValueHelper::GetSpectrumModel (uint32_t earfcn, uint8_t txBandwidthCo
 }
 
 Ptr<SpectrumValue> 
-LteSpectrumValueHelper::CreateTxPowerSpectralDensity (uint32_t earfcn, uint8_t txBandwidthConfiguration, double powerTx, std::vector <int> activeRbs)
+LteSpectrumValueHelper::CreateTxPowerSpectralDensity (uint32_t earfcn, uint16_t txBandwidthConfiguration, double powerTx, std::vector <int> activeRbs)
 {
-  NS_LOG_FUNCTION (earfcn << (uint16_t) txBandwidthConfiguration << powerTx << activeRbs);
+  NS_LOG_FUNCTION (earfcn << txBandwidthConfiguration << powerTx << activeRbs);
 
   Ptr<SpectrumModel> model = GetSpectrumModel (earfcn, txBandwidthConfiguration);
   Ptr<SpectrumValue> txPsd = Create <SpectrumValue> (model);
@@ -295,15 +305,14 @@ LteSpectrumValueHelper::CreateTxPowerSpectralDensity (uint32_t earfcn, uint8_t t
 }
 
 Ptr<SpectrumValue>
-LteSpectrumValueHelper::CreateTxPowerSpectralDensity (uint32_t earfcn, uint8_t txBandwidthConfiguration, double powerTx, std::map<int, double> powerTxMap, std::vector <int> activeRbs)
+LteSpectrumValueHelper::CreateTxPowerSpectralDensity (uint32_t earfcn, uint16_t txBandwidthConfiguration, double powerTx, std::map<int, double> powerTxMap, std::vector <int> activeRbs)
 {
-  NS_LOG_FUNCTION (earfcn << (uint16_t) txBandwidthConfiguration << activeRbs);
+  NS_LOG_FUNCTION (earfcn << txBandwidthConfiguration << activeRbs);
 
   Ptr<SpectrumModel> model = GetSpectrumModel (earfcn, txBandwidthConfiguration);
   Ptr<SpectrumValue> txPsd = Create <SpectrumValue> (model);
 
   // powerTx is expressed in dBm. We must convert it into natural unit.
-  double powerTxW = std::pow (10., (powerTx - 30) / 10);
   double basicPowerTxW = std::pow (10., (powerTx - 30) / 10);
 
 
@@ -317,7 +326,7 @@ LteSpectrumValueHelper::CreateTxPowerSpectralDensity (uint32_t earfcn, uint8_t t
 
       if (powerIt != powerTxMap.end ())
         {
-          powerTxW = std::pow (10., (powerIt->second - 30) / 10);
+          double powerTxW = std::pow (10., (powerIt->second - 30) / 10);
           txPowerDensity = (powerTxW / (txBandwidthConfiguration * 180000));
         }
       else
@@ -333,12 +342,34 @@ LteSpectrumValueHelper::CreateTxPowerSpectralDensity (uint32_t earfcn, uint8_t t
   return txPsd;
 }
 
+Ptr<SpectrumValue>
+LteSpectrumValueHelper::CreateUlTxPowerSpectralDensity (uint16_t earfcn, uint16_t txBandwidthConfiguration, double powerTx, std::vector <int> activeRbs)
+{
+  NS_LOG_FUNCTION (earfcn << txBandwidthConfiguration << powerTx << activeRbs);
 
+  Ptr<SpectrumModel> model = GetSpectrumModel (earfcn, txBandwidthConfiguration);
+  Ptr<SpectrumValue> txPsd = Create <SpectrumValue> (model);
+
+  // powerTx is expressed in dBm. We must convert it into natural unit.
+  double powerTxW = std::pow (10., (powerTx - 30) / 10);
+
+  double txPowerDensity = (powerTxW / (activeRbs.size() * 180000));
+
+  for (std::vector <int>::iterator it = activeRbs.begin (); it != activeRbs.end (); it++)
+    {
+      int rbId = (*it);
+      (*txPsd)[rbId] = txPowerDensity;
+    }
+
+  NS_LOG_LOGIC (*txPsd);
+
+  return txPsd;
+}
 
 Ptr<SpectrumValue>
-LteSpectrumValueHelper::CreateNoisePowerSpectralDensity (uint32_t earfcn, uint8_t txBandwidthConfiguration, double noiseFigure)
+LteSpectrumValueHelper::CreateNoisePowerSpectralDensity (uint32_t earfcn, uint16_t txBandwidthConfiguration, double noiseFigure)
 {
-  NS_LOG_FUNCTION (earfcn << (uint16_t) txBandwidthConfiguration << noiseFigure);
+  NS_LOG_FUNCTION (earfcn << txBandwidthConfiguration << noiseFigure);
   Ptr<SpectrumModel> model = GetSpectrumModel (earfcn, txBandwidthConfiguration);
   return CreateNoisePowerSpectralDensity (noiseFigure, model);
 }

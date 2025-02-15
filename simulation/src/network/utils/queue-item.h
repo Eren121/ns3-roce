@@ -54,6 +54,11 @@ public:
 
   virtual ~QueueItem ();
 
+  // Delete default constructor, copy constructor and assignment operator to avoid misuse
+  QueueItem () = delete;
+  QueueItem (const QueueItem &) = delete;
+  QueueItem & operator = (const QueueItem &) = delete;
+
   /**
    * \return the packet included in this item.
    */
@@ -102,26 +107,6 @@ public:
 
 private:
   /**
-   * \brief Default constructor
-   *
-   * Defined and unimplemented to avoid misuse
-   */
-  QueueItem ();
-  /**
-   * \brief Copy constructor
-   *
-   * Defined and unimplemented to avoid misuse
-   */
-  QueueItem (const QueueItem &);
-  /**
-   * \brief Assignment operator
-   *
-   * Defined and unimplemented to avoid misuse
-   * \returns
-   */
-  QueueItem &operator = (const QueueItem &);
-
-  /**
    * The packet contained in the queue item.
    */
   Ptr<Packet> m_packet;
@@ -156,6 +141,11 @@ public:
   QueueDiscItem (Ptr<Packet> p, const Address & addr, uint16_t protocol);
 
   virtual ~QueueDiscItem ();
+
+  // Delete default constructor, copy constructor and assignment operator to avoid misuse
+  QueueDiscItem () = delete;
+  QueueDiscItem (const QueueDiscItem &) = delete;
+  QueueDiscItem & operator = (const QueueDiscItem &) = delete;
 
   /**
    * \brief Get the MAC address included in this item
@@ -211,31 +201,22 @@ public:
   /**
    * \brief Marks the packet as a substitute for dropping it, such as for Explicit Congestion Notification
    *
-   * \return true if the packet gets marked, false otherwise
+   * \return true if the packet is marked by this method or is already marked, false otherwise
    */
   virtual bool Mark (void) = 0;
 
-private:
   /**
-   * \brief Default constructor
+   * \brief Computes the hash of various fields of the packet header
    *
-   * Defined and unimplemented to avoid misuse
-   */
-  QueueDiscItem ();
-  /**
-   * \brief Copy constructor
+   * This method just returns 0. Subclasses should implement a reasonable hash
+   * for their protocol type, such as hashing on the TCP/IP 5-tuple.
    *
-   * Defined and unimplemented to avoid misuse
+   * \param perturbation hash perturbation value
+   * \return the hash of various fields of the packet header
    */
-  QueueDiscItem (const QueueDiscItem &);
-  /**
-   * \brief Assignment operator
-   *
-   * Defined and unimplemented to avoid misuse
-   * \returns
-   */
-  QueueDiscItem &operator = (const QueueDiscItem &);
+  virtual uint32_t Hash (uint32_t perturbation = 0) const;
 
+private:
   Address m_address;      //!< MAC destination address
   uint16_t m_protocol;    //!< L3 Protocol number
   uint8_t m_txq;          //!< Transmission queue index

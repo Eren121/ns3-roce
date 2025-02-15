@@ -51,7 +51,7 @@ typedef struct
 {
   double averagePower;    //!< Average measured power
   Time lastUpdate;        //!< Last update time
-  Time measurementLength; //!< Total measuremement period
+  Time measurementLength; //!< Total measurement period
 } LrWpanEdPower;
 
 /**
@@ -158,7 +158,7 @@ typedef struct
 {
   uint8_t phyCurrentChannel;         //!< The RF channel to use
   uint32_t phyChannelsSupported[32]; //!< BitField representing the available channels supported by a channel page.
-  uint8_t phyTransmitPower;          //!< Transmit power
+  uint8_t phyTransmitPower;          //!< 2 MSB: tolerance on the transmit power, 6 LSB: Tx power in dBm relative to 1mW (signed int in 2-complement format)
   uint8_t phyCCAMode;                //!< CCA mode
   uint32_t phyCurrentPage;           //!< Current channel page
   uint32_t phyMaxFrameDuration;      //!< The maximum number of symbols in a frame
@@ -276,7 +276,7 @@ public:
 
   // inherited from SpectrumPhy
   void SetMobility (Ptr<MobilityModel> m);
-  Ptr<MobilityModel> GetMobility (void);
+  Ptr<MobilityModel> GetMobility (void) const;
   void SetChannel (Ptr<SpectrumChannel> c);
 
   /**
@@ -294,7 +294,7 @@ public:
    * \param a the antenna
    */
   void SetAntenna (Ptr<AntennaModel> a);
-  Ptr<AntennaModel> GetRxAntenna (void);
+  Ptr<Object> GetAntenna (void) const;
   virtual Ptr<const SpectrumModel> GetRxSpectrumModel (void) const;
 
   /**
@@ -432,6 +432,7 @@ public:
 
   /**
    * implement PLME SetAttribute confirm SAP
+   * bit rate is in kbit/s.  Symbol rate is in ksymbol/s.
    * @param isData is true for data rate or false for symbol rate
    * @return the rate value of this PHY
    */
@@ -492,7 +493,8 @@ public:
 protected:
   /**
    * The data and symbol rates for the different PHY options.
-   * See Table 2 in section 6.1.2 IEEE 802.15.4-2006
+   * See Table 2 in section 6.1.2 IEEE 802.15.4-2006.
+   * Bit rate is in kbit/s.  Symbol rate is in ksymbol/s.
    */
   static const LrWpanPhyDataAndSymbolRates dataSymbolRates[7];
   /**
@@ -558,7 +560,7 @@ private:
 
   /**
    * Cancel an ongoing ED procedure. This is called when the transceiver is
-   * switched off or set to TX mode. This calls the appropiate confirm callback
+   * switched off or set to TX mode. This calls the appropriate confirm callback
    * of the MAC.
    *
    * \param state the new state which is the cause for canceling ED
@@ -672,6 +674,24 @@ private:
    * be removed in a future release.
    */
   TracedCallback<Time, LrWpanPhyEnumeration, LrWpanPhyEnumeration> m_trxStateLogger;
+
+  /**
+   * Calculates the nominal transmit power of the device in decibels relative to 1 mW
+   * according to the representation of the PIB attribute phyTransmitPower.
+   *
+   * The phyTransmitPower (table 23 of IEEE 802.15.4-2006) is a 8-bit bitmap, stored
+   * as a `uint8_t`. The bitmap has the following meaning:
+   * The 2 MSBs represent the tolerance on the transmit power.
+   * The 6 LSBs represent a signed integer in twos-complement format, corresponding
+   * to the nominal transmit power of the device in decibels relative to 1 mW.
+   *
+   * This function extracts the 6 LSBs corresponding to the nominal transmit power and
+   * converts it to a `int8_t`.
+   *
+   * \param phyTransmitPower the PIB attribute
+   * \return The nominal transmit power in dBm.
+   */
+  int8_t GetNominalTxPowerFromPib (uint8_t phyTransmitPower);
 
   /**
    * The mobility model used by the PHY.

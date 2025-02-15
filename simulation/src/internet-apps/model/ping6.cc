@@ -26,8 +26,6 @@
 #include "ns3/packet.h"
 #include "ns3/socket.h"
 #include "ns3/uinteger.h"
-#include "ns3/ipv6.h"
-#include "ns3/ipv6-address.h"
 #include "ns3/inet6-socket-address.h"
 #include "ns3/icmpv6-header.h"
 #include "ns3/ipv6-raw-socket-factory.h"
@@ -79,28 +77,30 @@ TypeId Ping6::GetTypeId ()
 
 Ping6::Ping6 ()
 {
-  NS_LOG_FUNCTION_NOARGS ();
+  NS_LOG_FUNCTION (this);
   m_sent = 0;
   m_socket = 0;
   m_seq = 0;
+  m_ipInterfaceIndex = 0;
+  m_ifIndex = 0;
   m_sendEvent = EventId ();
 }
 
 Ping6::~Ping6 ()
 {
-  NS_LOG_FUNCTION_NOARGS ();
+  NS_LOG_FUNCTION (this);
   m_socket = 0;
 }
 
 void Ping6::DoDispose ()
 {
-  NS_LOG_FUNCTION_NOARGS ();
+  NS_LOG_FUNCTION (this);
   Application::DoDispose ();
 }
 
 void Ping6::StartApplication ()
 {
-  NS_LOG_FUNCTION_NOARGS ();
+  NS_LOG_FUNCTION (this);
 
   if (!m_socket)
     {
@@ -112,6 +112,12 @@ void Ping6::StartApplication ()
       m_socket->Bind (Inet6SocketAddress (m_localAddress, 0));
       m_socket->SetAttribute ("Protocol", UintegerValue (Ipv6Header::IPV6_ICMPV6));
       m_socket->SetRecvCallback (MakeCallback (&Ping6::HandleRead, this));
+      m_ipv6Protocol = m_node->GetObject<Ipv6L3Protocol> ();
+
+      if (!m_localAddress.IsAny ())
+        {
+          m_ipInterfaceIndex = m_ipv6Protocol->GetInterfaceForAddress (m_localAddress);
+        }
     }
 
   ScheduleTransmit (Seconds (0.));
@@ -131,7 +137,7 @@ void Ping6::SetRemote (Ipv6Address ipv6)
 
 void Ping6::StopApplication ()
 {
-  NS_LOG_FUNCTION_NOARGS ();
+  NS_LOG_FUNCTION (this);
 
   if (m_socket)
     {
@@ -159,7 +165,7 @@ void Ping6::SetRouters (std::vector<Ipv6Address> routers)
 
 void Ping6::Send ()
 {
-  NS_LOG_FUNCTION_NOARGS ();
+  NS_LOG_FUNCTION (this);
   NS_ASSERT (m_sendEvent.IsExpired ());
 
   Ipv6Address src;
@@ -271,6 +277,16 @@ void Ping6::HandleRead (Ptr<Socket> socket)
                            " id =  " << (uint16_t)reply.GetId () <<
                            " seq = " << (uint16_t)reply.GetSeq () <<
                            " Hop Count = " << (uint16_t) (64 - hdr.GetHopLimit ()));
+
+              if (m_ifIndex)
+                {
+                  m_ipv6Protocol->ReachabilityHint (m_ifIndex, address.GetIpv6 ());
+                }
+              else
+                {
+                  m_ipv6Protocol->ReachabilityHint (m_ipInterfaceIndex, address.GetIpv6 ());
+                }
+
               break;
             case Icmpv6Header::ICMPV6_ERROR_DESTINATION_UNREACHABLE:
               packet->RemoveHeader (destUnreach);

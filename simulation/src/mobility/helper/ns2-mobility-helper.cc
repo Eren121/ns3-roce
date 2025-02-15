@@ -42,7 +42,6 @@
 #include <sstream>
 #include <map>
 #include "ns3/log.h"
-#include "ns3/unused.h"
 #include "ns3/simulator.h"
 #include "ns3/node-list.h"
 #include "ns3/node.h"
@@ -103,16 +102,22 @@ struct DestinationPoint
 
 /**
  * Parses a line of ns2 mobility
+ * \param str the string to parse
+ * \returns The parsed line
  */
 static ParseResult ParseNs2Line (const std::string& str);
 
 /** 
  * Put out blank spaces at the start and end of a line
+ * \param str input line
+ * \returns the line trimmed
  */
 static std::string TrimNs2Line (const std::string& str);
 
 /**
- * Checks if a string represents a number or it has others characters than digits an point.
+ * Checks if a string represents a number or it has others characters than digits and point.
+ * \param s the string to check
+ * \returns true if the string represents a number
  */
 static bool IsNumber (const std::string& s);
 
@@ -127,57 +132,91 @@ static bool IsVal (const std::string& str, T& ret);
 
 /**
  * Checks if the value between brackets is a correct nodeId number
+ * \param str string to check
+ * \returns true if the string represents a nodeId number
  */ 
 static bool HasNodeIdNumber (std::string str);
 
 /** 
  * Gets nodeId number in string format from the string like $node_(4)
+ * \param str string to de-tokenize
+ * \returns A string with the nodeId number
  */
 static std::string GetNodeIdFromToken (std::string str);
 
 /** 
  * Get node id number in int format
+ * \param pr the ParseResult to analyze
+ * \returns the node ID (as an int)
  */
 static int GetNodeIdInt (ParseResult pr);
 
 /**  
  * Get node id number in string format
+ * \param pr the ParseResult to analyze
+ * \returns the node ID (as a string)
  */
 static std::string GetNodeIdString (ParseResult pr);
 
 /**
  * Add one coord to a vector position
+ * \param actPos actual position (overwritten)
+ * \param coord coordinate (x, y, or z)
+ * \param value value of the coordinate
+ * \return The vector of the position
  */
 static Vector SetOneInitialCoord (Vector actPos, std::string& coord, double value);
 
 /** 
  * Check if this corresponds to a line like this: $node_(0) set X_ 123
+ * \param pr the ParseResult to analyze
+ * \returns true if the ParseResult looks like a coordinate without a scheduled time
  */
 static bool IsSetInitialPos (ParseResult pr);
 
 /** 
  * Check if this corresponds to a line like this: $ns_ at 1 "$node_(0) setdest 2 3 4"
+ * \param pr the ParseResult to analyze
+ * \returns true if the ParseResult looks like a coordinate with a scheduled time and destionation
  */
 static bool IsSchedSetPos (ParseResult pr);
 
 /**
  * Check if this corresponds to a line like this: $ns_ at 1 "$node_(0) set X_ 2"
+ * \param pr the ParseResult to analyze
+ * \returns true if the ParseResult looks like a coordinate with a scheduled time
  */
 static bool IsSchedMobilityPos (ParseResult pr);
 
 /**
  * Set waypoints and speed for movement.
+ * \param model mobility model
+ * \param lastPos last position
+ * \param at initial movement time
+ * \param xFinalPosition final position (X axis)
+ * \param yFinalPosition final position (Y axis)
+ * \param speed movement speed
+ * \returns A descriptor of the movement
  */
 static DestinationPoint SetMovement (Ptr<ConstantVelocityMobilityModel> model, Vector lastPos, double at,
                                      double xFinalPosition, double yFinalPosition, double speed);
 
 /**
  * Set initial position for a node
+ * \param model mobility model
+ * \param coord coordinate (x, y, or z)
+ * \param coordVal value of the coordinate
+ * \return The vector of the position
  */
 static Vector SetInitialPosition (Ptr<ConstantVelocityMobilityModel> model, std::string coord, double coordVal);
 
 /** 
  * Schedule a set of position for a node
+ * \param model mobility model
+ * \param at initial movement time
+ * \param coord coordinate (x, y, or z)
+ * \param coordVal value of the coordinate
+ * \return The vector of the position at the given time
  */
 static Vector SetSchedPosition (Ptr<ConstantVelocityMobilityModel> model, double at, std::string coord, double coordVal);
 
@@ -539,7 +578,7 @@ TrimNs2Line (const std::string& s)
 
   while (ret.size () > 0 && isblank (ret[0]))
     {
-      ret.erase (0, 1);    // Removes blank spaces at the begining of the line
+      ret.erase (0, 1);    // Removes blank spaces at the beginning of the line
     }
 
   while (ret.size () > 0 && (isblank (ret[ret.size () - 1]) || (ret[ret.size () - 1] == ';')))
@@ -555,8 +594,7 @@ bool
 IsNumber (const std::string& s)
 {
   char *endp;
-  double v = strtod (s.c_str (), &endp); // declared with warn_unused_result
-  NS_UNUSED (v); // suppress "set but not used" compiler warning
+  [[maybe_unused]] double v = strtod (s.c_str (), &endp);
   return endp == s.c_str () + s.size ();
 }
 

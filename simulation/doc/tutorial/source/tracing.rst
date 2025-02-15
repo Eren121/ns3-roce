@@ -488,7 +488,7 @@ If you now build and run this example,
 
 .. sourcecode:: bash
 
-  $ ./waf --run fourth
+  $ ./ns3 run fourth
 
 you will see the output from the ``IntTrace`` function execute as soon
 as the trace source is hit:
@@ -672,7 +672,9 @@ interest was the code that provided the Config path.  Therefore, the
 be the only Callback called.
 
 The final piece of the puzzle is the "context".  Recall that we saw an
-output looking something like the following from ``third.cc``::
+output looking something like the following from ``third.cc``:
+
+.. sourcecode:: text
 
   /NodeList/7/$ns3::MobilityModel/CourseChange x = 7.27897, y =
   2.22677
@@ -720,7 +722,7 @@ you to the documentation for the latest stable release of |ns3|.  If
 you select the "API Documentation" link, you will be taken to the
 |ns3| API documentation page.
 
-In the sidebar you should see a hierachy that begins
+In the sidebar you should see a hierarchy that begins
 
 *  ns-3
 
@@ -1216,7 +1218,7 @@ return type for a ``TracedValue`` callback function is always
 The ``.AddTraceSource`` in the ``GetTypeId`` method provides the
 "hooks" used for connecting the trace source to the outside world
 through the Config system.  We already discussed the first three
-agruments to ``AddTraceSource``: the Attribute name for the Config
+arguments to ``AddTraceSource``: the Attribute name for the Config
 system, a help string, and the address of the TracedValue class data
 member.
 
@@ -1511,7 +1513,7 @@ models, you probably want to understand this section.
 
 The most common way to start pumping events is to start an
 ``Application``.  This is done as the result of the following
-(hopefully) familar lines of an |ns3| script::
+(hopefully) familiar lines of an |ns3| script::
 
   ApplicationContainer apps = ...
   apps.Start (Seconds (1.0));
@@ -2033,7 +2035,7 @@ to run.
 
 .. sourcecode:: bash
 
-  $ ./waf --run fifth
+  $ ./ns3 run fifth
   Waf: Entering directory `/home/craigdo/repos/ns-3-allinone-dev/ns-3-dev/build'
   Waf: Leaving directory `/home/craigdo/repos/ns-3-allinone-dev/ns-3-dev/build'
   'build' finished successfully (0.684s)
@@ -2049,7 +2051,7 @@ to run.
   ...
 
 You can probably see immediately a downside of using prints of any
-kind in your traces.  We get those extraneous waf messages printed all
+kind in your traces.  We get those extraneous ns3 messages printed all
 over our interesting information along with those RxDrop messages.  We
 will remedy that soon, but I'm sure you can't wait to see the results
 of all of this work.  Let's redirect that output to a file called
@@ -2057,9 +2059,9 @@ of all of this work.  Let's redirect that output to a file called
 
 .. sourcecode:: bash
 
-  $ ./waf --run fifth > cwnd.dat 2>&1
+  $ ./ns3 run fifth > cwnd.dat 2>&1
 
-Now edit up "cwnd.dat" in your favorite editor and remove the waf
+Now edit up "cwnd.dat" in your favorite editor and remove the ns3
 build status and drop lines, leaving only the traced data (you could
 also comment out the ``TraceConnectWithoutContext("PhyRxDrop",
 MakeCallback (&RxDrop));`` in the script to get rid of the drop prints
@@ -2095,7 +2097,7 @@ exhibits all of the problems we purport to fix with the |ns3| tracing
 system!  You would be correct.  But, bear with us.  We're not done
 yet.
 
-One of the most important things we want to do is to is to have the
+One of the most important things we want to do is to have the
 ability to easily control the amount of output coming out of the
 simulation; and we also want to save those data to a file so we can
 refer back to it later.  We can use the mid-level trace helpers
@@ -2275,7 +2277,7 @@ Now, back to the example.  If you build and run this example,
 
 .. sourcecode:: bash
 
-  $ ./waf --run sixth
+  $ ./ns3 run sixth
 
 you will see the same messages appear as when you ran "fifth", but two
 new files will appear in the top-level directory of your |ns3|
@@ -2644,7 +2646,7 @@ provide additional user-level functionality.  What this means to the
 user is that all device helpers in the system will have all of the
 ASCII trace methods available; and these methods will all work in the
 same way across devices if the devices implement
-``EnablAsciiInternal`` correctly.
+``EnableAsciiInternal`` correctly.
 
 Methods
 #######
@@ -2739,11 +2741,11 @@ but to summarize ...
     helper.EnableAscii ("prefix", "client/eth0");
     helper.EnableAscii ("prefix", "server/eth0");
 
-    This would result in two files named ``prefix-client-eth0.tr`` and
-    ``prefix-server-eth0.tr`` with traces for each device in the
-    respective trace file.  Since all of the ``EnableAscii`` functions
-    are overloaded to take a stream wrapper, you can use that form as
-    well::
+  This would result in two files named ``prefix-client-eth0.tr`` and
+  ``prefix-server-eth0.tr`` with traces for each device in the
+  respective trace file.  Since all of the ``EnableAscii`` functions
+  are overloaded to take a stream wrapper, you can use that form as
+  well::
 
     Names::Add ("client" ...);
     Names::Add ("client/eth0" ...);
@@ -2773,10 +2775,10 @@ but to summarize ...
     ...
     helper.EnableAscii ("prefix", d);
 
-    This would result in a number of ASCII trace files being created,
-    each of which follows the ``<prefix>-<node id>-<device id>.tr``
-    convention.
-
+  This would result in a number of ASCII trace files being created,
+  each of which follows the ``<prefix>-<node id>-<device id>.tr``
+  convention.
+  
   Combining all of the traces into a single file is accomplished
   similarly to the examples above::
 
@@ -2804,7 +2806,7 @@ but to summarize ...
   convention.  Combining all of the traces into a single file is
   accomplished similarly to the examples above.
 
-* You can enable PCAP tracing on the basis of Node ID and device ID
+* You can enable ASCII tracing on the basis of Node ID and device ID
   as well as with explicit ``Ptr``.  Each Node in the system has an
   integer Node ID and each device connected to a Node has an integer
   device ID.
@@ -2816,7 +2818,7 @@ but to summarize ...
   Of course, the traces can be combined into a single file as shown
   above.
 
-* Finally, you can enable PCAP tracing for all devices in the
+* Finally, you can enable ASCII tracing for all devices in the
   system, with the same type as that managed by the device helper.
 
   ::
@@ -3086,7 +3088,7 @@ provide additional user-level functionality.  What this means to the
 user is that all device helpers in the system will have all of the
 ASCII trace methods available; and these methods will all work in the
 same way across protocols if the protocols implement
-``EnablAsciiIpv4Internal`` correctly.
+``EnableAsciiIpv4Internal`` correctly.
 
 Methods
 #######
@@ -3244,7 +3246,7 @@ but to summarize ...
   convention.  Combining all of the traces into a single file is
   accomplished similarly to the examples above.
 
-* You can enable PCAP tracing on the basis of Node ID and device ID as
+* You can enable ASCII tracing on the basis of Node ID and device ID as
   well.  In this case, the node-id is translated to a ``Ptr<Node>`` and
   the appropriate protocol is looked up in the node.  The resulting
   protocol and interface are used to specify the resulting trace source.

@@ -99,14 +99,6 @@ public:
   void Set (uint8_t address[16]);
 
   /**
-   * \brief Comparison operation between two Ipv6Addresses.
-   *
-   * \param other the IPv6 address to which to compare thisaddress
-   * \return true if the addresses are equal, false otherwise
-   */
-  bool IsEqual (const Ipv6Address& other) const;
-
-  /**
    * \brief Serialize this address to a 16-byte buffer.
    * \param buf the output buffer to which this address gets overwritten with this
    * Ipv6Address
@@ -139,6 +131,29 @@ public:
    * \return Ipv4 address
    */
   Ipv4Address GetIpv4MappedAddress () const;
+
+  /**
+   * \brief Make the autoconfigured IPv6 address from a Mac address.
+   *
+   * Actually the MAC supported are: Mac8, Mac16, Mac48, and Mac64.
+   *
+   * \param addr the MAC address.
+   * \param prefix the IPv6 prefix
+   * \return autoconfigured IPv6 address
+   */
+  static Ipv6Address MakeAutoconfiguredAddress (Address addr, Ipv6Address prefix);
+
+  /**
+   * \brief Make the autoconfigured IPv6 address from a Mac address.
+   *
+   * Actually the MAC supported are: Mac8, Mac16, Mac48, and Mac64.
+   *
+   * \param addr the MAC address.
+   * \param prefix the IPv6 prefix
+   * \return autoconfigured IPv6 address
+   */
+
+  static Ipv6Address MakeAutoconfiguredAddress (Address addr, Ipv6Prefix prefix);
 
   /**
    * \brief Make the autoconfigured IPv6 address with Mac16Address.
@@ -180,6 +195,16 @@ public:
    * \return autoconfigured IPv6 address
    */
   static Ipv6Address MakeAutoconfiguredAddress (Mac8Address addr, Ipv6Address prefix);
+
+  /**
+   * \brief Make the autoconfigured link-local IPv6 address from a Mac address.
+   *
+   * Actually the MAC supported are: Mac8, Mac16, Mac48, and Mac64.
+   *
+   * \param mac the MAC address.
+   * \return autoconfigured link-local IPv6 address
+   */
+  static Ipv6Address MakeAutoconfiguredLinkLocalAddress (Address mac);
 
   /**
    * \brief Make the autoconfigured link-local IPv6 address with Mac16Address.
@@ -257,16 +282,6 @@ public:
   bool IsAllRoutersMulticast () const;
 
   /**
-   * \brief If the IPv6 address is "all hosts multicast" (ff02::3/8).
-   *
-   * \deprecated This function is deprecated because the address has been removed from RFCs.
-   *
-   * \return true if "all hosts multicast", false otherwise
-   */
-  NS_DEPRECATED
-  bool IsAllHostsMulticast () const;
-
-  /**
    * \brief If the IPv6 address is a link-local address (fe80::/64).
    * \return true if the address is link-local, false otherwise
    */
@@ -291,12 +306,19 @@ public:
   bool IsDocumentation () const;
 
   /**
+   * \brief Compares an address and a prefix.
+   * \param prefix the prefix to compare with
+   * \return true if the address has the given prefix
+   */
+  bool HasPrefix (Ipv6Prefix const& prefix) const;
+
+  /**
    * \brief Combine this address with a prefix.
    * \param prefix a IPv6 prefix
    * \return an IPv6 address that is this address combined
    * (bitwise AND) with a prefix, yielding an IPv6 network address.
    */
-  Ipv6Address CombinePrefix (Ipv6Prefix const & prefix);
+  Ipv6Address CombinePrefix (Ipv6Prefix const & prefix) const;
 
   /**
    * \brief If the Address matches the type.
@@ -322,6 +344,11 @@ public:
    * \return an Ipv6Address
    */
   static Ipv6Address ConvertFrom (const Address& address);
+
+  /**
+   * \return true if address is initialized (i.e., set to something), false otherwise
+   */
+  bool IsInitialized (void) const;
 
   /**
    * \brief Get the 0 (::) Ipv6Address.
@@ -368,7 +395,6 @@ public:
   /**
    * \brief Get the bytes corresponding to the address.
    * \param buf buffer to store the data
-   * \return bytes of the address
    */
   void GetBytes (uint8_t buf[16]) const;
 
@@ -389,6 +415,7 @@ private:
    * \brief The address representation on 128 bits (16 bytes).
    */
   uint8_t m_address[16];
+  bool m_initialized; //!< IPv6 address has been explicitly initialized to a valid value.
 
   /**
    * \brief Equal to operator.
@@ -435,15 +462,37 @@ public:
 
   /**
    * \brief Constructs an Ipv6Prefix by using the input 16 bytes.
+   *
+   * The prefix length is calculated as the minimum prefix length, i.e.,
+   * 2001:db8:cafe:: will have a 47 bit prefix length.
+   *
    * \param prefix the 128-bit prefix
    */
   Ipv6Prefix (uint8_t prefix[16]);
 
   /**
    * \brief Constructs an Ipv6Prefix by using the input string.
+   *
+   * The prefix length is calculated as the minimum prefix length, i.e.,
+   * 2001:db8:cafe:: will have a 47 bit prefix length.
+   *
    * \param prefix the 128-bit prefix
    */
   Ipv6Prefix (char const* prefix);
+
+  /**
+   * \brief Constructs an Ipv6Prefix by using the input 16 bytes.
+   * \param prefix the 128-bit prefix
+   * \param prefixLength the prefix length
+   */
+  Ipv6Prefix (uint8_t prefix[16], uint8_t prefixLength);
+
+  /**
+   * \brief Constructs an Ipv6Prefix by using the input string.
+   * \param prefix the 128-bit prefix
+   * \param prefixLength the prefix length
+   */
+  Ipv6Prefix (char const* prefix, uint8_t prefixLength);
 
   /**
    * \brief Constructs an Ipv6Prefix by using the input number of bits.
@@ -484,17 +533,28 @@ public:
   void GetBytes (uint8_t buf[16]) const;
 
   /**
+   * \brief Convert the Prefix into an IPv6 Address.
+   * \return an IPv6 address representing the prefix
+   */
+  Ipv6Address ConvertToIpv6Address () const;
+
+  /**
    * \brief Get prefix length.
    * \return prefix length
    */
   uint8_t GetPrefixLength () const;
 
   /**
-   * \brief Comparison operation between two Ipv6Prefix.
-   * \param other the IPv6 prefix to which to compare this prefix
-   * \return true if the prefixes are equal, false otherwise
+   * \brief Set prefix length.
+   * \param prefixLength the prefix length
    */
-  bool IsEqual (const Ipv6Prefix& other) const;
+  void SetPrefixLength (uint8_t prefixLength);
+
+   /**
+    * \brief Get the minimum prefix length, i.e., 128 - the length of the largest sequence trailing zeroes.
+    * \return minimum prefix length
+    */
+  uint8_t GetMinimumPrefixLength () const;
 
   /**
    * \brief Print this address to the given output stream.
@@ -527,6 +587,11 @@ private:
    * \brief The prefix representation.
    */
   uint8_t m_prefix[16];
+
+  /**
+   * \brief The prefix length.
+   */
+  uint8_t m_prefixLength;
 
   /**
    * \brief Equal to operator.
@@ -615,11 +680,11 @@ inline bool operator != (const Ipv6Prefix& a, const Ipv6Prefix& b)
  * \class Ipv6AddressHash
  * \brief Hash function class for IPv6 addresses.
  */
-class Ipv6AddressHash : public std::unary_function<Ipv6Address, size_t>
+class Ipv6AddressHash
 {
 public:
   /**
-   * \brief Unary operator to hash IPv6 address.
+   * \brief Returns the hash of an IPv6 address.
    * \param x IPv6 address to hash
    * \returns the hash of the address
    */

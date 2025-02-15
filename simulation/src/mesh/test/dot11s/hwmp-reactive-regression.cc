@@ -52,11 +52,7 @@ HwmpReactiveRegressionTest::~HwmpReactiveRegressionTest ()
 void
 HwmpReactiveRegressionTest::DoRun ()
 {
-  RngSeedManager::SetSeed (12345);
-  // This test is somewhat sensitive to seed selection, since the nodes
-  // are on the fringe of reception range from one another (to create 
-  // a multi-hop topology).  Some seeds may yield no data transfer because
-  // ARP resolution across the mesh may fail too many times
+  RngSeedManager::SetSeed (1);
   RngSeedManager::SetRun (1);
   CreateNodes ();
   CreateDevices ();
@@ -77,11 +73,11 @@ HwmpReactiveRegressionTest::CreateNodes ()
   MobilityHelper mobility;
   Ptr<ListPositionAllocator> positionAlloc = CreateObject<ListPositionAllocator>();
   positionAlloc->Add (Vector (  0,   0, 0));
-  positionAlloc->Add (Vector (  0, 150, 0));
-  positionAlloc->Add (Vector (  0, 300, 0));
-  positionAlloc->Add (Vector (  0, 450, 0));
+  positionAlloc->Add (Vector (  0, 120, 0));
+  positionAlloc->Add (Vector (  0, 240, 0));
+  positionAlloc->Add (Vector (  0, 360, 0));
+  positionAlloc->Add (Vector (  0, 480, 0));
   positionAlloc->Add (Vector (  0, 600, 0));
-  positionAlloc->Add (Vector (  0, 750, 0));
   mobility.SetPositionAllocator (positionAlloc);
   mobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
   mobility.Install (*m_nodes);
@@ -108,14 +104,14 @@ HwmpReactiveRegressionTest::CreateDevices ()
 {
   int64_t streamsUsed = 0;
   // 1. setup WiFi
-  YansWifiPhyHelper wifiPhy = YansWifiPhyHelper::Default ();
+  YansWifiPhyHelper wifiPhy;
   // This test suite output was originally based on YansErrorRateModel
   wifiPhy.SetErrorRateModel ("ns3::YansErrorRateModel");
   YansWifiChannelHelper wifiChannel = YansWifiChannelHelper::Default ();
   Ptr<YansWifiChannel> chan = wifiChannel.Create ();
   wifiPhy.SetChannel (chan);
-  wifiPhy.Set ("TxGain", DoubleValue (1.0)); //this configuration should go away in future revision to the test
-  wifiPhy.Set ("RxGain", DoubleValue (1.0)); //this configuration should go away in future revision to the test
+  // This test was written prior to the preamble detection model
+  wifiPhy.DisablePreambleDetectionModel ();
 
   // 2. setup mesh
   MeshHelper mesh = MeshHelper::Default ();
@@ -123,11 +119,11 @@ HwmpReactiveRegressionTest::CreateDevices ()
   mesh.SetMacType ("RandomStart", TimeValue (Seconds (0.1)));
   mesh.SetNumberOfInterfaces (1);
   NetDeviceContainer meshDevices = mesh.Install (wifiPhy, *m_nodes);
-  // Six devices, 4 streams per device
+  // Six devices, 10 streams per device
   streamsUsed += mesh.AssignStreams (meshDevices, streamsUsed);
-  NS_TEST_EXPECT_MSG_EQ (streamsUsed, (meshDevices.GetN () * 9), "Stream assignment mismatch");
+  NS_TEST_EXPECT_MSG_EQ (streamsUsed, (meshDevices.GetN () * 10), "Stream assignment mismatch");
   streamsUsed += wifiChannel.AssignStreams (chan, streamsUsed);
-  NS_TEST_EXPECT_MSG_EQ (streamsUsed, (meshDevices.GetN () * 9), "Stream assignment mismatch");
+  NS_TEST_EXPECT_MSG_EQ (streamsUsed, (meshDevices.GetN () * 10), "Stream assignment mismatch");
 
   // 3. setup TCP/IP
   InternetStackHelper internetStack;

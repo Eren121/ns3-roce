@@ -41,7 +41,7 @@ Figure :ref:`fig-clear-channel-80211b`.
 
 Validation results for the 802.11a/g OFDM error model are available in this
 `technical report <https://www.nsnam.org/~pei/80211ofdm.pdf>`__.  The curves
-can be reproduced by running the ``ofdm-validation.cc`` example program
+can be reproduced by running the ``wifi-ofdm-validation.cc`` example program
 in the ``examples/wireless`` directory, and the figure is reproduced below
 in Figure :ref:`fig-nist-frame-success-rate`.
 
@@ -52,8 +52,8 @@ in Figure :ref:`fig-nist-frame-success-rate`.
 
    Frame error rate (NIST model) for 802.11a/g (OFDM) Wi-Fi
 
-Similar curves for 802.11n/ac/ax can be obtained by running the ``ofdm-ht-validation.cc``,
-``ofdm-vht-validation.cc`` and ``ofdm-he-validation.cc`` example programs
+Similar curves for 802.11n/ac/ax can be obtained by running the ``wifi-ofdm-ht-validation.cc``,
+``wifi-ofdm-vht-validation.cc`` and ``wifi-ofdm-he-validation.cc`` example programs
 in the ``examples/wireless`` directory, and the figures are reproduced below
 in Figure :ref:`fig-nist-frame-success-rate-n`, Figure :ref:`fig-nist-frame-success-rate-ac`
 and Figure :ref:`fig-nist-frame-success-rate-ax`, respectively.
@@ -82,7 +82,9 @@ There is no validation for those curves yet.
 
 MAC validation
 **************
-Validation of the MAC layer has been performed in [baldo2010]_.
+Validation of the 802.11 DCF MAC layer has been performed in [baldo2010]_.
+
+802.11 PCF operation has been verified by running 'wifi-pcf' example with PCAP files generation enabled, and observing the frame exchange using Wireshark.
 
 SpectrumWiFiPhy
 ***************
@@ -139,7 +141,7 @@ interval enabled (cases 9-16), and then with channel bonding enabled and
 short guard first disabled then enabled (cases 17-32).  Cases 33-64 repeat
 the same configurations but for two spatial streams (MIMO abstraction).
 
-When run with the legacy YansWifiPhy, as in ``./waf --run "wifi-spectrum-saturation-example --wifiType=ns3::YansWifiPhy"``, the same output is observed:
+When run with the legacy YansWifiPhy, as in ``./ns3 run "wifi-spectrum-saturation-example --wifiType=ns3::YansWifiPhy"``, the same output is observed:
 
 ::
 
@@ -202,7 +204,7 @@ Some sample output with default arguments (no interference) is:
 
 ::
 
-  ./waf --run "wifi-spectrum-per-interference"
+  ./ns3 run "wifi-spectrum-per-interference"
 
   wifiType: ns3::SpectrumWifiPhy distance: 50m; time: 10; TxPower: 16 dBm (40 mW)
   index   MCS  Rate (Mb/s) Tput (Mb/s) Received Signal (dBm)Noi+Inf(dBm) SNR (dB)
@@ -221,7 +223,7 @@ higher order modulations, due to lower SNR:
 
 ::
 
-  ./waf --run "wifi-spectrum-per-interference --waveformPower=0.001"
+  ./ns3 run "wifi-spectrum-per-interference --waveformPower=0.001"
 
   wifiType: ns3::SpectrumWifiPhy distance: 50m; sent: 1000 TxPower: 16 dBm (40 mW)
   index   MCS Rate (Mb/s) Tput (Mb/s) Received Signal (dBm)Noi+Inf(dBm)  SNR (dB)
@@ -243,3 +245,58 @@ The interference signal as received by the sending node is typically below
 the default -62 dBm CCA Mode 1 threshold in this example.  If it raises
 above, the sending node will suppress all transmissions.
 
+Bianchi validation
+******************
+
+The program ``src/wifi/examples/wifi-bianchi.cc`` allows user to
+compare ns-3 simulation results against the Bianchi model
+presented in [bianchi2000]_ and [bianchi2005]_.
+
+The MATLAB code used to generate the Bianchi model,
+as well as the generated outputs, are provided in
+the folder ``src/wifi/examples/reference``.
+User can regenerate Bianchi results by running
+``generate_bianchi.m`` in MATLAB.
+
+By default, the program ``src/wifi/examples/wifi-bianchi.cc``
+simulates an 802.11a adhoc ring scenario, with a PHY rate set to 
+54 Mbit/s, and loop from 5 stations to 50 stations, by a step of 
+5 stations. It generates a plt file, which allows user to quickly
+generate an eps file using gnuplot and vizualize the graph.
+
+::
+
+  ./ns3 run "wifi-bianchi"
+
+.. _fig-wifi-bianchi-11a-54-adhoc:
+
+.. figure:: figures/wifi-11a-p-1500-adhoc-r-54-min-5-max-50-step-5-throughput.*
+   :align: center
+
+   Bianchi throughput validation results for 802.11a 54 Mbps in adhoc configuration
+
+The user has the possibility to select the standard (only
+11a, 11b or 11g currently supported), to select the PHY rate (in Mbit/s),
+as well as to choose between an adhoc or an infrastructure configuration.
+
+When run for 802.11g 6 Mbit/s in infrastucture mode, the output is:
+
+::
+
+  ./ns3 run "wifi-bianchi --standard=11g --phyRate=6 --duration=500 --infra"
+
+.. _fig-wifi-bianchi-11g-6-infra:
+
+.. figure:: figures/wifi-11g-p-1500-infrastructure-r-6-min-5-max-50-step-5-throughput.*
+   :align: center
+
+   Bianchi throughput validation results for 802.11g 6 Mbps in infrastructure configuration
+
+Multi-user transmissions validation
+***********************************
+
+The implementation of the OFDMA support has been validated against a theoretical model [magrin2021mu]_ .
+
+A preliminary evaluation of the usage of OFDMA in 802.11ax, in terms of latency in non-saturated
+conditions, throughput in saturated conditions and transmission range with UL OFDMA, is provided
+in [avallone2021wcm]_ .

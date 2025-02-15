@@ -18,18 +18,13 @@
  * Author: Dean Armstrong <deanarm@gmail.com>
  */
 
+#include "ns3/string.h"
 #include "ns3/test.h"
-#include "ns3/simulator.h"
-#include "ns3/log.h"
 #include "ns3/uinteger.h"
 #include "ns3/boolean.h"
-#include "ns3/string.h"
 #include "ns3/double.h"
 #include "ns3/ssid.h"
-#include "ns3/data-rate.h"
-#include "ns3/inet-socket-address.h"
 #include "ns3/packet-sink.h"
-#include "ns3/wifi-helper.h"
 #include "ns3/yans-wifi-helper.h"
 #include "ns3/mobility-helper.h"
 #include "ns3/internet-stack-helper.h"
@@ -39,8 +34,12 @@
 
 using namespace ns3;
 
-NS_LOG_COMPONENT_DEFINE ("WifiMsduAggregatorThroughputTest");
-
+/**
+ * \ingroup wifi-test
+ * \ingroup tests
+ *
+ * \brief Throughput test for MsduAggregator
+ */
 class WifiMsduAggregatorThroughputTest : public TestCase
 {
 public:
@@ -48,7 +47,7 @@ public:
   virtual void DoRun (void);
 
 private:
-  bool m_writeResults;
+  bool m_writeResults; //!< flag whether to generate pcap
 };
 
 WifiMsduAggregatorThroughputTest::WifiMsduAggregatorThroughputTest ()
@@ -62,7 +61,7 @@ WifiMsduAggregatorThroughputTest::DoRun (void)
 {
   WifiHelper wifi;
   WifiMacHelper wifiMac;
-  YansWifiPhyHelper wifiPhy = YansWifiPhyHelper::Default ();
+  YansWifiPhyHelper wifiPhy;
   YansWifiChannelHelper wifiChannel = YansWifiChannelHelper::Default ();
   wifiPhy.SetChannel (wifiChannel.Create ());
 
@@ -72,7 +71,7 @@ WifiMsduAggregatorThroughputTest::DoRun (void)
   // less), but this approach tests the bit we need to without unduly
   // increasing the complexity of the simulation.
   std::string phyMode ("DsssRate1Mbps");
-  wifi.SetStandard (WIFI_PHY_STANDARD_80211b);
+  wifi.SetStandard (WIFI_STANDARD_80211b);
   wifi.SetRemoteStationManager ("ns3::ConstantRateWifiManager",
                                 "DataMode", StringValue (phyMode),
                                 "ControlMode", StringValue (phyMode));
@@ -141,7 +140,7 @@ WifiMsduAggregatorThroughputTest::DoRun (void)
 
   // The packet source is an on-off application on the AP
   // device. Given that we have fixed the transmit rate at 1 Mbps
-  // above, a 1 Mbps stream at the transport layer should be sufficent
+  // above, a 1 Mbps stream at the transport layer should be sufficient
   // to determine whether aggregation is working or not.
   //
   // We configure this traffic stream to operate between 1 and 9 seconds.
@@ -157,6 +156,7 @@ WifiMsduAggregatorThroughputTest::DoRun (void)
   // Enable tracing at the AP
   if (m_writeResults)
     {
+      wifiPhy.SetPcapDataLinkType (WifiPhyHelper::DLT_IEEE802_11_RADIO);
       wifiPhy.EnablePcap ("wifi-amsdu-throughput", sta.Get (0)->GetId (), 0);
     }
 
@@ -188,9 +188,16 @@ WifiMsduAggregatorThroughputTest::DoRun (void)
 }
 
 
-// For now the MSDU Aggregator Test Suite contains only the one test
-// that is defined in this file, so it's class definition and
-// instantiation can live here.
+/**
+ * \ingroup wifi-test
+ * \ingroup tests
+ *
+ * \brief MsduAggregator Test Suite
+ *
+ * For now the MSDU Aggregator Test Suite contains only the one test
+ * that is defined in this file, so it's class definition and
+ * instantiation can live here.
+ */
 class WifiMsduAggregatorTestSuite : public TestSuite
 {
 public:
@@ -198,7 +205,7 @@ public:
 };
 
 WifiMsduAggregatorTestSuite::WifiMsduAggregatorTestSuite ()
-  : TestSuite ("ns3-wifi-msdu-aggregator", SYSTEM)
+  : TestSuite ("wifi-msdu-aggregator", SYSTEM)
 {
   AddTestCase (new WifiMsduAggregatorThroughputTest, TestCase::QUICK);
 }

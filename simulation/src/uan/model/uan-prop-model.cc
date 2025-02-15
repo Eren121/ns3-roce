@@ -153,7 +153,7 @@ UanPdp::SetTap (std::complex<double> amp, uint32_t index)
       m_taps.resize (index + 1);
     }
 
-  Time delay = Seconds (index * m_resolution.GetSeconds ());
+  Time delay = index * m_resolution;
   m_taps[index] = Tap (delay, amp);
 }
 const Tap &
@@ -208,7 +208,7 @@ UanPdp::SumTapsFromMaxC (Time delay, Time duration) const
       return std::complex<double> (0.0, 0.0);
     }
 
-  uint32_t numTaps =  static_cast<uint32_t> (duration.GetSeconds () / m_resolution.GetSeconds () + 0.5);
+  uint32_t numTaps =  (duration / m_resolution + 0.5).GetHigh ();
   double maxAmp = -1;
   uint32_t maxTapIndex = 0;
 
@@ -220,7 +220,7 @@ UanPdp::SumTapsFromMaxC (Time delay, Time duration) const
           maxTapIndex = i;
         }
     }
-  uint32_t start = maxTapIndex + static_cast<uint32_t> (delay.GetSeconds () / m_resolution.GetSeconds ());
+  uint32_t start = maxTapIndex + (delay / m_resolution).GetHigh ();
   uint32_t end = std::min (start + numTaps, GetNTaps ());
   std::complex<double> sum = 0;
   for (uint32_t i = start; i < end; i++)
@@ -241,7 +241,7 @@ UanPdp::SumTapsFromMaxNc (Time delay, Time duration) const
       return 0;
     }
 
-  uint32_t numTaps =  static_cast<uint32_t> (duration.GetSeconds () / m_resolution.GetSeconds () + 0.5);
+  uint32_t numTaps =  (duration / m_resolution + 0.5).GetHigh ();
   double maxAmp = -1;
   uint32_t maxTapIndex = 0;
 
@@ -255,7 +255,7 @@ UanPdp::SumTapsFromMaxNc (Time delay, Time duration) const
     }
 
 
-  uint32_t start = maxTapIndex + static_cast<uint32_t> (delay.GetSeconds () / m_resolution.GetSeconds ());
+  uint32_t start = maxTapIndex + (delay / m_resolution).GetHigh ();
   uint32_t end = std::min (start + numTaps, GetNTaps ());
   double sum = 0;
   for (uint32_t i = start; i < end; i++)
@@ -283,8 +283,8 @@ UanPdp::SumTapsNc (Time begin, Time end) const
         }
     }
 
-  uint32_t stIndex = (uint32_t)(begin.GetSeconds () / m_resolution.GetSeconds () + 0.5);
-  uint32_t endIndex = (uint32_t)(end.GetSeconds () / m_resolution.GetSeconds () + 0.5);
+  uint32_t stIndex = (begin / m_resolution + 0.5).GetHigh ();
+  uint32_t endIndex = (end / m_resolution + 0.5).GetHigh ();
 
   endIndex = std::min (endIndex, GetNTaps ());
   double sum = 0;
@@ -316,8 +316,8 @@ UanPdp::SumTapsC (Time begin, Time end) const
         }
     }
 
-  uint32_t stIndex = (uint32_t)(begin.GetSeconds () / m_resolution.GetSeconds () + 0.5);
-  uint32_t endIndex = (uint32_t)(end.GetSeconds () / m_resolution.GetSeconds () + 0.5);
+  uint32_t stIndex = (begin / m_resolution + 0.5).GetHigh ();
+  uint32_t endIndex = (end / m_resolution + 0.5).GetHigh ();
 
   endIndex = std::min (endIndex, GetNTaps ());
 
@@ -327,6 +327,25 @@ UanPdp::SumTapsC (Time begin, Time end) const
       sum += m_taps[i].GetAmp ();
     }
   return sum;
+}
+
+UanPdp
+UanPdp::NormalizeToSumNc (void) const
+{
+  double sumNc = 0.0;
+  std::vector<Tap> newTaps;
+
+  for (uint32_t i = 0; i < GetNTaps (); i++)
+    {
+      sumNc += std::abs (m_taps[i].GetAmp ());
+    }
+
+  for (uint32_t i = 0; i < GetNTaps (); i++)
+    {
+      newTaps.push_back ( Tap (m_taps[i].GetDelay (), (m_taps[i].GetAmp () / sumNc)));
+    }
+
+  return UanPdp (newTaps, m_resolution);
 }
 
 UanPdp

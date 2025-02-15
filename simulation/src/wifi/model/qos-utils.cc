@@ -19,10 +19,108 @@
  *          Cecchi Niccolò <insa@igeek.it>
  */
 
-#include "qos-utils.h"
 #include "ns3/socket.h"
+#include "ns3/queue-item.h"
+#include "qos-utils.h"
+#include "wifi-mac-header.h"
+#include "mgt-headers.h"
+#include "ctrl-headers.h"
 
 namespace ns3 {
+
+std::size_t
+WifiAddressTidHash::operator()(const WifiAddressTidPair& addressTidPair) const
+{
+  uint8_t buffer[7];
+  addressTidPair.first.CopyTo (buffer);
+  buffer[6] = addressTidPair.second;
+
+  std::string s (buffer, buffer + 7);
+  return std::hash<std::string>{} (s);
+}
+
+std::size_t
+WifiAddressHash::operator()(const Mac48Address& address) const
+{
+  uint8_t buffer[6];
+  address.CopyTo (buffer);
+
+  std::string s (buffer, buffer + 6);
+  return std::hash<std::string>{} (s);
+}
+
+WifiAc::WifiAc (uint8_t lowTid, uint8_t highTid)
+  : m_lowTid (lowTid),
+    m_highTid (highTid)
+{
+}
+
+uint8_t
+WifiAc::GetLowTid (void) const
+{
+  return m_lowTid;
+}
+
+uint8_t
+WifiAc::GetHighTid (void) const
+{
+  return m_highTid;
+}
+
+uint8_t
+WifiAc::GetOtherTid (uint8_t tid) const
+{
+  if (tid == m_lowTid)
+    {
+      return m_highTid;
+    }
+  if (tid == m_highTid)
+    {
+      return m_lowTid;
+    }
+  NS_ABORT_MSG ("TID " << tid << " does not belong to this AC");
+}
+
+bool operator> (enum AcIndex left, enum AcIndex right)
+{
+  NS_ABORT_MSG_IF (left > 3 || right > 3, "Cannot compare non-QoS ACs");
+
+  if (left == right)
+    {
+      return false;
+    }
+  if (left == AC_BK)
+    {
+      return false;
+    }
+  if (right == AC_BK)
+    {
+      return true;
+    }
+  return static_cast<uint8_t> (left) > static_cast<uint8_t> (right);
+}
+
+bool operator>= (enum AcIndex left, enum AcIndex right)
+{
+  NS_ABORT_MSG_IF (left > 3 || right > 3, "Cannot compare non-QoS ACs");
+
+  return (left == right || left > right);
+}
+
+bool operator< (enum AcIndex left, enum AcIndex right)
+{
+  return !(left >= right);
+}
+
+bool operator<= (enum AcIndex left, enum AcIndex right)
+{
+  return !(left > right);
+}
+
+const std::map<AcIndex, WifiAc> wifiAcList = { {AC_BE, {0, 3}},
+                                               {AC_BK, {1, 2}},
+                                               {AC_VI, {4, 5}},
+                                               {AC_VO, {6, 7}} };
 
 AcIndex
 QosUtilsMapTidToAc (uint8_t tid)
@@ -85,12 +183,6 @@ QosUtilsIsOldPacket (uint16_t startingSeq, uint16_t seqNumber)
   return (distance >= 2048);
 }
 
-/**
- *  \brief Extraction operator for TypeId
- *  \param [in] packet is the packet
- *  \param [in] hdr is Wifi MAC header
- *  \returns the TypeId of the MAC header
- */
 uint8_t
 GetTid (Ptr<const Packet> packet, const WifiMacHeader hdr)
 {
@@ -123,7 +215,7 @@ GetTid (Ptr<const Packet> packet, const WifiMacHeader hdr)
             {
             case WifiActionHeader::BLOCK_ACK_ADDBA_REQUEST:
               {
-                MgtAddBaResponseHeader reqHdr;
+                MgtAddBaRequestHeader reqHdr;
                 pkt->RemoveHeader (reqHdr);
                 return reqHdr.GetTid ();
               }
@@ -154,6 +246,30 @@ GetTid (Ptr<const Packet> packet, const WifiMacHeader hdr)
     {
       NS_FATAL_ERROR ("Packet has no Traffic ID");
     }
+  return 0; // Silence compiler warning about lack of return value
+}
+
+uint8_t
+SelectQueueByDSField (Ptr<QueueItem> item)
+{
+  uint8_t dscp, priority = 0;
+  if (item->GetUint8Value (QueueItem::IP_DSFIELD, dscp))
+    {
+      // if the QoS map element is implemented, it should be used here
+      // to set the priority.
+      // User priority is set to the three most significant bits of the DS field
+      priority = dscp >> 5;
+    }
+
+  // replace the priority tag
+  SocketPriorityTag priorityTag;
+  priorityTag.SetPriority (priority);
+  item->GetPacket ()->ReplacePacketTag (priorityTag);
+
+  // if the admission control were implemented, here we should check whether
+  // the access category assigned to the packet should be downgraded
+
+  return static_cast<uint8_t> (QosUtilsMapTidToAc (priority));
 }
 
 

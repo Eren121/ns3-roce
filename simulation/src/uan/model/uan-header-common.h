@@ -28,10 +28,15 @@
 
 namespace ns3 {
 
+/**
+ * \ingroup uan
+ *
+ *  UAN protocol descriptor
+ */
 struct UanProtocolBits
 {
-  uint8_t  m_type : 4;
-  uint8_t  m_protocolNumber : 4;
+  uint8_t  m_type : 4;            //!< type (4 bits)
+  uint8_t  m_protocolNumber : 4;  //!< protocol number (4 bits)
 };
 
 /**
@@ -141,7 +146,7 @@ public:
 private:
   Mac8Address m_dest;  //!< The destination address.
   Mac8Address m_src;   //!< The source address.
-  UanProtocolBits m_uanProtocolBits;  //!< The type and protocol bits
+  UanProtocolBits m_uanProtocolBits {0};  //!< The type and protocol bits
 
 };  // class UanHeaderCommon
 

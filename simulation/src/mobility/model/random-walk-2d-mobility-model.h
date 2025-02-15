@@ -35,7 +35,7 @@ namespace ns3 {
  * \ingroup mobility
  * \brief 2D random walk mobility model.
  *
- * Each instance moves with a speed and direction choosen at random
+ * Each instance moves with a speed and direction chosen at random
  * with the user-provided random variables until
  * either a fixed distance has been walked or until a fixed amount
  * of time. If we hit one of the boundaries (specified by a rectangle),
@@ -66,6 +66,7 @@ private:
   /**
    * Walk according to position and velocity, until distance is reached,
    * time is reached, or intersection with the bounding box
+   * \param timeLeft The remaining time of the walk
    */
   void DoWalk (Time timeLeft);
   /**

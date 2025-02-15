@@ -46,7 +46,7 @@ static void SinkRx (Ptr<const Packet> p, const Address &ad)
 {
   // Enable the below line to see the packet contents printed out at the
   // receive sink
-  //std::cout << Simulator::Now().GetSeconds () << " " << *p << std::endl;
+  //std::cout << Simulator::Now().As (Time::S) << " " << *p << std::endl;
 }
 
 int
@@ -56,7 +56,7 @@ main (int argc, char *argv[])
   LogComponentEnable ("CsmaPacketSocketExample", LOG_LEVEL_INFO);
 #endif
   uint32_t dataRate = 10;
-  CommandLine cmd;
+  CommandLine cmd (__FILE__);
   cmd.AddValue ("dataRate", "application dataRate (Kb/s)", dataRate);
   cmd.Parse (argc, argv);
 

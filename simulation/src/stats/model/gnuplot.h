@@ -142,7 +142,7 @@ public:
   };
 
   /**
-   * \param title the title to be associated to this dataset.
+   * \param title the title to be associated to this dataset (default "Untitled").
    *
    * Create an empty dataset. Usually, the dataset's title is 
    * displayed in the legend box.
@@ -438,7 +438,7 @@ public:
 
   /**
    * \param osControl the output stream on which the relevant gnuplot
-   * contol commands should be generated. Including output file and
+   * control commands should be generated. Including output file and
    * terminal headers.
    * \param osData the output stream on which the relevant gnuplot
    * data values should be generated.
@@ -520,7 +520,7 @@ public:
  
   /**
    * \param osControl the output stream on which the relevant gnuplot
-   * contol commands should be generated. Including output file and
+   * control commands should be generated. Including output file and
    * terminal headers.
    * \param osData the output stream on which the relevant gnuplot
    * data values should be generated.

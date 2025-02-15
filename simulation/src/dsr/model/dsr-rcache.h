@@ -52,12 +52,14 @@
 #include "ns3/net-device.h"
 #include "ns3/ipv4-l3-protocol.h"
 #include "ns3/callback.h"
-#include "ns3/wifi-mac-header.h"
 #include "ns3/arp-cache.h"
 #include "dsr-option-header.h"
 
 namespace ns3 {
+
 class Time;
+class WifiMacHeader;
+
 namespace dsr {
 
 /**
@@ -387,6 +389,9 @@ public:
   DsrRouteCache ();
   virtual ~DsrRouteCache ();
 
+  // Delete assignment operator to avoid misuse
+  DsrRouteCache & operator = (DsrRouteCache const &) = delete;
+
   /**
    * \brief Remove the aged route cache entries when the route cache is full
    * \param rtVector the route cache to scan.
@@ -704,39 +709,42 @@ public:
   }
   /**
    * \brief Add ARP cache to be used to allow layer 2 notifications processing
+   * \param a ARP cache
    */
-  void AddArpCache (Ptr<ArpCache>);
+  void AddArpCache (Ptr<ArpCache> a);
   /**
    * \brief Don't use the provided ARP cache any more (interface is down)
+   * \param a ARP cache
    */
   void DelArpCache (Ptr<ArpCache>);
   /**
    * \brief Get callback to ProcessTxError, this callback is trying to use the wifi mac tx error header to notify a link layer drop event, however,
    * it is not fully supported yet
+   * \return The callback to ProcessTxError
    */
   Callback<void, WifiMacHeader const &> GetTxErrorCallback () const
   {
     return m_txErrorCallback;
   }
 
-  /// Handle link failure callback
-  /// \param cb the callback to be set
+  /**
+   * Handle link failure callback
+   * \param cb the callback to be set
+   */
   void SetCallback (Callback<void, Ipv4Address, uint8_t > cb)
   {
     m_handleLinkFailure = cb;
   }
-  /// Handle link failure callback
+  /**
+   * Handle link failure callback
+   * \return The callback to LinkFailure
+   */
   Callback<void, Ipv4Address, uint8_t > GetCallback () const
   {
     return m_handleLinkFailure;
   }
 
 private:
-  /**
-   * \brief assignment operator - defined but not implemented to avoid misuse.
-   * \return
-   */
-  DsrRouteCache & operator= (DsrRouteCache const &);
   DsrRouteCacheEntry::IP_VECTOR m_vector;               ///< The route vector to save the ip addresses for intermediate nodes.
   uint32_t m_maxCacheLen;                               ///< The maximum number of packets that we allow a routing protocol to buffer.
   Time     RouteCacheTimeout;                           ///< The maximum period of time that dsr is allowed to for an unused route.

@@ -79,7 +79,7 @@ UanMacAloha::GetTypeId (void)
 bool
 UanMacAloha::Enqueue (Ptr<Packet> packet, uint16_t protocolNumber, const Address &dest)
 {
-  NS_LOG_DEBUG ("" << Simulator::Now ().GetSeconds () << " MAC " << Mac8Address::ConvertFrom (GetAddress ()) << " Queueing packet for " << Mac8Address::ConvertFrom (dest));
+  NS_LOG_DEBUG ("" << Now ().As (Time::S) << " MAC " << Mac8Address::ConvertFrom (GetAddress ()) << " Queueing packet for " << Mac8Address::ConvertFrom (dest));
 
   if (!m_phy->IsStateTx ())
     {
@@ -114,9 +114,8 @@ UanMacAloha::AttachPhy (Ptr<UanPhy> phy)
 
 }
 void
-UanMacAloha::RxPacketGood (Ptr<Packet> pkt, double sinr, UanTxMode txMode)
+UanMacAloha::RxPacketGood (Ptr<Packet> pkt, [[maybe_unused]] double sinr, UanTxMode txMode)
 {
-  NS_UNUSED (sinr);
   UanHeaderCommon header;
   pkt->RemoveHeader (header);
   NS_LOG_DEBUG ("Receiving packet from " << header.GetSrc () << " For " << header.GetDest ());

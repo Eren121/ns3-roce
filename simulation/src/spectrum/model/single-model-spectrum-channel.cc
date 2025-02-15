@@ -34,6 +34,7 @@
 #include <ns3/antenna-model.h>
 #include <ns3/angles.h>
 
+#include <algorithm>
 
 #include "single-model-spectrum-channel.h"
 
@@ -55,9 +56,6 @@ SingleModelSpectrumChannel::DoDispose ()
   NS_LOG_FUNCTION (this);
   m_phyList.clear ();
   m_spectrumModel = 0;
-  m_propagationDelay = 0;
-  m_propagationLoss = 0;
-  m_spectrumPropagationLoss = 0;
   SpectrumChannel::DoDispose ();
 }
 
@@ -69,38 +67,21 @@ SingleModelSpectrumChannel::GetTypeId (void)
     .SetParent<SpectrumChannel> ()
     .SetGroupName ("Spectrum")
     .AddConstructor<SingleModelSpectrumChannel> ()
-    .AddAttribute ("MaxLossDb",
-                   "If a single-frequency PropagationLossModel is used, "
-                   "this value represents the maximum loss in dB for which "
-                   "transmissions will be passed to the receiving PHY. "
-                   "Signals for which the PropagationLossModel returns "
-                   "a loss bigger than this value will not be propagated "
-                   "to the receiver. This parameter is to be used to reduce "
-                   "the computational load by not propagating signals "
-                   "that are far beyond the interference range. Note that "
-                   "the default value corresponds to considering all signals "
-                   "for reception. Tune this value with care. ",
-                   DoubleValue (1.0e9),
-                   MakeDoubleAccessor (&SingleModelSpectrumChannel::m_maxLossDb),
-                   MakeDoubleChecker<double> ())
-    .AddTraceSource ("PathLoss",
-                     "This trace is fired whenever a new path loss value "
-                     "is calculated. The first and second parameters "
-                     "to the trace are pointers respectively to the TX and "
-                     "RX SpectrumPhy instances, whereas the third parameters "
-                     "is the loss value in dB. Note that the loss value "
-                     "reported by this trace is the single-frequency loss "
-                     "value obtained by evaluating only the TX and RX "
-                     "AntennaModels and the PropagationLossModel. "
-                     "In particular, note that SpectrumPropagationLossModel "
-                     "(even if present) is never used to evaluate the "
-                     "loss value reported in this trace. ",
-                     MakeTraceSourceAccessor (&SingleModelSpectrumChannel::m_pathLossTrace),
-                     "ns3::SpectrumChannel::LossTracedCallback")
   ;
   return tid;
 }
 
+
+void
+SingleModelSpectrumChannel::RemoveRx (Ptr<SpectrumPhy> phy)
+{
+  NS_LOG_FUNCTION (this << phy);
+  auto it = std::find (begin (m_phyList), end (m_phyList), phy);
+  if (it != std::end (m_phyList))
+    {
+      m_phyList.erase (it);
+    }
+}
 
 void
 SingleModelSpectrumChannel::AddRx (Ptr<SpectrumPhy> phy)
@@ -116,6 +97,9 @@ SingleModelSpectrumChannel::StartTx (Ptr<SpectrumSignalParameters> txParams)
   NS_LOG_FUNCTION (this << txParams->psd << txParams->duration << txParams->txPhy);
   NS_ASSERT_MSG (txParams->psd, "NULL txPsd");
   NS_ASSERT_MSG (txParams->txPhy, "NULL txPhy");
+
+  Ptr<SpectrumSignalParameters> txParamsTrace = txParams->Copy (); // copy it since traced value cannot be const (because of potential underlying DynamicCasts)
+  m_txSigParamsTrace (txParamsTrace);
 
   // just a sanity check routine. We might want to remove it to save some computational load -- one "if" statement  ;-)
   if (m_spectrumModel == 0)
@@ -138,6 +122,19 @@ SingleModelSpectrumChannel::StartTx (Ptr<SpectrumSignalParameters> txParams)
        rxPhyIterator != m_phyList.end ();
        ++rxPhyIterator)
     {
+      Ptr<NetDevice> rxNetDevice = (*rxPhyIterator)->GetDevice ();
+      Ptr<NetDevice> txNetDevice = txParams->txPhy->GetDevice ();
+
+      if (rxNetDevice && txNetDevice)
+        {
+          // we assume that devices are attached to a node
+          if (rxNetDevice->GetNode()->GetId() == txNetDevice->GetNode()->GetId())
+            {
+              NS_LOG_DEBUG ("Skipping the pathloss calculation among different antennas of the same node, not supported yet by any pathloss model in ns-3.");
+              continue;
+            }
+        }
+
       if ((*rxPhyIterator) != txParams->txPhy)
         {
           Time delay  = MicroSeconds (0);
@@ -148,29 +145,35 @@ SingleModelSpectrumChannel::StartTx (Ptr<SpectrumSignalParameters> txParams)
 
           if (senderMobility && receiverMobility)
             {
+              double txAntennaGain = 0;
+              double rxAntennaGain = 0;
+              double propagationGainDb = 0;
               double pathLossDb = 0;
               if (rxParams->txAntenna != 0)
                 {
                   Angles txAngles (receiverMobility->GetPosition (), senderMobility->GetPosition ());
-                  double txAntennaGain = rxParams->txAntenna->GetGainDb (txAngles);
+                  txAntennaGain = rxParams->txAntenna->GetGainDb (txAngles);
                   NS_LOG_LOGIC ("txAntennaGain = " << txAntennaGain << " dB");
                   pathLossDb -= txAntennaGain;
                 }
-              Ptr<AntennaModel> rxAntenna = (*rxPhyIterator)->GetRxAntenna ();
+              Ptr<AntennaModel> rxAntenna = DynamicCast<AntennaModel>((*rxPhyIterator)->GetAntenna ());
               if (rxAntenna != 0)
                 {
                   Angles rxAngles (senderMobility->GetPosition (), receiverMobility->GetPosition ());
-                  double rxAntennaGain = rxAntenna->GetGainDb (rxAngles);
+                  rxAntennaGain = rxAntenna->GetGainDb (rxAngles);
                   NS_LOG_LOGIC ("rxAntennaGain = " << rxAntennaGain << " dB");
                   pathLossDb -= rxAntennaGain;
                 }
               if (m_propagationLoss)
                 {
-                  double propagationGainDb = m_propagationLoss->CalcRxPower (0, senderMobility, receiverMobility);
+                  propagationGainDb = m_propagationLoss->CalcRxPower (0, senderMobility, receiverMobility);
                   NS_LOG_LOGIC ("propagationGainDb = " << propagationGainDb << " dB");
                   pathLossDb -= propagationGainDb;
                 }                    
-              NS_LOG_LOGIC ("total pathLoss = " << pathLossDb << " dB");    
+              NS_LOG_LOGIC ("total pathLoss = " << pathLossDb << " dB");
+              // Gain trace
+              m_gainTrace (senderMobility, receiverMobility, txAntennaGain, rxAntennaGain, propagationGainDb, pathLossDb);
+              // Pathloss trace
               m_pathLossTrace (txParams->txPhy, *rxPhyIterator, pathLossDb);
               if ( pathLossDb > m_maxLossDb)
                 {
@@ -192,11 +195,10 @@ SingleModelSpectrumChannel::StartTx (Ptr<SpectrumSignalParameters> txParams)
             }
 
 
-          Ptr<NetDevice> netDev = (*rxPhyIterator)->GetDevice ();
-          if (netDev)
+          if (rxNetDevice)
             {
               // the receiver has a NetDevice, so we expect that it is attached to a Node
-              uint32_t dstNode =  netDev->GetNode ()->GetId ();
+              uint32_t dstNode =  rxNetDevice->GetNode ()->GetId ();
               Simulator::ScheduleWithContext (dstNode, delay, &SingleModelSpectrumChannel::StartRx, this, rxParams, *rxPhyIterator);
             }
           else
@@ -207,7 +209,6 @@ SingleModelSpectrumChannel::StartTx (Ptr<SpectrumSignalParameters> txParams)
             }
         }
     }
-
 }
 
 void
@@ -217,61 +218,18 @@ SingleModelSpectrumChannel::StartRx (Ptr<SpectrumSignalParameters> params, Ptr<S
   receiver->StartRx (params);
 }
 
-
-
-uint32_t
+std::size_t
 SingleModelSpectrumChannel::GetNDevices (void) const
 {
   NS_LOG_FUNCTION (this);
   return m_phyList.size ();
 }
 
-
 Ptr<NetDevice>
-SingleModelSpectrumChannel::GetDevice (uint32_t i) const
+SingleModelSpectrumChannel::GetDevice (std::size_t i) const
 {
   NS_LOG_FUNCTION (this << i);
   return m_phyList.at (i)->GetDevice ()->GetObject<NetDevice> ();
-}
-
-
-void
-SingleModelSpectrumChannel::AddPropagationLossModel (Ptr<PropagationLossModel> loss)
-{
-  NS_LOG_FUNCTION (this << loss);
-  if (m_propagationLoss)
-    {
-      loss->SetNext (m_propagationLoss);
-    }
-  m_propagationLoss = loss;
-}
-
-
-void
-SingleModelSpectrumChannel::AddSpectrumPropagationLossModel (Ptr<SpectrumPropagationLossModel> loss)
-{
-  NS_LOG_FUNCTION (this << loss);
-  if (m_spectrumPropagationLoss)
-    {
-      loss->SetNext (m_spectrumPropagationLoss);
-    }
-  m_spectrumPropagationLoss = loss;
-}
-
-void
-SingleModelSpectrumChannel::SetPropagationDelayModel (Ptr<PropagationDelayModel> delay)
-{
-  NS_LOG_FUNCTION (this << delay);
-  NS_ASSERT (m_propagationDelay == 0);
-  m_propagationDelay = delay;
-}
-
-
-Ptr<SpectrumPropagationLossModel>
-SingleModelSpectrumChannel::GetSpectrumPropagationLossModel (void)
-{
-  NS_LOG_FUNCTION (this);
-  return m_spectrumPropagationLoss;
 }
 
 

@@ -19,6 +19,7 @@
 
 #include "ns3/core-config.h"
 #if !defined(INT64X64_DOUBLE_H) && (defined (INT64X64_USE_DOUBLE) || defined(PYTHON_SCAN))
+/** Using the ns3::int64x64_t based on double values. */
 #define INT64X64_DOUBLE_H
 
 #include <stdint.h>
@@ -64,7 +65,8 @@ public:
    * specifically the double implementation.  To handle this,
    * we expose the underlying implementation type here.
    */
-  enum impl_type {
+  enum impl_type
+  {
     int128_impl,  //!< Native int128_t implementation.
     cairo_impl,   //!< cairo wideint implementation
     ld_impl,      //!< long double implementation
@@ -75,19 +77,28 @@ public:
 
   /// Default constructor
   inline int64x64_t ()
-    : _v (0) {}
-  /**@{*/
+    : _v (0)
+  {}
   /**
-   * Construct from a floating point value.
-   *
-   * \param [in] v Floating value to represent
+   * \name Construct from a floating point value.
    */
-  inline int64x64_t (double v)
-    : _v (v) {}
-  inline int64x64_t (long double v)
-    : _v (v) {}
+  /**
+   * @{
+   * Constructor from a floating point.
+   *
+   * \param [in] value Floating value to represent.
+   */
+  inline int64x64_t (double value)
+    : _v (value)
+  {}
+  inline int64x64_t (long double value)
+    : _v (value)
+  {}
   /**@}*/
 
+  /**
+   * \name Construct from an integral type.
+   */
   /**@{*/
   /**
    * Construct from an integral type.
@@ -95,17 +106,23 @@ public:
    * \param [in] v Integer value to represent
    */
   inline int64x64_t (int v)
-    : _v (v) {}
+    : _v (v)
+  {}
   inline int64x64_t (long int v)
-    : _v (v) {}
+    : _v (v)
+  {}
   inline int64x64_t (long long int v)
-    : _v (v) {}
+    : _v (static_cast<long double> (v))
+  {}
   inline int64x64_t (unsigned int v)
-    : _v (v) {}
+    : _v (v)
+  {}
   inline int64x64_t (unsigned long int v)
-    : _v (v) {}
+    : _v (v)
+  {}
   inline int64x64_t (unsigned long long int v)
-    : _v (v) {}
+    : _v (static_cast<long double> (v))
+  {}
   /**@}*/
   /**
    * Construct from explicit high and low values.
@@ -116,9 +133,10 @@ public:
   explicit inline int64x64_t (int64_t hi, uint64_t lo)
   {
     const bool negative = hi < 0;
-    const long double fhi = negative ? -hi : hi;
+    const long double hild = static_cast<long double> (hi);
+    const long double fhi = negative ? -hild : hild;
     const long double flo = lo / HP_MAX_64;
-    _v = negative ? - fhi : fhi;
+    _v = negative ? -fhi : fhi;
     _v += flo;
     // _v = negative ? -_v : _v;
   }
@@ -129,16 +147,24 @@ public:
    * \param [in] o Value to copy.
    */
   inline int64x64_t (const int64x64_t & o)
-    : _v (o._v) {}
+    : _v (o._v)
+  {}
   /**
    * Assignment.
    *
    * \param [in] o Value to assign to this int64x64_t.
+   * \returns a copy of \pname{o}
    */
   inline int64x64_t & operator = (const int64x64_t & o)
   {
     _v = o._v;
     return *this;
+  }
+
+  /** Explicit bool conversion. */
+  inline explicit operator bool () const
+  {
+    return (_v != 0);
   }
 
   /**
@@ -150,6 +176,7 @@ public:
   {
     return (double)_v;
   }
+
 private:
   /**
    * Get the high and low portions of this value.
@@ -157,7 +184,7 @@ private:
    * \return A pair of the high and low words
    */
   std::pair<int64_t, uint64_t> GetHighLow (void) const
-    {
+  {
     const bool negative = _v < 0;
     const long double v = negative ? -_v : _v;
 
@@ -173,24 +200,25 @@ private:
     //   TestSuite int64x64
     const long double round = 0.5;
     flo = flo * HP_MAX_64 + round;
-    int64_t  hi = fhi;
-    uint64_t lo = flo;
+    int64_t  hi = static_cast<int64_t> (fhi);
+    uint64_t lo = static_cast<uint64_t> (flo);
     if (flo >= HP_MAX_64)
       {
-	// conversion to uint64 rolled over
-	++hi;
+        // conversion to uint64 rolled over
+        ++hi;
       }
     if (negative)
       {
-	lo = ~lo;
-	hi = ~hi;
-	if (++lo == 0)
-	  {
-	    ++hi;
-	  }
+        lo = ~lo;
+        hi = ~hi;
+        if (++lo == 0)
+          {
+            ++hi;
+          }
       }
     return std::make_pair (hi, lo);
-    }
+  }
+
 public:
   /**
    * Get the integer portion.
@@ -209,6 +237,29 @@ public:
   inline uint64_t GetLow (void) const
   {
     return GetHighLow ().second;
+  }
+
+  /**
+   * Truncate to an integer.
+   * Truncation is always toward zero, 
+   * \return The value truncated toward zero.
+   */
+  int64_t GetInt (void) const
+  {
+    int64_t retval = static_cast<int64_t> (_v);
+    return retval;
+  }
+
+  /**
+   * Round to the nearest int.
+   * Similar to std::round this rounds halfway cases away from zero,
+   * regardless of the current (floating) rounding mode.
+   * \return The value rounded to the nearest int.
+   */
+  int64_t Round (void) const
+  {
+    int64_t retval = std::round (_v);
+    return retval;
   }
 
   /**
@@ -238,110 +289,65 @@ public:
   }
 
 private:
-  friend bool         operator == (const int64x64_t & lhs, const int64x64_t & rhs);
-
-  friend bool         operator <  (const int64x64_t & lhs, const int64x64_t & rhs);
-  friend bool         operator >  (const int64x64_t & lhs, const int64x64_t & rhs);
   
-  friend int64x64_t & operator += (      int64x64_t & lhs, const int64x64_t & rhs);
-  friend int64x64_t & operator -= (      int64x64_t & lhs, const int64x64_t & rhs);
-  friend int64x64_t & operator *= (      int64x64_t & lhs, const int64x64_t & rhs);
-  friend int64x64_t & operator /= (      int64x64_t & lhs, const int64x64_t & rhs);
+  /**
+   * \name Arithmetic Operators
+   * Arithmetic operators for int64x64_t.
+   */
+  /*
+   * @{
+   *  Arithmetic operator.
+   *  \param [in] lhs Left hand argument
+   *  \param [in] rhs Right hand argument
+   *  \return The result of the operator.
+   */
+  // *NS_CHECK_STYLE_OFF*
+  friend inline bool operator == (const int64x64_t & lhs, const int64x64_t & rhs) { return lhs._v == rhs._v; };
+  friend inline bool operator <  (const int64x64_t & lhs, const int64x64_t & rhs) { return lhs._v < rhs._v; };
+  friend inline bool operator >  (const int64x64_t & lhs, const int64x64_t & rhs) { return lhs._v > rhs._v; };
 
-  friend int64x64_t   operator -  (const int64x64_t & lhs);
-  friend int64x64_t   operator !  (const int64x64_t & lhs);
+  friend inline int64x64_t & operator += ( int64x64_t & lhs, const int64x64_t & rhs)
+    {
+      lhs._v += rhs._v;
+      return lhs;
+    };
+  friend inline int64x64_t & operator -= ( int64x64_t & lhs, const int64x64_t & rhs)
+    {
+      lhs._v -= rhs._v;
+      return lhs;
+    };
+  friend inline int64x64_t & operator *= ( int64x64_t & lhs, const int64x64_t & rhs)
+    {
+      lhs._v *= rhs._v;
+      return lhs;
+    };
+  friend inline int64x64_t & operator /= ( int64x64_t & lhs, const int64x64_t & rhs)
+    {
+      lhs._v /= rhs._v;
+      return lhs;
+    };
+  // *NS_CHECK_STYLE_ON*
+  /**@}*/
+
+  /**
+   * \name Unary Operators
+   * Unary operators for int64x64_t.
+   */
+  /*
+   * @{
+   *  Unary operator.
+   *  \param [in] lhs Left hand argument
+   *  \return The result of the operator.
+   */
+  friend inline int64x64_t   operator +  (const int64x64_t & lhs) { return lhs; };
+  friend inline int64x64_t   operator -  (const int64x64_t & lhs) { return int64x64_t (-lhs._v); };
+  friend inline int64x64_t   operator !  (const int64x64_t & lhs) { return int64x64_t (!lhs._v); };
+  /**@}*/
 
   long double _v;  //!< The Q64.64 value.
 
 };  // class int64x64_t
 
-
-/**
- * \ingroup highprec
- * Equality operator.
- */
-inline bool operator == (const int64x64_t & lhs, const int64x64_t & rhs)
-{
-  return lhs._v == rhs._v;
-}
-/**
- * \ingroup highprec
- * Less than operator
- */
-inline bool operator < (const int64x64_t & lhs, const int64x64_t & rhs)
-{
-  return lhs._v < rhs._v;
-}
-/**
- * \ingroup highprec
- * Greater operator
- */
-inline bool operator > (const int64x64_t & lhs, const int64x64_t & rhs)
-{
-  return lhs._v > rhs._v;
-}
-
-/**
- * \ingroup highprec
- * Compound addition operator
- */
-inline int64x64_t & operator += (int64x64_t & lhs, const int64x64_t & rhs)
-{
-  lhs._v += rhs._v;
-  return lhs;
-}
-/**
- * \ingroup highprec
- * Compound subtraction operator
- */
-inline int64x64_t & operator -= (int64x64_t & lhs, const int64x64_t & rhs)
-{
-  lhs._v -= rhs._v;
-  return lhs;
-}
-/**
- * \ingroup highprec
- * Compound multiplication operator
- */
-inline int64x64_t & operator *= (int64x64_t & lhs, const int64x64_t & rhs)
-{
-  lhs._v *= rhs._v;
-  return lhs;
-}
-/**
- * \ingroup highprec
- * Compound division operator
- */
-inline int64x64_t & operator /= (int64x64_t & lhs, const int64x64_t & rhs)
-{
-  lhs._v /= rhs._v;
-  return lhs;
-}
-
-/**
- * \ingroup highprec
- * Unary plus operator
- */
-inline int64x64_t operator + (const int64x64_t & lhs)
-{
-  return lhs;
-}
-/**
- * \ingroup highprec
- * Unary negation operator (change sign operator)
- */
-inline int64x64_t operator - (const int64x64_t & lhs)
-{
-  return int64x64_t (-lhs._v);
-}
-/**
- * \ingroup highprec
- * Logical not operator
- */
-inline int64x64_t operator ! (const int64x64_t & lhs)
-{
-  return int64x64_t (!lhs._v);
-}
 
 
 } // namespace ns3

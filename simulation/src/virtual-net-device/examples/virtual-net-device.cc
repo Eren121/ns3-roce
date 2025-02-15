@@ -14,6 +14,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  * Based on simple-global-routing.cc
+ * The Tunnel class adds two tunnels, n0<=>n3 and n1<=>n3
  */
 
 // Network topology
@@ -27,20 +28,15 @@
 //   n1
 //
 // - all links are point-to-point links with indicated one-way BW/delay
-// - CBR/UDP flows from n0 to n3, and from n3 to n1
-// - FTP/TCP flow from n0 to n3, starting at time 1.2 to time 1.35 sec.
-// - UDP packet size of 210 bytes, with per-packet interval 0.00375 sec.
-//   (i.e., DataRate of 448,000 bps)
-// - DropTail queues 
 // - Tracing of queues and packet receptions to file "virtual-net-device.tr"
 
 // Tunneling changes (relative to the simple-global-routing example):
-// n0 will receive an extra virtual interface with address 11.0.0.1
-// n1 will also receive an extra virtual interface with the same address 11.0.0.1
-// n3 will receive an extra virtual interface with address 11.0.0.254
-// The flows will be between 11.0.0.x (tunnel) addresses instead of 10.1.x.y ones
-// n3 will decide, on a per-packet basis, via random number, whether to
-// send the packet to n0 or to n1.
+// - n0 will receive an extra virtual interface with hardcoded inner-tunnel address 11.0.0.1
+// - n1 will also receive an extra virtual interface with the same inner-tunnel address 11.0.0.1
+// - n3 will receive an extra virtual interface with inner-tunnel address 11.0.0.254
+// - The flows will be between 11.0.0.x (inner-tunnel) addresses instead of 10.1.x.y ones
+// - n3 will decide, on a per-packet basis, via random number, whether to
+//   send the packet to n0 or to n1.
 //
 // Note: here we create a tunnel where IP packets are tunneled over
 // UDP/IP, but tunneling directly IP-over-IP would also be possible;
@@ -57,26 +53,37 @@
 #include "ns3/point-to-point-module.h"
 #include "ns3/applications-module.h"
 #include "ns3/virtual-net-device.h"
-#include "ns3/ipv4-global-routing-helper.h"
 
 using namespace ns3;
 
 NS_LOG_COMPONENT_DEFINE ("VirtualNetDeviceExample");
 
+/**
+ * \ingroup virtual-net-device
+ * 
+ * Tunnel class - its goal is to create and manage the tunnels between endpoints.
+ */
 class Tunnel
 {
-  Ptr<Socket> m_n3Socket;
-  Ptr<Socket> m_n0Socket;
-  Ptr<Socket> m_n1Socket;
-  Ipv4Address m_n3Address;
-  Ipv4Address m_n0Address;
-  Ipv4Address m_n1Address;
-  Ptr<UniformRandomVariable> m_rng;
-  Ptr<VirtualNetDevice> m_n0Tap;
-  Ptr<VirtualNetDevice> m_n1Tap;
-  Ptr<VirtualNetDevice> m_n3Tap;
+  Ptr<Socket> m_n3Socket; //!< Socket on the N3 node
+  Ptr<Socket> m_n0Socket; //!< Socket on the N0 node
+  Ptr<Socket> m_n1Socket; //!< Socket on the N1 node
+  Ipv4Address m_n3Address;  //!< Address of the N3 node
+  Ipv4Address m_n0Address;  //!< Address of the N0 node
+  Ipv4Address m_n1Address;  //!< Address of the N1 node
+  Ptr<UniformRandomVariable> m_rng; //!< Random number generator
+  Ptr<VirtualNetDevice> m_n0Tap;  //!< VirtualNetDevice on the N0 node
+  Ptr<VirtualNetDevice> m_n1Tap;  //!< VirtualNetDevice on the N1 node
+  Ptr<VirtualNetDevice> m_n3Tap;  //!< VirtualNetDevice on the N3 node
 
-
+  /**
+   * Send a packet through the N0 VirtualNetDevice
+   * \param packet Packet to send
+   * \param source Source IPv4 address
+   * \param dest Destination IPv4 address
+   * \param protocolNumber Protocol number
+   * \return true (always)
+   */
   bool
   N0VirtualSend (Ptr<Packet> packet, const Address& source, const Address& dest, uint16_t protocolNumber)
   {
@@ -85,6 +92,14 @@ class Tunnel
     return true;
   }
 
+  /**
+   * Send a packet through the N1 VirtualNetDevice
+   * \param packet Packet to send
+   * \param source Source IPv4 address
+   * \param dest Destination IPv4 address
+   * \param protocolNumber Protocol number
+   * \return true (always)
+   */
   bool
   N1VirtualSend (Ptr<Packet> packet, const Address& source, const Address& dest, uint16_t protocolNumber)
   {
@@ -93,6 +108,14 @@ class Tunnel
     return true;
   }
 
+  /**
+   * Send a packet through the N3 VirtualNetDevice
+   * \param packet Packet to send
+   * \param source Source IPv4 address
+   * \param dest Destination IPv4 address
+   * \param protocolNumber Protocol number
+   * \return true (always)
+   */
   bool
   N3VirtualSend (Ptr<Packet> packet, const Address& source, const Address& dest, uint16_t protocolNumber)
   {
@@ -109,6 +132,10 @@ class Tunnel
     return true;
   }
 
+  /**
+   * Receive a packet on the N3 VirtualNetDevice
+   * \param socket Receiving socket
+   */
   void N3SocketRecv (Ptr<Socket> socket)
   {
     Ptr<Packet> packet = socket->Recv (65535, 0);
@@ -116,6 +143,10 @@ class Tunnel
     m_n3Tap->Receive (packet, 0x0800, m_n3Tap->GetAddress (), m_n3Tap->GetAddress (), NetDevice::PACKET_HOST);
   }
 
+  /**
+   * Receive a packet on the N0 VirtualNetDevice
+   * \param socket Receiving socket
+   */
   void N0SocketRecv (Ptr<Socket> socket)
   {
     Ptr<Packet> packet = socket->Recv (65535, 0);
@@ -123,6 +154,10 @@ class Tunnel
     m_n0Tap->Receive (packet, 0x0800, m_n0Tap->GetAddress (), m_n0Tap->GetAddress (), NetDevice::PACKET_HOST);
   }
 
+  /**
+   * Receive a packet on the N1 VirtualNetDevice
+   * \param socket Receiving socket
+   */
   void N1SocketRecv (Ptr<Socket> socket)
   {
     Ptr<Packet> packet = socket->Recv (65535, 0);
@@ -132,6 +167,15 @@ class Tunnel
 
 public:
 
+  /**
+   * Constructor
+   * \param n3 Pointer of Node 3
+   * \param n0 Pointer of Node 0
+   * \param n1 Pointer of Node 1
+   * \param n3Addr IPv4 address of Node 3
+   * \param n0Addr IPv4 address of Node 0
+   * \param n1Addr IPv4 address of Node 1
+   */
   Tunnel (Ptr<Node> n3, Ptr<Node> n0, Ptr<Node> n1,
           Ipv4Address n3Addr, Ipv4Address n0Addr, Ipv4Address n1Addr)
     : m_n3Address (n3Addr), m_n0Address (n0Addr), m_n1Address (n1Addr)
@@ -189,7 +233,7 @@ public:
 int 
 main (int argc, char *argv[])
 {
-  // Users may find it convenient to turn on explicit debugging
+  // Users may find it convenient to turn on explicit logging
   // for selected modules; the below lines suggest how to do this
 #if 0 
   LogComponentEnable ("VirtualNetDeviceExample", LOG_LEVEL_INFO);
@@ -201,15 +245,11 @@ main (int argc, char *argv[])
   Config::SetDefault ("ns3::OnOffApplication::PacketSize", UintegerValue (210));
   Config::SetDefault ("ns3::OnOffApplication::DataRate", StringValue ("448kb/s"));
 
-  //DefaultValue::Bind ("DropTailQueue::m_maxPackets", 30);
-
   // Allow the user to override any of the defaults and the above
-  // DefaultValue::Bind ()s at run-time, via command-line arguments
-  CommandLine cmd;
+  // Config::SetDefault ()s at run-time, via command-line arguments
+  CommandLine cmd (__FILE__);
   cmd.Parse (argc, argv);
 
-  // Here, we will explicitly create four nodes.  In more sophisticated
-  // topologies, we could configure a node factory.
   NS_LOG_INFO ("Create nodes.");
   NodeContainer c;
   c.Create (4);
@@ -249,7 +289,7 @@ main (int argc, char *argv[])
   // tables in the nodes.
   Ipv4GlobalRoutingHelper::PopulateRoutingTables ();
 
-  // Add the tunnels
+  // Add the tunnels n0<=>n3 and n1<=>n3
   Tunnel tunnel (c.Get (3), c.Get (0), c.Get (1),
                  i3i2.GetAddress (0), i0i2.GetAddress (0), i1i2.GetAddress (0));
 

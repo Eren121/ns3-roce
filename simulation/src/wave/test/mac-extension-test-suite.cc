@@ -347,7 +347,7 @@ private:
    */
   bool Receive (Ptr<NetDevice> dev, Ptr<const Packet> pkt, uint16_t mode, const Address &sender);
   /**
-   * Receive VSA functon
+   * Receive VSA function
    * \param pkt the packet
    * \param address the address
    * \returns true if successful
@@ -609,38 +609,38 @@ void
 ChannelAccessTestCase::TestContinuous (SchInfo &info, bool shouldSucceed)
 {
   bool result = m_sender->StartSch (info);
-  NS_TEST_EXPECT_MSG_EQ (result, shouldSucceed, "TestContinuous fail at " << Now ().GetSeconds ());
+  NS_TEST_EXPECT_MSG_EQ (result, shouldSucceed, "TestContinuous fail at " << Now ().As (Time::S));
 }
 void
 ChannelAccessTestCase::TestContinuousAfter (uint32_t channelNumber, bool isAccessAssigned)
 {
   bool result = m_sender->GetChannelScheduler ()->IsContinuousAccessAssigned (channelNumber);
-  NS_TEST_EXPECT_MSG_EQ (result, isAccessAssigned, "TestContinuousAfter fail at " << Now ().GetSeconds ());
+  NS_TEST_EXPECT_MSG_EQ (result, isAccessAssigned, "TestContinuousAfter fail at " << Now ().As (Time::S));
 }
 void
 ChannelAccessTestCase::TestExtended (SchInfo &info, bool shouldSucceed)
 {
   bool result = m_sender->StartSch (info);
-  NS_TEST_EXPECT_MSG_EQ (result, shouldSucceed, "TestExtended fail at " << Now ().GetSeconds ());
+  NS_TEST_EXPECT_MSG_EQ (result, shouldSucceed, "TestExtended fail at " << Now ().As (Time::S));
 }
 void
 ChannelAccessTestCase::TestExtendedAfter (uint32_t channelNumber, bool isAccessAssigned)
 {
   bool result = m_sender->GetChannelScheduler ()->IsExtendedAccessAssigned (channelNumber);
-  NS_TEST_EXPECT_MSG_EQ (result, isAccessAssigned, "TestExtendedAfter fail at " << Now ().GetSeconds ());
+  NS_TEST_EXPECT_MSG_EQ (result, isAccessAssigned, "TestExtendedAfter fail at " << Now ().As (Time::S));
 }
 
 void
 ChannelAccessTestCase::TestAlternating (SchInfo &info, bool shouldSucceed)
 {
   bool result = m_sender->StartSch (info);
-  NS_TEST_EXPECT_MSG_EQ (result, shouldSucceed, "TestAlternating fail at " << Now ().GetSeconds ());
+  NS_TEST_EXPECT_MSG_EQ (result, shouldSucceed, "TestAlternating fail at " << Now ().As (Time::S));
 }
 void
 ChannelAccessTestCase::TestAlternatingAfter (uint32_t channelNumber, bool isAccessAssigned)
 {
   bool result = m_sender->GetChannelScheduler ()->IsAlternatingAccessAssigned (channelNumber);
-  NS_TEST_EXPECT_MSG_EQ (result, isAccessAssigned, "TestAlternating fail at " << Now ().GetSeconds ());
+  NS_TEST_EXPECT_MSG_EQ (result, isAccessAssigned, "TestAlternating fail at " << Now ().As (Time::S));
 }
 
 void

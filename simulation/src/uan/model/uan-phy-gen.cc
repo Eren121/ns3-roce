@@ -136,45 +136,44 @@ UanPhyCalcSinrFhFsk::CalcSinrDb (Ptr<Packet> pkt,
       NS_FATAL_ERROR ("Calculating SINR for unsupported mode type");
     }
 
-  double ts = 1.0 / mode.GetPhyRateSps ();
-  double clearingTime = (m_hops - 1.0) * ts;
-  double csp = pdp.SumTapsFromMaxNc (Seconds (0), Seconds (ts));
+  Time ts = Seconds (1.0 / mode.GetPhyRateSps ());
+  Time clearingTime = (m_hops - 1.0) * ts;
+  double csp = pdp.SumTapsFromMaxNc (Time (), ts);
 
   // Get maximum arrival offset
   double maxAmp = -1;
-  double maxTapDelay = 0.0;
+  Time maxTapDelay (0);
   UanPdp::Iterator pit = pdp.GetBegin ();
   for (; pit != pdp.GetEnd (); pit++)
     {
       if (std::abs (pit->GetAmp ()) > maxAmp)
         {
           maxAmp = std::abs (pit->GetAmp ());
-          // Modified in order to subtract delay of first tap (maxTapDelay appears to be used later in code 
+          // Modified in order to subtract delay of first tap (maxTapDelay appears to be used later in code
           // as delay from first reception, not from TX time)
-          maxTapDelay = pit->GetDelay ().GetSeconds () - pdp.GetTap(0).GetDelay().GetSeconds();
+          maxTapDelay = pit->GetDelay () - pdp.GetTap(0).GetDelay();
         }
     }
 
 
   double effRxPowerDb = rxPowerDb + KpToDb (csp);
-  //It appears to be just the first elements of the sum in Parrish paper, 
+  //It appears to be just the first elements of the sum in Parrish paper,
   // "System Design Considerations for Undersea Networks: Link and Multiple Access Protocols", eq. 14
-  double isiUpa = DbToKp(rxPowerDb) * pdp.SumTapsFromMaxNc (Seconds (ts + clearingTime), Seconds (ts)); // added DpToKp()
+  double isiUpa = DbToKp(rxPowerDb) * pdp.SumTapsFromMaxNc (ts + clearingTime, ts); // added DpToKp()
   UanTransducer::ArrivalList::const_iterator it = arrivalList.begin ();
   double intKp = -DbToKp (effRxPowerDb);
   for (; it != arrivalList.end (); it++)
     {
       UanPdp intPdp = it->GetPdp ();
-      double tDelta = std::abs (arrTime.GetSeconds () + maxTapDelay - it->GetArrivalTime ().GetSeconds ());
+      Time tDelta = Abs (arrTime + maxTapDelay - it->GetArrivalTime ());
       // We want tDelta in terms of a single symbol (i.e. if tDelta = 7.3 symbol+clearing
       // times, the offset in terms of the arriving symbol power is
       // 0.3 symbol+clearing times.
 
-      int32_t syms = (uint32_t)( (double) tDelta / (ts + clearingTime));
-      tDelta = tDelta - syms * (ts + clearingTime);
+      tDelta = Rem (tDelta, ts + clearingTime);
 
       // Align to pktRx
-      if (arrTime + Seconds (maxTapDelay)  > it->GetArrivalTime ())
+      if (arrTime + maxTapDelay  > it->GetArrivalTime ())
         {
           tDelta = ts + clearingTime - tDelta;
         }
@@ -183,20 +182,20 @@ UanPhyCalcSinrFhFsk::CalcSinrDb (Ptr<Packet> pkt,
       if (tDelta < ts) // Case where there is overlap of a symbol due to interferer arriving just after desired signal
         {
           //Appears to be just the first two elements of the sum in Parrish paper, eq. 14
-          intPower += intPdp.SumTapsNc (Seconds (0), Seconds (ts - tDelta));
-          intPower += intPdp.SumTapsNc (Seconds (ts - tDelta + clearingTime),
-                                        Seconds (2 * ts - tDelta + clearingTime));
+          intPower += intPdp.SumTapsNc (Time (), ts - tDelta);
+          intPower += intPdp.SumTapsNc (ts - tDelta + clearingTime,
+                                        2 * ts - tDelta + clearingTime);
         }
       else // Account for case where there's overlap of a symbol due to interferer arriving with a tDelta of a symbol + clearing time later
         {
           // Appears to be just the first two elements of the sum in Parrish paper, eq. 14
-          Time start = Seconds (ts + clearingTime - tDelta);
-          Time end = /*start +*/ Seconds (ts); // Should only sum over portion of ts that overlaps, not entire ts
+          Time start = ts + clearingTime - tDelta;
+          Time end = /*start +*/ ts; // Should only sum over portion of ts that overlaps, not entire ts
           intPower += intPdp.SumTapsNc (start, end);
 
-          start = start + Seconds (ts + clearingTime);
+          start = start + ts + clearingTime;
           //Should only sum over portion of ts that overlaps, not entire ts
-          end = end + Seconds (ts + clearingTime); //start + Seconds (ts);
+          end = end + ts + clearingTime; //start + Seconds (ts);
           intPower += intPdp.SumTapsNc (start, end);
         }
       intKp += DbToKp (it->GetRxPowerDb ()) * intPower;
@@ -300,6 +299,7 @@ UanPhyPerCommonModes::CalcPer (Ptr<Packet> pkt, double sinrDb, UanTxMode mode)
           NS_FATAL_ERROR ("constellation " << mode.GetConstellationSize () << " not supported");
           break;
         }
+      break;
 
     // taken from Ronell B. Sicat, "Bit Error Probability Computations for M-ary Quadrature Amplitude Modulation",
     // EE 242 Digital Communications and Codings, 2009
@@ -369,8 +369,8 @@ UanPhyPerCommonModes::CalcPer (Ptr<Packet> pkt, double sinrDb, UanTxMode mode)
 
         default:
           NS_FATAL_ERROR ("constellation " << mode.GetConstellationSize () << " not supported");
-          break;
         }
+      break;
 
     default:     // OTHER and error
       NS_FATAL_ERROR ("Mode " << mode.GetModType () << " not supported");
@@ -493,17 +493,17 @@ UanPhyPerUmodem::CalcPer (Ptr<Packet> pkt, double sinr, UanTxMode mode)
 /*************** UanPhyGen definition *****************/
 UanPhyGen::UanPhyGen ()
   : UanPhy (),
-    m_state (IDLE),
-    m_channel (0),
-    m_transducer (0),
-    m_device (0),
-    m_mac (0),
-    m_txPwrDb (0),
-    m_rxThreshDb (0),
-    m_ccaThreshDb (0),
-    m_pktRx (0),
-    m_pktTx (0),
-    m_cleared (false)
+  m_state (IDLE),
+  m_channel (0),
+  m_transducer (0),
+  m_device (0),
+  m_mac (0),
+  m_txPwrDb (0),
+  m_rxThreshDb (0),
+  m_ccaThreshDb (0),
+  m_pktRx (0),
+  m_pktTx (0),
+  m_cleared (false)
 {
   m_pg = CreateObject<UniformRandomVariable> ();
 
@@ -741,6 +741,8 @@ UanPhyGen::TxEndEvent ()
       m_state = IDLE;
     }
   UpdatePowerConsumption (IDLE);
+
+  NotifyListenersTxEnd ();
 }
 
 void
@@ -829,9 +831,8 @@ UanPhyGen::StartRxPacket (Ptr<Packet> pkt, double rxPowerDb, UanTxMode txMode, U
 }
 
 void
-UanPhyGen::RxEndEvent (Ptr<Packet> pkt, double rxPowerDb, UanTxMode txMode)
+UanPhyGen::RxEndEvent (Ptr<Packet> pkt, [[maybe_unused]] double rxPowerDb, UanTxMode txMode)
 {
-  NS_UNUSED (rxPowerDb);
   if (pkt != m_pktRx)
     {
       return;
@@ -1004,13 +1005,13 @@ void
 UanPhyGen::SetSleepMode (bool sleep )
 {
   if (sleep )
-  {
-    m_state = SLEEP;
-    if (!m_energyCallback.IsNull ())
-      {
-        m_energyCallback (SLEEP);
-      }
-  }
+    {
+      m_state = SLEEP;
+      if (!m_energyCallback.IsNull ())
+        {
+          m_energyCallback (SLEEP);
+        }
+    }
   else if (m_state == SLEEP)
     {
       if (GetInterferenceDb ((Ptr<Packet>) 0) > m_ccaThreshDb)
@@ -1039,9 +1040,8 @@ UanPhyGen::AssignStreams (int64_t stream)
 }
 
 void
-UanPhyGen::NotifyTransStartTx (Ptr<Packet> packet, double txPowerDb, UanTxMode txMode)
+UanPhyGen::NotifyTransStartTx (Ptr<Packet> packet, [[maybe_unused]] double txPowerDb, UanTxMode txMode)
 {
-  NS_UNUSED (txPowerDb);
   if (m_pktRx)
     {
       m_minRxSinrDb = -1e30;
@@ -1152,6 +1152,16 @@ UanPhyGen::NotifyListenersTxStart (Time duration)
   for (; it != m_listeners.end (); it++)
     {
       (*it)->NotifyTxStart (duration);
+    }
+}
+
+void
+UanPhyGen::NotifyListenersTxEnd (void)
+{
+  ListenerList::const_iterator it = m_listeners.begin ();
+  for (; it != m_listeners.end (); it++)
+    {
+      (*it)->NotifyTxEnd ();
     }
 }
 

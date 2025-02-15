@@ -35,10 +35,11 @@ NS_OBJECT_ENSURE_REGISTERED (UanMacCw);
 
 UanMacCw::UanMacCw ()
   : UanMac (),
-    m_phy (0),
-    m_pktTx (0),
-    m_state (IDLE),
-    m_cleared (false)
+  m_phy (0),
+  m_pktTx (0),
+  m_txOngoing (false),
+  m_state (IDLE),
+  m_cleared (false)
 
 {
   m_rv = CreateObject<UniformRandomVariable> ();
@@ -63,7 +64,7 @@ UanMacCw::Clear ()
       m_phy = 0;
     }
   m_sendEvent.Cancel ();
-  m_txEndEvent.Cancel ();
+  m_txOngoing = false;
 }
 
 void
@@ -114,8 +115,8 @@ UanMacCw::Enqueue (Ptr<Packet> packet, uint16_t protocolNumber, const Address &d
   switch (m_state)
     {
     case CCABUSY:
-      NS_LOG_DEBUG ("Time " << Simulator::Now ().GetSeconds () << " MAC " << GetAddress () << " Starting enqueue CCABUSY");
-      if (m_txEndEvent.IsRunning ())
+      NS_LOG_DEBUG ("Time " << Now ().As (Time::S) << " MAC " << GetAddress () << " Starting enqueue CCABUSY");
+      if (m_txOngoing == true)
         {
           NS_LOG_DEBUG ("State is TX");
         }
@@ -137,7 +138,7 @@ UanMacCw::Enqueue (Ptr<Packet> packet, uint16_t protocolNumber, const Address &d
 
         UanHeaderCommon header;
         header.SetDest (Mac8Address::ConvertFrom (dest));
-        header.SetSrc (m_address);
+        header.SetSrc (Mac8Address::ConvertFrom (GetAddress ()));
         header.SetType (0);
         header.SetProtocolNumber (0);
         packet->AddHeader (header);
@@ -150,15 +151,15 @@ UanMacCw::Enqueue (Ptr<Packet> packet, uint16_t protocolNumber, const Address &d
             m_pktTxProt = GetTxModeIndex ();
             m_state = CCABUSY;
             uint32_t cw = (uint32_t) m_rv->GetValue (0,m_cw);
-            m_savedDelayS = Seconds ((double)(cw) * m_slotTime.GetSeconds ());
+            m_savedDelayS = cw * m_slotTime;
             m_sendTime = Simulator::Now () + m_savedDelayS;
-            NS_LOG_DEBUG ("Time " << Simulator::Now ().GetSeconds () << ": Addr " << GetAddress () << ": Enqueuing new packet while busy:  (Chose CW " << cw << ", Sending at " << m_sendTime.GetSeconds () << " Packet size: " << packet->GetSize ());
+            NS_LOG_DEBUG ("Time " << Now ().As (Time::S) << ": Addr " << GetAddress () << ": Enqueuing new packet while busy:  (Chose CW " << cw << ", Sending at " << m_sendTime.As (Time::S) << " Packet size: " << packet->GetSize ());
             NS_ASSERT (m_phy->GetTransducer ()->GetArrivalList ().size () >= 1 || m_phy->IsStateTx ());
           }
         else
           {
             NS_ASSERT (m_state != TX);
-            NS_LOG_DEBUG ("Time " << Simulator::Now ().GetSeconds () << ": Addr " << GetAddress () << ": Enqueuing new packet while idle (sending)");
+            NS_LOG_DEBUG ("Time " << Now ().As (Time::S) << ": Addr " << GetAddress () << ": Enqueuing new packet while idle (sending)");
             NS_ASSERT (m_phy->GetTransducer ()->GetArrivalList ().size () == 0 && !m_phy->IsStateTx ());
             m_state = TX;
             m_phy->SendPacket (packet,GetTxModeIndex ());
@@ -197,7 +198,7 @@ UanMacCw::NotifyRxStart (void)
   if (m_state == RUNNING)
     {
 
-      NS_LOG_DEBUG ("Time " << Simulator::Now ().GetSeconds () << " Addr " << GetAddress () << ": Switching to channel busy");
+      NS_LOG_DEBUG ("Time " << Now ().As (Time::S) << " Addr " << GetAddress () << ": Switching to channel busy");
       SaveTimer ();
       m_state = CCABUSY;
     }
@@ -208,7 +209,7 @@ UanMacCw::NotifyRxEndOk (void)
 {
   if (m_state == CCABUSY && !m_phy->IsStateCcaBusy ())
     {
-      NS_LOG_DEBUG ("Time " << Simulator::Now ().GetSeconds () << " Addr " << GetAddress () << ": Switching to channel idle");
+      NS_LOG_DEBUG ("Time " << Now ().As (Time::S) << " Addr " << GetAddress () << ": Switching to channel idle");
       m_state = RUNNING;
       StartTimer ();
 
@@ -220,7 +221,7 @@ UanMacCw::NotifyRxEndError (void)
 {
   if (m_state == CCABUSY && !m_phy->IsStateCcaBusy ())
     {
-      NS_LOG_DEBUG ("Time " << Simulator::Now ().GetSeconds () << " Addr " << GetAddress () << ": Switching to channel idle");
+      NS_LOG_DEBUG ("Time " << Now ().As (Time::S) << " Addr " << GetAddress () << ": Switching to channel idle");
       m_state = RUNNING;
       StartTimer ();
 
@@ -232,7 +233,7 @@ UanMacCw::NotifyCcaStart (void)
 {
   if (m_state == RUNNING)
     {
-      NS_LOG_DEBUG ("Time " << Simulator::Now ().GetSeconds () << " Addr " << GetAddress () << ": Switching to channel busy");
+      NS_LOG_DEBUG ("Time " << Now ().As (Time::S) << " Addr " << GetAddress () << ": Switching to channel busy");
       m_state = CCABUSY;
       SaveTimer ();
 
@@ -244,7 +245,7 @@ UanMacCw::NotifyCcaEnd (void)
 {
   if (m_state == CCABUSY)
     {
-      NS_LOG_DEBUG ("Time " << Simulator::Now ().GetSeconds () << " Addr " << GetAddress () << ": Switching to channel idle");
+      NS_LOG_DEBUG ("Time " << Now ().As (Time::S) << " Addr " << GetAddress () << ": Switching to channel idle");
       m_state = RUNNING;
       StartTimer ();
 
@@ -254,22 +255,24 @@ UanMacCw::NotifyCcaEnd (void)
 void
 UanMacCw::NotifyTxStart (Time duration)
 {
+  m_txOngoing = true;
 
-  if (m_txEndEvent.IsRunning ())
-    {
-      Simulator::Cancel (m_txEndEvent);
-    }
+  NS_LOG_DEBUG ("Time " << Now ().As (Time::S) << " Tx Start Notified");
 
-  m_txEndEvent = Simulator::Schedule (duration, &UanMacCw::EndTx, this);
-  NS_LOG_DEBUG ("Time " << Simulator::Now ().GetSeconds () << " scheduling TxEndEvent with delay " << duration.GetSeconds ());
   if (m_state == RUNNING)
     {
       NS_ASSERT (0);
       m_state = CCABUSY;
       SaveTimer ();
-
     }
+}
 
+void
+UanMacCw::NotifyTxEnd (void)
+{
+  m_txOngoing = false;
+
+  EndTx ();
 }
 
 int64_t
@@ -292,7 +295,7 @@ UanMacCw::EndTx (void)
     {
       if (m_phy->IsStateIdle ())
         {
-          NS_LOG_DEBUG ("Time " << Simulator::Now ().GetSeconds () << " Addr " << GetAddress () << ": Switching to channel idle (After TX!)");
+          NS_LOG_DEBUG ("Time " << Now ().As (Time::S) << " Addr " << GetAddress () << ": Switching to channel idle (After TX!)");
           m_state = RUNNING;
           StartTimer ();
         }
@@ -323,26 +326,24 @@ UanMacCw::GetSlotTime (void)
   return m_slotTime;
 }
 void
-UanMacCw::PhyRxPacketGood (Ptr<Packet> packet, double sinr, UanTxMode mode)
+UanMacCw::PhyRxPacketGood (Ptr<Packet> packet, [[maybe_unused]] double sinr, UanTxMode mode)
 {
-  NS_UNUSED (sinr);
   UanHeaderCommon header;
   packet->RemoveHeader (header);
 
-  if (header.GetDest () == m_address || header.GetDest () == Mac8Address::GetBroadcast ())
+  if (header.GetDest () == Mac8Address::ConvertFrom (GetAddress ()) || header.GetDest () == Mac8Address::GetBroadcast ())
     {
       m_forwardUpCb (packet, header.GetProtocolNumber (), header.GetSrc ());
     }
 }
 void
-UanMacCw::PhyRxPacketError (Ptr<Packet> packet, double sinr)
+UanMacCw::PhyRxPacketError (Ptr<Packet> packet, [[maybe_unused]] double sinr)
 {
-  NS_UNUSED (sinr);
 }
 void
 UanMacCw::SaveTimer (void)
 {
-  NS_LOG_DEBUG ("Time " << Simulator::Now ().GetSeconds () << " Addr " << GetAddress () << " Saving timer (Delay = " << (m_savedDelayS = m_sendTime - Simulator::Now ()).GetSeconds () << ")");
+  NS_LOG_DEBUG ("Time " << Now ().As (Time::S) << " Addr " << GetAddress () << " Saving timer (Delay = " << (m_savedDelayS = m_sendTime - Now ()).As (Time::S) << ")");
   NS_ASSERT (m_pktTx);
   NS_ASSERT (m_sendTime >= Simulator::Now ());
   m_savedDelayS = m_sendTime - Simulator::Now ();
@@ -362,14 +363,14 @@ UanMacCw::StartTimer (void)
   else
     {
       m_sendEvent = Simulator::Schedule (m_savedDelayS, &UanMacCw::SendPacket, this);
-      NS_LOG_DEBUG ("Time " << Simulator::Now ().GetSeconds () << " Addr " << GetAddress () << " Starting timer (New send time = " << this->m_sendTime.GetSeconds () << ")");
+      NS_LOG_DEBUG ("Time " << Now ().As (Time::S) << " Addr " << GetAddress () << " Starting timer (New send time = " << this->m_sendTime.As (Time::S) << ")");
     }
 }
 
 void
 UanMacCw::SendPacket (void)
 {
-  NS_LOG_DEBUG ("Time " << Simulator::Now ().GetSeconds () << " Addr " << GetAddress () << " Transmitting ");
+  NS_LOG_DEBUG ("Time " << Now ().As (Time::S) << " Addr " << GetAddress () << " Transmitting ");
   NS_ASSERT (m_state == RUNNING);
   m_state = TX;
   m_phy->SendPacket (m_pktTx,m_pktTxProt);

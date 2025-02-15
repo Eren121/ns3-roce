@@ -22,14 +22,15 @@
 #ifndef L2ROUTING_NET_DEVICE_H
 #define L2ROUTING_NET_DEVICE_H
 
+#include "ns3/node.h"
 #include "ns3/net-device.h"
 #include "ns3/mac48-address.h"
 #include "ns3/bridge-channel.h"
 #include "ns3/mesh-l2-routing-protocol.h"
+#include "ns3/random-variable-stream.h"
 
 namespace ns3 {
 
-class Node;
 /**
  * \ingroup mesh
  *
@@ -39,7 +40,7 @@ class Node;
  *   - Aggregating and coordinating 1..* real devices -- mesh interfaces, see MeshInterfaceDevice class.
  *   - Hosting all mesh-related level 2 protocols.
  *
- * One of hosted L2 protocols must inplement L2RoutingProtocol interface and is used for packets forwarding.
+ * One of hosted L2 protocols must implement L2RoutingProtocol interface and is used for packets forwarding.
  *
  * From the level 3 point of view MeshPointDevice is similar to BridgeNetDevice, but the packets,
  * which going through may be changed (because L2 protocols may require their own headers or tags).
@@ -59,8 +60,8 @@ public:
   /// D-tor
   virtual ~MeshPointDevice ();
 
-  ///\name Interfaces
-  //\{
+  /// \name Interfaces
+  ///@{
   /**
    * \brief Attach new interface to the station. Interface must support 48-bit MAC address and SendFrom method.
    * \param port the port used
@@ -81,15 +82,24 @@ public:
    * \return vector of interfaces
    */
   std::vector<Ptr<NetDevice> > GetInterfaces () const;
-  //\}
+  ///@}
 
-  ///\name Protocols
-  //\{
-  /// Register routing protocol to be used. Protocol must be already installed on this mesh point.
+
+  /// \name Protocols
+  ///@{
+  /**
+   * Register routing protocol to be used. Protocol must be already installed on this mesh point.
+   *
+   * \param protocol the routing protocol
+   */
   void SetRoutingProtocol (Ptr<MeshL2RoutingProtocol> protocol);
-  /// Access current routing protocol
+  /**
+   * Access current routing protocol
+   *
+   * \return the current routing protocol
+   */
   Ptr<MeshL2RoutingProtocol> GetRoutingProtocol () const;
-  //\}
+  ///@}
 
   // Inherited from NetDevice
   virtual void SetIfIndex (const uint32_t index);
@@ -118,13 +128,34 @@ public:
   virtual Address GetMulticast (Ipv6Address addr) const;
   virtual void DoDispose ();
 
-  ///\name Statistics
-  //\{
-  /// Print statistics counters
+  /// \name Statistics
+  ///@{
+  /**
+   *  Print statistics counters
+   *  \param os the output stream
+   */
   void Report (std::ostream & os) const;
   /// Reset statistics counters
   void ResetStats ();
-  //\}
+  ///@}
+
+  /**
+   * Assign a fixed random variable stream number to the random variables
+   * used by this model.  Return the number of streams (possibly zero) that
+   * have been assigned.
+   *
+   * \param stream first stream index to use
+   * \return the number of stream indices assigned by this model
+   */
+  int64_t AssignStreams (int64_t stream);
+
+  /**
+   * Return a (random) forwarding delay value from the random variable
+   * ForwardingDelay attribute.
+   * 
+   * \return A Time value from the ForwardingDelay random variable
+   */
+  Time GetForwardingDelay () const;
 
 private:
   /**
@@ -185,6 +216,8 @@ private:
   Ptr<BridgeChannel> m_channel;
   /// Current routing protocol, used mainly by GetRoutingProtocol
   Ptr<MeshL2RoutingProtocol> m_routingProtocol;
+  /// Random variable used for forwarding delay and jitter
+  Ptr<RandomVariableStream> m_forwardingRandomVariable;
 
   /// statistics counters
   struct Statistics
@@ -197,7 +230,7 @@ private:
     /// constructor
     Statistics ();
   };
-  /// Counters
+  // Counters
   Statistics m_rxStats; ///< receive statistics
   Statistics m_txStats; ///< transmit statistics
   Statistics m_fwdStats; ///< forward statistics

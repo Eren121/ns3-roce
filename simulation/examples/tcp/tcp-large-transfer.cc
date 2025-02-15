@@ -27,7 +27,7 @@
 // - pcap traces also generated in the following files
 //   "tcp-large-transfer-$n-$i.pcap" where n and i represent node and interface
 // numbers respectively
-//  Usage (e.g.): ./waf --run tcp-large-transfer
+//  Usage (e.g.): ./ns3 run tcp-large-transfer
 
 #include <iostream>
 #include <fstream>
@@ -75,7 +75,7 @@ int main (int argc, char *argv[])
   //  LogComponentEnable("PacketSink", LOG_LEVEL_ALL);
   //  LogComponentEnable("TcpLargeTransfer", LOG_LEVEL_ALL);
 
-  CommandLine cmd;
+  CommandLine cmd (__FILE__);
   cmd.Parse (argc, argv);
 
   // initialize the tx buffer.
@@ -212,5 +212,8 @@ void WriteUntilBufferFull (Ptr<Socket> localSocket, uint32_t txSpace)
         }
       currentTxBytes += amountSent;
     }
-  localSocket->Close ();
+  if (currentTxBytes >= totalTxBytes)
+    {
+      localSocket->Close ();
+    }
 }

@@ -32,7 +32,12 @@
 using namespace ns3;
 
 /**
+ * \ingroup lte-test
+ *
  * \brief Test suite for executing the secondary cell selection test cases.
+ *
+ * Checks that if multiple component carriers are defined for an eNB, that
+ * UEs can connect to each of these component carriers, not just the primary
  *
  * \sa ns3::LteSecondaryCellSelectionTestCase
  */
@@ -43,10 +48,8 @@ public:
 };
 
 
-
-
 /**
- * \ingroup lte
+ * \ingroup lte-test
  *
  * \brief Testing the initial cell selection procedure by UE at IDLE state in
  *        the beginning of simulation with multiple component carriers.
@@ -62,7 +65,7 @@ public:
    * \param rngRun the number of run to be used by the random number generator
    * \param numberOfComponentCarriers number of component carriers
    */
-  LteSecondaryCellSelectionTestCase (std::string name, bool isIdealRrc, int64_t rngRun, uint8_t numberOfComponentCarriers);
+  LteSecondaryCellSelectionTestCase (std::string name, bool isIdealRrc, uint64_t rngRun, uint8_t numberOfComponentCarriers);
 
   virtual ~LteSecondaryCellSelectionTestCase ();
 
@@ -104,7 +107,7 @@ private:
                                       uint16_t cellId, uint16_t rnti);
 
   bool m_isIdealRrc; ///< whether the LTE is configured to use ideal RRC
-  int64_t m_rngRun; ///< rng run
+  uint64_t m_rngRun; ///< rng run
   uint8_t m_numberOfComponentCarriers; ///< number of component carriers
 
   /// The current UE RRC state.

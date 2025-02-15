@@ -18,12 +18,15 @@
  * Author: Mathieu Lacage <mathieu.lacage@sophia.inria.fr>
  */
 
-#include "wifi-phy-state-helper.h"
-#include "wifi-tx-vector.h"
+#include <algorithm>
 #include "ns3/log.h"
 #include "ns3/simulator.h"
 #include "ns3/packet.h"
-#include <algorithm>
+#include "wifi-phy-state-helper.h"
+#include "wifi-tx-vector.h"
+#include "wifi-phy-listener.h"
+#include "wifi-psdu.h"
+#include "wifi-phy.h"
 
 namespace ns3 {
 
@@ -58,8 +61,7 @@ WifiPhyStateHelper::GetTypeId (void)
 }
 
 WifiPhyStateHelper::WifiPhyStateHelper ()
-  : m_rxing (false),
-    m_sleeping (false),
+  : m_sleeping (false),
     m_isOff (false),
     m_endTx (Seconds (0)),
     m_endRx (Seconds (0)),
@@ -96,10 +98,10 @@ WifiPhyStateHelper::RegisterListener (WifiPhyListener *listener)
 void
 WifiPhyStateHelper::UnregisterListener (WifiPhyListener *listener)
 {
-  ListenersI i = find (m_listeners.begin (), m_listeners.end (), listener);
-  if (i != m_listeners.end ())
+  auto it = find (m_listeners.begin (), m_listeners.end (), listener);
+  if (it != m_listeners.end ())
     {
-      m_listeners.erase (i);
+      m_listeners.erase (it);
     }
 }
 
@@ -165,14 +167,8 @@ WifiPhyStateHelper::GetDelayUntilIdle (void) const
       retval = m_endSwitching - Simulator::Now ();
       break;
     case WifiPhyState::IDLE:
-      retval = Seconds (0);
-      break;
     case WifiPhyState::SLEEP:
-      NS_FATAL_ERROR ("Cannot determine when the device will wake up.");
-      retval = Seconds (0);
-      break;
     case WifiPhyState::OFF:
-      NS_FATAL_ERROR ("Cannot determine when the device will be switched on.");
       retval = Seconds (0);
       break;
     default:
@@ -190,6 +186,12 @@ WifiPhyStateHelper::GetLastRxStartTime (void) const
   return m_startRx;
 }
 
+Time
+WifiPhyStateHelper::GetLastRxEndTime (void) const
+{
+  return m_endRx;
+}
+
 WifiPhyState
 WifiPhyStateHelper::GetState (void) const
 {
@@ -205,7 +207,7 @@ WifiPhyStateHelper::GetState (void) const
     {
       return WifiPhyState::TX;
     }
-  else if (m_rxing)
+  else if (m_endRx > Simulator::Now ())
     {
       return WifiPhyState::RX;
     }
@@ -227,9 +229,9 @@ void
 WifiPhyStateHelper::NotifyTxStart (Time duration, double txPowerDbm)
 {
   NS_LOG_FUNCTION (this);
-  for (Listeners::const_iterator i = m_listeners.begin (); i != m_listeners.end (); i++)
+  for (const auto& listener : m_listeners)
     {
-      (*i)->NotifyTxStart (duration, txPowerDbm);
+      listener->NotifyTxStart (duration, txPowerDbm);
     }
 }
 
@@ -237,9 +239,9 @@ void
 WifiPhyStateHelper::NotifyRxStart (Time duration)
 {
   NS_LOG_FUNCTION (this);
-  for (Listeners::const_iterator i = m_listeners.begin (); i != m_listeners.end (); i++)
+  for (const auto& listener : m_listeners)
     {
-      (*i)->NotifyRxStart (duration);
+      listener->NotifyRxStart (duration);
     }
 }
 
@@ -247,9 +249,9 @@ void
 WifiPhyStateHelper::NotifyRxEndOk (void)
 {
   NS_LOG_FUNCTION (this);
-  for (Listeners::const_iterator i = m_listeners.begin (); i != m_listeners.end (); i++)
+  for (const auto& listener : m_listeners)
     {
-      (*i)->NotifyRxEndOk ();
+      listener->NotifyRxEndOk ();
     }
 }
 
@@ -257,9 +259,9 @@ void
 WifiPhyStateHelper::NotifyRxEndError (void)
 {
   NS_LOG_FUNCTION (this);
-  for (Listeners::const_iterator i = m_listeners.begin (); i != m_listeners.end (); i++)
+  for (const auto& listener : m_listeners)
     {
-      (*i)->NotifyRxEndError ();
+      listener->NotifyRxEndError ();
     }
 }
 
@@ -267,9 +269,9 @@ void
 WifiPhyStateHelper::NotifyMaybeCcaBusyStart (Time duration)
 {
   NS_LOG_FUNCTION (this);
-  for (Listeners::const_iterator i = m_listeners.begin (); i != m_listeners.end (); i++)
+  for (const auto& listener : m_listeners)
     {
-      (*i)->NotifyMaybeCcaBusyStart (duration);
+      listener->NotifyMaybeCcaBusyStart (duration);
     }
 }
 
@@ -277,9 +279,9 @@ void
 WifiPhyStateHelper::NotifySwitchingStart (Time duration)
 {
   NS_LOG_FUNCTION (this);
-  for (Listeners::const_iterator i = m_listeners.begin (); i != m_listeners.end (); i++)
+  for (const auto& listener : m_listeners)
     {
-      (*i)->NotifySwitchingStart (duration);
+      listener->NotifySwitchingStart (duration);
     }
 }
 
@@ -287,9 +289,9 @@ void
 WifiPhyStateHelper::NotifySleep (void)
 {
   NS_LOG_FUNCTION (this);
-  for (Listeners::const_iterator i = m_listeners.begin (); i != m_listeners.end (); i++)
+  for (const auto& listener : m_listeners)
     {
-      (*i)->NotifySleep ();
+      listener->NotifySleep ();
     }
 }
 
@@ -297,9 +299,9 @@ void
 WifiPhyStateHelper::NotifyOff (void)
 {
   NS_LOG_FUNCTION (this);
-  for (Listeners::const_iterator i = m_listeners.begin (); i != m_listeners.end (); i++)
+  for (const auto& listener : m_listeners)
     {
-      (*i)->NotifyOff ();
+      listener->NotifyOff ();
     }
 }
 
@@ -307,9 +309,9 @@ void
 WifiPhyStateHelper::NotifyWakeup (void)
 {
   NS_LOG_FUNCTION (this);
-  for (Listeners::const_iterator i = m_listeners.begin (); i != m_listeners.end (); i++)
+  for (const auto& listener : m_listeners)
     {
-      (*i)->NotifyWakeup ();
+      listener->NotifyWakeup ();
     }
 }
 
@@ -317,9 +319,9 @@ void
 WifiPhyStateHelper::NotifyOn (void)
 {
   NS_LOG_FUNCTION (this);
-  for (Listeners::const_iterator i = m_listeners.begin (); i != m_listeners.end (); i++)
+  for (const auto& listener : m_listeners)
     {
-      (*i)->NotifyOn ();
+      listener->NotifyOn ();
     }
 }
 
@@ -328,28 +330,47 @@ WifiPhyStateHelper::LogPreviousIdleAndCcaBusyStates (void)
 {
   NS_LOG_FUNCTION (this);
   Time now = Simulator::Now ();
-  Time idleStart = Max (m_endCcaBusy, m_endRx);
-  idleStart = Max (idleStart, m_endTx);
-  idleStart = Max (idleStart, m_endSwitching);
-  NS_ASSERT (idleStart <= now);
-  if (m_endCcaBusy > m_endRx
-      && m_endCcaBusy > m_endSwitching
-      && m_endCcaBusy > m_endTx)
+  WifiPhyState state = GetState ();
+  if (state == WifiPhyState::CCA_BUSY)
     {
-      Time ccaBusyStart = Max (m_endTx, m_endRx);
-      ccaBusyStart = Max (ccaBusyStart, m_startCcaBusy);
-      ccaBusyStart = Max (ccaBusyStart, m_endSwitching);
-      m_stateLogger (ccaBusyStart, idleStart - ccaBusyStart, WifiPhyState::CCA_BUSY);
+      Time ccaStart = std::max ({m_endRx, m_endTx, m_startCcaBusy, m_endSwitching});
+      m_stateLogger (ccaStart, now - ccaStart, WifiPhyState::CCA_BUSY);
     }
-  m_stateLogger (idleStart, now - idleStart, WifiPhyState::IDLE);
+  else if (state == WifiPhyState::IDLE)
+    {
+      Time idleStart = std::max ({m_endCcaBusy, m_endRx, m_endTx, m_endSwitching});
+      NS_ASSERT (idleStart <= now);
+      if (m_endCcaBusy > m_endRx
+          && m_endCcaBusy > m_endSwitching
+          && m_endCcaBusy > m_endTx)
+        {
+          Time ccaBusyStart = std::max ({m_endTx, m_endRx, m_startCcaBusy, m_endSwitching});
+          Time ccaBusyDuration = idleStart - ccaBusyStart;
+          if (ccaBusyDuration.IsStrictlyPositive ())
+            {
+              m_stateLogger (ccaBusyStart, ccaBusyDuration, WifiPhyState::CCA_BUSY);
+            }
+        }
+      Time idleDuration = now - idleStart;
+      if (idleDuration.IsStrictlyPositive ())
+        {
+          m_stateLogger (idleStart, idleDuration, WifiPhyState::IDLE);
+        }
+    }
 }
 
 void
-WifiPhyStateHelper::SwitchToTx (Time txDuration, Ptr<const Packet> packet, double txPowerDbm,
-                                WifiTxVector txVector)
+WifiPhyStateHelper::SwitchToTx (Time txDuration, WifiConstPsduMap psdus, double txPowerDbm, WifiTxVector txVector)
 {
-  NS_LOG_FUNCTION (this << txDuration << packet << txPowerDbm << txVector);
-  m_txTrace (packet, txVector.GetMode (), txVector.GetPreambleType (), txVector.GetTxPowerLevel ());
+  NS_LOG_FUNCTION (this << txDuration << psdus << txPowerDbm << txVector);
+  if (!m_txTrace.IsEmpty ())
+    {
+      for (auto const& psdu : psdus)
+        {
+          m_txTrace (psdu.second->GetPacket (), txVector.GetMode (psdu.first),
+                     txVector.GetPreambleType (), txVector.GetTxPowerLevel ());
+        }
+    }
   Time now = Simulator::Now ();
   switch (GetState ())
     {
@@ -357,17 +378,11 @@ WifiPhyStateHelper::SwitchToTx (Time txDuration, Ptr<const Packet> packet, doubl
       /* The packet which is being received as well
        * as its endRx event are cancelled by the caller.
        */
-      m_rxing = false;
       m_stateLogger (m_startRx, now - m_startRx, WifiPhyState::RX);
       m_endRx = now;
       break;
     case WifiPhyState::CCA_BUSY:
-      {
-        Time ccaStart = Max (m_endRx, m_endTx);
-        ccaStart = Max (ccaStart, m_startCcaBusy);
-        ccaStart = Max (ccaStart, m_endSwitching);
-        m_stateLogger (ccaStart, now - ccaStart, WifiPhyState::CCA_BUSY);
-      } break;
+      [[fallthrough]];
     case WifiPhyState::IDLE:
       LogPreviousIdleAndCcaBusyStates ();
       break;
@@ -387,26 +402,19 @@ WifiPhyStateHelper::SwitchToRx (Time rxDuration)
 {
   NS_LOG_FUNCTION (this << rxDuration);
   NS_ASSERT (IsStateIdle () || IsStateCcaBusy ());
-  NS_ASSERT (!m_rxing);
   Time now = Simulator::Now ();
   switch (GetState ())
     {
     case WifiPhyState::IDLE:
+      [[fallthrough]];
+    case WifiPhyState::CCA_BUSY:
       LogPreviousIdleAndCcaBusyStates ();
       break;
-    case WifiPhyState::CCA_BUSY:
-      {
-        Time ccaStart = Max (m_endRx, m_endTx);
-        ccaStart = Max (ccaStart, m_startCcaBusy);
-        ccaStart = Max (ccaStart, m_endSwitching);
-        m_stateLogger (ccaStart, now - ccaStart, WifiPhyState::CCA_BUSY);
-      } break;
     default:
-      NS_FATAL_ERROR ("Invalid WifiPhy state.");
+      NS_FATAL_ERROR ("Invalid WifiPhy state " << GetState ());
       break;
     }
   m_previousStateChangeTime = now;
-  m_rxing = true;
   m_startRx = now;
   m_endRx = now + rxDuration;
   NotifyRxStart (rxDuration);
@@ -424,17 +432,11 @@ WifiPhyStateHelper::SwitchToChannelSwitching (Time switchingDuration)
       /* The packet which is being received as well
        * as its endRx event are cancelled by the caller.
        */
-      m_rxing = false;
       m_stateLogger (m_startRx, now - m_startRx, WifiPhyState::RX);
       m_endRx = now;
       break;
     case WifiPhyState::CCA_BUSY:
-      {
-        Time ccaStart = Max (m_endRx, m_endTx);
-        ccaStart = Max (ccaStart, m_startCcaBusy);
-        ccaStart = Max (ccaStart, m_endSwitching);
-        m_stateLogger (ccaStart, now - ccaStart, WifiPhyState::CCA_BUSY);
-      } break;
+      [[fallthrough]];
     case WifiPhyState::IDLE:
       LogPreviousIdleAndCcaBusyStates ();
       break;
@@ -443,11 +445,7 @@ WifiPhyStateHelper::SwitchToChannelSwitching (Time switchingDuration)
       break;
     }
 
-  if (now < m_endCcaBusy)
-    {
-      m_endCcaBusy = now;
-    }
-
+  m_endCcaBusy = std::min (now, m_endCcaBusy);
   m_stateLogger (now, switchingDuration, WifiPhyState::SWITCHING);
   m_previousStateChangeTime = now;
   m_startSwitching = now;
@@ -457,29 +455,52 @@ WifiPhyStateHelper::SwitchToChannelSwitching (Time switchingDuration)
 }
 
 void
-WifiPhyStateHelper::SwitchFromRxEndOk (Ptr<Packet> packet, double snr, WifiTxVector txVector)
+WifiPhyStateHelper::ContinueRxNextMpdu (Ptr<WifiPsdu> psdu, RxSignalInfo rxSignalInfo, WifiTxVector txVector)
 {
-  NS_LOG_FUNCTION (this << packet << snr << txVector);
-  m_rxOkTrace (packet, snr, txVector.GetMode (), txVector.GetPreambleType ());
+  NS_LOG_FUNCTION (this << *psdu << rxSignalInfo << txVector);
+  std::vector<bool> statusPerMpdu;
+  if (!m_rxOkCallback.IsNull ())
+    {
+      m_rxOkCallback (psdu, rxSignalInfo, txVector, statusPerMpdu);
+    }
+}
+
+void
+WifiPhyStateHelper::SwitchFromRxEndOk (Ptr<WifiPsdu> psdu, RxSignalInfo rxSignalInfo, WifiTxVector txVector, uint16_t staId, std::vector<bool> statusPerMpdu)
+{
+  NS_LOG_FUNCTION (this << *psdu << rxSignalInfo << txVector << staId << statusPerMpdu.size () <<
+                   std::all_of(statusPerMpdu.begin(), statusPerMpdu.end(), [](bool v) { return v; })); //returns true if all true
+  NS_ASSERT (statusPerMpdu.size () != 0);
+  NS_ASSERT (Abs (m_endRx - Simulator::Now ()) < MicroSeconds (1)); //1us corresponds to the maximum propagation delay (delay spread)
+  //TODO: a better fix would be to call the function once all HE TB PPDUs are received
+  if (!m_rxOkTrace.IsEmpty ())
+    {
+      m_rxOkTrace (psdu->GetPacket (), rxSignalInfo.snr, txVector.GetMode (staId),
+                   txVector.GetPreambleType ());
+    }
   NotifyRxEndOk ();
   DoSwitchFromRx ();
   if (!m_rxOkCallback.IsNull ())
     {
-      m_rxOkCallback (packet, snr, txVector);
+      m_rxOkCallback (psdu, rxSignalInfo, txVector, statusPerMpdu);
     }
-
 }
 
 void
-WifiPhyStateHelper::SwitchFromRxEndError (Ptr<Packet> packet, double snr)
+WifiPhyStateHelper::SwitchFromRxEndError (Ptr<WifiPsdu> psdu, double snr)
 {
-  NS_LOG_FUNCTION (this << packet << snr);
-  m_rxErrorTrace (packet, snr);
+  NS_LOG_FUNCTION (this << *psdu << snr);
+  NS_ASSERT (Abs (m_endRx - Simulator::Now ()) < MicroSeconds (1)); //1us corresponds to the maximum propagation delay (delay spread)
+  //TODO: a better fix would be to call the function once all HE TB PPDUs are received
+  if (!m_rxErrorTrace.IsEmpty ())
+    {
+      m_rxErrorTrace (psdu->GetPacket (), snr);
+    }
   NotifyRxEndError ();
   DoSwitchFromRx ();
   if (!m_rxErrorCallback.IsNull ())
     {
-      m_rxErrorCallback (packet, snr);
+      m_rxErrorCallback (psdu);
     }
 }
 
@@ -487,14 +508,10 @@ void
 WifiPhyStateHelper::DoSwitchFromRx (void)
 {
   NS_LOG_FUNCTION (this);
-  NS_ASSERT (IsStateRx ());
-  NS_ASSERT (m_rxing);
-
   Time now = Simulator::Now ();
   m_stateLogger (m_startRx, now - m_startRx, WifiPhyState::RX);
   m_previousStateChangeTime = now;
-  m_rxing = false;
-
+  m_endRx = Simulator::Now ();
   NS_ASSERT (IsStateIdle () || IsStateCcaBusy ());
 }
 
@@ -502,13 +519,18 @@ void
 WifiPhyStateHelper::SwitchMaybeToCcaBusy (Time duration)
 {
   NS_LOG_FUNCTION (this << duration);
-  NotifyMaybeCcaBusyStart (duration);
+  if (GetState () != WifiPhyState::RX)
+    {
+      NotifyMaybeCcaBusyStart (duration);
+    }
   Time now = Simulator::Now ();
   switch (GetState ())
     {
     case WifiPhyState::IDLE:
       LogPreviousIdleAndCcaBusyStates ();
       break;
+    case WifiPhyState::RX:
+      return;
     default:
       break;
     }
@@ -527,15 +549,10 @@ WifiPhyStateHelper::SwitchToSleep (void)
   switch (GetState ())
     {
     case WifiPhyState::IDLE:
+      [[fallthrough]];
+    case WifiPhyState::CCA_BUSY:
       LogPreviousIdleAndCcaBusyStates ();
       break;
-    case WifiPhyState::CCA_BUSY:
-      {
-        Time ccaStart = Max (m_endRx, m_endTx);
-        ccaStart = Max (ccaStart, m_startCcaBusy);
-        ccaStart = Max (ccaStart, m_endSwitching);
-        m_stateLogger (ccaStart, now - ccaStart, WifiPhyState::CCA_BUSY);
-      } break;
     default:
       NS_FATAL_ERROR ("Invalid WifiPhy state.");
       break;
@@ -548,32 +565,27 @@ WifiPhyStateHelper::SwitchToSleep (void)
 }
 
 void
-WifiPhyStateHelper::SwitchFromSleep (Time duration)
+WifiPhyStateHelper::SwitchFromSleep (void)
 {
-  NS_LOG_FUNCTION (this << duration);
+  NS_LOG_FUNCTION (this);
   NS_ASSERT (IsStateSleep ());
   Time now = Simulator::Now ();
   m_stateLogger (m_startSleep, now - m_startSleep, WifiPhyState::SLEEP);
   m_previousStateChangeTime = now;
   m_sleeping = false;
   NotifyWakeup ();
-  //update m_endCcaBusy after the sleep period
-  m_endCcaBusy = std::max (m_endCcaBusy, now + duration);
-  if (m_endCcaBusy > now)
-    {
-      NotifyMaybeCcaBusyStart (m_endCcaBusy - now);
-    }
 }
 
 void
 WifiPhyStateHelper::SwitchFromRxAbort (void)
 {
   NS_LOG_FUNCTION (this);
-  NS_ASSERT (IsStateRx ());
-  NS_ASSERT (m_rxing);
-  m_endRx = Simulator::Now ();
+  NS_ASSERT (IsStateCcaBusy ()); //abort is called (with OBSS_PD_CCA_RESET reason) before RX is set by payload start
+  NotifyRxEndOk ();
   DoSwitchFromRx ();
-  NS_ASSERT (!IsStateRx ());
+  m_endCcaBusy = Simulator::Now ();
+  NotifyMaybeCcaBusyStart (Seconds (0));
+  NS_ASSERT (IsStateIdle ());
 }
 
 void
@@ -587,7 +599,6 @@ WifiPhyStateHelper::SwitchToOff (void)
       /* The packet which is being received as well
        * as its endRx event are cancelled by the caller.
        */
-      m_rxing = false;
       m_stateLogger (m_startRx, now - m_startRx, WifiPhyState::RX);
       m_endRx = now;
       break;
@@ -599,15 +610,10 @@ WifiPhyStateHelper::SwitchToOff (void)
       m_endTx = now;
       break;
     case WifiPhyState::IDLE:
+      [[fallthrough]];
+    case WifiPhyState::CCA_BUSY:
       LogPreviousIdleAndCcaBusyStates ();
       break;
-    case WifiPhyState::CCA_BUSY:
-      {
-        Time ccaStart = Max (m_endRx, m_endTx);
-        ccaStart = Max (ccaStart, m_startCcaBusy);
-        ccaStart = Max (ccaStart, m_endSwitching);
-        m_stateLogger (ccaStart, now - ccaStart, WifiPhyState::CCA_BUSY);
-      } break;
     default:
       NS_FATAL_ERROR ("Invalid WifiPhy state.");
       break;
@@ -619,20 +625,14 @@ WifiPhyStateHelper::SwitchToOff (void)
 }
 
 void
-WifiPhyStateHelper::SwitchFromOff (Time duration)
+WifiPhyStateHelper::SwitchFromOff (void)
 {
-  NS_LOG_FUNCTION (this << duration);
+  NS_LOG_FUNCTION (this);
   NS_ASSERT (IsStateOff ());
   Time now = Simulator::Now ();
   m_previousStateChangeTime = now;
   m_isOff = false;
   NotifyOn ();
-  //update m_endCcaBusy after the off period
-  m_endCcaBusy = std::max (m_endCcaBusy, now + duration);
-  if (m_endCcaBusy > now)
-    {
-      NotifyMaybeCcaBusyStart (m_endCcaBusy - now);
-    }
 }
 
 } //namespace ns3

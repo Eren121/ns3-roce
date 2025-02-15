@@ -38,6 +38,7 @@
 
 #define BURST_RESET_TIMEOUT 1.5
 
+class PieQueueDiscTestCase;  // Forward declaration for unit test
 namespace ns3 {
 
 class TraceContainer;
@@ -78,57 +79,11 @@ public:
   };
 
   /**
-   * \brief Enumeration of the modes supported in the class.
-   * \deprecated This enum will go away in future versions of ns-3.
-   *
-   */
-  enum QueueDiscMode
-  {
-    QUEUE_DISC_MODE_PACKETS,     /**< Use number of packets for maximum queue disc size */
-    QUEUE_DISC_MODE_BYTES,       /**< Use number of bytes for maximum queue disc size */
-  };
-
-  /**
-   * \brief Set the operating mode of this queue disc.
-   *
-   * \param mode The operating mode of this queue disc.
-   * \deprecated This method will go away in future versions of ns-3.
-   * See instead SetMaxSize()
-   */
-  void SetMode (QueueDiscMode mode);
-
-  /**
-   * \brief Get the operating mode of this queue disc.
-   *
-   * \returns The operating mode of this queue disc.
-   * \deprecated This method will go away in future versions of ns-3.
-   * See instead GetMaxSize()
-   */
-  QueueDiscMode GetMode (void) const;
-
-  /**
-   * \brief Get the current value of the queue in bytes or packets.
-   *
-   * \returns The queue size in bytes or packets.
-   */
-  uint32_t GetQueueSize (void);
-
-  /**
-   * \brief Set the limit of the queue in bytes or packets.
-   *
-   * \param lim The limit in bytes or packets.
-   * \deprecated This method will go away in future versions of ns-3.
-   * See instead SetMaxSize()
-   */
-  void SetQueueLimit (uint32_t lim);
-
-  /**
    * \brief Get queue delay.
    *
    * \returns The current queue delay.
    */
   Time GetQueueDelay (void);
-
   /**
    * Assign a fixed random variable stream number to the random variables
    * used by this model.  Return the number of streams (possibly zero) that
@@ -142,6 +97,8 @@ public:
   // Reasons for dropping packets
   static constexpr const char* UNFORCED_DROP = "Unforced drop";  //!< Early probability drops: proactive
   static constexpr const char* FORCED_DROP = "Forced drop";      //!< Drops due to queue limit: reactive
+  static constexpr const char* UNFORCED_MARK = "Unforced mark";  //!< Early probability marks: proactive
+  static constexpr const char* CE_THRESHOLD_EXCEEDED_MARK = "CE threshold exceeded mark";  //!< Early probability marks: proactive
 
 protected:
   /**
@@ -150,9 +107,9 @@ protected:
   virtual void DoDispose (void);
 
 private:
+  friend class::PieQueueDiscTestCase;         // Test code
   virtual bool DoEnqueue (Ptr<QueueDiscItem> item);
   virtual Ptr<QueueDiscItem> DoDequeue (void);
-  virtual Ptr<const QueueDiscItem> DoPeek (void);
   virtual bool CheckConfig (void);
 
   /**
@@ -175,6 +132,7 @@ private:
    */
   void CalculateP ();
 
+
   static const uint64_t DQCOUNT_INVALID = std::numeric_limits<uint64_t>::max();  //!< Invalid dqCount value
 
   // ** Variables supplied by user
@@ -186,6 +144,14 @@ private:
   double m_a;                                   //!< Parameter to pie controller
   double m_b;                                   //!< Parameter to pie controller
   uint32_t m_dqThreshold;                       //!< Minimum queue size in bytes before dequeue rate is measured
+  bool m_useDqRateEstimator;                    //!< Enable/Disable usage of dequeue rate estimator for queue delay calculation
+  bool  m_isCapDropAdjustment;                  //!< Enable/Disable Cap Drop Adjustment feature mentioned in RFC 8033
+  bool m_useEcn;                                //!< Enable ECN Marking functionality
+  bool m_useDerandomization;                    //!< Enable Derandomization feature mentioned in RFC 8033
+  double m_markEcnTh;                           //!< ECN marking threshold (default 10% as suggested in RFC 8033)
+  Time m_activeThreshold;                       //!< Threshold for activating PIE (disabled by default)
+  Time m_ceThreshold;                           //!< Threshold above which to CE mark
+  bool m_useL4s;                                //!< True if L4S is used (ECT1 packets are marked at CE threshold)
 
   // ** Variables maintained by PIE
   double m_dropProb;                            //!< Variable used in calculation of drop probability
@@ -196,10 +162,12 @@ private:
   BurstStateT m_burstState;                     //!< Used to determine the current state of burst
   bool m_inMeasurement;                         //!< Indicates whether we are in a measurement cycle
   double m_avgDqRate;                           //!< Time averaged dequeue rate
-  double m_dqStart;                             //!< Start timestamp of current measurement cycle
+  Time m_dqStart;                               //!< Start timestamp of current measurement cycle
   uint64_t m_dqCount;                           //!< Number of bytes departed since current measurement cycle starts
   EventId m_rtrsEvent;                          //!< Event used to decide the decision of interval of drop probability calculation
   Ptr<UniformRandomVariable> m_uv;              //!< Rng stream
+  double m_accuProb;                            //!< Accumulated drop probability
+  bool m_active;                                //!< Indicates whether PIE is in active state or not
 };
 
 };   // namespace ns3

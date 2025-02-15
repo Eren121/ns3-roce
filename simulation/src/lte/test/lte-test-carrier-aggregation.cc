@@ -30,6 +30,7 @@
 #include <iostream>
 #include "ns3/radio-bearer-stats-calculator.h"
 #include <ns3/constant-position-mobility-model.h>
+#include "ns3/ff-mac-scheduler.h"
 #include <ns3/eps-bearer.h>
 #include <ns3/node-container.h>
 #include <ns3/mobility-helper.h>
@@ -285,6 +286,20 @@ CarrierAggregationTestCase::DoRun (void)
   Config::SetDefault ("ns3::LteSpectrumPhy::DataErrorModelEnabled", BooleanValue (false));
   Config::SetDefault ("ns3::LteHelper::UseIdealRrc", BooleanValue (true));
 
+  Config::SetDefault ("ns3::MacStatsCalculator::DlOutputFilename", StringValue (CreateTempDirFilename ("DlMacStats.txt")));
+  Config::SetDefault ("ns3::MacStatsCalculator::UlOutputFilename", StringValue (CreateTempDirFilename ("UlMacStats.txt")));
+  Config::SetDefault ("ns3::RadioBearerStatsCalculator::DlRlcOutputFilename", StringValue (CreateTempDirFilename ("DlRlcStats.txt")));
+  Config::SetDefault ("ns3::RadioBearerStatsCalculator::UlRlcOutputFilename", StringValue (CreateTempDirFilename ("UlRlcStats.txt")));
+  Config::SetDefault ("ns3::RadioBearerStatsCalculator::DlPdcpOutputFilename", StringValue (CreateTempDirFilename ("DlPdcpStats.txt")));
+  Config::SetDefault ("ns3::RadioBearerStatsCalculator::UlPdcpOutputFilename", StringValue (CreateTempDirFilename ("UlPdcpStats.txt")));
+  Config::SetDefault ("ns3::PhyStatsCalculator::DlRsrpSinrFilename", StringValue (CreateTempDirFilename ("DlRsrpSinrStats.txt")));
+  Config::SetDefault ("ns3::PhyStatsCalculator::UlSinrFilename", StringValue (CreateTempDirFilename ("UlSinrStats.txt")));
+  Config::SetDefault ("ns3::PhyStatsCalculator::UlInterferenceFilename", StringValue (CreateTempDirFilename ("UlInterferenceStats.txt")));
+  Config::SetDefault ("ns3::PhyRxStatsCalculator::DlRxOutputFilename", StringValue (CreateTempDirFilename ("DlRxPhyStats.txt")));
+  Config::SetDefault ("ns3::PhyRxStatsCalculator::UlRxOutputFilename", StringValue (CreateTempDirFilename ("UlRxPhyStats.txt")));
+  Config::SetDefault ("ns3::PhyTxStatsCalculator::DlTxOutputFilename", StringValue (CreateTempDirFilename ("DlTxPhyStats.txt")));
+  Config::SetDefault ("ns3::PhyTxStatsCalculator::UlTxOutputFilename", StringValue (CreateTempDirFilename ("UlTxPhyStats.txt")));
+
   /**
    * Initialize Simulation Scenario: 1 eNB and m_nUser UEs
    */
@@ -310,6 +325,7 @@ CarrierAggregationTestCase::DoRun (void)
   NetDeviceContainer enbDevs;
   NetDeviceContainer ueDevs;
   lteHelper->SetSchedulerType ("ns3::PfFfMacScheduler");
+  lteHelper->SetSchedulerAttribute ("UlCqiFilter", EnumValue (FfMacScheduler::SRS_UL_CQI));
   enbDevs = lteHelper->InstallEnbDevice (enbNodes);
   ueDevs = lteHelper->InstallUeDevice (ueNodes);
 
@@ -354,7 +370,7 @@ CarrierAggregationTestCase::DoRun (void)
   Simulator::Run ();
 
   /**
-   * Check that the assignation is done in a RR fashion
+   * Check that the assignment is done in a RR fashion
    */
   NS_LOG_INFO ("DL - Test with " << m_nUser << " user(s) at distance " << m_dist);
   std::vector <uint64_t> dlDataRxed;

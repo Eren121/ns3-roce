@@ -18,11 +18,22 @@
  * Author: Sebastien Deronne <sebastien.deronne@gmail.com>
  */
 
-#include "ns3/core-module.h"
-#include "ns3/applications-module.h"
-#include "ns3/wifi-module.h"
-#include "ns3/mobility-module.h"
-#include "ns3/internet-module.h"
+#include "ns3/command-line.h"
+#include "ns3/config.h"
+#include "ns3/uinteger.h"
+#include "ns3/boolean.h"
+#include "ns3/string.h"
+#include "ns3/log.h"
+#include "ns3/yans-wifi-helper.h"
+#include "ns3/ssid.h"
+#include "ns3/mobility-helper.h"
+#include "ns3/internet-stack-helper.h"
+#include "ns3/ipv4-address-helper.h"
+#include "ns3/packet-sink-helper.h"
+#include "ns3/on-off-helper.h"
+#include "ns3/ipv4-global-routing-helper.h"
+#include "ns3/packet-sink.h"
+#include "ns3/yans-wifi-channel.h"
 
 // This is a simple example in order to show how to configure an IEEE 802.11n Wi-Fi network
 // with multiple TOS. It outputs the aggregated UDP throughput, which depends on the number of
@@ -44,7 +55,7 @@ int main (int argc, char *argv[])
   bool useShortGuardInterval = false;
   bool useRts = false;
 
-  CommandLine cmd;
+  CommandLine cmd (__FILE__);
   cmd.AddValue ("nWifi", "Number of stations", nWifi);
   cmd.AddValue ("distance", "Distance in meters between the stations and the access point", distance);
   cmd.AddValue ("simulationTime", "Simulation time in seconds", simulationTime);
@@ -60,15 +71,12 @@ int main (int argc, char *argv[])
   wifiApNode.Create (1);
 
   YansWifiChannelHelper channel = YansWifiChannelHelper::Default ();
-  YansWifiPhyHelper phy = YansWifiPhyHelper::Default ();
+  YansWifiPhyHelper phy;
   phy.SetChannel (channel.Create ());
-
-  // Set guard interval
-  phy.Set ("ShortGuardEnabled", BooleanValue (useShortGuardInterval));
 
   WifiMacHelper mac;
   WifiHelper wifi;
-  wifi.SetStandard (WIFI_PHY_STANDARD_80211n_5GHZ);
+  wifi.SetStandard (WIFI_STANDARD_80211n);
 
   std::ostringstream oss;
   oss << "HtMcs" << mcs;
@@ -92,7 +100,11 @@ int main (int argc, char *argv[])
   apDevice = wifi.Install (phy, mac, wifiApNode);
 
   // Set channel width
-  Config::Set ("/NodeList/*/DeviceList/*/$ns3::WifiNetDevice/Phy/ChannelWidth", UintegerValue (channelWidth));
+  Config::Set ("/NodeList/*/DeviceList/*/$ns3::WifiNetDevice/Phy/ChannelSettings",
+               StringValue ("{0, " + std::to_string (channelWidth) + ", BAND_2_4GHZ, 0}"));
+
+  // Set guard interval
+  Config::Set ("/NodeList/*/DeviceList/*/$ns3::WifiNetDevice/HtConfiguration/ShortGuardIntervalSupported", BooleanValue (useShortGuardInterval));
 
   // mobility
   MobilityHelper mobility;
@@ -123,7 +135,7 @@ int main (int argc, char *argv[])
   ApplicationContainer sourceApplications, sinkApplications;
   std::vector<uint8_t> tosValues = {0x70, 0x28, 0xb8, 0xc0}; //AC_BE, AC_BK, AC_VI, AC_VO
   uint32_t portNumber = 9;
-  for (uint8_t index = 0; index < nWifi; ++index)
+  for (uint32_t index = 0; index < nWifi; ++index)
     {
       for (uint8_t tosValue : tosValues)
         {
@@ -151,14 +163,16 @@ int main (int argc, char *argv[])
 
   Simulator::Stop (Seconds (simulationTime + 1));
   Simulator::Run ();
-  Simulator::Destroy ();
 
   double throughput = 0;
-  for (unsigned index = 0; index < sinkApplications.GetN (); ++index)
+  for (uint32_t index = 0; index < sinkApplications.GetN (); ++index)
     {
       uint64_t totalPacketsThrough = DynamicCast<PacketSink> (sinkApplications.Get (index))->GetTotalRx ();
       throughput += ((totalPacketsThrough * 8) / (simulationTime * 1000000.0)); //Mbit/s
     }
+
+  Simulator::Destroy ();
+
   if (throughput > 0)
     {
       std::cout << "Aggregated throughput: " << throughput << " Mbit/s" << std::endl;
@@ -168,5 +182,6 @@ int main (int argc, char *argv[])
       NS_LOG_ERROR ("Obtained throughput is 0!");
       exit (1);
     }
+
   return 0;
 }

@@ -22,6 +22,7 @@
 #include "ns3/object.h"
 #include "ns3/address.h"
 #include "ns3/net-device.h"
+#include "ns3/traced-callback.h"
 #include "ns3/node.h"
 #include "ns3/queue-item.h"
 #include <map>
@@ -108,6 +109,10 @@ public:
 
   virtual ~TrafficControlLayer ();
 
+  // Delete copy constructor and assignment operator to avoid misuse
+  TrafficControlLayer (TrafficControlLayer const &) = delete;
+  TrafficControlLayer & operator = (TrafficControlLayer const &) = delete;
+
   /**
    * \brief Register an IN handler
    *
@@ -133,13 +138,13 @@ public:
   typedef std::vector<Ptr<QueueDisc> > QueueDiscVector;
 
   /**
-   * \brief Perform the operations that the traffic control layer needs to do when
-   *        an IPv4/v6 interface is added to a device
-   * \param device the device which the IPv4/v6 interface has been added to
+   * \brief Collect information needed to determine how to handle packets
+   *        destined to each of the NetDevices of this node
    *
-   * This method creates a NetDeviceQueueInterface for the device
+   * Checks whether a NetDeviceQueueInterface objects is aggregated to each of
+   * the NetDevices of this node and sets the required callbacks properly.
    */
-  virtual void SetupDevice (Ptr<NetDevice> device);
+  virtual void ScanDevices (void);
 
   /**
    * \brief This method can be used to set the root queue disc installed on a device
@@ -180,7 +185,7 @@ public:
    * \param device network device
    * \param p the packet
    * \param protocol next header value
-   * \param from address of the correspondant
+   * \param from address of the correspondent
    * \param to address of the destination
    * \param packetType type of the packet
    */
@@ -195,9 +200,6 @@ public:
    */
   virtual void Send (Ptr<NetDevice> device, Ptr<QueueDiscItem> item);
 
-  /// Callback invoked to determine the tx queue selected for a given packet
-  typedef Callback< uint8_t, Ptr<QueueItem> > SelectQueueCallback;
-
 protected:
 
   virtual void DoDispose (void);
@@ -205,17 +207,6 @@ protected:
   virtual void NotifyNewAggregate (void);
 
 private:
-  /**
-   * \brief Copy constructor
-   * Disable default implementation to avoid misuse
-   */
-  TrafficControlLayer (TrafficControlLayer const &);
-  /**
-   * \brief Assignment operator
-   * \return this object
-   * Disable default implementation to avoid misuse
-   */
-  TrafficControlLayer& operator= (TrafficControlLayer const &);
   /**
    * \brief Protocol handler entry.
    * This structure is used to demultiplex all the protocols.
@@ -230,38 +221,11 @@ private:
   /**
    * \brief Information to store for each device
    */
-  class NetDeviceInfo
+  struct NetDeviceInfo
   {
-  public:
-    /**
-     * \brief Constructor
-     *
-     * \param rootQueueDisc the root queue disc installed on the device
-     * \param ndqi the NetDeviceQueueInterface aggregated to the device
-     * \param queueDiscsToWake the vector of queue discs to wake
-     * \param selectQueueCallback the select queue callback
-     */
-    NetDeviceInfo (Ptr<QueueDisc> rootQueueDisc, Ptr<NetDeviceQueueInterface> ndqi,
-                   QueueDiscVector queueDiscsToWake, SelectQueueCallback selectQueueCallback);
-    virtual ~NetDeviceInfo ();
-
     Ptr<QueueDisc> m_rootQueueDisc;       //!< the root queue disc on the device
     Ptr<NetDeviceQueueInterface> m_ndqi;  //!< the netdevice queue interface
     QueueDiscVector m_queueDiscsToWake;   //!< the vector of queue discs to wake
-    SelectQueueCallback m_selectQueueCallback;  //!< the select queue callback
-  private:
-    NetDeviceInfo ();
-    /**
-     * \brief Copy constructor
-     * Disable default implementation to avoid misuse
-     */
-    NetDeviceInfo (NetDeviceInfo const &);
-    /**
-     * \brief Assignment operator
-     * \return this object
-     * Disable default implementation to avoid misuse
-     */
-    NetDeviceInfo& operator= (NetDeviceInfo const &);
   };
 
   /// Typedef for protocol handlers container
@@ -284,6 +248,13 @@ private:
   /// Map storing the required information for each device with a queue disc installed
   std::map<Ptr<NetDevice>, NetDeviceInfo> m_netDevices;
   ProtocolHandlerList m_handlers;  //!< List of upper-layer handlers
+
+  /**
+   * The trace source fired when the Traffic Control layer drops a packet because
+   * no queue disc is installed on the device, the device supports flow control and
+   * the device queue is stopped
+   */
+  TracedCallback<Ptr<const Packet>> m_dropped;
 };
 
 } // namespace ns3

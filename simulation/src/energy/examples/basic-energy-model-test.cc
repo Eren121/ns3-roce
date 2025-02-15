@@ -64,17 +64,17 @@ private:
   bool StateSwitchTest (WifiPhyState state);
 
 private:
-  double m_timeS;     // in seconds
-  double m_tolerance; // tolerance for power estimation
+  double m_timeS;     //!< Time in seconds
+  double m_tolerance; //!< Tolerance for power estimation
 
-  ObjectFactory m_energySource;
-  ObjectFactory m_deviceEnergyModel;
+  ObjectFactory m_energySource;       //!< Energy source factory
+  ObjectFactory m_deviceEnergyModel;  //!< Device energy model factory
 };
 
 BasicEnergyUpdateTest::BasicEnergyUpdateTest ()
 {
   m_timeS = 15.5; // idle for 15 seconds before changing state
-  m_tolerance = 1.0e-13;  //
+  m_tolerance = 1.0e-5;  //
 }
 
 BasicEnergyUpdateTest::~BasicEnergyUpdateTest ()
@@ -281,11 +281,11 @@ private:
   bool DepletionTestCase (double simTimeS, double updateIntervalS);
 
 private:
-  int m_numOfNodes;         // number of nodes in simulation
-  int m_callbackCount;      // counter for # of callbacks invoked
-  double m_simTimeS;        // maximum simulation time, in seconds
-  double m_timeStepS;       // simulation time step size, in seconds
-  double m_updateIntervalS; // update interval of each device model
+  int m_numOfNodes;         //!< number of nodes in simulation
+  int m_callbackCount;      //!< counter for # of callbacks invoked
+  double m_simTimeS;        //!< maximum simulation time, in seconds
+  double m_timeStepS;       //!< simulation time step size, in seconds
+  double m_updateIntervalS; //!< update interval of each device model
 
 };
 
@@ -355,9 +355,9 @@ BasicEnergyDepletionTest::DepletionTestCase (double simTimeS,
 
   // install YansWifiPhy
   WifiHelper wifi;
-  wifi.SetStandard (WIFI_PHY_STANDARD_80211b);
+  wifi.SetStandard (WIFI_STANDARD_80211b);
 
-  YansWifiPhyHelper wifiPhy = YansWifiPhyHelper::Default ();
+  YansWifiPhyHelper wifiPhy;
   /*
    * This is one parameter that matters when using FixedRssLossModel, set it to
    * zero; otherwise, gain will be added.

@@ -571,6 +571,27 @@ public:
    * packet).
    */
   void AddByteTag (const Tag &tag) const;
+
+  /**
+   * \brief Tag the indicated byte range of this packet with a new byte tag.
+   *
+   * As parameters for this method, we do not use indexes, but byte position.
+   * Moreover, as there is no 0-th position, the first position is 1.
+   *
+   * As example, if you want to tag the first 10 bytes, you have to call
+   * the method in this way:
+   *
+   * \code{.cpp}
+       Ptr<Packet> p = ... ;
+       SomeTag tag;
+       p->AddByteTag (tag, 1, 10);
+     \endcode
+   *
+   * \param tag the new tag to add to this packet
+   * \param start the position of the first byte tagged by this tag
+   * \param end the position of the last byte tagged by this tag
+   */
+  void AddByteTag (const Tag &tag, uint32_t start, uint32_t end) const;
   /**
    * \brief Returns an iterator over the set of byte tags included in this packet
    *
@@ -666,16 +687,20 @@ public:
   /**
    * \brief Set the packet nix-vector.
    *
-   * Note: This function supports a temporary solution
+   * \note Note: This function supports a temporary solution
    * to a specific problem in this generic class, i.e. 
    * how to associate something specific like nix-vector 
    * with a packet.  This design methodology 
    * should _not_ be followed, and is only here as an 
    * impetus to fix this general issue.
    *
+   * \warning For real this function is not const, as it is the
+   * setter for a mutable variable member. The const qualifier
+   * is needed to set a private mutable variable of const objects.
+   * 
    * \param nixVector the nix vector
    */
-  void SetNixVector (Ptr<NixVector> nixVector);
+  void SetNixVector (Ptr<NixVector> nixVector) const;
   /**
    * \brief Get the packet nix-vector.
    *
@@ -701,6 +726,16 @@ public:
   typedef void (* AddressTracedCallback)
     (Ptr<const Packet> packet, const Address &address);
   
+   /**
+    * TracedCallback signature for packet and source/destination addresses.
+    *
+    * \param [in] packet The packet.
+    * \param [in] srcAddress The source address.
+    * \param [in] destAddress The destination address.
+    */
+  typedef void (* TwoAddressTracedCallback)
+    (const Ptr<const Packet> packet, const Address &srcAddress, const Address &destAddress);
+
   /**
    * TracedCallback signature for packet and Mac48Address.
    *
@@ -754,7 +789,7 @@ private:
   PacketMetadata m_metadata;      //!< the packet's metadata
 
   /* Please see comments above about nix-vector */
-  Ptr<NixVector> m_nixVector; //!< the packet's Nix vector
+  mutable Ptr<NixVector> m_nixVector; //!< the packet's Nix vector
 
   static uint32_t m_globalUid; //!< Global counter of packets Uid
 };

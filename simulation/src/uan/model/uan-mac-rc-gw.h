@@ -126,7 +126,6 @@ private:
   Callback<void, Ptr<Packet>, uint16_t, const Mac8Address&> m_forwardUpCb;
   
   Ptr<UanPhy> m_phy;            //!< PHY layer attached to this MAC.
-  Mac8Address m_address;         //!< The MAC address.
   Time m_maxDelta;              //!< Maximum propagation delay between gateway and non-gateway nodes .
   Time m_sifs;                  //!< Spacing between frames to account for timing error and processing delay.
   uint32_t m_maxRes;            //!< Maximum number of reservations to accept per cycle.
@@ -177,7 +176,7 @@ private:
   TracedCallback<Time, Time, uint32_t, uint32_t, double, uint32_t, double> m_cycleLogger;
 
   /**
-   * PHY recieve ok callback.
+   * PHY receive ok callback.
    *
    * \param pkt The Packet to receive
    * \param sinr The SINR on the channel

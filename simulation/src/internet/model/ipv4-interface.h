@@ -62,6 +62,10 @@ public:
   Ipv4Interface ();
   virtual ~Ipv4Interface();
 
+  // Delete copy constructor and assignment operator to avoid misuse
+  Ipv4Interface (const Ipv4Interface &) = delete;
+  Ipv4Interface & operator = (const Ipv4Interface &) = delete;
+
   /**
    * \brief Set node associated with interface.
    * \param node node
@@ -169,7 +173,7 @@ public:
   Ipv4InterfaceAddress GetAddress (uint32_t index) const;
 
   /**
-   * \returns the number of Ipv4InterfaceAddresss stored on this interface
+   * \returns the number of Ipv4InterfaceAddress stored on this interface
    */
   uint32_t GetNAddresses (void) const;
 
@@ -190,24 +194,8 @@ public:
 
 protected:
   virtual void DoDispose (void);
+
 private:
-  /**
-   * \brief Copy constructor
-   * \param o object to copy
-   *
-   * Defined and unimplemented to avoid misuse
-   */
-  Ipv4Interface (const Ipv4Interface &o);
-
-  /**
-   * \brief Assignment operator
-   * \param o object to copy
-   * \returns the copied object
-   *
-   * Defined and unimplemented to avoid misuse
-   */
-  Ipv4Interface &operator = (const Ipv4Interface &o);
-
   /**
    * \brief Initialize interface.
    */

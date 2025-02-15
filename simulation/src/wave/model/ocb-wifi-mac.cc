@@ -19,14 +19,16 @@
  * Author: Mathieu Lacage <mathieu.lacage@sophia.inria.fr>
  *         Junling Bu <linlinjavaer@gmail.com>
  */
+
+#include "ns3/event-id.h"
 #include "ns3/pointer.h"
 #include "ns3/log.h"
 #include "ns3/string.h"
-#include "ns3/mac-low.h"
-#include "ns3/dcf-manager.h"
 #include "ns3/mac-rx-middle.h"
-#include "ns3/mgt-headers.h"
-#include "wave-mac-low.h"
+#include "ns3/ht-capabilities.h"
+#include "ns3/vht-capabilities.h"
+#include "ns3/channel-access-manager.h"
+#include "wave-frame-exchange-manager.h"
 #include "ocb-wifi-mac.h"
 #include "vendor-specific-action.h"
 #include "higher-tx-tag.h"
@@ -44,7 +46,7 @@ TypeId
 OcbWifiMac::GetTypeId (void)
 {
   static TypeId tid = TypeId ("ns3::OcbWifiMac")
-    .SetParent<RegularWifiMac> ()
+    .SetParent<WifiMac> ()
     .SetGroupName ("Wave")
     .AddConstructor<OcbWifiMac> ()
   ;
@@ -57,7 +59,7 @@ OcbWifiMac::OcbWifiMac (void)
   // Let the lower layers know that we are acting as an OCB node
   SetTypeOfStation (OCB);
   // BSSID is still needed in the low part of MAC
-  RegularWifiMac::SetBssid (WILDCARD_BSSID);
+  WifiMac::SetBssid (WILDCARD_BSSID);
 }
 
 OcbWifiMac::~OcbWifiMac (void)
@@ -80,15 +82,15 @@ OcbWifiMac::SendVsc (Ptr<Packet> vsc, Mac48Address peer, OrganizationIdentifier 
   vsa.SetOrganizationIdentifier (oi);
   vsc->AddHeader (vsa);
 
-  if (m_qosSupported)
+  if (GetQosSupported ())
     {
       uint8_t tid = QosUtilsGetTidForPacket (vsc);
       tid = tid > 7 ? 0 : tid;
-      m_edca[QosUtilsMapTidToAc (tid)]->Queue (vsc, hdr);
+      GetQosTxop (tid)->Queue (vsc, hdr);
     }
   else
     {
-      m_dca->Queue (vsc, hdr);
+      GetTxop ()->Queue (vsc, hdr);
     }
 }
 
@@ -117,7 +119,7 @@ OcbWifiMac::GetSsid (void) const
 {
   NS_LOG_WARN ("in OCB mode we should not call GetSsid");
   // we really do not want to return ssid, however we have to provide
-  return RegularWifiMac::GetSsid ();
+  return WifiMac::GetSsid ();
 }
 
 
@@ -138,7 +140,7 @@ void
 OcbWifiMac::SetLinkUpCallback (Callback<void> linkUp)
 {
   NS_LOG_FUNCTION (this << &linkUp);
-  RegularWifiMac::SetLinkUpCallback (linkUp);
+  WifiMac::SetLinkUpCallback (linkUp);
 
   // The approach taken here is that, from the point of view of a STA
   // in OCB mode, the link is always up, so we immediately invoke the
@@ -150,29 +152,35 @@ void
 OcbWifiMac::SetLinkDownCallback (Callback<void> linkDown)
 {
   NS_LOG_FUNCTION (this << &linkDown);
-  RegularWifiMac::SetLinkDownCallback (linkDown);
+  WifiMac::SetLinkDownCallback (linkDown);
   NS_LOG_WARN ("in OCB mode the like will never down, so linkDown will never be called");
 }
 
+bool
+OcbWifiMac::CanForwardPacketsTo (Mac48Address to) const
+{
+  return true;
+}
+
 void
-OcbWifiMac::Enqueue (Ptr<const Packet> packet, Mac48Address to)
+OcbWifiMac::Enqueue (Ptr<Packet> packet, Mac48Address to)
 {
   NS_LOG_FUNCTION (this << packet << to);
-  if (m_stationManager->IsBrandNew (to))
+  if (GetWifiRemoteStationManager ()->IsBrandNew (to))
     {
       //In ad hoc mode, we assume that every destination supports all
       //the rates we support.
-      if (m_htSupported || m_vhtSupported)
+      if (GetHtSupported () || GetVhtSupported ())
         {
-          m_stationManager->AddAllSupportedMcs (to);
-          m_stationManager->AddStationHtCapabilities (to, GetHtCapabilities());
+          GetWifiRemoteStationManager ()->AddAllSupportedMcs (to);
+          GetWifiRemoteStationManager ()->AddStationHtCapabilities (to, GetHtCapabilities());
         }
-      if (m_vhtSupported)
+      if (GetVhtSupported ())
         {
-          m_stationManager->AddStationVhtCapabilities (to, GetVhtCapabilities());
+          GetWifiRemoteStationManager ()->AddStationVhtCapabilities (to, GetVhtCapabilities());
         }
-      m_stationManager->AddAllSupportedModes (to);
-      m_stationManager->RecordDisassociated (to);
+      GetWifiRemoteStationManager ()->AddAllSupportedModes (to);
+      GetWifiRemoteStationManager ()->RecordDisassociated (to);
     }
 
   WifiMacHeader hdr;
@@ -182,7 +190,7 @@ OcbWifiMac::Enqueue (Ptr<const Packet> packet, Mac48Address to)
   // QosUtilsMapTidToAc()), so we use that as our default here.
   uint8_t tid = 0;
 
-  if (m_qosSupported)
+  if (GetQosSupported ())
     {
       hdr.SetType (WIFI_MAC_QOSDATA);
       hdr.SetQosAckPolicy (WifiMacHeader::NORMAL_ACK);
@@ -210,9 +218,9 @@ OcbWifiMac::Enqueue (Ptr<const Packet> packet, Mac48Address to)
       hdr.SetType (WIFI_MAC_DATA);
     }
 
-  if (m_htSupported || m_vhtSupported)
+  if (GetHtSupported () || GetVhtSupported ())
     {
-      hdr.SetNoOrder ();
+      hdr.SetNoOrder (); // explicitly set to 0 for the time being since HT/VHT/HE control field is not yet implemented (set it to 1 when implemented)
     }
   hdr.SetAddr1 (to);
   hdr.SetAddr2 (GetAddress ());
@@ -220,15 +228,15 @@ OcbWifiMac::Enqueue (Ptr<const Packet> packet, Mac48Address to)
   hdr.SetDsNotFrom ();
   hdr.SetDsNotTo ();
 
-  if (m_qosSupported)
+  if (GetQosSupported ())
     {
       // Sanity check that the TID is valid
       NS_ASSERT (tid < 8);
-      m_edca[QosUtilsMapTidToAc (tid)]->Queue (packet, hdr);
+      GetQosTxop (tid)->Queue (packet, hdr);
     }
   else
     {
-      m_dca->Queue (packet, hdr);
+      GetTxop ()->Queue (packet, hdr);
     }
 }
 
@@ -237,30 +245,34 @@ OcbWifiMac::Enqueue (Ptr<const Packet> packet, Mac48Address to)
  * here we only care about data packet and vsa management frame
  */
 void
-OcbWifiMac::Receive (Ptr<Packet> packet, const WifiMacHeader *hdr)
+OcbWifiMac::Receive (Ptr<WifiMacQueueItem> mpdu)
 {
-  NS_LOG_FUNCTION (this << packet << hdr);
+  NS_LOG_FUNCTION (this << *mpdu);
+  const WifiMacHeader* hdr = &mpdu->GetHeader ();
+  // Create a copy of the MPDU payload because non-const operations like RemovePacketTag
+  // and RemoveHeader may need to be performed.
+  Ptr<Packet> packet = mpdu->GetPacket ()->Copy ();
   NS_ASSERT (!hdr->IsCtl ());
   NS_ASSERT (hdr->GetAddr3 () == WILDCARD_BSSID);
 
   Mac48Address from = hdr->GetAddr2 ();
   Mac48Address to = hdr->GetAddr1 ();
 
-  if (m_stationManager->IsBrandNew (from))
+  if (GetWifiRemoteStationManager ()->IsBrandNew (from))
     {
       //In ad hoc mode, we assume that every destination supports all
       //the rates we support.
-      if (m_htSupported || m_vhtSupported)
+      if (GetHtSupported () || GetVhtSupported ())
         {
-          m_stationManager->AddAllSupportedMcs (from);
-          m_stationManager->AddStationHtCapabilities (from, GetHtCapabilities());
+          GetWifiRemoteStationManager ()->AddAllSupportedMcs (from);
+          GetWifiRemoteStationManager ()->AddStationHtCapabilities (from, GetHtCapabilities());
         }
-      if (m_vhtSupported)
+      if (GetVhtSupported ())
         {
-          m_stationManager->AddStationVhtCapabilities (from, GetVhtCapabilities());
+          GetWifiRemoteStationManager ()->AddStationVhtCapabilities (from, GetVhtCapabilities());
         }
-      m_stationManager->AddAllSupportedModes (from);
-      m_stationManager->RecordDisassociated (from);
+      GetWifiRemoteStationManager ()->AddAllSupportedModes (from);
+      GetWifiRemoteStationManager ()->RecordDisassociated (from);
     }
 
   if (hdr->IsData ())
@@ -268,7 +280,7 @@ OcbWifiMac::Receive (Ptr<Packet> packet, const WifiMacHeader *hdr)
       if (hdr->IsQosData () && hdr->IsQosAmsdu ())
         {
           NS_LOG_DEBUG ("Received A-MSDU from" << from);
-          DeaggregateAmsduAndForward (packet, hdr);
+          DeaggregateAmsduAndForward (mpdu);
         }
       else
         {
@@ -291,7 +303,7 @@ OcbWifiMac::Receive (Ptr<Packet> packet, const WifiMacHeader *hdr)
   if (hdr->IsMgt () && hdr->IsAction ())
     {
       // yes, we only care about VendorSpecificAction frame in OCB mode
-      // other management frames will be handled by RegularWifiMac::Receive
+      // other management frames will be handled by WifiMac::Receive
       VendorSpecificActionHeader vsaHdr;
       packet->PeekHeader (vsaHdr);
       if (vsaHdr.GetCategory () == CATEGORY_OF_VSA)
@@ -319,45 +331,48 @@ OcbWifiMac::Receive (Ptr<Packet> packet, const WifiMacHeader *hdr)
   // Invoke the receive handler of our parent class to deal with any
   // other frames. Specifically, this will handle Block Ack-related
   // Management Action frames.
-  RegularWifiMac::Receive (packet, hdr);
+  WifiMac::Receive (Create<WifiMacQueueItem> (packet, *hdr));
 }
 
 void
 OcbWifiMac::ConfigureEdca (uint32_t cwmin, uint32_t cwmax, uint32_t aifsn, enum AcIndex ac)
 {
   NS_LOG_FUNCTION (this << cwmin << cwmax << aifsn << ac);
-  Ptr<DcaTxop> dcf;
+  Ptr<Txop> dcf;
   switch (ac)
     {
     case AC_VO:
-      dcf = RegularWifiMac::GetVOQueue ();
+      dcf = WifiMac::GetVOQueue ();
       dcf->SetMinCw ((cwmin + 1) / 4 - 1);
       dcf->SetMaxCw ((cwmin + 1) / 2 - 1);
       dcf->SetAifsn (aifsn);
       break;
     case AC_VI:
-      dcf = RegularWifiMac::GetVIQueue ();
+      dcf = WifiMac::GetVIQueue ();
       dcf->SetMinCw ((cwmin + 1) / 2 - 1);
       dcf->SetMaxCw (cwmin);
       dcf->SetAifsn (aifsn);
       break;
     case AC_BE:
-      dcf = RegularWifiMac::GetBEQueue ();
+      dcf = WifiMac::GetBEQueue ();
       dcf->SetMinCw (cwmin);
       dcf->SetMaxCw (cwmax);
       dcf->SetAifsn (aifsn);
       break;
     case AC_BK:
-      dcf = RegularWifiMac::GetBKQueue ();
+      dcf = WifiMac::GetBKQueue ();
       dcf->SetMinCw (cwmin);
       dcf->SetMaxCw (cwmax);
       dcf->SetAifsn (aifsn);
       break;
     case AC_BE_NQOS:
-      dcf = RegularWifiMac::GetDcaTxop ();
+      dcf = WifiMac::GetTxop ();
       dcf->SetMinCw (cwmin);
       dcf->SetMaxCw (cwmax);
       dcf->SetAifsn (aifsn);
+      break;
+    case AC_BEACON:
+      // done by ApWifiMac
       break;
     case AC_UNDEF:
       NS_FATAL_ERROR ("I don't know what to do with this");
@@ -366,26 +381,45 @@ OcbWifiMac::ConfigureEdca (uint32_t cwmin, uint32_t cwmax, uint32_t aifsn, enum 
 }
 
 void
-OcbWifiMac::FinishConfigureStandard (enum WifiPhyStandard standard)
+OcbWifiMac::ConfigureStandard (enum WifiStandard standard)
 {
   NS_LOG_FUNCTION (this << standard);
-  NS_ASSERT ((standard == WIFI_PHY_STANDARD_80211_10MHZ)
-             || (standard == WIFI_PHY_STANDARD_80211a));
+  NS_ASSERT (standard == WIFI_STANDARD_80211p);
 
   uint32_t cwmin = 15;
   uint32_t cwmax = 1023;
 
-  // The special value of AC_BE_NQOS which exists in the Access
-  // Category enumeration allows us to configure plain old DCF.
-  ConfigureEdca (cwmin, cwmax, 2, AC_BE_NQOS);
+  if (!GetQosSupported ())
+    {
+      // The special value of AC_BE_NQOS which exists in the Access
+      // Category enumeration allows us to configure plain old DCF.
+      ConfigureEdca (cwmin, cwmax, 2, AC_BE_NQOS);
+    }
+  else
+    {
+      // Now we configure the EDCA functions
+      // see IEEE802.11p-2010 section 7.3.2.29
+      // Wave CCH and SCHs set default 802.11p EDCA
+      ConfigureEdca (cwmin, cwmax, 2, AC_VO);
+      ConfigureEdca (cwmin, cwmax, 3, AC_VI);
+      ConfigureEdca (cwmin, cwmax, 6, AC_BE);
+      ConfigureEdca (cwmin, cwmax, 9, AC_BK);
+    }
 
-  // Now we configure the EDCA functions
-  // see IEEE802.11p-2010 section 7.3.2.29
-  // Wave CCH and SCHs set default 802.11p EDCA
-  ConfigureEdca (cwmin, cwmax, 2, AC_VO);
-  ConfigureEdca (cwmin, cwmax, 3, AC_VI);
-  ConfigureEdca (cwmin, cwmax, 6, AC_BE);
-  ConfigureEdca (cwmin, cwmax, 9, AC_BK);
+  // Setup FrameExchangeManager
+  m_feManager = CreateObject<WaveFrameExchangeManager> ();
+  m_feManager->SetWifiMac (this);
+  m_feManager->SetMacTxMiddle (m_txMiddle);
+  m_feManager->SetMacRxMiddle (m_rxMiddle);
+  m_feManager->SetAddress (GetAddress ());
+  m_channelAccessManager->SetupFrameExchangeManager (m_feManager);
+  if (GetQosSupported ())
+    {
+      for (auto& ac : {AC_BE, AC_BK, AC_VI, AC_VO})
+        {
+          GetQosTxop (ac)->SetQosFrameExchangeManager (DynamicCast<QosFrameExchangeManager> (m_feManager));
+        }
+    }
 }
 
 
@@ -393,8 +427,8 @@ void
 OcbWifiMac::Suspend (void)
 {
   NS_LOG_FUNCTION (this);
-  m_dcfManager->NotifySleepNow ();
-  m_low->NotifySleepNow ();
+  m_channelAccessManager->NotifySleepNow ();
+  m_feManager->NotifySleepNow ();
 }
 
 void
@@ -402,24 +436,24 @@ OcbWifiMac::Resume (void)
 {
   NS_LOG_FUNCTION (this);
   // wake-up operation is not required in m_low object
-  m_dcfManager->NotifyWakeupNow ();
+  m_channelAccessManager->NotifyWakeupNow ();
 }
 
 void
 OcbWifiMac::MakeVirtualBusy (Time duration)
 {
   NS_LOG_FUNCTION (this << duration);
-  m_dcfManager->NotifyMaybeCcaBusyStartNow (duration);
+  m_channelAccessManager->NotifyMaybeCcaBusyStartNow (duration);
 }
 
 void
 OcbWifiMac::CancleTx (enum AcIndex ac)
 {
   NS_LOG_FUNCTION (this << ac);
-  Ptr<EdcaTxopN> queue = m_edca.find (ac)->second;
+  Ptr<QosTxop> queue = GetQosTxop (ac);
   NS_ASSERT (queue != 0);
   // reset and flush queue
-  queue->NotifyChannelSwitching ();
+  queue->GetWifiMacQueue ()->Flush ();
 }
 
 void
@@ -427,24 +461,23 @@ OcbWifiMac::Reset (void)
 {
   NS_LOG_FUNCTION (this);
   // The switching event is used to notify MAC entity reset its operation.
-  m_dcfManager->NotifySwitchingStartNow (Time (0));
-  m_low->NotifySwitchingStartNow (Time (0));
+  m_channelAccessManager->NotifySwitchingStartNow (Time (0));
+  m_feManager->NotifySwitchingStartNow (Time (0));
 }
 
 void
 OcbWifiMac::EnableForWave (Ptr<WaveNetDevice> device)
 {
   NS_LOG_FUNCTION (this << device);
-  // To extend current OcbWifiMac for WAVE 1609.4, we shall use WaveMacLow instead of MacLow
-  m_low = CreateObject<WaveMacLow> ();
-  (DynamicCast<WaveMacLow> (m_low))->SetWaveNetDevice (device);
-  m_low->SetRxCallback (MakeCallback (&MacRxMiddle::Receive, m_rxMiddle));
-  m_dcfManager->SetupLow (m_low);
-  m_dca->SetLow (m_low);
-  for (EdcaQueues::iterator i = m_edca.begin (); i != m_edca.end (); ++i)
-    {
-      i->second->SetLow (m_low);
-      i->second->CompleteConfig ();
-    }
+  // To extend current OcbWifiMac for WAVE 1609.4, we shall use WaveFrameExchangeManager
+  StaticCast<WaveFrameExchangeManager> (m_feManager)->SetWaveNetDevice (device);
 }
+
+void
+OcbWifiMac::DoDispose (void)
+{
+  NS_LOG_FUNCTION (this);
+  WifiMac::DoDispose ();
+}
+
 } // namespace ns3

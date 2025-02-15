@@ -22,7 +22,6 @@
 #ifndef RADIOTAP_HEADER_H
 #define RADIOTAP_HEADER_H
 
-
 #include <ns3/header.h>
 
 namespace ns3 {
@@ -102,16 +101,6 @@ public:
   void SetTsft (uint64_t tsft);
 
   /**
-   * @brief Get the Time Synchronization Function Timer (TSFT) value.  Valid for
-   * received frames only.
-   *
-   * @returns The value in microseconds of the MAC's 64-bit 802.11 Time
-   *          Synchronization Function timer when the first bit of the MPDU
-   *          arrived at the MAC.
-   */
-  uint64_t GetTsft (void) const;
-
-  /**
    * @brief Frame flags.
    */
   enum FrameFlag
@@ -134,23 +123,10 @@ public:
   void SetFrameFlags (uint8_t flags);
 
   /**
-   * @brief Get the frame flags of the transmitted or received frame.
-   * @returns The frame flags.
-   * @see FrameFlags.
-   */
-  uint8_t GetFrameFlags (void) const;
-
-  /**
    * @brief Set the transmit/receive channel frequency in units of megahertz
    * @param rate the transmit/receive channel frequency in units of megahertz.
    */
   void SetRate (uint8_t rate);
-
-  /**
-   * @brief Get the transmit/receive channel frequency in units of megahertz.
-   * @returns The transmit/receive channel frequency in units of megahertz.
-   */
-  uint8_t GetRate (void) const;
 
   /**
    * @brief Channel flags.
@@ -177,19 +153,6 @@ public:
   void SetChannelFrequencyAndFlags (uint16_t frequency, uint16_t flags);
 
   /**
-   * @brief Get the transmit/receive data rate in units of 500 kbps.
-   * @returns The transmit/receive data rate in units of 500 kbps.
-   */
-  uint16_t GetChannelFrequency (void) const;
-
-  /**
-   * @brief Get the channel flags of the transmitted or received frame.
-   * @returns The frame flags.
-   * @see ChannelFlags.
-   */
-  uint16_t GetChannelFlags (void) const;
-
-  /**
    * @brief Set the RF signal power at the antenna as a decibel difference
    * from an arbitrary, fixed reference.
    *
@@ -199,15 +162,6 @@ public:
   void SetAntennaSignalPower (double signal);
 
   /**
-   * @brief Get the RF signal power at the antenna as a decibel difference
-   * from an arbitrary, fixed reference.
-   *
-   * @returns The RF signal power at the antenna as a decibel difference
-   *          from an arbitrary, fixed reference.
-   */
-  uint8_t GetAntennaSignalPower (void) const;
-
-  /**
    * @brief Set the RF noise power at the antenna as a decibel difference
    * from an arbitrary, fixed reference.
    *
@@ -215,15 +169,6 @@ public:
    *              from an arbitrary, fixed reference.
    */
   void SetAntennaNoisePower (double noise);
-
-  /**
-   * @brief Get the RF noise power at the antenna as a decibel difference
-   * from an arbitrary, fixed reference.
-   *
-   * @returns The RF noise power at the antenna as a decibel difference
-   *          from an arbitrary, fixed reference.
-   */
-  uint8_t GetAntennaNoisePower (void) const;
 
   /**
    * @brief MCS known bits.
@@ -267,25 +212,6 @@ public:
   void SetMcsFields (uint8_t known, uint8_t flags, uint8_t mcs);
 
   /**
-   * @brief Get the MCS known bitmap.
-   *
-   * @returns The MCS known bitmap.
-   */
-  uint8_t GetMcsKnown (void) const;
-  /**
-   * @brief Get the MCS flags.
-   *
-   * @returns The MCS flags.
-   */
-  uint8_t GetMcsFlags (void) const;
-  /**
-   * @brief Get the MCS index value.
-   *
-   * @returns The MCS index value.
-   */
-  uint8_t GetMcsRate (void) const;
-
-  /**
    * @brief A-MPDU status flags.
    */
   enum AmpduFlags
@@ -307,19 +233,6 @@ public:
    * @param crc The CRC value value.
    */
   void SetAmpduStatus (uint32_t referenceNumber, uint16_t flags, uint8_t crc);
-
-  /**
-   * @brief Get the A-MPDU reference number.
-   *
-   * @returns The A-MPDU reference number.
-   */
-  uint32_t GetAmpduStatusRef (void) const;
-  /**
-   * @brief Get the A-MPDU status flags.
-   *
-   * @returns The A-MPDU status flags.
-   */
-  uint16_t GetAmpduStatusFlags (void) const;
 
   /**
    * @brief VHT known bits.
@@ -369,66 +282,154 @@ public:
                      uint16_t partial_aid);
 
   /**
-   * @brief Get the VHT known bitmap.
-   *
-   * @returns The MCS known bitmap.
+   * @brief HE data1.
    */
-  uint16_t GetVhtKnown (void) const;
-  /**
-   * @brief Get the VHT flags.
-   *
-   * @returns The VHT flags.
-   */
-  uint8_t GetVhtFlags (void) const;
-  /**
-   * @brief Get the VHT bandwidth field value.
-   *
-   * @returns The VHT bandwidth field value.
-   */
-  uint8_t GetVhtBandwidth (void) const;
-  /**
-   * @brief Get the VHT mcs_nss field value for user 1.
-   *
-   * @returns The VHT mcs_nss field value for user 1.
-   */
-  uint8_t GetVhtMcsNssUser1 () const;
-  /**
-   * @brief Get the VHT mcs_nss field value for user 2.
-   *
-   * @returns The VHT mcs_nss field value for user 2.
-   */
-  uint8_t GetVhtMcsNssUser2 () const;
-  /**
-   * @brief Get the VHT mcs_nss field value for user 3.
-   *
-   * @returns The VHT mcs_nss field value for user 3.
-   */
-  uint8_t GetVhtMcsNssUser3 () const;
-  /**
-   * @brief Get the VHT mcs_nss field value for user 4.
-   *
-   * @returns The VHT mcs_nss field value for user 4.
-   */
-  uint8_t GetVhtMcsNssUser4 () const;
-  /**
-   * @brief Get the VHT coding field value.
-   *
-   * @returns The VHT coding field value.
-   */
-  uint8_t GetVhtCoding (void) const;
-  /**
-   * @brief Get the VHT group_id field value.
-   *
-   * @returns The VHT group_id field value.
-   */
-  uint8_t GetVhtGroupId (void) const;
-  /**
-   * @brief Get the VHT partial_aid field value.
-   *
-   * @returns The VHT partial_aid field value.
-   */
-  uint8_t GetVhtPartialAid (void) const;
+  enum HeData1
+  {
+    HE_DATA1_FORMAT_EXT_SU      = 0x0001, /**< HE EXT SU PPDU format */
+    HE_DATA1_FORMAT_MU          = 0x0002, /**< HE MU PPDU format */
+    HE_DATA1_FORMAT_TRIG        = 0x0003, /**< HE TRIG PPDU format */
+    HE_DATA1_BSS_COLOR_KNOWN    = 0x0004, /**< BSS Color known */
+    HE_DATA1_BEAM_CHANGE_KNOWN  = 0x0008, /**< Beam Change known */
+    HE_DATA1_UL_DL_KNOWN        = 0x0010, /**< UL/DL known */
+    HE_DATA1_DATA_MCS_KNOWN     = 0x0020, /**< data MCS known */
+    HE_DATA1_DATA_DCM_KNOWN     = 0x0040, /**< data DCM known */
+    HE_DATA1_CODING_KNOWN       = 0x0080, /**< Coding known */
+    HE_DATA1_LDPC_XSYMSEG_KNOWN = 0x0100, /**< LDPC extra symbol segment known */
+    HE_DATA1_STBC_KNOWN         = 0x0200, /**< STBC known */
+    HE_DATA1_SPTL_REUSE_KNOWN   = 0x0400, /**< Spatial Reuse known (Spatial Reuse 1 for HE TRIG PPDU format) */
+    HE_DATA1_SPTL_REUSE2_KNOWN  = 0x0800, /**< Spatial Reuse 2 known (HE TRIG PPDU format), STA-ID known (HE MU PPDU format) */
+    HE_DATA1_SPTL_REUSE3_KNOWN  = 0x1000, /**< Spatial Reuse 3 known (HE TRIG PPDU format) */
+    HE_DATA1_SPTL_REUSE4_KNOWN  = 0x2000, /**< Spatial Reuse 4 known (HE TRIG PPDU format) */
+    HE_DATA1_BW_RU_ALLOC_KNOWN  = 0x4000, /**< data BW/RU allocation known */
+    HE_DATA1_DOPPLER_KNOWN      = 0x8000, /**< Doppler known */
+  };
 
+  /**
+   * @brief HE data2.
+   */
+  enum HeData2
+  {
+    HE_DATA2_PRISEC_80_KNOWN    = 0x0001, /**< pri/sec 80 MHz known */
+    HE_DATA2_GI_KNOWN           = 0x0002, /**< GI known */
+    HE_DATA2_NUM_LTF_SYMS_KNOWN = 0x0004, /**< number of LTF symbols known */
+    HE_DATA2_PRE_FEC_PAD_KNOWN  = 0x0008, /**< Pre-FEC Padding Factor known */
+    HE_DATA2_TXBF_KNOWN         = 0x0010, /**< TxBF known */
+    HE_DATA2_PE_DISAMBIG_KNOWN  = 0x0020, /**< PE Disambiguity known */
+    HE_DATA2_TXOP_KNOWN         = 0x0040, /**< TXOP known */
+    HE_DATA2_MIDAMBLE_KNOWN     = 0x0080, /**< midamble periodicity known */
+    HE_DATA2_RU_OFFSET          = 0x3f00, /**< RU allocation offset */
+    HE_DATA2_RU_OFFSET_KNOWN    = 0x4000, /**< RU allocation offset known */
+    HE_DATA2_PRISEC_80_SEC      = 0x8000, /**< pri/sec 80 MHz */
+  };
+
+  /**
+   * @brief HE data5.
+   */
+  enum HeData5
+  {
+    HE_DATA5_DATA_BW_RU_ALLOC_40MHZ  = 0x0001, /**< 40 MHz data Bandwidth */
+    HE_DATA5_DATA_BW_RU_ALLOC_80MHZ  = 0x0002, /**< 80 MHz data Bandwidth */
+    HE_DATA5_DATA_BW_RU_ALLOC_160MHZ = 0x0003, /**< 160 MHz data Bandwidth */
+    HE_DATA5_DATA_BW_RU_ALLOC_26T    = 0x0004, /**< 26-tone RU allocation */
+    HE_DATA5_DATA_BW_RU_ALLOC_52T    = 0x0005, /**< 52-tone RU allocation */
+    HE_DATA5_DATA_BW_RU_ALLOC_106T   = 0x0006, /**< 106-tone RU allocation */
+    HE_DATA5_DATA_BW_RU_ALLOC_242T   = 0x0007, /**< 242-tone RU allocation */
+    HE_DATA5_DATA_BW_RU_ALLOC_484T   = 0x0008, /**< 484-tone RU allocation */
+    HE_DATA5_DATA_BW_RU_ALLOC_996T   = 0x0009, /**< 996-tone RU allocation */
+    HE_DATA5_DATA_BW_RU_ALLOC_2x996T = 0x000a, /**< 2x996-tone RU allocation */
+    HE_DATA5_GI_1_6                  = 0x0010, /**< 1.6us GI */
+    HE_DATA5_GI_3_2                  = 0x0020, /**< 3.2us GI */
+    HE_DATA5_LTF_SYM_SIZE            = 0x00c0, /**< LTF symbol size */
+    HE_DATA5_NUM_LTF_SYMS            = 0x0700, /**< number of LTF symbols */
+    HE_DATA5_PRE_FEC_PAD             = 0x3000, /**< Pre-FEC Padding Factor */
+    HE_DATA5_TXBF                    = 0x4000, /**< TxBF */
+    HE_DATA5_PE_DISAMBIG             = 0x8000, /**< PE Disambiguity */
+  };
+
+  /**
+   * @brief Set the HE fields
+   *
+   * @param data1 The data1 field.
+   * @param data2 The data2 field.
+   * @param data3 The data3 field.
+   * @param data4 The data4 field.
+   * @param data5 The data5 field.
+   * @param data6 The data6 field.
+   */
+  void SetHeFields (uint16_t data1,
+                    uint16_t data2,
+                    uint16_t data3,
+                    uint16_t data4,
+                    uint16_t data5,
+                    uint16_t data6);
+
+  /**
+   * @brief HE MU flags1.
+   */
+  enum HeMuFlags1
+  {
+    HE_MU_FLAGS1_SIGB_MCS                = 0x000f, /**< SIG-B MCS (from SIG-A) */
+    HE_MU_FLAGS1_SIGB_MCS_KNOWN          = 0x0010, /**< SIG-B MCS known */
+    HE_MU_FLAGS1_SIGB_DCM                = 0x0020, /**< SIG-B DCM (from SIG-A) */
+    HE_MU_FLAGS1_SIGB_DCM_KNOWN          = 0x0040, /**< SIG-B DCM known */
+    HE_MU_FLAGS1_CH2_CENTER_26T_RU_KNOWN = 0x0080, /**< (Channel 2) Center 26-tone RU bit known */
+    HE_MU_FLAGS1_CH1_RUS_KNOWN           = 0x0100, /**< Channel 1 RUs known (which depends on BW) */
+    HE_MU_FLAGS1_CH2_RUS_KNOWN           = 0x0200, /**< Channel 2 RUs known (which depends on BW) */
+    HE_MU_FLAGS1_CH1_CENTER_26T_RU_KNOWN = 0x1000, /**< (Channel 1) Center 26-tone RU bit known */
+    HE_MU_FLAGS1_CH1_CENTER_26T_RU       = 0x2000, /**< (Channel 1) Center 26-tone RU value */
+    HE_MU_FLAGS1_SIGB_COMPRESSION_KNOWN  = 0x4000, /**< SIG-B Compression known */
+    HE_MU_FLAGS1_NUM_SIGB_SYMBOLS_KNOWN  = 0x8000, /**< # of HE-SIG-B Symbols/MU-MIMO Users known */
+  };
+
+  /**
+   * @brief HE MU flags2.
+   */
+  enum HeMuFlags2
+  {
+    HE_MU_FLAGS2_BW_FROM_SIGA                                 = 0x0003, /**< Bandwidth from Bandwidth field in HE-SIG-A */
+    HE_MU_FLAGS2_BW_FROM_SIGA_KNOWN                           = 0x0004, /**< Bandwidth from Bandwidth field in HE-SIG-A known */
+    HE_MU_FLAGS2_SIGB_COMPRESSION_FROM_SIGA                   = 0x0008, /**< SIG-B compression from SIG-A */
+    HE_MU_FLAGS2_NUM_SIGB_SYMBOLS_FROM_SIGA                   = 0x00f0, /**< # of HE-SIG-B Symbols - 1 or # of MU-MIMO Users - 1 from SIG-A */
+    HE_MU_FLAGS2_PREAMBLE_PUNCTURING_FROM_SIGA_BW_FIELD       = 0x0300, /**< Preamble puncturing from Bandwidth field in HE-SIG-A */
+    HE_MU_FLAGS2_PREAMBLE_PUNCTURING_FROM_SIGA_BW_FIELD_KNOWN = 0x0400, /**< Preamble puncturing from Bandwidth field in HE-SIG-A known */
+    HE_MU_FLAGS2_CH2_CENTER_26T_RU                            = 0x0800, /**< (Channel 2) Center 26-tone RU value */
+  };
+
+  /**
+   * @brief Set the HE MU fields
+   *
+   * @param flags1 The flags1 field.
+   * @param flags2 The flags2 field.
+   * @param ruChannel1 The RU_channel1 field.
+   * @param ruChannel2 The RU_channel2 field.
+   */
+  void SetHeMuFields (uint16_t flags1, uint16_t flags2, const std::array<uint8_t, 4> &ruChannel1, const std::array<uint8_t, 4> &ruChannel2);
+
+  /**
+   * @brief HE MU per_user_known.
+   */
+  enum HeMuPerUserKnown
+  {
+    HE_MU_PER_USER_POSITION_KNOWN              = 0x01, /**< User field position known */
+    HE_MU_PER_USER_STA_ID_KNOWN                = 0x02, /**< STA-ID known */
+    HE_MU_PER_USER_NSTS_KNOWN                  = 0x04, /**< NSTS known */
+    HE_MU_PER_USER_TX_BF_KNOWN                 = 0x08, /**< Tx Beamforming known */
+    HE_MU_PER_USER_SPATIAL_CONFIGURATION_KNOWN = 0x10, /**< Spatial Configuration known */
+    HE_MU_PER_USER_MCS_KNOWN                   = 0x20, /**< MCS known */
+    HE_MU_PER_USER_DCM_KNOWN                   = 0x40, /**< DCM known */
+    HE_MU_PER_USER_CODING_KNOWN                = 0x80, /**< Coding known */
+  };
+
+  /**
+   * @brief Set the HE MU per user fields
+   *
+   * @param perUser1 The per_user_1 field.
+   * @param perUser2 The per_user_2 field.
+   * @param perUserPosition The per_user_position field.
+   * @param perUserKnown The per_user_known field.
+   */
+  void SetHeMuPerUserFields (uint16_t perUser1, uint16_t perUser2, uint8_t perUserPosition, uint8_t perUserKnown);
 
 private:
   /**
@@ -454,7 +455,12 @@ private:
     RADIOTAP_MCS               = 0x00080000,
     RADIOTAP_AMPDU_STATUS      = 0x00100000,
     RADIOTAP_VHT               = 0x00200000,
-    RADIOTAP_EXT               = 0x10000000
+    RADIOTAP_HE                = 0x00800000,
+    RADIOTAP_HE_MU             = 0x01000000,
+    RADIOTAP_HE_MU_OTHER_USER  = 0x02000000,
+    RADIOTAP_ZERO_LEN_PSDU     = 0x04000000,
+    RADIOTAP_LSIG              = 0x08000000,
+    RADIOTAP_EXT               = 0x80000000
   };
 
   uint16_t m_length;        //!< entire length of radiotap data + header
@@ -486,6 +492,24 @@ private:
   uint8_t m_vhtCoding;      //!< VHT coding field.
   uint8_t m_vhtGroupId;     //!< VHT group_id field.
   uint16_t m_vhtPartialAid; //!< VHT partial_aid field.
+
+  uint8_t m_hePad;         //!< HE padding.
+  uint16_t m_heData1;      //!< HE data1 field.
+  uint16_t m_heData2;      //!< HE data2 field.
+  uint16_t m_heData3;      //!< HE data3 field.
+  uint16_t m_heData4;      //!< HE data4 field.
+  uint16_t m_heData5;      //!< HE data5 field.
+  uint16_t m_heData6;      //!< HE data6 field.
+
+  uint8_t m_heMuPad;       //!< HE MU padding.
+  uint16_t m_heMuFlags1;   //!< HE MU flags1 field.
+  uint16_t m_heMuFlags2;   //!< HE MU flags2 field.
+
+  uint8_t m_heMuOtherUserPad;    //!< HE MU other user padding.
+  uint16_t m_heMuPerUser1;       //!< HE MU per_user_1 field.
+  uint16_t m_heMuPerUser2;       //!< HE MU per_user_2 field.
+  uint8_t m_heMuPerUserPosition; //!< HE MU per_user_position field.
+  uint8_t m_heMuPerUserKnown;    //!< HE MU per_user_known field.
 };
 
 } // namespace ns3

@@ -27,9 +27,10 @@
 #include "ns3/attribute.h"
 #include "ns3/attribute-helper.h"
 #include "ns3/address.h"
-#include "ns3/wifi-mac.h"
 
 namespace ns3 {
+
+class WifiMac;
 class VendorSpecificContentManager;
 
 /**
@@ -60,7 +61,11 @@ public:
    * \param length identifier length
    */
   OrganizationIdentifier (const uint8_t *str, uint32_t length);
-  /// assignment operator
+  /**
+   * Assignment operator
+   * \param oi object to copy from
+   * \return reference to the new object
+   */
   OrganizationIdentifier& operator= (const OrganizationIdentifier& oi);
   virtual ~OrganizationIdentifier (void);
 
@@ -166,7 +171,11 @@ public:
    */
   OrganizationIdentifier GetOrganizationIdentifier (void) const;
   /**
-   * the category field shall be CATEGORY_OF_VSA
+   * Get the category field
+   *
+   * The category field shall be CATEGORY_OF_VSA
+   *
+   * \return The category field
    */
   uint8_t GetCategory (void) const;
 
@@ -189,7 +198,7 @@ private:
 /**
  * \param mac a pointer to the mac object which is calling this callback
  * \param oi the organization identifier of vendor specific action frame
- * \param packet the vendor specifc content packet received
+ * \param packet the vendor specific content packet received
  * \param sender the address of the sender
  * \returns true if the callback could handle the packet successfully;
  *       false otherwise.

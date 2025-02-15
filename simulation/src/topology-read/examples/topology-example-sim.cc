@@ -31,17 +31,48 @@
 #include "ns3/internet-module.h"
 #include "ns3/point-to-point-module.h"
 #include "ns3/applications-module.h"
-#include "ns3/ipv4-nix-vector-helper.h"
+#include "ns3/nix-vector-helper.h"
 
 #include "ns3/topology-read-module.h"
 #include <list>
+
+/**
+ * \file
+ * \ingroup topology
+ * Example of TopologyReader: .read in a topology in a specificed format.
+ */
+
+//  Document the available input files
+/**
+ * \file RocketFuel_toposample_1239_weights.txt
+ * Example TopologyReader input file in RocketFuel format;
+ * to read this with topology-example-sim.cc use \c --format=Rocket
+ */
+/**
+ * \file Inet_toposample.txt
+ * Example TopologyReader input file in Inet format;
+ * to read this with topology-example-sim.cc use \c --format=Inet
+ */
+/**
+ * \file Inet_small_toposample.txt
+ * Example TopologyReader input file in Inet format;
+ * to read this with topology-example-sim.cc use \c --format=Inet
+ */
+/**
+ * \file Orbis_toposample.txt
+ * Example TopologyReader input file in Orbis format;
+ * to read this with topology-example-sim.cc use \c --format=Orbis
+ */
 
 using namespace ns3;
 
 NS_LOG_COMPONENT_DEFINE ("TopologyCreationExperiment");
 
-static std::list<unsigned int> data;
-
+/**
+ * Print the TTL of received packet
+ * \param p received packet
+ * \param ad sender address
+ */
 static void SinkRx (Ptr<const Packet> p, const Address &ad)
 {
   Ipv4Header ipv4;
@@ -60,7 +91,7 @@ int main (int argc, char *argv[])
   std::string input ("src/topology-read/examples/Inet_small_toposample.txt");
 
   // Set up command line parameters used to control the experiment.
-  CommandLine cmd;
+  CommandLine cmd (__FILE__);
   cmd.AddValue ("format", "Format to use for data input [Orbis|Inet|Rocketfuel].",
                 format);
   cmd.AddValue ("input", "Name of the input file.",
@@ -102,7 +133,7 @@ int main (int argc, char *argv[])
   stack.SetRoutingHelper (nixRouting);  // has effect on the next Install ()
   stack.Install (nodes);
 
-  NS_LOG_INFO ("creating ip4 addresses");
+  NS_LOG_INFO ("creating IPv4 addresses");
   Ipv4AddressHelper address;
   address.SetBase ("10.0.0.0", "255.255.255.252");
 
@@ -129,7 +160,7 @@ int main (int argc, char *argv[])
     }
 
   // it crates little subnets, one for each couple of nodes.
-  NS_LOG_INFO ("creating ipv4 interfaces");
+  NS_LOG_INFO ("creating IPv4 interfaces");
   Ipv4InterfaceContainer* ipic = new Ipv4InterfaceContainer[totlinks];
   for (int i = 0; i < totlinks; i++)
     {

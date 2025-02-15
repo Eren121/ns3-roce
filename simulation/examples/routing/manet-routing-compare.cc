@@ -71,42 +71,72 @@
 #include "ns3/network-module.h"
 #include "ns3/internet-module.h"
 #include "ns3/mobility-module.h"
-#include "ns3/wifi-module.h"
 #include "ns3/aodv-module.h"
 #include "ns3/olsr-module.h"
 #include "ns3/dsdv-module.h"
 #include "ns3/dsr-module.h"
 #include "ns3/applications-module.h"
+#include "ns3/yans-wifi-helper.h"
 
 using namespace ns3;
 using namespace dsr;
 
 NS_LOG_COMPONENT_DEFINE ("manet-routing-compare");
 
+/**
+ * Routing experiment class.
+ * 
+ * It handles the creation and run of an experiment.
+ */
 class RoutingExperiment
 {
 public:
   RoutingExperiment ();
+  /**
+   * Run the experiment.
+   * \param nSinks The number of Sink Nodes.
+   * \param txp The Tx power.
+   * \param CSVfileName The output CSV filename.
+   */
   void Run (int nSinks, double txp, std::string CSVfileName);
   //static void SetMACParam (ns3::NetDeviceContainer & devices,
   //                                 int slotDistance);
+  /**
+   * Handles the command-line parmeters.
+   * \param argc The argument count.
+   * \param argv The argument vector.
+   * \return the CSV filename.
+   */
   std::string CommandSetup (int argc, char **argv);
 
 private:
+  /**
+   * Setup the receiving socket in a Sink Node.
+   * \param addr The address of the node.
+   * \param node The node pointer.
+   * \return the socket.
+   */
   Ptr<Socket> SetupPacketReceive (Ipv4Address addr, Ptr<Node> node);
+  /**
+   * Receive a packet.
+   * \param socket The receiving socket.
+   */
   void ReceivePacket (Ptr<Socket> socket);
+  /**
+   * Compute the throughput.
+   */
   void CheckThroughput ();
 
-  uint32_t port;
-  uint32_t bytesTotal;
-  uint32_t packetsReceived;
+  uint32_t port;            //!< Receiving port number.
+  uint32_t bytesTotal;      //!< Total received bytes.
+  uint32_t packetsReceived; //!< Total received packets.
 
-  std::string m_CSVfileName;
-  int m_nSinks;
-  std::string m_protocolName;
-  double m_txp;
-  bool m_traceMobility;
-  uint32_t m_protocol;
+  std::string m_CSVfileName;  //!< CSV filename.
+  int m_nSinks;               //!< Number of sink nodes.
+  std::string m_protocolName; //!< Protocol name.
+  double m_txp;               //!< Tx power.
+  bool m_traceMobility;       //!< Enavle mobility tracing.
+  uint32_t m_protocol;        //!< Protocol type.
 };
 
 RoutingExperiment::RoutingExperiment ()
@@ -187,7 +217,7 @@ RoutingExperiment::SetupPacketReceive (Ipv4Address addr, Ptr<Node> node)
 std::string
 RoutingExperiment::CommandSetup (int argc, char **argv)
 {
-  CommandLine cmd;
+  CommandLine cmd (__FILE__);
   cmd.AddValue ("CSVfileName", "The name of the CSV output file name", m_CSVfileName);
   cmd.AddValue ("traceMobility", "Enable mobility tracing", m_traceMobility);
   cmd.AddValue ("protocol", "1=OLSR;2=AODV;3=DSDV;4=DSR", m_protocol);
@@ -247,9 +277,9 @@ RoutingExperiment::Run (int nSinks, double txp, std::string CSVfileName)
 
   // setting up wifi phy and channel using helpers
   WifiHelper wifi;
-  wifi.SetStandard (WIFI_PHY_STANDARD_80211b);
+  wifi.SetStandard (WIFI_STANDARD_80211b);
 
-  YansWifiPhyHelper wifiPhy =  YansWifiPhyHelper::Default ();
+  YansWifiPhyHelper wifiPhy;
   YansWifiChannelHelper wifiChannel;
   wifiChannel.SetPropagationDelay ("ns3::ConstantSpeedPropagationDelayModel");
   wifiChannel.AddPropagationLoss ("ns3::FriisPropagationLossModel");
@@ -268,7 +298,7 @@ RoutingExperiment::Run (int nSinks, double txp, std::string CSVfileName)
   NetDeviceContainer adhocDevices = wifi.Install (wifiPhy, wifiMac, adhocNodes);
 
   MobilityHelper mobilityAdhoc;
-  int64_t streamIndex = 0; // used to get consistent mobility across scenarios
+  [[maybe_unused]] int64_t streamIndex = 0; // used to get consistent mobility across scenarios
 
   ObjectFactory pos;
   pos.SetTypeId ("ns3::RandomRectanglePositionAllocator");
@@ -289,7 +319,6 @@ RoutingExperiment::Run (int nSinks, double txp, std::string CSVfileName)
   mobilityAdhoc.SetPositionAllocator (taPositionAlloc);
   mobilityAdhoc.Install (adhocNodes);
   streamIndex += mobilityAdhoc.AssignStreams (adhocNodes, streamIndex);
-  NS_UNUSED (streamIndex); // From this point, streamIndex is unused
 
   AodvHelper aodv;
   OlsrHelper olsr;

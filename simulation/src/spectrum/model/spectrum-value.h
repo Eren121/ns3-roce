@@ -157,7 +157,18 @@ public:
    */
   Values::iterator ValuesEnd ();
 
+  /**
+   * \brief Get the number of values stored in the array
+   * \return the values array size
+   */
+  uint32_t GetValuesN () const;
 
+  /**
+   * \brief Get the value element at the position
+   * \param pos position
+   * \return the value element in that position (with bounds checking)
+   */
+  const double & ValuesAt (uint32_t pos) const;
 
   /**
    *  addition operator
@@ -561,10 +572,12 @@ private:
   void ChangeSign ();
   /**
    * Shift the values to the left
+   * \param n number of positions to shift
    */
   void ShiftLeft (int n);
   /**
    * Shift the values to the right
+   * \param n number of positions to shift
    */
   void ShiftRight (int n);
   /**

@@ -20,7 +20,6 @@
 #include "ns3/packet.h"
 #include "ns3/packet-tag-list.h"
 #include "ns3/test.h"
-#include "ns3/unused.h"
 #include <limits>     // std:numeric_limits
 #include <string>
 #include <cstdarg>
@@ -93,7 +92,7 @@ public:
   static TypeId GetTypeId (void) {
     std::ostringstream oss;
     oss << "anon::ATestTag<" << N << ">";
-    static TypeId tid = TypeId (oss.str ().c_str ())
+    static TypeId tid = TypeId (oss.str ())
       .SetParent<ATestTagBase> ()
       .SetGroupName ("Network")
       .HideFromDocumentation ()
@@ -251,7 +250,7 @@ public:
   static TypeId GetTypeId (void) {
     std::ostringstream oss;
     oss << "anon::ATestHeader<" << N << ">";
-    static TypeId tid = TypeId (oss.str ().c_str ())
+    static TypeId tid = TypeId (oss.str ())
       .SetParent<ATestHeaderBase> ()
       .SetGroupName ("Network")
       .HideFromDocumentation ()
@@ -337,7 +336,7 @@ public:
   static TypeId GetTypeId (void) {
     std::ostringstream oss;
     oss << "anon::ATestTrailer<" << N << ">";
-    static TypeId tid = TypeId (oss.str ().c_str ())
+    static TypeId tid = TypeId (oss.str ())
       .SetParent<ATestTrailerBase> ()
       .SetGroupName ("Network")
       .HideFromDocumentation ()
@@ -394,20 +393,39 @@ struct Expected
    * \param end_ End
    */
   Expected (uint32_t n_, uint32_t start_, uint32_t end_)
-    : n (n_), start (start_), end (end_) {}
+    : n (n_), start (start_), end (end_), data(0) {}
+
+    /**
+   * Constructor
+   * \param n_ Number of elements
+   * \param start_ Start
+   * \param end_ End
+   * \param data_ Data stored in tag
+   */
+  Expected (uint32_t n_, uint32_t start_, uint32_t end_, uint8_t data_)
+    : n (n_), start (start_), end (end_), data(data_) {}
 
   uint32_t n;     //!< Number of elements
   uint32_t start; //!< Start
   uint32_t end;   //!< End
+  uint8_t data;   //!< Optional data
 };
 
 }
 
 // tag name, start, end
-#define E(a,b,c) a,b,c
+#define E(name,start,end) name,start,end
 
+// tag name, start, end, data
+#define E_DATA(name,start,end,data) name,start,end,data
+
+// Check byte tags on a packet, checks name, start, end
 #define CHECK(p, n, ...)                                \
-  DoCheck (p, __FILE__, __LINE__, n, __VA_ARGS__)
+  DoCheck (p, n, __VA_ARGS__)
+
+// Check byte tags on a packet, checks name, start, end, data
+#define CHECK_DATA(p, n, ...)                           \
+  DoCheckData (p, n, __VA_ARGS__)
 
 /**
  * \ingroup network-test
@@ -424,12 +442,17 @@ private:
   /**
    * Checks the packet
    * \param p The packet
-   * \param file The file name
-   * \param line The line number
    * \param n The number of variable arguments
    * \param ... The variable arguments
    */
-  void DoCheck (Ptr<const Packet> p, const char *file, int line, uint32_t n, ...);
+  void DoCheck (Ptr<const Packet> p, uint32_t n, ...);
+  /**
+   * Checks the packet and its data
+   * \param p The packet
+   * \param n The number of variable arguments
+   * \param ... The variable arguments
+   */
+  void DoCheckData (Ptr<const Packet> p, uint32_t n, ...);
 };
 
 
@@ -438,7 +461,7 @@ PacketTest::PacketTest ()
 }
 
 void
-PacketTest::DoCheck (Ptr<const Packet> p, const char *file, int line, uint32_t n, ...)
+PacketTest::DoCheck (Ptr<const Packet> p, uint32_t n, ...)
 {
   std::vector<struct Expected> expected;
   va_list ap;
@@ -460,13 +483,52 @@ PacketTest::DoCheck (Ptr<const Packet> p, const char *file, int line, uint32_t n
       struct Expected e = expected[j];
       std::ostringstream oss;
       oss << "anon::ATestTag<" << e.n << ">";
-      NS_TEST_EXPECT_MSG_EQ_INTERNAL (item.GetTypeId ().GetName (), oss.str (), "trivial", file, line);
-      NS_TEST_EXPECT_MSG_EQ_INTERNAL (item.GetStart (), e.start, "trivial", file, line);
-      NS_TEST_EXPECT_MSG_EQ_INTERNAL (item.GetEnd (), e.end, "trivial", file, line);
+      NS_TEST_EXPECT_MSG_EQ (item.GetTypeId ().GetName (), oss.str (), "trivial");
+      NS_TEST_EXPECT_MSG_EQ (item.GetStart (), e.start, "trivial");
+      NS_TEST_EXPECT_MSG_EQ (item.GetEnd (), e.end, "trivial");
       ATestTagBase *tag = dynamic_cast<ATestTagBase *> (item.GetTypeId ().GetConstructor () ());
       NS_TEST_EXPECT_MSG_NE (tag, 0, "trivial");
       item.GetTag (*tag);
       NS_TEST_EXPECT_MSG_EQ (tag->m_error, false, "trivial");
+      delete tag;
+      j++;
+    }
+  NS_TEST_EXPECT_MSG_EQ (i.HasNext (), false, "Nothing left");
+  NS_TEST_EXPECT_MSG_EQ (j, expected.size (), "Size match");
+}
+
+void
+PacketTest::DoCheckData (Ptr<const Packet> p, uint32_t n, ...)
+{
+  std::vector<struct Expected> expected;
+  va_list ap;
+  va_start (ap, n);
+  for (uint32_t k = 0; k < n; ++k)
+    {
+      uint32_t N = va_arg (ap, uint32_t);
+      uint32_t start = va_arg (ap, uint32_t);
+      uint32_t end = va_arg (ap, uint32_t);
+      int data = va_arg (ap, int);
+      expected.push_back (Expected (N, start, end, data));
+    }
+  va_end (ap);
+
+  ByteTagIterator i = p->GetByteTagIterator ();
+  uint32_t j = 0;
+  while (i.HasNext () && j < expected.size ())
+    {
+      ByteTagIterator::Item item = i.Next ();
+      struct Expected e = expected[j];
+      std::ostringstream oss;
+      oss << "anon::ATestTag<" << e.n << ">";
+      NS_TEST_EXPECT_MSG_EQ (item.GetTypeId ().GetName (), oss.str (), "trivial");
+      NS_TEST_EXPECT_MSG_EQ (item.GetStart (), e.start, "trivial");
+      NS_TEST_EXPECT_MSG_EQ (item.GetEnd (), e.end, "trivial");
+      ATestTagBase *tag = dynamic_cast<ATestTagBase *> (item.GetTypeId ().GetConstructor () ());
+      NS_TEST_EXPECT_MSG_NE (tag, 0, "trivial");
+      item.GetTag (*tag);
+      NS_TEST_EXPECT_MSG_EQ (tag->m_error, false, "trivial");
+      NS_TEST_EXPECT_MSG_EQ (tag->GetData (), e.data, "trivial");
       delete tag;
       j++;
     }
@@ -534,7 +596,7 @@ PacketTest::DoRun (void)
 
   CHECK (frag0, 3, E (1, 0, 10), E (2, 0, 10), E (3, 0, 10));
   frag0->AddAtEnd (frag1);
-  CHECK (frag0, 9, 
+  CHECK (frag0, 9,
          E (1, 0, 10), E (2, 0, 10), E (3, 0, 10),
          E (1, 10, 100), E (2, 10, 100), E (4, 10, 100),
          E (1, 100, 1000), E (2, 100, 1000), E (5, 100, 1000));
@@ -641,6 +703,62 @@ PacketTest::DoRun (void)
     NS_TEST_EXPECT_MSG_EQ (p.PeekPacketTag (b), false, "trivial");
   }
 
+  /* Test Serialization and Deserialization of Packet with PacketTag data */
+  {
+    Ptr<Packet> p1 = Create<Packet> (1000);;
+    ATestTag<10> a1(65);
+    ATestTag<11> b1(66);
+    ATestTag<12> c1(67);
+
+    p1->AddPacketTag (a1);
+    p1->AddPacketTag (b1);
+    p1->AddPacketTag (c1);
+
+    uint32_t serializedSize = p1->GetSerializedSize ();
+    uint8_t* buffer =  new uint8_t[serializedSize + 16];
+    p1->Serialize (buffer, serializedSize);
+
+    Ptr<Packet> p2 = Create<Packet> (buffer, serializedSize, true);
+
+    delete [] buffer;
+
+    ATestTag<10> a2;
+    ATestTag<11> b2;
+    ATestTag<12> c2;
+
+    NS_TEST_EXPECT_MSG_EQ (p2 -> PeekPacketTag(a2), true, "trivial");
+    NS_TEST_EXPECT_MSG_EQ (a2.GetData (), 65, "trivial");
+    NS_TEST_EXPECT_MSG_EQ (p2 -> PeekPacketTag(b2), true, "trivial");
+    NS_TEST_EXPECT_MSG_EQ (b2.GetData (), 66, "trivial");
+    NS_TEST_EXPECT_MSG_EQ (p2 -> PeekPacketTag(c2), true, "trivial");
+    NS_TEST_EXPECT_MSG_EQ (c2.GetData (), 67, "trivial");
+  }
+
+  /* Test Serialization and Deserialization of Packet with ByteTag data */
+  {
+    Ptr<Packet> p1 = Create<Packet> (1000);;
+
+    ATestTag<10> a1(65);
+    ATestTag<11> b1(66);
+    ATestTag<12> c1(67);
+
+    p1->AddByteTag (a1);
+    p1->AddByteTag (b1);
+    p1->AddByteTag (c1);
+
+    CHECK (p1, 3, E (10, 0, 1000), E (11, 0, 1000), E (12, 0, 1000));
+
+    uint32_t serializedSize = p1->GetSerializedSize ();
+    uint8_t* buffer =  new uint8_t[serializedSize];
+    p1->Serialize (buffer, serializedSize);
+
+    Ptr<Packet> p2 = Create<Packet> (buffer, serializedSize, true);
+
+    delete [] buffer;
+
+    CHECK_DATA (p2, 3, E_DATA (10, 0, 1000, 65), E_DATA (11, 0, 1000, 66), E_DATA (12, 0, 1000, 67));
+  }
+
   {
     /// \internal
     /// See \bugid{572}
@@ -735,7 +853,7 @@ PacketTest::DoRun (void)
   {
     Ptr<Packet> tmp = Create<Packet> (0);
     ALargeTestTag a;
-    tmp->AddPacketTag (a); 
+    tmp->AddPacketTag (a);
   }
 }
 
@@ -828,11 +946,8 @@ PacketTagListTest::CheckRef (const PacketTagList & ref,
   ATestTag<5> t5 (1); \
   ATestTag<6> t6 (1); \
   ATestTag<7> t7 (1); \
-  const int tagLast = 7;  /* length of ref PacketTagList */ \
-  NS_UNUSED (tagLast) /* silence warnings */
- 
-  
-  
+  [[maybe_unused]] const int tagLast = 7;  /* length of ref PacketTagList */
+
 void
 PacketTagListTest::CheckRefList (const PacketTagList & ptl,
                                  const char * msg,
@@ -847,7 +962,7 @@ PacketTagListTest::CheckRefList (const PacketTagList & ptl,
   CheckRef (ptl, t6, msg, miss == 6);
   CheckRef (ptl, t7, msg, miss == 7);
 }
-  
+
 int
 PacketTagListTest::RemoveTime (const PacketTagList & ref,
                                ATestTagBase & t,
@@ -898,7 +1013,7 @@ PacketTagListTest::DoRun (void)
   std::cout << GetName () << "begin" << std::endl;
 
   MAKE_TEST_TAGS ;
-  
+
   PacketTagList ref;  // empty list
   ref.Add (t1);       // last
   ref.Add (t2);       // post merge
@@ -907,10 +1022,10 @@ PacketTagListTest::DoRun (void)
   ref.Add (t5);       // merge precursor
   ref.Add (t6);       // pre-merge
   ref.Add (t7);       // first
-  
+
   { // Peek
     std::cout << GetName () << "check Peek (missing tag) returns false"
-              << std::endl;;
+              << std::endl;
     ATestTag<10> t10;
     NS_TEST_EXPECT_MSG_EQ (ref.Peek (t10), false, "missing tag");
   }
@@ -926,7 +1041,7 @@ PacketTagListTest::DoRun (void)
       CheckRefList (ptl, "assignment copy");
     }
   }
-  
+
   { // Removal
 #   define RemoveCheck(n)                               \
     { PacketTagList p ## n = ref;			\
@@ -934,7 +1049,7 @@ PacketTagListTest::DoRun (void)
       CheckRefList (ref,     "remove " #n " orig");	\
       CheckRefList (p ## n, "remove " #n " copy", n);   \
     }
-    
+
     { // Remove single tags from list
       std::cout << GetName () << "check removal of each tag" << std::endl;
       RemoveCheck (1);
@@ -945,7 +1060,7 @@ PacketTagListTest::DoRun (void)
       RemoveCheck (6);
       RemoveCheck (7);
     }
-    
+
     { // Remove in the presence of a merge
       std::cout << GetName () << "check removal doesn't disturb merge "
                 << std::endl;
@@ -953,7 +1068,7 @@ PacketTagListTest::DoRun (void)
       ptl.Remove (t7);
       ptl.Remove (t6);
       ptl.Remove (t5);
-      
+
       PacketTagList mrg = ptl;  // merged list
       ATestTag<8> m5 (1);
       mrg.Add (m5);             // ptl and mrg differ
@@ -976,7 +1091,7 @@ PacketTagListTest::DoRun (void)
   { // Replace
 
     std::cout << GetName () << "check replacing each tag" << std::endl;
-      
+
 #   define ReplaceCheck(n)					\
     t ## n .m_data = 2;						\
     { PacketTagList p ## n = ref;				\
@@ -984,7 +1099,7 @@ PacketTagListTest::DoRun (void)
       CheckRefList (ref,     "replace " #n " orig");		\
       CheckRef     (p ## n, t ## n, "replace " #n " copy");	\
     }
-    
+
     ReplaceCheck (1);
     ReplaceCheck (2);
     ReplaceCheck (3);
@@ -993,7 +1108,7 @@ PacketTagListTest::DoRun (void)
     ReplaceCheck (6);
     ReplaceCheck (7);
   }
-  
+
   { // Timing
     std::cout << GetName () << "add+remove timing" << std::endl;
     int flm = std::numeric_limits<int>::max ();
@@ -1005,7 +1120,7 @@ PacketTagListTest::DoRun (void)
     std::cout << GetName () << "min add+remove time: "
               << std::setw (8) << flm        << " ticks"
               << std::endl;
-    
+
     std::cout << GetName () << "remove timing" << std::endl;
     // tags numbered from 1, so add one for (unused) entry at 0
     std::vector <int> rmn (tagLast + 1, std::numeric_limits<int>::max ());
@@ -1021,7 +1136,7 @@ PacketTagListTest::DoRun (void)
         case 2:  now = RemoveTime (ref, t2);  break;
         case 1:  now = RemoveTime (ref, t1);  break;
 	}  // switch
-	
+
 	if (now < rmn[j]) rmn[j] = now;
       } // for tag j
     } // for iteration i
@@ -1032,7 +1147,7 @@ PacketTagListTest::DoRun (void)
                 << std::endl;
     }
   }  // Timing
-    
+
 }
 
 /**

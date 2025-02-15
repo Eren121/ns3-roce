@@ -178,28 +178,24 @@ FdNetDevice::FdNetDevice ()
     m_stopEvent ()
 {
   NS_LOG_FUNCTION (this);
-  Start (m_tStart);
-}
-
-FdNetDevice::FdNetDevice (FdNetDevice const &)
-{
 }
 
 FdNetDevice::~FdNetDevice ()
 {
   NS_LOG_FUNCTION (this);
+}
 
-  {
-    CriticalSection cs (m_pendingReadMutex);
+void
+FdNetDevice::DoInitialize (void)
+{
+  NS_LOG_FUNCTION (this);
+  Start (m_tStart);
+  if (m_tStop != Seconds (0))
+    {
+        Stop (m_tStop);
+    }
 
-    while (!m_pendingQueue.empty ())
-      {
-        std::pair<uint8_t *, ssize_t> next = m_pendingQueue.front ();
-        m_pendingQueue.pop ();
-
-        free (next.first);
-      }
-  }
+  NetDevice::DoInitialize ();
 }
 
 void
@@ -213,7 +209,7 @@ FdNetDevice::DoDispose (void)
 void
 FdNetDevice::SetEncapsulationMode (enum EncapsulationMode mode)
 {
-  NS_LOG_FUNCTION (mode);
+  NS_LOG_FUNCTION (this << mode);
   m_encapMode = mode;
   NS_LOG_LOGIC ("m_encapMode = " << m_encapMode);
 }
@@ -228,7 +224,7 @@ FdNetDevice::GetEncapsulationMode (void) const
 void
 FdNetDevice::Start (Time tStart)
 {
-  NS_LOG_FUNCTION (tStart);
+  NS_LOG_FUNCTION (this << tStart);
   Simulator::Cancel (m_startEvent);
   m_startEvent = Simulator::Schedule (tStart, &FdNetDevice::StartDevice, this);
 }
@@ -236,9 +232,9 @@ FdNetDevice::Start (Time tStart)
 void
 FdNetDevice::Stop (Time tStop)
 {
-  NS_LOG_FUNCTION (tStop);
+  NS_LOG_FUNCTION (this << tStop);
   Simulator::Cancel (m_stopEvent);
-  m_startEvent = Simulator::Schedule (tStop, &FdNetDevice::StopDevice, this);
+  m_stopEvent = Simulator::Schedule (tStop, &FdNetDevice::StopDevice, this);
 }
 
 void
@@ -251,20 +247,36 @@ FdNetDevice::StartDevice (void)
       NS_LOG_DEBUG ("FdNetDevice::Start(): Failure, invalid file descriptor.");
       return;
     }
-  //
-  // A similar story exists for the node ID.  We can't just naively do a
-  // GetNode ()->GetId () since GetNode is going to give us a Ptr<Node> which
-  // is reference counted.  We need to stash away the node ID for use in the
-  // read thread.
-  //
-  m_nodeId = GetNode ()->GetId ();
 
-  m_fdReader = Create<FdNetDeviceFdReader> ();
-  // 22 bytes covers 14 bytes Ethernet header with possible 8 bytes LLC/SNAP
-  m_fdReader->SetBufferSize (m_mtu + 22);
+  m_fdReader = DoCreateFdReader ();
   m_fdReader->Start (m_fd, MakeCallback (&FdNetDevice::ReceiveCallback, this));
 
+  DoFinishStartingDevice ();
+
   NotifyLinkUp ();
+}
+
+Ptr<FdReader>
+FdNetDevice::DoCreateFdReader (void)
+{
+  NS_LOG_FUNCTION (this);
+
+  Ptr<FdNetDeviceFdReader> fdReader = Create<FdNetDeviceFdReader> ();
+  // 22 bytes covers 14 bytes Ethernet header with possible 8 bytes LLC/SNAP
+  fdReader->SetBufferSize (m_mtu + 22);
+  return fdReader;
+}
+
+void
+FdNetDevice::DoFinishStartingDevice (void)
+{
+  NS_LOG_FUNCTION (this);
+}
+
+void
+FdNetDevice::DoFinishStoppingDevice (void)
+{
+  NS_LOG_FUNCTION (this);
 }
 
 void
@@ -283,16 +295,25 @@ FdNetDevice::StopDevice (void)
       close (m_fd);
       m_fd = -1;
     }
+
+  while (!m_pendingQueue.empty ())
+    {
+      std::pair<uint8_t *, ssize_t> next = m_pendingQueue.front ();
+      m_pendingQueue.pop ();
+      FreeBuffer (next.first);
+    }
+
+  DoFinishStoppingDevice ();
 }
 
 void
 FdNetDevice::ReceiveCallback (uint8_t *buf, ssize_t len)
 {
-  NS_LOG_FUNCTION (this << buf << len);
+  NS_LOG_FUNCTION (this << static_cast<void *> (buf) << len);
   bool skip = false;
 
   {
-    CriticalSection cs (m_pendingReadMutex);
+    std::unique_lock lock {m_pendingReadMutex};
     if (m_pendingQueue.size () >= m_maxPendingReads)
       {
         NS_LOG_WARN ("Packet dropped");
@@ -381,15 +402,34 @@ RemovePIHeader (uint8_t *&buf, ssize_t &len)
     }
 }
 
+uint8_t *
+FdNetDevice::AllocateBuffer(size_t len)
+{
+  return (uint8_t*) malloc(len);
+}
+
+void
+FdNetDevice::FreeBuffer (uint8_t *buf)
+{
+  free (buf);
+}
+
 void
 FdNetDevice::ForwardUp (void)
 {
+  NS_LOG_FUNCTION (this);
 
-  uint8_t *buf = 0; 
+  uint8_t *buf = 0;
   ssize_t len = 0;
 
+  if (m_pendingQueue.empty())
   {
-    CriticalSection cs (m_pendingReadMutex);
+    NS_LOG_LOGIC ("buffer is empty, probably the device is stopped.");
+    return;
+  }
+
+  {
+    std::unique_lock lock {m_pendingReadMutex};
     std::pair<uint8_t *, ssize_t> next = m_pendingQueue.front ();
     m_pendingQueue.pop ();
 
@@ -397,7 +437,7 @@ FdNetDevice::ForwardUp (void)
     len = next.second;
   }
 
-  NS_LOG_FUNCTION (this << buf << len);
+  NS_LOG_LOGIC ("buffer: " << static_cast<void *> (buf) << " length: " << len);
 
   // We need to remove the PI header and ignore it
   if (m_encapMode == DIXPI)
@@ -409,7 +449,7 @@ FdNetDevice::ForwardUp (void)
   // Create a packet out of the buffer we received and free that buffer.
   //
   Ptr<Packet> packet = Create<Packet> (reinterpret_cast<const uint8_t *> (buf), len);
-  free (buf);
+  FreeBuffer (buf);
   buf = 0;
 
   //
@@ -578,7 +618,13 @@ FdNetDevice::SendFrom (Ptr<Packet> packet, const Address& src, const Address& de
 
 
   size_t len =  (size_t) packet->GetSize ();
-  uint8_t *buffer = (uint8_t*)malloc (len);
+  uint8_t *buffer = AllocateBuffer (len);
+  if(!buffer)
+  {
+    m_macTxDropTrace(packet);
+    return false;
+  }
+
   packet->CopyData (buffer, len);
 
   // We need to add the PI header
@@ -587,8 +633,8 @@ FdNetDevice::SendFrom (Ptr<Packet> packet, const Address& src, const Address& de
       AddPIHeader (buffer, len);
     }
 
-  ssize_t written = write (m_fd, buffer, len);
-  free (buffer);
+  ssize_t written = Write(buffer, len);
+  FreeBuffer (buffer);
 
   if (written == -1 || (size_t) written != len)
     {
@@ -599,6 +645,15 @@ FdNetDevice::SendFrom (Ptr<Packet> packet, const Address& src, const Address& de
   return true;
 }
 
+ssize_t
+FdNetDevice::Write (uint8_t *buffer, size_t length)
+{
+  NS_LOG_FUNCTION (this << static_cast<void *> (buffer) << length);
+
+  uint32_t ret = write (m_fd, buffer, length);
+  return ret;
+}
+
 void
 FdNetDevice::SetFileDescriptor (int fd)
 {
@@ -606,6 +661,12 @@ FdNetDevice::SetFileDescriptor (int fd)
     {
       m_fd = fd;
     }
+}
+
+int
+FdNetDevice::GetFileDescriptor (void) const
+{
+  return m_fd;
 }
 
 void
@@ -648,11 +709,11 @@ FdNetDevice::GetChannel (void) const
 bool
 FdNetDevice::SetMtu (const uint16_t mtu)
 {
-  // The MTU depends on the technology associated to 
+  // The MTU depends on the technology associated to
   // the file descriptor. The user is responsible of
   // setting the correct value of the MTU.
   // If the file descriptor is created using a helper,
-  // then is the responsibility of the helper to set 
+  // then is the responsibility of the helper to set
   // the correct MTU value.
   m_mtu = mtu;
   return true;
@@ -740,6 +801,11 @@ void
 FdNetDevice::SetNode (Ptr<Node> node)
 {
   m_node = node;
+
+  // Save the node ID for use in the read thread, to avoid having
+  // to make a call to GetNode ()->GetId () that increments
+  // Ptr<Node>'s reference count.
+  m_nodeId = node->GetId ();
 }
 
 bool

@@ -92,9 +92,9 @@ TraceCwnd (std::string cwndTrFileName)
 }
 
 static void
-SojournTracer (Ptr<OutputStreamWrapper>stream, Time oldval, Time newval)
+SojournTracer (Ptr<OutputStreamWrapper>stream, Time newval)
 {
-  *stream->GetStream () << oldval << " " << newval << std::endl;
+  *stream->GetStream () << newval << std::endl;
 }
 
 static void
@@ -109,7 +109,7 @@ TraceSojourn (std::string sojournTrFileName)
   else
     {
       Ptr<OutputStreamWrapper> stream = ascii.CreateFileStream (sojournTrFileName.c_str ());
-      Config::ConnectWithoutContext ("/NodeList/2/$ns3::TrafficControlLayer/RootQueueDiscList/0/$ns3::CoDelQueueDisc/Sojourn", MakeBoundCallback (&SojournTracer, stream));
+      Config::ConnectWithoutContext ("/NodeList/2/$ns3::TrafficControlLayer/RootQueueDiscList/0/$ns3::CoDelQueueDisc/SojournTime", MakeBoundCallback (&SojournTracer, stream));
     }
 }
 
@@ -238,7 +238,7 @@ int main (int argc, char *argv[])
   std::string fileNamePrefix = "codel-vs-pfifo-fast-asymmetric";
   bool logging = true;
 
-  CommandLine cmd;
+  CommandLine cmd (__FILE__);
   cmd.AddValue ("serverCmtsDelay", "Link delay between server and CMTS", serverCmtsDelay);
   cmd.AddValue ("cmtsRouterDelay", "Link delay between CMTS and rounter", cmtsRouterDelay);
   cmd.AddValue ("routerHostDelay", "Link delay between router and host", routerHostDelay);

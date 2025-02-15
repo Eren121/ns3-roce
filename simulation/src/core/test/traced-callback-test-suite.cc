@@ -21,35 +21,61 @@
 
 using namespace ns3;
 
+/**
+ * \file
+ * \ingroup tracedcallback-tests
+ * TracedCallback test suite
+ */
+
+/**
+ * \ingroup core-tests
+ * \defgroup tracedcallback-tests TracedCallback class tests
+ */
+
+/**
+ * \ingroup tracedcallback-tests
+ * 
+ * TracedCallback Test case, check basic TracedCallback operation.
+ */
 class BasicTracedCallbackTestCase : public TestCase
 {
 public:
   BasicTracedCallbackTestCase ();
-  virtual ~BasicTracedCallbackTestCase () {}
+  virtual ~BasicTracedCallbackTestCase ()
+  {}
 
 private:
   virtual void DoRun (void);
 
+  /**
+   * First callback.
+   * \param a First parameter.
+   * \param b Second parameter.
+   */
   void CbOne (uint8_t a, double b);
+  /**
+   * Second callback.
+   * \param a First parameter.
+   * \param b Second parameter.
+   */
   void CbTwo (uint8_t a, double b);
 
-  bool m_one;
-  bool m_two;
+  bool m_one; //!< Variable set by the first callback.
+  bool m_two; //!< Variable set by the second callback.
 };
 
 BasicTracedCallbackTestCase::BasicTracedCallbackTestCase ()
   : TestCase ("Check basic TracedCallback operation")
-{
-}
+{}
 
 void
-BasicTracedCallbackTestCase::CbOne (uint8_t a, double b)
+BasicTracedCallbackTestCase::CbOne ([[maybe_unused]] uint8_t a, [[maybe_unused]] double b)
 {
   m_one = true;
 }
 
 void
-BasicTracedCallbackTestCase::CbTwo (uint8_t a, double b)
+BasicTracedCallbackTestCase::CbTwo ([[maybe_unused]] uint8_t a, [[maybe_unused]] double b)
 {
   m_two = true;
 }
@@ -64,7 +90,7 @@ BasicTracedCallbackTestCase::DoRun (void)
   TracedCallback<uint8_t, double> trace;
 
   //
-  // Connect both callbacks to their respective test methods.  If we hit the 
+  // Connect both callbacks to their respective test methods.  If we hit the
   // trace, both callbacks should be called and the two variables  should be set
   // to true.
   //
@@ -108,6 +134,11 @@ BasicTracedCallbackTestCase::DoRun (void)
   NS_TEST_ASSERT_MSG_EQ (m_two, true, "Callback CbTwo not called");
 }
 
+/**
+ * \ingroup tracedcallback-tests
+ *  
+ * \brief The traced callback Test Suite.
+ */
 class TracedCallbackTestSuite : public TestSuite
 {
 public:
@@ -120,4 +151,4 @@ TracedCallbackTestSuite::TracedCallbackTestSuite ()
   AddTestCase (new BasicTracedCallbackTestCase, TestCase::QUICK);
 }
 
-static TracedCallbackTestSuite tracedCallbackTestSuite;
+static TracedCallbackTestSuite g_tracedCallbackTestSuite; //!< Static variable for test initialization

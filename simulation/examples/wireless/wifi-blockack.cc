@@ -19,7 +19,7 @@
  */
 
 /**
- * This is a simple example in order to show how 802.11e compressed block ack mechanism could be used.
+ * This is a simple example in order to show how 802.11n compressed block ack mechanism could be used.
  *
  * Network topology:
  *
@@ -32,7 +32,7 @@
  *
  * In this example a QoS sta sends UDP datagram packets to access point. On the access point
  * there is no application installed so it replies to every packet with an ICMP frame. However
- * our attention is on originator sta n1. We have set blockAckThreshold (mininum number of packets to use
+ * our attention is on originator sta n1. We have set blockAckThreshold (minimum number of packets to use
  * block ack) to 2 so if there are in the BestEffort queue more than 2 packets a block ack will be
  * negotiated. We also set a timeout for block ack inactivity to 3 blocks of 1024 microseconds. This timer is
  * reset when:
@@ -40,12 +40,22 @@
  *    - the recipient receives a block ack request or a MPDU with ack policy Block Ack.
  */
 
-#include "ns3/core-module.h"
-#include "ns3/internet-module.h"
-#include "ns3/network-module.h"
-#include "ns3/applications-module.h"
-#include "ns3/wifi-module.h"
-#include "ns3/mobility-module.h"
+#include "ns3/command-line.h"
+#include "ns3/uinteger.h"
+#include "ns3/boolean.h"
+#include "ns3/double.h"
+#include "ns3/string.h"
+#include "ns3/log.h"
+#include "ns3/yans-wifi-helper.h"
+#include "ns3/ssid.h"
+#include "ns3/mobility-helper.h"
+#include "ns3/on-off-helper.h"
+#include "ns3/yans-wifi-channel.h"
+#include "ns3/mobility-model.h"
+#include "ns3/rectangle.h"
+#include "ns3/internet-stack-helper.h"
+#include "ns3/ipv4-address-helper.h"
+#include "ns3/ipv4-global-routing-helper.h"
 
 using namespace ns3;
 
@@ -53,23 +63,25 @@ NS_LOG_COMPONENT_DEFINE ("Test-block-ack");
 
 int main (int argc, char * argv[])
 {
-  CommandLine cmd;
+  CommandLine cmd (__FILE__);
   cmd.Parse (argc, argv);
 
-  LogComponentEnable ("EdcaTxopN", LOG_LEVEL_DEBUG);
+  LogComponentEnable ("QosTxop", LOG_LEVEL_DEBUG);
   LogComponentEnable ("BlockAckManager", LOG_LEVEL_INFO);
 
   Ptr<Node> sta = CreateObject<Node> ();
   Ptr<Node> ap = CreateObject<Node> ();
 
   YansWifiChannelHelper channel = YansWifiChannelHelper::Default ();
-  YansWifiPhyHelper phy = YansWifiPhyHelper::Default ();
+  YansWifiPhyHelper phy;
+  phy.SetPcapDataLinkType (WifiPhyHelper::DLT_IEEE802_11_RADIO);
   phy.SetChannel (channel.Create ());
 
   WifiHelper wifi;
+  wifi.SetStandard (WIFI_STANDARD_80211n);
   WifiMacHelper mac;
   /* disable fragmentation */
-  wifi.SetRemoteStationManager ("ns3::AarfWifiManager", "FragmentationThreshold", UintegerValue (2500));
+  wifi.SetRemoteStationManager ("ns3::IdealWifiManager", "FragmentationThreshold", UintegerValue (2500));
 
   Ssid ssid ("My-network");
 
@@ -138,7 +150,7 @@ int main (int argc, char * argv[])
 
   Simulator::Stop (Seconds (10.0));
 
-  phy.EnablePcap ("test-blockack-2", ap->GetId (), 0);
+  phy.EnablePcap ("test-blockack", ap->GetId (), 0);
   Simulator::Run ();
   Simulator::Destroy ();
 

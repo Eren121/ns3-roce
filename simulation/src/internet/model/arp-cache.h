@@ -22,6 +22,7 @@
 
 #include <stdint.h>
 #include <list>
+#include <unordered_map>
 #include "ns3/simulator.h"
 #include "ns3/callback.h"
 #include "ns3/packet.h"
@@ -32,7 +33,6 @@
 #include "ns3/ptr.h"
 #include "ns3/object.h"
 #include "ns3/traced-callback.h"
-#include "ns3/sgi-hashmap.h"
 #include "ns3/output-stream-wrapper.h"
 
 namespace ns3 {
@@ -50,21 +50,6 @@ class Ipv4Header;
  */
 class ArpCache : public Object
 {
-private:
-  /**
-   * \brief Copy constructor
-   *
-   * Defined and unimplemented to avoid misuse
-   */
-  ArpCache (ArpCache const &);
-  /**
-   * \brief Copy constructor
-   *
-   * Defined and unimplemented to avoid misuse
-   * \returns
-   */
-  ArpCache& operator= (ArpCache const &);
-
 public:
   /**
    * \brief Get the type ID.
@@ -72,8 +57,13 @@ public:
    */
   static TypeId GetTypeId (void);
   class Entry;
+
   ArpCache ();
   ~ArpCache ();
+
+  // Delete copy constructor and assignment operator to avoid misuse
+  ArpCache (ArpCache const &) = delete;
+  ArpCache & operator = (ArpCache const &) = delete;
 
   /**
    * \brief Set the NetDevice and Ipv4Interface associated with the ArpCache
@@ -242,12 +232,6 @@ public:
     Ipv4Address GetIpv4Address (void) const;
     /**
      * \param macAddress The MacAddress for this entry
-     * \deprecated This (misspelled) method will go away in future versions of ns-3, in favor of the correctly spelled version.
-     */
-    NS_DEPRECATED
-    void SetMacAddresss (Address macAddress);
-    /**
-     * \param macAddress The MacAddress for this entry
      */
     void SetMacAddress (Address macAddress);
     /**
@@ -319,11 +303,11 @@ private:
   /**
    * \brief ARP Cache container
    */
-  typedef sgi::hash_map<Ipv4Address, ArpCache::Entry *, Ipv4AddressHash> Cache;
+  typedef std::unordered_map<Ipv4Address, ArpCache::Entry *, Ipv4AddressHash> Cache;
   /**
    * \brief ARP Cache container iterator
    */
-  typedef sgi::hash_map<Ipv4Address, ArpCache::Entry *, Ipv4AddressHash>::iterator CacheI;
+  typedef std::unordered_map<Ipv4Address, ArpCache::Entry *, Ipv4AddressHash>::iterator CacheI;
 
   virtual void DoDispose (void);
 

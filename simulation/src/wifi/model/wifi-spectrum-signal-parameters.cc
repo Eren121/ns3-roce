@@ -19,8 +19,8 @@
  * Modified by Marco Miozzo <mmiozzo@cttc.es> (add data and ctrl diversity)
  */
 
-#include <ns3/log.h>
-#include <ns3/packet.h>
+#include "ns3/log.h"
+#include "wifi-ppdu.h"
 #include "wifi-spectrum-signal-parameters.h"
 
 namespace ns3 {
@@ -28,6 +28,7 @@ namespace ns3 {
 NS_LOG_COMPONENT_DEFINE ("WifiSpectrumSignalParameters");
 
 WifiSpectrumSignalParameters::WifiSpectrumSignalParameters ()
+  : txCenterFreq (0)
 {
   NS_LOG_FUNCTION (this);
 }
@@ -36,7 +37,8 @@ WifiSpectrumSignalParameters::WifiSpectrumSignalParameters (const WifiSpectrumSi
   : SpectrumSignalParameters (p)
 {
   NS_LOG_FUNCTION (this << &p);
-  packet = p.packet;
+  ppdu = p.ppdu;
+  txCenterFreq = p.txCenterFreq;
 }
 
 Ptr<SpectrumSignalParameters>

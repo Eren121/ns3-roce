@@ -65,7 +65,7 @@ public:
    * \param iface the interface
    * \param hops the number of hops
    * \param nextHop the IP address of the next hop
-   * \param lifetime the lifetime 
+   * \param lifetime the lifetime
    * \param SettlingTime the settling time
    * \param changedEntries flag for changed entries
    */
@@ -276,9 +276,10 @@ public:
   /**
    * Print routing table entry
    * \param stream the output stream
+   * \param unit the Time unit
    */
   void
-  Print (Ptr<OutputStreamWrapper> stream) const;
+  Print (Ptr<OutputStreamWrapper> stream, Time::Unit unit = Time::S) const;
 
 private:
   // Fields
@@ -393,9 +394,10 @@ public:
   /**
    * Print routing table
    * \param stream the output stream
+   * \param unit the Time unit
    */
   void
-  Print (Ptr<OutputStreamWrapper> stream) const;
+  Print (Ptr<OutputStreamWrapper> stream, Time::Unit unit = Time::S) const;
   /**
    * Provides the number of routes present in that nodes routing table.
    * \returns the number of routes

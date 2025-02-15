@@ -89,11 +89,17 @@ public:
   TcpL4Protocol ();
   virtual ~TcpL4Protocol ();
 
+  // Delete copy constructor and assignment operator to avoid misuse
+  TcpL4Protocol (const TcpL4Protocol &) = delete;
+  TcpL4Protocol & operator = (const TcpL4Protocol &) = delete;
+
   /**
    * Set node associated with this stack
    * \param node the node
    */
   void SetNode (Ptr<Node> node);
+
+  // NOTE: API from here should not be removed, only added. Be backward-compatible!
 
   /**
    * \brief Create a TCP socket using the TypeId set by SocketType attribute
@@ -112,7 +118,18 @@ public:
    * \warning using a congestionTypeId other than TCP is a bad idea.
    *
    * \param congestionTypeId the congestion control algorithm TypeId
+   * \param recoveryTypeId the recovery algorithm TypeId
    */
+  Ptr<Socket> CreateSocket (TypeId congestionTypeId, TypeId recoveryTypeId);
+
+  /**
+    * \brief Create a TCP socket using the specified congestion control algorithm
+    * \return A smart Socket pointer to a TcpSocket allocated by this instance
+    * of the TCP protocol
+    *
+    * \param congestionTypeId the congestion control algorithm TypeId
+    *
+    */
   Ptr<Socket> CreateSocket (TypeId congestionTypeId);
 
   /**
@@ -306,23 +323,10 @@ private:
   Ipv6EndPointDemux *m_endPoints6; //!< A list of IPv6 end points.
   TypeId m_rttTypeId;              //!< The RTT Estimator TypeId
   TypeId m_congestionTypeId;       //!< The socket TypeId
+  TypeId m_recoveryTypeId;         //!< The recovery TypeId
   std::vector<Ptr<TcpSocketBase> > m_sockets;      //!< list of sockets
   IpL4Protocol::DownTargetCallback m_downTarget;   //!< Callback to send packets over IPv4
   IpL4Protocol::DownTargetCallback6 m_downTarget6; //!< Callback to send packets over IPv6
-
-  /**
-   * \brief Copy constructor
-   *
-   * Defined and not implemented to avoid misuse
-   */
-  TcpL4Protocol (const TcpL4Protocol &);
-  /**
-   * \brief Copy constructor
-   *
-   * Defined and not implemented to avoid misuse
-   * \returns
-   */
-  TcpL4Protocol &operator = (const TcpL4Protocol &);
 
   /**
    * \brief Send a packet via TCP (IPv4)

@@ -90,7 +90,7 @@ void Ipv6RipngTest::ReceivePkt (Ptr<Socket> socket)
   uint32_t availableData;
   availableData = socket->GetRxAvailable ();
   m_receivedPacket = socket->Recv (std::numeric_limits<uint32_t>::max (), 0);
-  NS_ASSERT (availableData == m_receivedPacket->GetSize ());
+  NS_TEST_ASSERT_MSG_EQ (availableData, m_receivedPacket->GetSize (), "Received packet size is not equal to Rx buffer size");
   //cast availableData to void, to suppress 'availableData' set but not used
   //compiler warning
   (void) availableData;
@@ -229,7 +229,7 @@ Ipv6RipngTest::DoRun (void)
   Ipv6AddressHelper ipv6;
 
   ipv6.SetBase (Ipv6Address ("2001:1::"), Ipv6Prefix (64));
-  Ipv6InterfaceContainer iic1 = ipv6.Assign (net1);
+  Ipv6InterfaceContainer iic1 = ipv6.AssignWithoutOnLink (net1);
   iic1.SetForwarding (1, true);
   iic1.SetDefaultRouteInAllNodes (1);
 
@@ -242,7 +242,7 @@ Ipv6RipngTest::DoRun (void)
   iic3.SetForwarding (1, true);
 
   ipv6.SetBase (Ipv6Address ("2001:2::"), Ipv6Prefix (64));
-  Ipv6InterfaceContainer iic4 = ipv6.Assign (net4);
+  Ipv6InterfaceContainer iic4 = ipv6.AssignWithoutOnLink (net4);
   iic4.SetForwarding (0, true);
   iic4.SetDefaultRouteInAllNodes (0);
 
@@ -313,7 +313,7 @@ void Ipv6RipngCountToInfinityTest::ReceivePkt (Ptr<Socket> socket)
   uint32_t availableData;
   availableData = socket->GetRxAvailable ();
   m_receivedPacket = socket->Recv (std::numeric_limits<uint32_t>::max (), 0);
-  NS_ASSERT (availableData == m_receivedPacket->GetSize ());
+  NS_TEST_ASSERT_MSG_EQ (availableData, m_receivedPacket->GetSize (), "Received packet size is not equal to Rx buffer size");
   //cast availableData to void, to suppress 'availableData' set but not used
   //compiler warning
   (void) availableData;
@@ -459,7 +459,7 @@ Ipv6RipngCountToInfinityTest::DoRun (void)
   Ipv6AddressHelper ipv6;
 
   ipv6.SetBase (Ipv6Address ("2001:1::"), Ipv6Prefix (64));
-  Ipv6InterfaceContainer iic1 = ipv6.Assign (net1);
+  Ipv6InterfaceContainer iic1 = ipv6.AssignWithoutOnLink (net1);
   iic1.SetForwarding (1, true);
   iic1.SetDefaultRouteInAllNodes (1);
 
@@ -472,7 +472,7 @@ Ipv6RipngCountToInfinityTest::DoRun (void)
   iic3.SetForwarding (1, true);
 
   ipv6.SetBase (Ipv6Address ("2001:2::"), Ipv6Prefix (64));
-  Ipv6InterfaceContainer iic4 = ipv6.Assign (net4);
+  Ipv6InterfaceContainer iic4 = ipv6.AssignWithoutOnLink (net4);
   iic4.SetForwarding (0, true);
   iic4.SetDefaultRouteInAllNodes (0);
 
@@ -532,7 +532,7 @@ void Ipv6RipngSplitHorizonStrategyTest::ReceivePktProbe (Ptr<Socket> socket)
   availableData = socket->GetRxAvailable ();
   Address srcAddr;
   Ptr<Packet> receivedPacketProbe = socket->RecvFrom (std::numeric_limits<uint32_t>::max (), 0, srcAddr);
-  NS_ASSERT (availableData == receivedPacketProbe->GetSize ());
+  NS_TEST_ASSERT_MSG_EQ (availableData, receivedPacketProbe->GetSize (), "ReceivedPacketProbe size is not equal to the Rx buffer size");
   Ipv6Address senderAddress = Inet6SocketAddress::ConvertFrom (srcAddr).GetIpv6 ();
 
   if (senderAddress == "fe80::200:ff:fe00:4")
@@ -653,7 +653,7 @@ Ipv6RipngSplitHorizonStrategyTest::DoRun (void)
   Ipv6AddressHelper ipv6;
 
   ipv6.SetBase (Ipv6Address ("2001:1::"), Ipv6Prefix (64));
-  Ipv6InterfaceContainer iic0 = ipv6.Assign (net0);
+  Ipv6InterfaceContainer iic0 = ipv6.AssignWithoutOnLink (net0);
 
   Ipv6InterfaceContainer iic1 = ipv6.AssignWithoutAddress (net1);
   iic1.SetForwarding (0, true);

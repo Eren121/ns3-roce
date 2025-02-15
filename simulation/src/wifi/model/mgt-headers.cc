@@ -20,8 +20,9 @@
  *          Mirko Banchi <mk.banchi@gmail.com>
  */
 
-#include "mgt-headers.h"
 #include "ns3/simulator.h"
+#include "ns3/address-utils.h"
+#include "mgt-headers.h"
 
 namespace ns3 {
 
@@ -48,21 +49,15 @@ MgtProbeRequestHeader::GetSsid (void) const
 }
 
 void
-MgtAssocResponseHeader::SetAssociationId (uint16_t aid)
-{
-  m_aid = aid;
-}
-
-void
 MgtProbeRequestHeader::SetSupportedRates (SupportedRates rates)
 {
   m_rates = rates;
 }
 
 void
-MgtProbeRequestHeader::SetExtendedCapabilities (ExtendedCapabilities extendedcapabilities)
+MgtProbeRequestHeader::SetExtendedCapabilities (ExtendedCapabilities extendedCapabilities)
 {
-  m_extendedCapability = extendedcapabilities;
+  m_extendedCapability = extendedCapabilities;
 }
 
 ExtendedCapabilities
@@ -72,9 +67,9 @@ MgtProbeRequestHeader::GetExtendedCapabilities (void) const
 }
 
 void
-MgtProbeRequestHeader::SetHtCapabilities (HtCapabilities htcapabilities)
+MgtProbeRequestHeader::SetHtCapabilities (HtCapabilities htCapabilities)
 {
-  m_htCapability = htcapabilities;
+  m_htCapability = htCapabilities;
 }
 
 HtCapabilities
@@ -84,9 +79,9 @@ MgtProbeRequestHeader::GetHtCapabilities (void) const
 }
 
 void
-MgtProbeRequestHeader::SetVhtCapabilities (VhtCapabilities vhtcapabilities)
+MgtProbeRequestHeader::SetVhtCapabilities (VhtCapabilities vhtCapabilities)
 {
-  m_vhtCapability = vhtcapabilities;
+  m_vhtCapability = vhtCapabilities;
 }
 
 VhtCapabilities
@@ -96,9 +91,9 @@ MgtProbeRequestHeader::GetVhtCapabilities (void) const
 }
 
 void
-MgtProbeRequestHeader::SetHeCapabilities (HeCapabilities hecapabilities)
+MgtProbeRequestHeader::SetHeCapabilities (HeCapabilities heCapabilities)
 {
-  m_heCapability = hecapabilities;
+  m_heCapability = heCapabilities;
 }
 
 HeCapabilities
@@ -149,6 +144,7 @@ MgtProbeRequestHeader::Print (std::ostream &os) const
 {
   os << "ssid=" << m_ssid << ", "
      << "rates=" << m_rates << ", "
+     << "Extended Capabilities=" << m_extendedCapability << " , "
      << "HT Capabilities=" << m_htCapability << " , "
      << "VHT Capabilities=" << m_vhtCapability << " , "
      << "HE Capabilities=" << m_heCapability;
@@ -233,9 +229,9 @@ MgtProbeResponseHeader::GetCapabilities (void) const
 }
 
 void
-MgtProbeResponseHeader::SetExtendedCapabilities (ExtendedCapabilities extendedcapabilities)
+MgtProbeResponseHeader::SetExtendedCapabilities (ExtendedCapabilities extendedCapabilities)
 {
-  m_extendedCapability = extendedcapabilities;
+  m_extendedCapability = extendedCapabilities;
 }
 
 ExtendedCapabilities
@@ -245,9 +241,9 @@ MgtProbeResponseHeader::GetExtendedCapabilities (void) const
 }
 
 void
-MgtProbeResponseHeader::SetHtCapabilities (HtCapabilities htcapabilities)
+MgtProbeResponseHeader::SetHtCapabilities (HtCapabilities htCapabilities)
 {
-  m_htCapability = htcapabilities;
+  m_htCapability = htCapabilities;
 }
 
 HtCapabilities
@@ -257,9 +253,9 @@ MgtProbeResponseHeader::GetHtCapabilities (void) const
 }
 
 void
-MgtProbeResponseHeader::SetHtOperation (HtOperation htoperation)
+MgtProbeResponseHeader::SetHtOperation (HtOperation htOperation)
 {
-  m_htOperation = htoperation;
+  m_htOperation = htOperation;
 }
 
 HtOperation
@@ -269,9 +265,9 @@ MgtProbeResponseHeader::GetHtOperation (void) const
 }
 
 void
-MgtProbeResponseHeader::SetVhtCapabilities (VhtCapabilities vhtcapabilities)
+MgtProbeResponseHeader::SetVhtCapabilities (VhtCapabilities vhtCapabilities)
 {
-  m_vhtCapability = vhtcapabilities;
+  m_vhtCapability = vhtCapabilities;
 }
 
 VhtCapabilities
@@ -281,9 +277,9 @@ MgtProbeResponseHeader::GetVhtCapabilities (void) const
 }
 
 void
-MgtProbeResponseHeader::SetVhtOperation (VhtOperation vhtoperation)
+MgtProbeResponseHeader::SetVhtOperation (VhtOperation vhtOperation)
 {
-  m_vhtOperation = vhtoperation;
+  m_vhtOperation = vhtOperation;
 }
 
 VhtOperation
@@ -293,9 +289,9 @@ MgtProbeResponseHeader::GetVhtOperation (void) const
 }
 
 void
-MgtProbeResponseHeader::SetHeCapabilities (HeCapabilities hecapabilities)
+MgtProbeResponseHeader::SetHeCapabilities (HeCapabilities heCapabilities)
 {
-  m_heCapability = hecapabilities;
+  m_heCapability = heCapabilities;
 }
 
 HeCapabilities
@@ -305,9 +301,9 @@ MgtProbeResponseHeader::GetHeCapabilities (void) const
 }
 
 void
-MgtProbeResponseHeader::SetHeOperation (HeOperation heoperation)
+MgtProbeResponseHeader::SetHeOperation (HeOperation heOperation)
 {
-  m_heOperation = heoperation;
+  m_heOperation = heOperation;
 }
 
 HeOperation
@@ -359,15 +355,27 @@ MgtProbeResponseHeader::GetErpInformation (void) const
 }
 
 void
-MgtProbeResponseHeader::SetEdcaParameterSet (EdcaParameterSet edcaparameters)
+MgtProbeResponseHeader::SetEdcaParameterSet (EdcaParameterSet edcaParameters)
 {
-  m_edcaParameterSet = edcaparameters;
+  m_edcaParameterSet = edcaParameters;
+}
+
+void
+MgtProbeResponseHeader::SetMuEdcaParameterSet (MuEdcaParameterSet muEdcaParameters)
+{
+  m_muEdcaParameterSet = muEdcaParameters;
 }
 
 EdcaParameterSet
 MgtProbeResponseHeader::GetEdcaParameterSet (void) const
 {
   return m_edcaParameterSet;
+}
+
+MuEdcaParameterSet
+MgtProbeResponseHeader::GetMuEdcaParameterSet (void) const
+{
+  return m_muEdcaParameterSet;
 }
 
 TypeId
@@ -407,6 +415,7 @@ MgtProbeResponseHeader::GetSerializedSize (void) const
   size += m_vhtOperation.GetSerializedSize ();
   size += m_heCapability.GetSerializedSize ();
   size += m_heOperation.GetSerializedSize ();
+  size += m_muEdcaParameterSet.GetSerializedSize ();
   return size;
 }
 
@@ -416,6 +425,7 @@ MgtProbeResponseHeader::Print (std::ostream &os) const
   os << "ssid=" << m_ssid << ", "
      << "rates=" << m_rates << ", "
      << "ERP information=" << m_erpInformation << ", "
+     << "Extended Capabilities=" << m_extendedCapability << " , "
      << "HT Capabilities=" << m_htCapability << " , "
      << "HT Operation=" << m_htOperation << " , "
      << "VHT Capabilities=" << m_vhtCapability << " , "
@@ -430,15 +440,15 @@ MgtProbeResponseHeader::Serialize (Buffer::Iterator start) const
   //timestamp
   //beacon interval
   //capability information
-  //ssid
+  //SSID
   //supported rates
-  //fh parameter set
-  //ds parameter set
-  //cf parameter set
-  //ibss parameter set
+  //FH parameter set
+  //DS parameter set
+  //CF parameter set
+  //IBSS parameter set
   Buffer::Iterator i = start;
   i.WriteHtolsbU64 (Simulator::Now ().GetMicroSeconds ());
-  i.WriteHtolsbU16 (m_beaconInterval / 1024);
+  i.WriteHtolsbU16 (static_cast<uint16_t> (m_beaconInterval / 1024));
   i = m_capability.Serialize (i);
   i = m_ssid.Serialize (i);
   i = m_rates.Serialize (i);
@@ -453,6 +463,7 @@ MgtProbeResponseHeader::Serialize (Buffer::Iterator start) const
   i = m_vhtOperation.Serialize (i);
   i = m_heCapability.Serialize (i);
   i = m_heOperation.Serialize (i);
+  i = m_muEdcaParameterSet.Serialize (i);
 }
 
 uint32_t
@@ -476,6 +487,7 @@ MgtProbeResponseHeader::Deserialize (Buffer::Iterator start)
   i = m_vhtOperation.DeserializeIfPresent (i);
   i = m_heCapability.DeserializeIfPresent (i);
   i = m_heOperation.DeserializeIfPresent (i);
+  i = m_muEdcaParameterSet.DeserializeIfPresent (i);
   return i.GetDistanceFrom (start);
 }
 
@@ -545,9 +557,9 @@ MgtAssocRequestHeader::GetCapabilities (void) const
 }
 
 void
-MgtAssocRequestHeader::SetExtendedCapabilities (ExtendedCapabilities extendedcapabilities)
+MgtAssocRequestHeader::SetExtendedCapabilities (ExtendedCapabilities extendedCapabilities)
 {
-  m_extendedCapability = extendedcapabilities;
+  m_extendedCapability = extendedCapabilities;
 }
 
 ExtendedCapabilities
@@ -557,9 +569,9 @@ MgtAssocRequestHeader::GetExtendedCapabilities (void) const
 }
 
 void
-MgtAssocRequestHeader::SetHtCapabilities (HtCapabilities htcapabilities)
+MgtAssocRequestHeader::SetHtCapabilities (HtCapabilities htCapabilities)
 {
-  m_htCapability = htcapabilities;
+  m_htCapability = htCapabilities;
 }
 
 HtCapabilities
@@ -569,9 +581,9 @@ MgtAssocRequestHeader::GetHtCapabilities (void) const
 }
 
 void
-MgtAssocRequestHeader::SetVhtCapabilities (VhtCapabilities vhtcapabilities)
+MgtAssocRequestHeader::SetVhtCapabilities (VhtCapabilities vhtCapabilities)
 {
-  m_vhtCapability = vhtcapabilities;
+  m_vhtCapability = vhtCapabilities;
 }
 
 VhtCapabilities
@@ -581,9 +593,9 @@ MgtAssocRequestHeader::GetVhtCapabilities (void) const
 }
 
 void
-MgtAssocRequestHeader::SetHeCapabilities (HeCapabilities hecapabilities)
+MgtAssocRequestHeader::SetHeCapabilities (HeCapabilities heCapabilities)
 {
-  m_heCapability = hecapabilities;
+  m_heCapability = heCapabilities;
 }
 
 HeCapabilities
@@ -648,6 +660,7 @@ MgtAssocRequestHeader::Print (std::ostream &os) const
 {
   os << "ssid=" << m_ssid << ", "
      << "rates=" << m_rates << ", "
+     << "Extended Capabilities=" << m_extendedCapability << " , "
      << "HT Capabilities=" << m_htCapability << " , "
      << "VHT Capabilities=" << m_vhtCapability << " , "
      << "HE Capabilities=" << m_heCapability;
@@ -731,9 +744,9 @@ MgtReassocRequestHeader::GetCapabilities (void) const
 }
 
 void
-MgtReassocRequestHeader::SetExtendedCapabilities (ExtendedCapabilities extendedcapabilities)
+MgtReassocRequestHeader::SetExtendedCapabilities (ExtendedCapabilities extendedCapabilities)
 {
-  m_extendedCapability = extendedcapabilities;
+  m_extendedCapability = extendedCapabilities;
 }
 
 ExtendedCapabilities
@@ -743,9 +756,9 @@ MgtReassocRequestHeader::GetExtendedCapabilities (void) const
 }
 
 void
-MgtReassocRequestHeader::SetHtCapabilities (HtCapabilities htcapabilities)
+MgtReassocRequestHeader::SetHtCapabilities (HtCapabilities htCapabilities)
 {
-  m_htCapability = htcapabilities;
+  m_htCapability = htCapabilities;
 }
 
 HtCapabilities
@@ -755,9 +768,9 @@ MgtReassocRequestHeader::GetHtCapabilities (void) const
 }
 
 void
-MgtReassocRequestHeader::SetVhtCapabilities (VhtCapabilities vhtcapabilities)
+MgtReassocRequestHeader::SetVhtCapabilities (VhtCapabilities vhtCapabilities)
 {
-  m_vhtCapability = vhtcapabilities;
+  m_vhtCapability = vhtCapabilities;
 }
 
 VhtCapabilities
@@ -767,9 +780,9 @@ MgtReassocRequestHeader::GetVhtCapabilities (void) const
 }
 
 void
-MgtReassocRequestHeader::SetHeCapabilities (HeCapabilities hecapabilities)
+MgtReassocRequestHeader::SetHeCapabilities (HeCapabilities heCapabilities)
 {
-  m_heCapability = hecapabilities;
+  m_heCapability = heCapabilities;
 }
 
 HeCapabilities
@@ -842,6 +855,7 @@ MgtReassocRequestHeader::Print (std::ostream &os) const
   os << "current AP address=" << m_currentApAddr << ", "
      << "ssid=" << m_ssid << ", "
      << "rates=" << m_rates << ", "
+     << "Extended Capabilities=" << m_extendedCapability << " , "
      << "HT Capabilities=" << m_htCapability << " , "
      << "VHT Capabilities=" << m_vhtCapability << " , "
      << "HE Capabilities=" << m_heCapability;
@@ -933,9 +947,9 @@ MgtAssocResponseHeader::GetCapabilities (void) const
 }
 
 void
-MgtAssocResponseHeader::SetExtendedCapabilities (ExtendedCapabilities extendedcapabilities)
+MgtAssocResponseHeader::SetExtendedCapabilities (ExtendedCapabilities extendedCapabilities)
 {
-  m_extendedCapability = extendedcapabilities;
+  m_extendedCapability = extendedCapabilities;
 }
 
 ExtendedCapabilities
@@ -945,9 +959,9 @@ MgtAssocResponseHeader::GetExtendedCapabilities (void) const
 }
 
 void
-MgtAssocResponseHeader::SetHtCapabilities (HtCapabilities htcapabilities)
+MgtAssocResponseHeader::SetHtCapabilities (HtCapabilities htCapabilities)
 {
-  m_htCapability = htcapabilities;
+  m_htCapability = htCapabilities;
 }
 
 HtCapabilities
@@ -957,9 +971,9 @@ MgtAssocResponseHeader::GetHtCapabilities (void) const
 }
 
 void
-MgtAssocResponseHeader::SetHtOperation (HtOperation htoperation)
+MgtAssocResponseHeader::SetHtOperation (HtOperation htOperation)
 {
-  m_htOperation = htoperation;
+  m_htOperation = htOperation;
 }
 
 HtOperation
@@ -969,9 +983,9 @@ MgtAssocResponseHeader::GetHtOperation (void) const
 }
 
 void
-MgtAssocResponseHeader::SetVhtCapabilities (VhtCapabilities vhtcapabilities)
+MgtAssocResponseHeader::SetVhtCapabilities (VhtCapabilities vhtCapabilities)
 {
-  m_vhtCapability = vhtcapabilities;
+  m_vhtCapability = vhtCapabilities;
 }
 
 VhtCapabilities
@@ -981,9 +995,9 @@ MgtAssocResponseHeader::GetVhtCapabilities (void) const
 }
 
 void
-MgtAssocResponseHeader::SetVhtOperation (VhtOperation vhtoperation)
+MgtAssocResponseHeader::SetVhtOperation (VhtOperation vhtOperation)
 {
-  m_vhtOperation = vhtoperation;
+  m_vhtOperation = vhtOperation;
 }
 
 VhtOperation
@@ -993,9 +1007,9 @@ MgtAssocResponseHeader::GetVhtOperation (void) const
 }
 
 void
-MgtAssocResponseHeader::SetHeCapabilities (HeCapabilities hecapabilities)
+MgtAssocResponseHeader::SetHeCapabilities (HeCapabilities heCapabilities)
 {
-  m_heCapability = hecapabilities;
+  m_heCapability = heCapabilities;
 }
 
 HeCapabilities
@@ -1005,15 +1019,27 @@ MgtAssocResponseHeader::GetHeCapabilities (void) const
 }
 
 void
-MgtAssocResponseHeader::SetHeOperation (HeOperation heoperation)
+MgtAssocResponseHeader::SetHeOperation (HeOperation heOperation)
 {
-  m_heOperation = heoperation;
+  m_heOperation = heOperation;
 }
 
 HeOperation
 MgtAssocResponseHeader::GetHeOperation (void) const
 {
   return m_heOperation;
+}
+
+void
+MgtAssocResponseHeader::SetAssociationId (uint16_t aid)
+{
+  m_aid = aid;
+}
+
+uint16_t
+MgtAssocResponseHeader::GetAssociationId (void) const
+{
+  return m_aid;
 }
 
 void
@@ -1034,10 +1060,22 @@ MgtAssocResponseHeader::SetEdcaParameterSet (EdcaParameterSet edcaparameters)
   m_edcaParameterSet = edcaparameters;
 }
 
+void
+MgtAssocResponseHeader::SetMuEdcaParameterSet (MuEdcaParameterSet muEdcaParameters)
+{
+  m_muEdcaParameterSet = muEdcaParameters;
+}
+
 EdcaParameterSet
 MgtAssocResponseHeader::GetEdcaParameterSet (void) const
 {
   return m_edcaParameterSet;
+}
+
+MuEdcaParameterSet
+MgtAssocResponseHeader::GetMuEdcaParameterSet (void) const
+{
+  return m_muEdcaParameterSet;
 }
 
 TypeId
@@ -1075,6 +1113,7 @@ MgtAssocResponseHeader::GetSerializedSize (void) const
   size += m_vhtOperation.GetSerializedSize ();
   size += m_heCapability.GetSerializedSize ();
   size += m_heOperation.GetSerializedSize ();
+  size += m_muEdcaParameterSet.GetSerializedSize ();
   return size;
 }
 
@@ -1085,6 +1124,7 @@ MgtAssocResponseHeader::Print (std::ostream &os) const
      << "aid=" << m_aid << ", "
      << "rates=" << m_rates << ", "
      << "ERP information=" << m_erpInformation << ", "
+     << "Extended Capabilities=" << m_extendedCapability << " , "
      << "HT Capabilities=" << m_htCapability << " , "
      << "HT Operation=" << m_htOperation << " , "
      << "VHT Capabilities=" << m_vhtCapability << " , "
@@ -1111,6 +1151,7 @@ MgtAssocResponseHeader::Serialize (Buffer::Iterator start) const
   i = m_vhtOperation.Serialize (i);
   i = m_heCapability.Serialize (i);
   i = m_heOperation.Serialize (i);
+  i = m_muEdcaParameterSet.Serialize (i);
 }
 
 uint32_t
@@ -1131,6 +1172,7 @@ MgtAssocResponseHeader::Deserialize (Buffer::Iterator start)
   i = m_vhtOperation.DeserializeIfPresent (i);
   i = m_heCapability.DeserializeIfPresent (i);
   i = m_heOperation.DeserializeIfPresent (i);
+  i = m_muEdcaParameterSet.DeserializeIfPresent (i);
   return i.GetDistanceFrom (start);
 }
 
@@ -1150,27 +1192,27 @@ void
 WifiActionHeader::SetAction (WifiActionHeader::CategoryValue type,
                              WifiActionHeader::ActionValue action)
 {
-  m_category = type;
+  m_category = static_cast<uint8_t> (type);
   switch (type)
     {
     case BLOCK_ACK:
       {
-        m_actionValue = action.blockAck;
+        m_actionValue = static_cast<uint8_t> (action.blockAck);
         break;
       }
     case MESH:
       {
-        m_actionValue = action.meshAction;
+        m_actionValue = static_cast<uint8_t> (action.meshAction);
         break;
       }
     case MULTIHOP:
       {
-        m_actionValue = action.multihopAction;
+        m_actionValue = static_cast<uint8_t> (action.multihopAction);
         break;
       }
     case SELF_PROTECTED:
       {
-        m_actionValue = action.selfProtectedAction;
+        m_actionValue = static_cast<uint8_t> (action.selfProtectedAction);
         break;
       }
     case VENDOR_SPECIFIC_ACTION:
@@ -1539,7 +1581,7 @@ MgtAddBaRequestHeader::GetTid (void) const
 bool
 MgtAddBaRequestHeader::IsImmediateBlockAck (void) const
 {
-  return (m_policy == 1) ? true : false;
+  return m_policy == 1;
 }
 
 uint16_t
@@ -1557,7 +1599,7 @@ MgtAddBaRequestHeader::GetBufferSize (void) const
 bool
 MgtAddBaRequestHeader::IsAmsduSupported (void) const
 {
-  return (m_amsduSupport == 1) ? true : false;
+  return m_amsduSupport == 1;
 }
 
 uint16_t
@@ -1719,7 +1761,7 @@ MgtAddBaResponseHeader::GetTid (void) const
 bool
 MgtAddBaResponseHeader::IsImmediateBlockAck (void) const
 {
-  return (m_policy == 1) ? true : false;
+  return m_policy == 1;
 }
 
 uint16_t
@@ -1737,7 +1779,7 @@ MgtAddBaResponseHeader::GetBufferSize (void) const
 bool
 MgtAddBaResponseHeader::IsAmsduSupported (void) const
 {
-  return (m_amsduSupport == 1) ? true : false;
+  return m_amsduSupport == 1;
 }
 
 uint16_t
@@ -1823,7 +1865,7 @@ MgtDelBaHeader::Deserialize (Buffer::Iterator start)
 bool
 MgtDelBaHeader::IsByOriginator (void) const
 {
-  return (m_initiator == 1) ? true : false;
+  return m_initiator == 1;
 }
 
 uint8_t

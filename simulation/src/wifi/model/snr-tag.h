@@ -39,34 +39,34 @@ public:
    * \return the object TypeId
    */
   static TypeId GetTypeId (void);
-  TypeId GetInstanceTypeId (void) const;
 
   /**
-   * Create a SnrTag with the default snr 0
+   * Create a SnrTag with the default SNR 0
    */
   SnrTag ();
 
-  uint32_t GetSerializedSize (void) const;
-  void Serialize (TagBuffer i) const;
-  void Deserialize (TagBuffer i);
-  void Print (std::ostream &os) const;
+  TypeId GetInstanceTypeId (void) const override;
+  uint32_t GetSerializedSize (void) const override;
+  void Serialize (TagBuffer i) const override;
+  void Deserialize (TagBuffer i) override;
+  void Print (std::ostream &os) const override;
 
   /**
    * Set the SNR to the given value.
    *
-   * \param snr the value of the snr to set
+   * \param snr the value of the SNR to set in linear scale
    */
   void Set (double snr);
   /**
    * Return the SNR value.
    *
-   * \return the SNR value
+   * \return the SNR value in linear scale
    */
   double Get (void) const;
 
 
 private:
-  double m_snr;  //!< SNR value
+  double m_snr;  //!< SNR value in linear scale
 };
 
 }

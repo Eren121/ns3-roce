@@ -22,7 +22,10 @@
 #include "ns3/assert.h"
 #include "ns3/log.h"
 #include "ns3/abort.h"
-#include "ns3/address-utils.h"
+#include "ns3/ipv6-header.h"
+#include "ns3/mac64-address.h"
+#include "ns3/mac16-address.h"
+#include "ns3/ipv6-header.h"
 #include "sixlowpan-header.h"
 
 
@@ -128,7 +131,7 @@ void SixLowPanHc1::Print (std::ostream & os) const
   encoding <<= 1;
   encoding |= m_hc2HeaderPresent;
 
-  os << "encoding " << static_cast<int> (encoding) << ", hopLimit " << static_cast<int> (m_hopLimit);
+  os << "encoding " << +encoding << ", hopLimit " << +m_hopLimit;
 }
 
 uint32_t SixLowPanHc1::GetSerializedSize () const
@@ -545,7 +548,7 @@ NS_OBJECT_ENSURE_REGISTERED (SixLowPanFrag1);
 
 SixLowPanFrag1::SixLowPanFrag1 ()
   : m_datagramSize (0),
-    m_datagramTag (0)
+  m_datagramTag (0)
 {
 }
 
@@ -632,8 +635,8 @@ NS_OBJECT_ENSURE_REGISTERED (SixLowPanFragN);
 
 SixLowPanFragN::SixLowPanFragN ()
   : m_datagramSize (0),
-    m_datagramTag (0),
-    m_datagramOffset (0)
+  m_datagramTag (0),
+  m_datagramOffset (0)
 {
 }
 /*
@@ -655,7 +658,7 @@ TypeId SixLowPanFragN::GetInstanceTypeId (void) const
 
 void SixLowPanFragN::Print (std::ostream & os) const
 {
-  os << "datagram size " << m_datagramSize << " tag " << m_datagramTag << " offset " << static_cast<int> (m_datagramOffset);
+  os << "datagram size " << m_datagramSize << " tag " << m_datagramTag << " offset " << +m_datagramOffset;
 }
 
 uint32_t SixLowPanFragN::GetSerializedSize () const
@@ -790,6 +793,7 @@ SixLowPanIphc::SixLowPanIphc ()
 {
   // 011x xxxx xxxx xxxx
   m_baseFormat = 0x6000;
+  m_srcdstContextId = 0;
 }
 
 SixLowPanIphc::SixLowPanIphc (uint8_t dispatch)
@@ -797,6 +801,7 @@ SixLowPanIphc::SixLowPanIphc (uint8_t dispatch)
   // 011x xxxx xxxx xxxx
   m_baseFormat = dispatch;
   m_baseFormat <<= 8;
+  m_srcdstContextId = 0;
 }
 
 TypeId SixLowPanIphc::GetTypeId (void)
@@ -815,7 +820,48 @@ TypeId SixLowPanIphc::GetInstanceTypeId (void) const
 
 void SixLowPanIphc::Print (std::ostream & os) const
 {
-  os << "Compression kind: " << static_cast<int> (m_baseFormat);
+  switch ( GetTf () )
+    {
+    case TF_FULL:
+      os << "TF_FULL(" << +m_ecn << ", " << +m_dscp << ", " << m_flowLabel << ")";
+      break;
+    case TF_DSCP_ELIDED:
+      os << "TF_DSCP_ELIDED(" << +m_ecn << ", " << m_flowLabel << ")";
+      break;
+    case TF_FL_ELIDED:
+      os << "TF_FL_ELIDED(" << +m_ecn << ", " << +m_dscp << ")";
+      break;
+    default:
+      os << "TF_ELIDED";
+      break;
+    }
+
+  GetNh () ? os << " NH(1)" : os << " NH(0)";
+
+  switch ( GetHlim () )
+    {
+    case HLIM_INLINE:
+      os << " HLIM_INLINE(" << +m_hopLimit << ")";
+      break;
+    case HLIM_COMPR_1:
+      os << " HLIM_COMPR_1(1)";
+      break;
+    case HLIM_COMPR_64:
+      os << " HLIM_COMPR_64(64)";
+      break;
+    default:
+      os << " HLIM_COMPR_255(255)";
+      break;
+    }
+
+  GetCid () ? os << " CID(" << +m_srcdstContextId << ")" : os << " CID(0)";
+
+  GetSac () ? os << " SAC(1)" : os << " SAC(0)";
+  os << " SAM (" << GetSam () << ")";
+
+  GetM () ? os << " M(1)" : os << " M(0)";
+  GetDac () ? os << " DAC(1)" : os << " DAC(0)";
+  os << " DAM (" << GetDam () << ")";
 }
 
 uint32_t SixLowPanIphc::GetSerializedSize () const
@@ -980,22 +1026,17 @@ void SixLowPanIphc::Serialize (Buffer::Iterator start) const
   // Source Address
   switch (GetSam () )
     {
-      uint8_t temp[16];
     case HC_INLINE:
       if ( GetSac () == false )
         {
-          uint8_t temp[16];
-          m_srcAddress.Serialize (temp);
-          i.Write (temp, 16);
+          i.Write (m_srcInlinePart, 16);
         }
       break;
     case HC_COMPR_64:
-      m_srcAddress.Serialize (temp);
-      i.Write (temp + 8, 8);
+      i.Write (m_srcInlinePart, 8);
       break;
     case HC_COMPR_16:
-      m_srcAddress.Serialize (temp);
-      i.Write (temp + 14, 2);
+      i.Write (m_srcInlinePart, 2);
       break;
     case HC_COMPR_0:
     default:
@@ -1004,23 +1045,17 @@ void SixLowPanIphc::Serialize (Buffer::Iterator start) const
   // Destination Address
   if ( GetM () == false)
     {
-      uint8_t temp[16];
+      // unicast
       switch (GetDam () )
         {
         case HC_INLINE:
-          if ( GetDac () == false )
-            {
-              m_dstAddress.Serialize (temp);
-              i.Write (temp, 16);
-            }
+          i.Write (m_dstInlinePart, 16);
           break;
         case HC_COMPR_64:
-          m_dstAddress.Serialize (temp);
-          i.Write (temp + 8, 8);
+          i.Write (m_dstInlinePart, 8);
           break;
         case HC_COMPR_16:
-          m_dstAddress.Serialize (temp);
-          i.Write (temp + 14, 2);
+          i.Write (m_dstInlinePart, 2);
           break;
         case HC_COMPR_0:
         default:
@@ -1029,45 +1064,22 @@ void SixLowPanIphc::Serialize (Buffer::Iterator start) const
     }
   else
     {
+      // multicast
       switch (GetDam () )
         {
-          uint8_t temp[16];
         case HC_INLINE:
-          if ( GetDac () == false )
-            {
-              m_dstAddress.Serialize (temp);
-              i.Write (temp, 16);
-            }
-          else
-            {
-              m_dstAddress.Serialize (temp);
-              i.Write (temp + 1, 2);
-              i.Write (temp + 12, 4);
-            }
+          i.Write (m_dstInlinePart, 16);
           break;
         case HC_COMPR_64:
-          if ( GetDac () == false )
-            {
-              m_dstAddress.Serialize (temp);
-              i.Write (temp + 1, 1);
-              i.Write (temp + 11, 5);
-            }
+          i.Write (m_dstInlinePart, 6);
           break;
         case HC_COMPR_16:
-          if ( GetDac () == false )
-            {
-              m_dstAddress.Serialize (temp);
-              i.Write (temp + 1, 1);
-              i.Write (temp + 13, 3);
-            }
+          i.Write (m_dstInlinePart, 4);
           break;
         case HC_COMPR_0:
-        default:
-          if ( GetDac () == false )
-            {
-              m_dstAddress.Serialize (temp);
-              i.WriteU8 (temp[15]);
-            }
+          i.Write (m_dstInlinePart, 1);
+          break;
+       default:
           break;
         }
     }
@@ -1082,6 +1094,10 @@ uint32_t SixLowPanIphc::Deserialize (Buffer::Iterator start)
   if ( GetCid () )
     {
       m_srcdstContextId = i.ReadU8 ();
+    }
+  else
+    {
+      m_srcdstContextId = 0;
     }
   // Traffic Class and Flow Label
   switch ( GetTf () )
@@ -1139,68 +1155,41 @@ uint32_t SixLowPanIphc::Deserialize (Buffer::Iterator start)
 
     }
   // Source Address
+  memset (m_srcInlinePart, 0x00, sizeof (m_srcInlinePart));
   switch (GetSam () )
     {
-      uint8_t temp[16];
     case HC_INLINE:
       if ( GetSac () == false )
         {
-          i.Read (temp, 16);
-          m_srcAddress = Ipv6Address::Deserialize (temp);
+          i.Read (m_srcInlinePart, 16);
         }
       break;
     case HC_COMPR_64:
-      memset (temp, 0x00, sizeof (temp));
-      i.Read (temp + 8, 8);
-      temp[0] = 0xfe;
-      temp[1] = 0x80;
-      m_srcAddress = Ipv6Address::Deserialize (temp);
+      i.Read (m_srcInlinePart, 8);
       break;
     case HC_COMPR_16:
-      memset (temp, 0x00, sizeof (temp));
-      i.Read (temp + 14, 2);
-      temp[0] = 0xfe;
-      temp[1] = 0x80;
-      temp[11] = 0xff;
-      temp[12] = 0xfe;
-      m_srcAddress = Ipv6Address::Deserialize (temp);
+      i.Read (m_srcInlinePart, 2);
       break;
     case HC_COMPR_0:
     default:
       break;
     }
-  if ( GetSac () == true )
-    {
-      PostProcessSac ();
-    }
+
   // Destination Address
+  memset (m_dstInlinePart, 0x00, sizeof (m_dstInlinePart));
   if ( GetM () == false)
     {
-      uint8_t temp[16];
+      // unicast
       switch (GetDam () )
         {
         case HC_INLINE:
-          if ( GetDac () == false )
-            {
-              i.Read (temp, 16);
-              m_dstAddress = Ipv6Address::Deserialize (temp);
-            }
+          i.Read (m_dstInlinePart, 16);
           break;
         case HC_COMPR_64:
-          memset (temp, 0x00, sizeof (temp));
-          i.Read (temp + 8, 8);
-          temp[0] = 0xfe;
-          temp[1] = 0x80;
-          m_dstAddress = Ipv6Address::Deserialize (temp);
+          i.Read (m_dstInlinePart, 8);
           break;
         case HC_COMPR_16:
-          memset (temp, 0x00, sizeof (temp));
-          i.Read (temp + 14, 2);
-          temp[0] = 0xfe;
-          temp[1] = 0x80;
-          temp[11] = 0xff;
-          temp[12] = 0xfe;
-          m_dstAddress = Ipv6Address::Deserialize (temp);
+          i.Read (m_dstInlinePart, 2);
           break;
         case HC_COMPR_0:
         default:
@@ -1209,61 +1198,26 @@ uint32_t SixLowPanIphc::Deserialize (Buffer::Iterator start)
     }
   else
     {
+      // multicast
       switch (GetDam () )
         {
-          uint8_t temp[16];
         case HC_INLINE:
-          if ( GetDac () == false )
-            {
-              i.Read (temp, 16);
-              m_dstAddress = Ipv6Address::Deserialize (temp);
-            }
-          else
-            {
-              memset (temp, 0x00, sizeof (temp));
-              i.Read (temp + 1, 2);
-              i.Read (temp + 12, 4);
-              temp[0] = 0xff;
-              m_dstAddress = Ipv6Address::Deserialize (temp);
-            }
+          i.Read (m_dstInlinePart, 16);
           break;
         case HC_COMPR_64:
-          if ( GetDac () == false )
-            {
-              memset (temp, 0x00, sizeof (temp));
-              i.Read (temp + 1, 1);
-              i.Read (temp + 11, 5);
-              temp[0] = 0xff;
-              m_dstAddress = Ipv6Address::Deserialize (temp);
-            }
+          i.Read (m_dstInlinePart, 6);
           break;
         case HC_COMPR_16:
-          if ( GetDac () == false )
-            {
-              memset (temp, 0x00, sizeof (temp));
-              i.Read (temp + 1, 1);
-              i.Read (temp + 13, 3);
-              temp[0] = 0xff;
-              m_dstAddress = Ipv6Address::Deserialize (temp);
-            }
+          i.Read (m_dstInlinePart, 4);
           break;
         case HC_COMPR_0:
+          i.Read (m_dstInlinePart, 1);
+          break;
         default:
-          if ( GetDac () == false )
-            {
-              memset (temp, 0x00, sizeof (temp));
-              temp[15] = i.ReadU8 ();
-              temp[0] = 0xff;
-              temp[1] = 0x02;
-              m_dstAddress = Ipv6Address::Deserialize (temp);
-            }
           break;
         }
     }
-  if ( GetDac () == true )
-    {
-      PostProcessDac ();
-    }
+
   return GetSerializedSize ();
 }
 
@@ -1333,6 +1287,19 @@ SixLowPanIphc::HeaderCompression_e SixLowPanIphc::GetSam (void) const
   return HeaderCompression_e ((m_baseFormat >> 4) & 0x3);
 }
 
+const uint8_t* SixLowPanIphc::GetSrcInlinePart (void) const
+{
+  return m_srcInlinePart;
+}
+
+void SixLowPanIphc::SetSrcInlinePart (uint8_t srcInlinePart[16], uint8_t size)
+{
+  NS_ASSERT_MSG (size <= 16,  "Src inline part too large");
+
+  memcpy (m_srcInlinePart, srcInlinePart, size);
+  return;
+}
+
 void SixLowPanIphc::SetM (bool mField)
 {
   uint16_t field = mField;
@@ -1364,6 +1331,19 @@ void SixLowPanIphc::SetDam (HeaderCompression_e damField)
 SixLowPanIphc::HeaderCompression_e SixLowPanIphc::GetDam (void) const
 {
   return HeaderCompression_e (m_baseFormat & 0x3);
+}
+
+const uint8_t* SixLowPanIphc::GetDstInlinePart (void) const
+{
+  return m_dstInlinePart;
+}
+
+void SixLowPanIphc::SetDstInlinePart (uint8_t dstInlinePart[16], uint8_t size)
+{
+  NS_ASSERT_MSG (size <= 16,  "Dst inline part too large");
+
+  memcpy (m_dstInlinePart, dstInlinePart, size);
+  return;
 }
 
 void SixLowPanIphc::SetSrcContextId (uint8_t srcContextId)
@@ -1441,38 +1421,6 @@ uint8_t SixLowPanIphc::GetHopLimit (void) const
   return m_hopLimit;
 }
 
-void SixLowPanIphc::SetSrcAddress (Ipv6Address srcAddress)
-{
-  m_srcAddress = srcAddress;
-}
-
-Ipv6Address SixLowPanIphc::GetSrcAddress () const
-{
-  return m_srcAddress;
-}
-
-void SixLowPanIphc::SetDstAddress (Ipv6Address dstAddress)
-{
-  m_dstAddress = dstAddress;
-}
-
-Ipv6Address SixLowPanIphc::GetDstAddress () const
-{
-  return m_dstAddress;
-}
-
-void SixLowPanIphc::PostProcessSac ()
-{
-  NS_ABORT_MSG ("Unsupported; Context destination is not implemented");
-  return;
-}
-
-void SixLowPanIphc::PostProcessDac ()
-{
-  NS_ABORT_MSG ("Unsupported; Context destination is not implemented");
-  return;
-}
-
 std::ostream & operator << (std::ostream & os, const SixLowPanIphc & h)
 {
   h.Print (os);
@@ -1508,7 +1456,7 @@ TypeId SixLowPanNhcExtension::GetInstanceTypeId (void) const
 
 void SixLowPanNhcExtension::Print (std::ostream & os) const
 {
-  os << "Compression kind: " << static_cast<int> (m_nhcExtensionHeader) << " Size: " << GetSerializedSize ();
+  os << "Compression kind: " << +m_nhcExtensionHeader << " Size: " << GetSerializedSize ();
 }
 
 uint32_t SixLowPanNhcExtension::GetSerializedSize () const
@@ -1637,7 +1585,7 @@ TypeId SixLowPanUdpNhcExtension::GetInstanceTypeId (void) const
 
 void SixLowPanUdpNhcExtension::Print (std::ostream & os) const
 {
-  os << "Compression kind: " << static_cast<int> (m_baseFormat);
+  os << "Compression kind: " << +m_baseFormat;
 }
 
 uint32_t SixLowPanUdpNhcExtension::GetSerializedSize () const
@@ -1805,6 +1753,317 @@ std::ostream & operator << (std::ostream & os, const SixLowPanUdpNhcExtension & 
   return os;
 }
 
+/*
+ * SixLowPanBc0
+ */
+NS_OBJECT_ENSURE_REGISTERED (SixLowPanBc0);
+
+SixLowPanBc0::SixLowPanBc0 ()
+{
+  m_seqNumber = 66;
+}
+
+TypeId SixLowPanBc0::GetTypeId (void)
+{
+  static TypeId tid = TypeId ("ns3::SixLowPanBc0")
+    .SetParent<Header> ()
+    .SetGroupName ("SixLowPan")
+    .AddConstructor<SixLowPanBc0> ();
+  return tid;
+}
+
+TypeId SixLowPanBc0::GetInstanceTypeId (void) const
+{
+  return GetTypeId ();
+}
+
+void SixLowPanBc0::Print (std::ostream & os) const
+{
+  os << "Sequence number: " << +m_seqNumber;
+}
+
+uint32_t SixLowPanBc0::GetSerializedSize () const
+{
+  return 2;
+}
+
+void SixLowPanBc0::Serialize (Buffer::Iterator start) const
+{
+  Buffer::Iterator i = start;
+  i.WriteU8 (0x50);
+  i.WriteU8 (m_seqNumber);
+
+}
+
+uint32_t SixLowPanBc0::Deserialize (Buffer::Iterator start)
+{
+  Buffer::Iterator i = start;
+  uint8_t dispatch = i.ReadU8 ();
+
+  if (dispatch != 0x50)
+    {
+      return 0;
+    }
+
+  m_seqNumber = i.ReadU8 ();
+
+  return GetSerializedSize ();
+}
+
+void SixLowPanBc0::SetSequenceNumber (uint8_t seqNumber)
+{
+  m_seqNumber = seqNumber;
+}
+
+uint8_t SixLowPanBc0::GetSequenceNumber (void) const
+{
+  return m_seqNumber;
+}
+
+std::ostream & operator << (std::ostream & os, const SixLowPanBc0 & h)
+{
+  h.Print (os);
+  return os;
+}
+
+/*
+ * SixLowPanMesh
+ */
+NS_OBJECT_ENSURE_REGISTERED (SixLowPanMesh);
+
+SixLowPanMesh::SixLowPanMesh ()
+{
+  m_hopsLeft = 0;
+  m_src = Address ();
+  m_dst = Address ();
+  m_v = false;
+  m_f = false;
+}
+
+TypeId SixLowPanMesh::GetTypeId (void)
+{
+  static TypeId tid = TypeId ("ns3::SixLowPanMesh")
+    .SetParent<Header> ()
+    .SetGroupName ("SixLowPan")
+    .AddConstructor<SixLowPanMesh> ();
+  return tid;
+}
+
+TypeId SixLowPanMesh::GetInstanceTypeId (void) const
+{
+  return GetTypeId ();
+}
+
+void SixLowPanMesh::Print (std::ostream & os) const
+{
+  os << "Hops left: " << +m_hopsLeft << ", src: ";
+  if (Mac64Address::IsMatchingType (m_src))
+    {
+      os << Mac64Address::ConvertFrom (m_src);
+    }
+  else
+    {
+      os << Mac16Address::ConvertFrom (m_src);
+    }
+  os << ", dst: ";
+  if (Mac64Address::IsMatchingType (m_dst))
+    {
+      os << Mac64Address::ConvertFrom (m_dst);
+    }
+  else
+    {
+      os << Mac16Address::ConvertFrom (m_dst);
+    }
+}
+
+uint32_t SixLowPanMesh::GetSerializedSize () const
+{
+  uint32_t serializedSize = 1;
+
+  if (m_hopsLeft >= 0xF)
+    {
+      serializedSize++;
+    }
+
+  if (m_v)
+    {
+      serializedSize += 2;
+    }
+  else
+    {
+      serializedSize += 8;
+    }
+
+  if (m_f)
+    {
+      serializedSize += 2;
+    }
+  else
+    {
+      serializedSize += 8;
+    }
+
+  return serializedSize;
+}
+
+void SixLowPanMesh::Serialize (Buffer::Iterator start) const
+{
+  Buffer::Iterator i = start;
+
+  uint8_t dispatch = 0x80;
+
+  if (m_v)
+    {
+      dispatch |= 0x20;
+    }
+  if (m_f)
+    {
+      dispatch |= 0x10;
+    }
+
+  if (m_hopsLeft < 0xF)
+    {
+      dispatch |= m_hopsLeft;
+      i.WriteU8 (dispatch);
+    }
+  else
+    {
+      dispatch |= 0xF;
+      i.WriteU8 (dispatch);
+      i.WriteU8 (m_hopsLeft);
+    }
+
+  uint8_t buffer[8];
+
+  m_src.CopyTo (buffer);
+  if (m_v)
+    {
+      i.Write (buffer, 2);
+    }
+  else
+    {
+      i.Write (buffer, 8);
+    }
+
+  m_dst.CopyTo (buffer);
+  if (m_f)
+    {
+      i.Write (buffer, 2);
+    }
+  else
+    {
+      i.Write (buffer, 8);
+    }
+}
+
+uint32_t SixLowPanMesh::Deserialize (Buffer::Iterator start)
+{
+  Buffer::Iterator i = start;
+  uint8_t temp = i.ReadU8 ();
+
+  if ((temp & 0xC0) != 0x80)
+    {
+      return 0;
+    }
+
+  m_v = temp & 0x20;
+  m_f = temp & 0x10;
+  m_hopsLeft = temp & 0xF;
+
+  if (m_hopsLeft == 0xF)
+    {
+      m_hopsLeft = i.ReadU8 ();
+    }
+
+  uint8_t buffer[8];
+  uint8_t addrSize;
+
+  if (m_v)
+    {
+      addrSize = 2;
+    }
+  else
+    {
+      addrSize = 8;
+    }
+  i.Read (buffer, addrSize);
+  m_src.CopyFrom (buffer, addrSize);
+
+  if (m_f)
+    {
+      addrSize = 2;
+    }
+  else
+    {
+      addrSize = 8;
+    }
+  i.Read (buffer, addrSize);
+  m_dst.CopyFrom (buffer, addrSize);
+
+  return GetSerializedSize ();
+}
+
+void SixLowPanMesh::SetOriginator (Address originator)
+{
+  if (Mac64Address::IsMatchingType (originator))
+    {
+      m_v = false;
+    }
+  else if (Mac16Address::IsMatchingType (originator))
+    {
+      m_v = true;
+    }
+  else
+    {
+      NS_ABORT_MSG ("SixLowPanMesh::SetOriginator - incompatible address");
+    }
+
+  m_src = originator;
+}
+
+Address SixLowPanMesh::GetOriginator (void) const
+{
+  return m_src;
+}
+
+void SixLowPanMesh::SetFinalDst (Address finalDst)
+{
+  if (Mac64Address::IsMatchingType (finalDst))
+    {
+      m_f = false;
+    }
+  else if (Mac16Address::IsMatchingType (finalDst))
+    {
+      m_f = true;
+    }
+  else
+    {
+      NS_ABORT_MSG ("SixLowPanMesh::SetFinalDst - incompatible address");
+    }
+
+  m_dst = finalDst;
+}
+
+Address SixLowPanMesh::GetFinalDst (void) const
+{
+  return m_dst;
+}
+
+void SixLowPanMesh::SetHopsLeft (uint8_t hopsLeft)
+{
+  m_hopsLeft = hopsLeft;
+}
+
+uint8_t SixLowPanMesh::GetHopsLeft (void) const
+{
+  return m_hopsLeft;
+}
+
+std::ostream & operator << (std::ostream & os, const SixLowPanMesh & h)
+{
+  h.Print (os);
+  return os;
+}
 
 }
 

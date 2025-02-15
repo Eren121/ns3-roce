@@ -34,7 +34,6 @@
 #include "ns3/ipv4.h"
 #include "ns3/ipv4-routing-protocol.h"
 #include "ns3/ipv4-list-routing.h"
-#include "ns3/mpi-interface.h"
 #include "global-router-interface.h"
 #include "global-route-manager-impl.h"
 #include "candidate-queue.h"
@@ -151,7 +150,7 @@ SPFVertex::~SPFVertex ()
   // delete children
   while (m_children.size () > 0)
     {
-      // pop out children one by one. Some children may disapper 
+      // pop out children one by one. Some children may disappear 
       // when deleting some other children in the list. As a result,
       // it is necessary to use pop to walk through all children, instead
       // of using iterator.
@@ -711,7 +710,7 @@ GlobalRouteManagerImpl::InitializeRoutes ()
       Ptr<GlobalRouter> rtr = 
         node->GetObject<GlobalRouter> ();
 
-      uint32_t systemId = MpiInterface::GetSystemId ();
+      uint32_t systemId = Simulator::GetSystemId ();
       // Ignore nodes that are not assigned to our systemId (distributed sim)
       if (node->GetSystemId () != systemId) 
         {

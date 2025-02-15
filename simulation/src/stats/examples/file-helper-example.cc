@@ -34,11 +34,11 @@ using namespace ns3;
 
 NS_LOG_COMPONENT_DEFINE ("FileHelperExample");
 
-//
-// This is our test object, an object that increments a counter according
-// to a Poisson process, and exports the (integer-valued) count as a
-// trace source.
-//
+/**
+ * This is our test object, an object that increments a counter according
+ * to a Poisson process, and exports the (integer-valued) count as a
+ * trace source.
+ */
 class Emitter : public Object
 {
 public:
@@ -50,10 +50,11 @@ public:
   Emitter ();
 private:
   void DoInitialize (void);
+  /// Counts how many time this function is called.
   void Count (void);
 
-  TracedValue<uint32_t> m_counter;
-  Ptr<ExponentialRandomVariable> m_var;
+  TracedValue<uint32_t> m_counter; //!< Simple counter
+  Ptr<ExponentialRandomVariable> m_var; //!< Random number generator.
 
 };
 
@@ -92,14 +93,14 @@ void
 Emitter::Count (void)
 {
   NS_LOG_FUNCTION (this);
-  NS_LOG_DEBUG ("Counting at " << Simulator::Now ().GetSeconds ());
+  NS_LOG_DEBUG ("Counting at " << Simulator::Now ().As (Time::S));
   m_counter += 1.0;
   Simulator::Schedule (Seconds (m_var->GetValue ()), &Emitter::Count, this);
 }
 
 int main (int argc, char *argv[])
 {
-  CommandLine cmd;
+  CommandLine cmd (__FILE__);
   cmd.Parse (argc, argv);
 
   //

@@ -1,3 +1,4 @@
+from __future__ import print_function
 import ns.point_to_point
 import ns.csma
 import ns.wifi
@@ -5,20 +6,19 @@ import ns.bridge
 import ns.internet
 import ns.mesh
 import ns.wimax
-import ns.wimax
 import ns.lte
 
-import gobject
+from gi.repository import GObject
 import os.path
 import sys
 
 PIXELS_PER_METER = 3.0 # pixels-per-meter, at 100% zoom level
 
-## PyVizObject class 
-class PyVizObject(gobject.GObject):
-    ## @var __gtype_name__
-    #  global type name
-    __gtype_name__ = "PyVizObject"  
+## PyVizObject class
+class PyVizObject(GObject.GObject):
+    ##  global type name
+    __gtype_name__ = "PyVizObject"
+
     ## Returns tooltip text string.
     #
     ## @param tooltip: tooltip object.
@@ -33,8 +33,8 @@ class Link(PyVizObject):
 
 ## InformationWindow class
 class InformationWindow(object):
-    ## update function 
-    #    
+    ## update function
+    #
     ## @return: NotImplementedError exception
     def update(self):
         raise NotImplementedError
@@ -42,16 +42,17 @@ class InformationWindow(object):
 ## NetDeviceTraits class
 class NetDeviceTraits(object):
     ## class variables
-    ## @var is_wireless 
+    ## @var is_wireless
     #  is wireless
     ## @var is_virtual
     #  is virtual
     def __init__(self, is_wireless=None, is_virtual=False):
-        ''' Initialize function.
-       
+        """!
+        Initialize function.
+        @param self The current class
         @param is_wireless is wireless flag
         @param is_virtual is virtual flag
-        '''
+        """
         assert is_virtual or is_wireless is not None
         self.is_wireless = is_wireless
         self.is_virtual = is_virtual
@@ -126,15 +127,15 @@ def load_plugins():
             continue
         try:
             plugin_module = __import__(name)
-        except ImportError, ex:
-            print >> sys.stderr, "Could not load plugin %r: %s" % (filename, str(ex))
+        except ImportError as ex:
+            print("Could not load plugin %r: %s" % (filename, str(ex)), file=sys.stderr)
             continue
         try:
             plugin_func = plugin_module.register
         except AttributeError:
-            print >> sys.stderr, "Plugin %r has no 'register' function" % name
+            print("Plugin %r has no 'register' function" % name, file=sys.stderr)
         else:
-            #print >> sys.stderr, "Plugin %r registered" % name
+            #print("Plugin %r registered" % name, file=sys.stderr)
             register_plugin(plugin_func, name, plugin_module)
     sys.path = old_path
 

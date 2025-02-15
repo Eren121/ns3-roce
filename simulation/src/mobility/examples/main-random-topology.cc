@@ -22,6 +22,11 @@
 
 using namespace ns3;
 
+/**
+ * Function called when there is a course change
+ * \param context event context
+ * \param position a pointer to the mobility model
+ */
 static void 
 CourseChange (std::string context, Ptr<const MobilityModel> position)
 {
@@ -32,7 +37,7 @@ CourseChange (std::string context, Ptr<const MobilityModel> position)
 
 int main (int argc, char *argv[])
 {
-  CommandLine cmd;
+  CommandLine cmd (__FILE__);
   cmd.Parse (argc, argv);
 
 

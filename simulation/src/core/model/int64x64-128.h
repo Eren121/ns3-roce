@@ -20,20 +20,30 @@
 #include "ns3/core-config.h"
 
 #if !defined(INT64X64_128_H) && defined (INT64X64_USE_128) && !defined(PYTHON_SCAN)
+/**
+ * \ingroup highprec
+ * Use uint128_t for int64x64_t implementation
+ */
 #define INT64X64_128_H
 
 #include <stdint.h>
 #include <cmath>  // pow
 
 #if defined(HAVE___UINT128_T) && !defined(HAVE_UINT128_T)
+/**
+ * \ingroup highprec
+ * Some compilers do not have this defined, so we define it.
+ * @{
+ */
 typedef __uint128_t uint128_t;
 typedef __int128_t int128_t;
+/** @} */
 #endif
 
 /**
  * \file
  * \ingroup highprec
- * Declaration of the ns3::int64x64_t type using a native int128_t type..
+ * Declaration of the ns3::int64x64_t type using a native int128_t type.
  */
 
 namespace ns3 {
@@ -45,7 +55,7 @@ namespace ns3 {
 class int64x64_t
 {
   /// uint128_t high bit (sign bit).
-  static const uint128_t   HP128_MASK_HI_BIT = (((int128_t)1)<<127);
+  static const uint128_t   HP128_MASK_HI_BIT = (((int128_t)1) << 127);
   /// Mask for fraction part.
   static const uint64_t    HP_MASK_LO = 0xffffffffffffffffULL;
   /// Mask for sign + integer part.
@@ -73,7 +83,8 @@ public:
    * specifically the double implementation.  To handle this,
    * we expose the underlying implementation type here.
    */
-  enum impl_type {
+  enum impl_type
+  {
     int128_impl,  //!< Native \c int128_t implementation.
     cairo_impl,   //!< Cairo wideint implementation.
     ld_impl,      //!< `long double` implementation.
@@ -84,13 +95,17 @@ public:
 
   /// Default constructor.
   inline int64x64_t ()
-    : _v (0)  {}
+    : _v (0)
+  {}
   /**
    * \name Construct from a floating point value.
+   */
+  /**
+   * @{
+   * Constructor from a floating point.
    *
    * \param [in] value Floating value to represent.
    */
-  /**@{*/
   inline int64x64_t (const double value)
   {
     const int64x64_t tmp ((long double)value);
@@ -117,8 +132,8 @@ public:
     const uint64_t lo = flo;
     if (flo >= HP_MAX_64)
       {
-	// conversion to uint64 rolled over
-	++hi;
+        // conversion to uint64 rolled over
+        ++hi;
       }
     _v = hi << 64;
     _v |= lo;
@@ -128,22 +143,25 @@ public:
 
   /**
    * \name Construct from an integral type.
+   */
+  /**@{*/
+  /**
+   * Construct from an integral type.
    *
    * \param [in] v Integer value to represent.
    */
-  /**@{*/
   inline int64x64_t (const int v)
     : _v (v)
   {
     _v <<= 64;
   }
   inline int64x64_t (const long int v)
-    : _v (v) 
+    : _v (v)
   {
     _v <<= 64;
   }
   inline int64x64_t (const long long int v)
-    : _v (v) 
+    : _v (v)
   {
     _v <<= 64;
   }
@@ -153,17 +171,20 @@ public:
     _v <<= 64;
   }
   inline int64x64_t (const unsigned long int v)
-    : _v (v) 
+    : _v (v)
   {
     _v <<= 64;
   }
   inline int64x64_t (const unsigned long long int v)
-    : _v (v) 
+    : _v (v)
   {
     _v <<= 64;
   }
+  inline int64x64_t (const int128_t v)
+    : _v (v)
+  {}
   /**@}*/
-  
+
   /**
    * Construct from explicit high and low values.
    *
@@ -182,7 +203,8 @@ public:
    * \param [in] o Value to copy.
    */
   inline int64x64_t (const int64x64_t & o)
-    : _v (o._v) {}
+    : _v (o._v)
+  {}
   /**
    * Assignment.
    *
@@ -193,6 +215,12 @@ public:
   {
     _v = o._v;
     return *this;
+  }
+
+  /** Explicit bool conversion. */
+  inline explicit operator bool () const
+  {
+    return (_v != 0);
   }
 
   /**
@@ -233,6 +261,37 @@ public:
   }
 
   /**
+   * Truncate to an integer.
+   * Truncation is always toward zero, 
+   * \return The value truncated toward zero.
+   */
+  int64_t GetInt (void) const
+  {
+    const bool negative = _v < 0;
+    const uint128_t value = negative ? -_v : _v;
+    int64_t retval = value >> 64;
+    retval = negative ? - retval : retval;
+    return retval;
+  }
+
+  /**
+   * Round to the nearest int.
+   * Similar to std::round this rounds halfway cases away from zero,
+   * regardless of the current (floating) rounding mode.
+   * \return The value rounded to the nearest int.
+   */
+  int64_t Round (void) const
+  {
+    const bool negative = _v < 0;
+    int64x64_t value = (negative ? -(*this) : *this);
+    const int64x64_t half (0, 1LL << 63);
+    value += half;
+    int64_t retval = value.GetHigh ();
+    retval = negative ? - retval : retval;
+    return retval;
+  }
+
+  /**
    * Multiply this value by a Q0.128 value, presumably representing an inverse,
    * completing a division operation.
    *
@@ -259,24 +318,65 @@ public:
 
 private:
 
-  friend bool         operator == (const int64x64_t & lhs, const int64x64_t & rhs);
+  /**
+   * \name Arithmetic Operators
+   * Arithmetic operators for int64x64_t.
+   */
+  /**
+   * @{
+   *  Arithmetic operator.
+   *  \param [in] lhs Left hand argument
+   *  \param [in] rhs Right hand argument
+   *  \return The result of the operator.
+   */
+  // *NS_CHECK_STYLE_OFF*
+  friend inline bool operator == (const int64x64_t & lhs, const int64x64_t & rhs) { return lhs._v == rhs._v; };
+  friend inline bool operator <  (const int64x64_t & lhs, const int64x64_t & rhs) { return lhs._v < rhs._v; };
+  friend inline bool operator >  (const int64x64_t & lhs, const int64x64_t & rhs) { return lhs._v > rhs._v; };
 
-  friend bool         operator <  (const int64x64_t & lhs, const int64x64_t & rhs);
-  friend bool         operator >  (const int64x64_t & lhs, const int64x64_t & rhs);
-  
-  friend int64x64_t & operator += (      int64x64_t & lhs, const int64x64_t & rhs);
-  friend int64x64_t & operator -= (      int64x64_t & lhs, const int64x64_t & rhs);
-  friend int64x64_t & operator *= (      int64x64_t & lhs, const int64x64_t & rhs);
-  friend int64x64_t & operator /= (      int64x64_t & lhs, const int64x64_t & rhs);
+  friend inline int64x64_t & operator += (int64x64_t & lhs, const int64x64_t & rhs)
+    {
+      lhs._v += rhs._v;
+       return lhs;
+    };
+  friend inline int64x64_t & operator -= (int64x64_t & lhs, const int64x64_t & rhs)
+    {
+      lhs._v -= rhs._v;
+      return lhs;
+    };
+  friend inline int64x64_t & operator *= (int64x64_t & lhs, const int64x64_t & rhs)
+    {
+      lhs.Mul (rhs);
+      return lhs;
+    };
+  friend inline int64x64_t & operator /= (int64x64_t & lhs, const int64x64_t & rhs)
+    {
+      lhs.Div (rhs);
+      return lhs;
+    };
+  // *NS_CHECK_STYLE_ON*
+  /**@}*/
 
-  friend int64x64_t   operator -  (const int64x64_t & lhs);
-  friend int64x64_t   operator !  (const int64x64_t & lhs);
+  /**
+   * \name Unary Operators
+   * Unary operators for int64x64_t.
+   */
+  /**
+   * @{
+   *  Unary operator.
+   *  \param [in] lhs Left hand argument
+   *  \return The result of the operator.
+   */
+  friend inline int64x64_t   operator +  (const int64x64_t & lhs) { return lhs; };
+  friend inline int64x64_t   operator -  (const int64x64_t & lhs) { return int64x64_t (-lhs._v); };
+  friend inline int64x64_t   operator !  (const int64x64_t & lhs) { return int64x64_t (!lhs._v); };
+  /**@}*/
 
   /**
    * Implement `*=`.
    *
    * \param [in] o The other factor.
-   */   
+   */
   void Mul (const int64x64_t & o);
   /**
    * Implement `/=`.
@@ -328,105 +428,10 @@ private:
    */
   static uint128_t UmulByInvert (const uint128_t a, const uint128_t b);
 
-  /**
-   * Construct from an integral type.
-   *
-   * \param [in] v Integer value to represent.
-   */
-  inline int64x64_t (const int128_t v)
-    : _v (v) {}
-
   int128_t _v;  //!< The Q64.64 value.
 
 };  // class int64x64_t
 
-
-/**
- * \ingroup highprec
- * Equality operator.
- */
-inline bool operator == (const int64x64_t & lhs, const int64x64_t & rhs)
-{
-  return lhs._v == rhs._v;
-}
-/**
- * \ingroup highprec
- * Less than operator.
- */
-inline bool operator < (const int64x64_t & lhs, const int64x64_t & rhs)
-{
-  return lhs._v < rhs._v;
-}
-/**
- * \ingroup highprec
- * Greater operator.
- */
-inline bool operator > (const int64x64_t & lhs, const int64x64_t & rhs)
-{
-  return lhs._v > rhs._v;
-}
-
-/**
- * \ingroup highprec
- * Compound addition operator.
- */
-inline int64x64_t & operator += (int64x64_t & lhs, const int64x64_t & rhs)
-{
-  lhs._v += rhs._v;
-  return lhs;
-}
-/**
- * \ingroup highprec
- * Compound subtraction operator.
- */
-inline int64x64_t & operator -= (int64x64_t & lhs, const int64x64_t & rhs)
-{
-  lhs._v -= rhs._v;
-  return lhs;
-}
-/**
- * \ingroup highprec
- * Compound multiplication operator.
- */
-inline int64x64_t & operator *= (int64x64_t & lhs, const int64x64_t & rhs)
-{
-  lhs.Mul (rhs);
-  return lhs;
-}
-/**
- * \ingroup highprec
- * Compound division operator.
- */
-inline int64x64_t & operator /= (int64x64_t & lhs, const int64x64_t & rhs)
-{
-  lhs.Div (rhs);
-  return lhs;
-}
-
-/**
- * \ingroup highprec
- * Unary plus operator.
- */
-inline int64x64_t operator + (const int64x64_t & lhs)
-{
-  return lhs;
-}
-/**
- * \ingroup highprec
- * Unary negation operator (change sign operator).
- */
-inline int64x64_t operator - (const int64x64_t & lhs)
-{
-  return int64x64_t (-lhs._v);
-}
-/**
- * \ingroup highprec
- * Logical not operator.
- */
-inline int64x64_t operator ! (const int64x64_t & lhs)
-{
-  return int64x64_t (!lhs._v);
-}
 
 
 } // namespace ns3
