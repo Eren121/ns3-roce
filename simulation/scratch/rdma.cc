@@ -411,6 +411,11 @@ void RunFlow(ScheduledFlow flow)
 	{
 		static uint16_t unique_port = 10;
 
+		if(flow.bandwidth_percent <= 0.0) {
+			NS_LOG_INFO("Skipping flow because bandwidth percent is zero");
+			continue;
+		}
+
 		RdmaUnicastAppHelper app_helper;
 		app_helper.SetAttribute("SrcNode", UintegerValue(flow.src));
 		app_helper.SetAttribute("DstNode", UintegerValue(flow.dst));
