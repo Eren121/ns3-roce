@@ -9,16 +9,33 @@ import subprocess as sp
 import joblib
 
 
-def build_template_file(in_path: str, vars: dict):
+def write_to_file(file: pathlib.Path, content: str) -> None:
+    with open(file, "w") as text_file:
+        text_file.write(content)
+
+
+def read_all_file(file: pathlib.Path) -> str:
+    with open(file, "r") as text_file:
+        return text_file.read()
+    return ""
+
+
+def build_template_file(in_path: str, vars: dict, out_dir: str = None):
     """
     Read a jinja2 template from `in_path` and build it into a NamedTemporaryFile which is returned.
-    The temporary file's parent directory is this python file's directory.
+    The temporary file parent directory is this python file directory.
     Params:
         vars: List of key-value variables for the jinja template. Value is stringified automatically.
     """
+
+    if out_dir is None:
+        out_dir = pathlib.Path(__file__).parent.as_posix()
+
+    out_dir.mkdir(parents=True, exist_ok=True)
+
     # Make output temporary file in current directory
-    # Needed because Docker cannot acces host's `/tmp` directory.
-    out_file = tempfile.NamedTemporaryFile(dir=pathlib.Path(__file__).parent.as_posix())
+    # Needed because Docker cannot acces host"s `/tmp` directory.
+    out_file = tempfile.NamedTemporaryFile(dir=out_dir)
     print(f"Build template in_file='{in_path}' out_file='{out_file.name}'")
     # Jinja do not take absolute path, so hack around.
     jinja_env = jinja2.Environment(loader=jinja2.FileSystemLoader(searchpath=in_path.parent.as_posix()))
@@ -32,6 +49,7 @@ def build_template_file(in_path: str, vars: dict):
 
 def print_each_line(line: str) -> None:
     print(line, end="")
+
 
 def run_process(argv: list, each_line=print_each_line) -> None:
     """
@@ -58,6 +76,6 @@ def run_process(argv: list, each_line=print_each_line) -> None:
         raise Exception(f"Error: process exited with return code {proc.returncode}")
 
 
-def parallel_for(data: list, func):
-    results = joblib.Parallel(n_jobs=-1)(joblib.delayed(func)(i) for i in data)
+def parallel_for(data: list, func, jobs: int = 0):
+    results = joblib.Parallel(n_jobs=(-1 if jobs <= 0 else jobs))(joblib.delayed(func)(i) for i in data)
     return results

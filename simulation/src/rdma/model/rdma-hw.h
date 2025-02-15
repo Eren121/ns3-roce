@@ -5,12 +5,37 @@
 #include <ns3/rdma-queue-pair.h>
 #include <ns3/node.h>
 #include <ns3/custom-header.h>
+#include <ns3/json.h>
 #include "qbb-net-device.h"
 #include <unordered_map>
 #include <functional>
 #include "pint.h"
 
 namespace ns3 {
+
+enum FlowType {
+	Flow, Allgather
+};
+
+NLOHMANN_JSON_SERIALIZE_ENUM(FlowType, {
+	{FlowType::Flow, "flow"},
+	{FlowType::Allgather, "allgather"}
+});
+
+struct ScheduledFlow {
+	FlowType type;
+	uint32_t src{};
+	uint32_t dst{};
+	uint16_t dst_port{};
+	uint64_t size{};
+	double start_time{};
+	uint32_t priority{};
+	bool reliable{};
+	bool multicast{};
+	double bandwidth_percent{1};
+	std::string output_file;
+	NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(ScheduledFlow, type, src, dst, dst_port, size, start_time, priority, reliable, multicast, bandwidth_percent, output_file);
+};
 
 class RdmaHw : public Object {
 public:

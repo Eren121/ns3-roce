@@ -15,27 +15,45 @@ namespace ns3 {
 
 class QbbNetDevice;
 
+/**
+ * \brief Common base to UD and RC SQs.
+ */
 class RdmaTxQueuePair : public Object
 { 
 public:
+	/**
+	 * \param node Node associated to this SQ.
+	 * \param pg Priority
+	 * \param sip Source IP.
+	 * \param sport Source port.
+	 */
 	RdmaTxQueuePair(Ptr<Node> node, uint16_t pg, Ipv4Address sip, uint16_t sport);
 	~RdmaTxQueuePair() override;
 
+	/**
+	 * \return The device associated to this SQ.
+	 */
 	Ptr<QbbNetDevice> GetDevice();
 
+	/**
+	 * \brief Callback called when the send request is completed.
+	 */
 	using OnSendCallback = std::function<void()>;
 	
+	/**
+	 * @brief Equivalent of `ibv_send_wr()`.
+	 */
 	struct SendRequest
 	{
-		uint32_t payload_size{};
-		uint32_t imm{};
-		bool multicast{};
-		Ipv4Address dip{}; // Only for unreliable
-		uint16_t dport{};  // Only for unreliable
-		OnSendCallback on_send{}; // For unreliable: called when sent, for reliable: called when ACKed.
+		uint32_t payload_size{}; //!< How much bytes to write.
+		uint32_t imm{}; //!< Immediate data.
+		bool multicast{}; //!< Is `dip` a multicast group?
+		Ipv4Address dip{}; //!< Note: Only for UD SQ.
+		uint16_t dport{};  //!< Note: Only for UD SQ.
+		OnSendCallback on_send{}; //!< For UD QP: called when the packet leaves the NIC; For RC QP: called when ACKed.
 	
 		// Private
-		uint64_t first_psn{};
+		uint64_t first_psn{}; //!< First PSN of the QP associated to this send request.
 
 		uint64_t GetEndPSN() const { return first_psn + payload_size; }
 	};
@@ -46,7 +64,7 @@ public:
 	}
 
 	/**
-	 * @returns true When this SQ is ready to send and a next packet is available.
+	 * \returns true When this SQ is ready to send and a next packet is available.
 	 */
 	virtual bool IsReadyToSend() const
 	{
@@ -54,7 +72,7 @@ public:
 	}
 
 	/**
-	 * @returns true When the QP can be deleted.
+	 * \returns true When the QP can be deleted.
 	 */
 	virtual bool IsFinished() const
 	{
@@ -75,6 +93,9 @@ public:
 	{
 		return m_nextAvail;
 	}
+
+	void TriggerDevTransmit();
+
 
 	/***********
 	 * methods
@@ -100,6 +121,10 @@ public:
 	}
 
 	void StopTimers();
+
+	void SetRateFactor(double rate_factor);
+	void SetMaxRate(DataRate data_rate);
+	DataRate GetMaxRate() const;
 
 protected:
 	Ptr<Node> m_node{};
@@ -163,6 +188,9 @@ protected:
 		DataRate m_curRate;
 		uint32_t m_incStage;
 	} hpccPint{};
+
+private:
+	double m_rate_multiplier{1.0}; //!< Limit the rate from the max. rate by this factor.
 };
 
 using RdmaImm = uint32_t;

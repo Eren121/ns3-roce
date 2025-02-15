@@ -1,16 +1,17 @@
 {
+    "enable_pfc":                      true,
     "enable_qcn":                      true,
     "use_dynamic_pfc_threshold":       true,
 
     "packet_payload_size":             1500,
 
-    "topology_file":                   "{{ IN_DIR }}/topology.json",
-    "flow_file":                       "{{ IN_DIR }}/flow.json",
-    "groups_file":                     "{{ IN_DIR }}/groups.json",
-    "trace_file":                      "{{ IN_DIR }}/trace.txt",
-    "trace_output_file":               "{{ OUT_DIR }}/trace.tr",
-    "fct_output_file":                 "{{ OUT_DIR }}/fct.txt",
-    "pfc_output_file":                 "{{ OUT_DIR }}/pfc.txt",
+    "topology_file":                   "topology.json",
+    "flow_file":                       "flow.json",
+    "groups_file":                     "groups.json",
+    "trace_file":                      "trace.txt",
+    "trace_output_file":               "trace.tr",
+    "fct_output_file":                 "fct.txt",
+    "pfc_output_file":                 "pfc.txt",
 
     "simulator_stop_time":             1e9,
 
@@ -25,8 +26,8 @@
     "rate_hai":                        "100Mb/s",
     "min_rate":                        "100Mb/s",
     "dctcp_rate_ai":                   "1000Mb/s",
-
-    "error_rate_per_link":             {{ ERROR_RATE_PER_LINK }},
+    
+    "error_rate_per_link":             0.0,
     "l2_chunk_size":                   4000,
     "l2_ack_interval":                 4000,
     "l2_back_to_zero":                 false,
@@ -75,7 +76,7 @@
     ],
 
     "buffer_size":                     32,
-    "qlen_mon_file":                   "{{ OUT_DIR }}/qlen.txt",
+    "qlen_mon_file":                   "qlen.txt",
     "qlen_mon_start":                  2000000000,
     "qlen_mon_end":                    2010000000,
 

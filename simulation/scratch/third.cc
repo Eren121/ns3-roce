@@ -41,9 +41,13 @@
 #include <ns3/animation-interface.h>
 #include <ns3/constant-position-mobility-model.h>
 #include <ns3/mobility-helper.h>
+#include <filesystem>
 
 using namespace ns3;
+namespace fs = std::filesystem;
 using json = nlohmann::json;
+
+fs::path config_dir;
 
 NS_LOG_COMPONENT_DEFINE("GENERIC_SIMULATION");
 
@@ -161,19 +165,6 @@ struct SimConfig
 		l2_chunk_size, l2_ack_interval, l2_back_to_zero, nak_interval, has_win, global_t, var_win, fast_react,
 		u_target, mi_thresh, int_multi, multi_rate, sample_feedback, pint_log_base, pint_prob, rate_bound, ack_high_prio, link_down, enable_trace,
 		kmax_map, kmin_map, pmax_map, buffer_size, qlen_mon_file, qlen_mon_start, qlen_mon_end, rng_seed);
-};
-
-
-struct ScheduledFlow {
-	uint32_t src = 0;
-	uint32_t dst = 1;
-	uint16_t dst_port = 1000;
-	uint64_t size = 100;
-	double start_time = 0;
-	uint32_t priority = 3;
-	bool reliable = true;
-	bool multicast = false;
-	NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(ScheduledFlow, src, dst, dst_port, size, start_time, priority, reliable, multicast);
 };
 
 class FlowsConfig
@@ -403,12 +394,19 @@ void RunFlow(ScheduledFlow flow)
 	}
 
 	if(flow.multicast) {
-		// We use IP as an index for the multicsat group (simpler than using real multicast address)
+		// We use IP as an index for the multicsat group (simpler than using IGMP multicast address)
 		dip = Ipv4Address(flow.dst);
 	}
 
 	
-	if(false)
+	std::cout << "Running flow " << Simulator::Now() << json(flow) << std::endl;
+
+	if(!flow.output_file.empty()) {
+		// Make relative to config directory
+		flow.output_file = (config_dir / flow.output_file);
+	}
+
+	if(flow.type == FlowType::Flow)
 	{
 		static uint16_t unique_port = 10;
 
@@ -422,21 +420,21 @@ void RunFlow(ScheduledFlow flow)
 		app_helper.SetAttribute("Window", UintegerValue(win));
 		app_helper.SetAttribute("Mtu", UintegerValue(1500));
 		app_helper.SetAttribute("Multicast", BooleanValue(flow.multicast));
+		app_helper.SetAttribute("RateFactor", DoubleValue(flow.bandwidth_percent));
 	
-		std::cout << "Running flow " << Simulator::Now() << json(flow) << std::endl;
-
 		ApplicationContainer app_con = app_helper.Install(n);
 		app_con.Start(Time(0));
 	
 		return;
 	}
-
-	RdmaClientHelper clientHelper(flow.priority, sip, dip, src_port, flow.dst_port, flow.size, win, baseRtt);
-
-	// raf quick test to replace flow by multicast, run on all nodes
-	//ApplicationContainer appCon = clientHelper.Install(n.Get(flow.src));
-	ApplicationContainer appCon = clientHelper.Install(n);
-	appCon.Start(Time(0));
+	else if(flow.type == FlowType::Allgather) {
+		RdmaClientHelper clientHelper(flow, win);
+		ApplicationContainer appCon = clientHelper.Install(n);
+		appCon.Start(Time(0));
+	}
+	else {
+		NS_ABORT_MSG("Unknown flow type");
+	}
 }
 
 void ScheduleFlowInputs()
@@ -445,9 +443,13 @@ void ScheduleFlowInputs()
 	while(flowsConfig.GetNextFlow(flow)) {
 		
 		const Time when = Seconds(flow.start_time) - Simulator::Now();
-		NS_ABORT_IF(IsSwitchNode(n.Get(flow.src)));
-		if(!flow.multicast) {
-			NS_ABORT_IF(IsSwitchNode(n.Get(flow.dst)));
+
+		if(flow.type == FlowType::Flow) {
+			NS_ABORT_IF(IsSwitchNode(n.Get(flow.src)));
+			
+			if(!flow.multicast) {
+				NS_ABORT_IF(IsSwitchNode(n.Get(flow.dst)));
+			}
 		}
 
 		Simulator::Schedule(when, RunFlow, flow);
@@ -659,6 +661,8 @@ int main(int argc, char *argv[])
 		WarnInvalidKeys<SimConfig>(j);
 	}
 
+	config_dir = fs::path{argv[1]}.parent_path();
+
 	Config::SetDefault("ns3::QbbNetDevice::PauseTime", UintegerValue(simConfig.pause_time));
 	Config::SetDefault("ns3::QbbNetDevice::QbbEnabled", BooleanValue(simConfig.enable_pfc));
 	Config::SetDefault("ns3::QbbNetDevice::DynamicThreshold", BooleanValue(simConfig.use_dynamic_pfc_threshold));
@@ -684,16 +688,16 @@ int main(int argc, char *argv[])
 
 	//SeedManager::SetSeed(time(NULL));
 
-	const TopoConfig topo = json::parse(std::ifstream(simConfig.topology_file));
+	const TopoConfig topo = json::parse(std::ifstream((config_dir / simConfig.topology_file).c_str()));
 	std::ifstream tracef;
 
 	{
-		const json j = json::parse(std::ifstream(simConfig.flow_file));
+		const json j = json::parse(std::ifstream((config_dir / simConfig.flow_file).c_str()));
 		flowsConfig = FlowsConfig::Json(j);
 		flowsConfig.Finished();
 	}
 	
-	tracef.open(simConfig.trace_file.c_str());
+	tracef.open((config_dir / simConfig.trace_file).c_str());
 	NS_ABORT_MSG_IF(!tracef, "Cannot open input trace file");
 
 	uint32_t trace_num;
@@ -752,7 +756,7 @@ int main(int argc, char *argv[])
 	rem->SetAttribute("ErrorRate", DoubleValue(simConfig.error_rate_per_link));
 	rem->SetAttribute("ErrorUnit", StringValue("ERROR_UNIT_PACKET"));
 
-	FILE *pfc_file = fopen(simConfig.pfc_output_file.c_str(), "w");
+	FILE *pfc_file = fopen((config_dir / simConfig.pfc_output_file).c_str(), "w");
 
 	QbbHelper qbb;
 	Ipv4AddressHelper ipv4;
@@ -852,7 +856,7 @@ int main(int argc, char *argv[])
 	}
 
 	#if ENABLE_QP
-	FILE *fct_output = fopen(simConfig.fct_output_file.c_str(), "w");
+	FILE *fct_output = fopen((config_dir / simConfig.fct_output_file).c_str(), "w");
 	//
 	// install RDMA driver
 	//
@@ -972,7 +976,7 @@ int main(int argc, char *argv[])
 		trace_nodes = NodeContainer(trace_nodes, n.Get(nid));
 	}
 
-	FILE *trace_output = fopen(simConfig.trace_output_file.c_str(), "w");
+	FILE *trace_output = fopen((config_dir / simConfig.trace_output_file).c_str(), "w");
 	NS_ABORT_MSG_IF(!trace_output, "Cannot open output trace file");
 	if (simConfig.enable_trace)
 		qbb.EnableTracing(trace_output, trace_nodes);
@@ -996,7 +1000,7 @@ int main(int argc, char *argv[])
 
 	{
 		MCastConfig mcastConfig;
-		mcastConfig.ParseFromFile(simConfig.groups_file);
+		mcastConfig.ParseFromFile((config_dir / simConfig.groups_file).string());
 		MCastNetwork mcastNet(mcastConfig);
 
 		for(const MCastConfig::Group& group : mcastConfig.groups) {
@@ -1030,7 +1034,7 @@ int main(int argc, char *argv[])
 	}
 
 	// schedule buffer monitor
-	FILE* qlen_output = fopen(simConfig.qlen_mon_file.c_str(), "w");
+	FILE* qlen_output = fopen((config_dir / simConfig.qlen_mon_file).c_str(), "w");
 	Simulator::Schedule(NanoSeconds(simConfig.qlen_mon_start), &monitor_buffer, qlen_output, &simConfig, &n);
 
 	std::unique_ptr<AnimationInterface> anim;

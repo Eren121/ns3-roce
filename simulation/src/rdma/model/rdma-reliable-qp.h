@@ -37,7 +37,6 @@ private:
 	bool ShouldReqAck(uint64_t payload_size) const;
 	void NotifyPendingCompEvents();
 	void Rollback();
-	void TriggerDevTransmit();
 	void ScheduleRetrTimeout();
 	void OnRetrTimeout();
 

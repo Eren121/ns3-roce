@@ -1,7 +1,7 @@
 TAG = hpcc
 DOCKER_USER ?= -u $(shell id -u):$(shell id -g) # Avoid creating files as root
 DOCKER_MOUNT ?= --mount type=bind,src=.,dst=/app
-DOCKER_RUN ?= docker run --rm $(docker_interactive) $(DOCKER_MOUNT) $(DOCKER_USER) -w /app/simulation -e NS_LOG='$(NS_LOG)' -e CXXFLAGS='-Wall -fdiagnostics-color=always' $(TAG)
+DOCKER_RUN ?= docker run --rm $(docker_interactive) $(DOCKER_MOUNT) $(DOCKER_USER) -w /app/simulation -e NS_LOG='$(NS_LOG)' -e CXXFLAGS='-Wall -fdiagnostics-color=always' -e LD_LIBRARY_PATH=build $(TAG)
 .PHONY: build_image configure build run build_trace
 
 # config file from inside the container path when running ns-3
@@ -39,8 +39,9 @@ distclean:
 
 # Run HPCC
 # Working directory inside the Docker container is "$GIT_ROOT/simulation".
+# Don't use waf because running waf in parallel doeesnt work very well (some clang's waf's files are modified)
 run:
-	$(DOCKER_RUN) python2 waf --run 'scratch/third $(config)'
+	$(DOCKER_RUN) build/scratch/third $(config)
 
 run_gdb:
 	$(DOCKER_RUN) python2 waf --run 'scratch/third' --command-template="gdb -ex run --args %s $(config)"

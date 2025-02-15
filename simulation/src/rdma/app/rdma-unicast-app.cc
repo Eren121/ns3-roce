@@ -3,6 +3,7 @@
 #include <ns3/rdma-hw.h>
 #include <ns3/simulator.h>
 #include <ns3/log.h>
+#include <ns3/double.h>
 
 NS_LOG_COMPONENT_DEFINE("RdmaUnicastApp");
 
@@ -53,6 +54,11 @@ TypeId RdmaUnicastApp::GetTypeId()
                   UintegerValue(0),
                   MakeUintegerAccessor(&RdmaUnicastApp::m_win),
                   MakeUintegerChecker<uint32_t>())
+    .AddAttribute("RateFactor",
+                  "Bound percentage of the link bandwidth.",
+                  DoubleValue(1.0),
+                  MakeDoubleAccessor(&RdmaUnicastApp::m_rate_factor),
+                  MakeDoubleChecker<double>(0.0, 1.0))
 		.AddAttribute("Multicast",
                   "Whether this is a multicast flow",
                   BooleanValue(false),
@@ -95,18 +101,25 @@ void RdmaUnicastApp::InitQP()
 
   const Ptr<RdmaHw> rdma{m_node->GetObject<RdmaHw>()};
   
+  Ptr<RdmaTxQueuePair> tx;
+  Ptr<RdmaRxQueuePair> rx;
+
 	if(m_multicast) {
 		m_ud_qp.sq = CreateObject<RdmaUnreliableSQ>(GetNode(), m_pg, local_ip, local_port);
-	  m_ud_qp.sq->SetMTU(m_mtu);
 	  m_ud_qp.rq = CreateObject<RdmaUnreliableRQ>(m_ud_qp.sq);
-    rdma->RegisterQP(m_ud_qp.sq, m_ud_qp.rq);
+    tx = m_ud_qp.sq;
+    rx = m_ud_qp.rq;
 	}
 	else {
 		m_rc_qp.sq = CreateObject<RdmaReliableSQ>(GetNode(), m_pg, local_ip, local_port, m_peer_ip, m_peer_port);
-	  m_rc_qp.sq->SetMTU(m_mtu);
 	  m_rc_qp.rq = CreateObject<RdmaReliableRQ>(m_rc_qp.sq);
-    rdma->RegisterQP(m_rc_qp.sq, m_rc_qp.rq);
-	}
+    tx = m_rc_qp.sq;
+    rx = m_rc_qp.rq;
+  }
+  
+  tx->SetMTU(m_mtu);
+  tx->SetRateFactor(m_rate_factor);
+  rdma->RegisterQP(tx, rx);
 }
 
 void RdmaUnicastApp::StartApplication()

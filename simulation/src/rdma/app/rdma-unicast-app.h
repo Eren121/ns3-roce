@@ -36,6 +36,7 @@ private:
   uint16_t m_pg{};              //!< Priority group.
   uint32_t m_win{};             //!< Bound of on-the-fly packets.
   bool m_multicast{};           //!< Whether the flow is multicast.
+  double m_rate_factor{1.0};
   RdmaReliableQP m_rc_qp;       //!< Used only for RC flow.
   RdmaUnreliableQP m_ud_qp;     //!< Used only for UD flow.
   OnComplete m_on_complete;

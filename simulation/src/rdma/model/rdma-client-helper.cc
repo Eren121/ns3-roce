@@ -30,13 +30,13 @@ RdmaClientHelper::RdmaClientHelper()
 {
 }
 
-RdmaClientHelper::RdmaClientHelper (uint16_t pg, Ipv4Address sip, Ipv4Address dip, uint16_t sport, uint16_t dport, uint64_t size, uint32_t win, uint64_t baseRtt)
+RdmaClientHelper::RdmaClientHelper (const ScheduledFlow& flow, uint32_t win)
+	: m_flow{flow}
 {
 	m_factory.SetTypeId (RdmaClient::GetTypeId ());
-	SetAttribute ("PriorityGroup", UintegerValue (pg));
-	SetAttribute ("WriteSize", UintegerValue (size));
+	SetAttribute ("PriorityGroup", UintegerValue (flow.priority));
+	SetAttribute ("WriteSize", UintegerValue (flow.size));
 	SetAttribute ("Window", UintegerValue (win));
-	SetAttribute ("BaseRtt", UintegerValue (baseRtt));
 }
 
 void
@@ -63,11 +63,15 @@ RdmaClientHelper::Install (NodeContainer c)
 	const NodeContainer servers{FilterServers(c)};
   ApplicationContainer apps;
 
+	std::shared_ptr<RdmaClient::SharedState> shared_state(new RdmaClient::SharedState());
+	shared_state->flow = m_flow;
+
   for (NodeContainer::Iterator i{servers.Begin()}; i != servers.End (); ++i)
 	{
 		Ptr<Node> server{*i};
 		Ptr<RdmaClient> client{m_factory.Create<RdmaClient>()};
 		client->SetServers(servers);
+		client->SetSharedState(shared_state);
 		const uint32_t app_id{server->AddApplication(client)};
 		NS_ASSERT(app_id == 0);
 		apps.Add(client);

@@ -21,14 +21,7 @@ void RdmaUnreliableSQ::PostSend(RdmaTxQueuePair::SendRequest sr)
 	NS_ASSERT_MSG(sr.payload_size <= m_mtu, "UD QP max. message size is MTU");
 
 	m_to_send.push(std::move(sr));	
-	
-	// Trigger to possibly send
-	if(m_nextAvail <= Simulator::Now()) {
-		Simulator::Schedule(Seconds(0), &QbbNetDevice::TriggerTransmit, GetDevice());
-	}
-	else {
-		Simulator::Schedule(m_nextAvail - Simulator::Now(), &QbbNetDevice::TriggerTransmit, GetDevice());
-	}
+	TriggerDevTransmit();
 }
 
 bool RdmaUnreliableSQ::HasDataToSend() const
@@ -51,7 +44,6 @@ bool RdmaUnreliableSQ::IsReadyToSend() const
 Ptr<Packet> RdmaUnreliableSQ::GetNextPacket()
 {
   NS_LOG_FUNCTION(this);
-
 	if(m_to_send.empty()) {
 		NS_ASSERT(false);
 		return nullptr;
@@ -141,10 +133,14 @@ void RdmaUnreliableRQ::ReceiveUdp(Ptr<Packet> p, const CustomHeader &ch)
 	const uint8_t ecnbits = ch.GetIpv4EcnBits();
 	
 	// If any node in the path encountered congestion, send back an ECN notification (but not too often)
+	// UD QP SHOULD NOT SEND ACK
+	// Reverse multicast, it can overflow the sender
+#if 0
 	if(ecnbits == Ipv4Header::ECN_CE && Simulator::Now() >= m_ecn_next_avail) {
 		m_ecn_next_avail = Simulator::Now() + m_ecn_delay;
 		SendEcn(ch);
 	}
+#endif
 }
 
 void RdmaUnreliableRQ::SendEcn(const CustomHeader& recv)

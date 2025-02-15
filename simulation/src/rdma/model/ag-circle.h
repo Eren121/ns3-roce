@@ -17,18 +17,23 @@ inline T AgCeilDiv(T num, T den)
 
 struct AgConfig
 {
-  using block_id_t = uint32_t;
-  using chunk_id_t = uint32_t;
+  using block_id_t = uint64_t;
+  using chunk_id_t = uint64_t;
 
-  uint32_t chunk_size;
-  uint32_t node_count; //!< Count of nodes in the allgather.
-  uint32_t root_count; //!< Count of multicast roots.
-  uint32_t current_node; //!< Current node ID. In `[0;node_count)`.
+  uint64_t chunk_size;
+  uint64_t node_count; //!< Count of nodes in the allgather.
+  uint64_t root_count; //!< Count of multicast roots.
+  uint64_t current_node; //!< Current node ID. In `[0;node_count)`.
   uint64_t size; //!< Count of bytes to send in each node. At the end of the allgather each node has `size * node_count` bytes.
 
-  uint32_t GetChunkCountPerBlock() const
+  uint64_t GetChunkCountPerBlock() const
   {
-    return AgCeilDiv(size, uint64_t{chunk_size});
+    return AgCeilDiv(size, chunk_size);
+  }
+
+  uint64_t GetTotalChunkCount() const
+  {
+    return GetChunkCountPerBlock() * node_count;
   }
 };
 

@@ -1,13 +1,22 @@
 {
     "flows": [
         {
-            "src": 3,
+            "type": "allgather",
+            "size": 3e8,
+            "start_time": 0,
+            "priority": 3,
+            "dst": 1
+        },
+        {
+            "type": "flow",
+            "src": 4,
             "dst": 1,
-            "size": 1e4,
+            "size": 1e7,
             "start_time": 0,
             "priority": 3,
             "multicast": true,
-            "reliable": true
+            "reliable": false,
+            "bandwidth_percent": {{ background_job_bandwidth_percent }}
         }
     ]
 }

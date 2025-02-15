@@ -41,14 +41,14 @@
 #include <ns3/simulator.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <fstream>
+
+using json = nlohmann::json;
 
 namespace ns3 {
 
 NS_LOG_COMPONENT_DEFINE ("RdmaClient");
 NS_OBJECT_ENSURE_REGISTERED (RdmaClient);
-
-std::unordered_map<RdmaImm, AgRecovery::RecoveryRequest> RdmaClient::m_recovery_request_map;
-int RdmaClient::m_completed_apps = 0;
 
 TypeId
 RdmaClient::GetTypeId()
@@ -70,11 +70,6 @@ RdmaClient::GetTypeId()
                    UintegerValue (0),
                    MakeUintegerAccessor (&RdmaClient::m_win),
                    MakeUintegerChecker<uint32_t> ())
-    .AddAttribute ("BaseRtt",
-                   "Base Rtt",
-                   UintegerValue (0),
-                   MakeUintegerAccessor (&RdmaClient::m_baseRtt),
-                   MakeUintegerChecker<uint64_t> ())
     .AddAttribute("OnFlowFinished",
                   "Callback when the flow finishes",
                   CallbackValue(),
@@ -148,7 +143,7 @@ void RdmaClient::InitLeftRightQP()
 
     NS_LOG_LOGIC("[" << m_config.current_node << "] Received recovery of block " << block);
     
-    auto& my_recover_req = m_recovery_request_map[m_config.current_node];
+    auto& my_recover_req = m_shared->recovery_request_map[m_config.current_node];
     my_recover_req.erase(block);
     if(my_recover_req.empty()) {
       m_has_recovered_chunks = true;
@@ -163,7 +158,7 @@ void RdmaClient::InitLeftRightQP()
     // It is possible that the phase is still mcast,
     // But we still need to register the request.
     
-    const uint32_t missed{m_recovery_request_map.at(FindNeighbor(Neighbor::Right)).size()};
+    const uint32_t missed{m_shared->recovery_request_map.at(FindNeighbor(Neighbor::Right)).size()};
     NS_LOG_LOGIC("Right node has partially missed " << missed << " blocks");
     m_has_recv_recover_req = true;
 
@@ -269,13 +264,19 @@ void RdmaClient::InitMcastQP()
   m_mcast_qp.sq = CreateObject<RdmaUnreliableSQ>(GetNode(), m_pg, GetLocalIp(), PORT_MCAST);
   m_mcast_qp.sq->SetMTU(mtu);
   m_mcast_qp.rq = CreateObject<RdmaUnreliableRQ>(m_mcast_qp.sq);
+  m_mcast_qp.sq->SetRateFactor(1.0 / m_config.root_count); // We should reserve bandwidth for each of the multicast that happen in the same time
   rdma->RegisterQP(m_mcast_qp.sq, m_mcast_qp.rq);
 
+  
   m_timeout_ev = Simulator::Schedule(timeout, &RdmaClient::RunRecoveryPhase, this);
 
   // Register callback
   m_mcast_qp.rq->SetOnRecv([this](RdmaRxQueuePair::RecvNotif notif) mutable {
     NS_ASSERT(notif.has_imm);
+
+    if(GenRandomDouble(0.0, 1.0) < 0.00) {
+      return; // Drop randomly
+    }
     OnRecvMcastChunk(notif.imm);
   });
 }
@@ -366,13 +367,15 @@ void RdmaClient::RunRecoveryPhase()
     NS_LOG_INFO("Missed " << start << "-" << end);
   }
 
-  static int completed_mcasts{0};
-  static int total_chunk_lost{0};
-  completed_mcasts++;
-  total_chunk_lost += AgRecovery::GetTotalMissedChunks(req);
-  if(completed_mcasts == m_config.node_count) {
+  m_shared->completed_mcasts++;
+  m_shared->total_chunk_lost += AgRecovery::GetTotalMissedChunks(req);
+
+  if(m_shared->completed_mcasts == m_config.node_count) {
     std::cout << "Elapsed mcast time: " << Simulator::Now().GetSeconds() << std::endl;
-    std::cout << "Chunks lost across all nodes: " << total_chunk_lost << std::endl;
+    const float total_chunk_lost_percent{1.0f * m_shared->total_chunk_lost / m_config.GetTotalChunkCount() / m_config.node_count};
+    std::cout << "Chunks lost across all nodes: " << m_shared->total_chunk_lost << " (" << (total_chunk_lost_percent * 100.0f) << "%)" << std::endl;
+
+    m_shared->elapsed_mcast_time = Simulator::Now();
   }
 
   // Request missed chunks to the left node
@@ -387,7 +390,7 @@ void RdmaClient::RunRecoveryPhase()
     };
   }
 
-  m_recovery_request_map[m_config.current_node] = std::move(req);
+  m_shared->recovery_request_map[m_config.current_node] = std::move(req);
   m_left_qp.sq->PostSend(recover_request);
 }
 
@@ -399,8 +402,8 @@ void RdmaClient::TryUpdateState()
     return;
   }
 
-  const auto& right_recover_req = m_recovery_request_map[FindNeighbor(Neighbor::Right)];
-  auto& my_recover_req = m_recovery_request_map[m_config.current_node];
+  const auto& right_recover_req = m_shared->recovery_request_map[FindNeighbor(Neighbor::Right)];
+  auto& my_recover_req = m_shared->recovery_request_map[m_config.current_node];
   const uint32_t peer_req_block_count{right_recover_req.size()};
 
   NS_LOG_LOGIC("{"
@@ -438,10 +441,20 @@ void RdmaClient::TryUpdateState()
     m_phase = Phase::Complete;
     NS_LOG_INFO("Completed " << m_config.current_node);
 
-    m_completed_apps++;
-    if(m_completed_apps == m_servers.GetN()) {
+    m_shared->completed_apps++;
+    if(m_shared->completed_apps == m_servers.GetN()) {
       std::cout << "Elapsed simulation time: " << Simulator::Now().GetSeconds() << std::endl;
       Simulator::Stop();
+
+      const std::string& out_path{m_shared->flow.output_file};
+      if(!out_path.empty()) {
+        std::ofstream ofs{out_path.c_str()};
+        json j;
+        j["elapsed_total_time"] = Simulator::Now().GetSeconds();
+        j["elapsed_mcast_time"] = m_shared->elapsed_mcast_time.GetSeconds();
+        j["total_chunk_lost_percent"] = 1.0f * m_shared->total_chunk_lost / m_config.GetTotalChunkCount() / m_config.node_count;
+        ofs << j.dump(4) << std::endl;
+      }
     }
   }
 }

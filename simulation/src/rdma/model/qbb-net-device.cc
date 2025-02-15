@@ -270,7 +270,7 @@ namespace ns3 {
 		Ptr<Packet> p;
 		if (!IsSwitchNode(m_node)){
 			int qIndex = m_rdmaEQ->GetNextQindex(m_paused);
-			if (qIndex != -1024){
+			if (qIndex != -1024) {
 				if (qIndex == -1){ // high prio
 					p = m_rdmaEQ->DequeueQindex(qIndex);
 					m_traceDequeue(p, 0);
@@ -305,9 +305,9 @@ namespace ns3 {
 				}
 
 				if(t < Simulator::Now()) { t = Simulator::Now(); }
-				t += MicroSeconds(1);
-
-				if (m_nextSend.IsExpired() && t < Simulator::GetMaximumSimulationTime() && t > Simulator::Now()){
+				// if(t < Simulator::GetMaximumSimulationTime()) { t += MicroSeconds(1); }
+				
+				if (m_nextSend.IsExpired() && t < Simulator::GetMaximumSimulationTime()){
 					m_nextSend = Simulator::Schedule(t - Simulator::Now(), &QbbNetDevice::DequeueAndTransmit, this);
 				}
 			}

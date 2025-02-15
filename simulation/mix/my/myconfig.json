@@ -1,4 +1,5 @@
     {
+        "enable_pfc":                      true,
         "enable_qcn":                      true,
         "use_dynamic_pfc_threshold":       true,
 
@@ -57,24 +58,24 @@
         "enable_trace":                    1,
 
         "kmax_map": [
-            {"bandwidth": 25000000000, "ecn_threshold": 400},
-            {"bandwidth": 50000000000, "ecn_threshold": 800},
-            {"bandwidth": 100000000000, "ecn_threshold": 1600}
+            {"bandwidth": 25e9,  "ecn_threshold": 400},
+            {"bandwidth": 50e9,  "ecn_threshold": 800},
+            {"bandwidth": 100e9, "ecn_threshold": 1600}
         ],
 
         "kmin_map": [
-            {"bandwidth": 25000000000, "ecn_threshold": 100},
-            {"bandwidth": 50000000000, "ecn_threshold": 200},
-            {"bandwidth": 100000000000, "ecn_threshold": 400}
+            {"bandwidth": 25e9,  "ecn_threshold": 100},
+            {"bandwidth": 50e9,  "ecn_threshold": 200},
+            {"bandwidth": 100e9, "ecn_threshold": 400}
         ],
 
         "pmax_map": [
-            {"bandwidth": 25000000000, "ecn_threshold": 0.2},
-            {"bandwidth": 50000000000, "ecn_threshold": 0.2},
-            {"bandwidth": 100000000000, "ecn_threshold": 0.2}
+            {"bandwidth": 25e9,  "ecn_threshold": 0.2},
+            {"bandwidth": 50e9,  "ecn_threshold": 0.2},
+            {"bandwidth": 100e9, "ecn_threshold": 0.2}
         ],
 
-        "buffer_size":                     3200,
+        "buffer_size":                     32,
         "qlen_mon_file":                   "mix/my/out/qlen.txt",
         "qlen_mon_start":                  2000000000,
         "qlen_mon_end":                    2010000000,

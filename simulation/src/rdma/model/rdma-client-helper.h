@@ -26,6 +26,7 @@
 #include "ns3/object-factory.h"
 #include "ns3/ipv4-address.h"
 #include "ns3/rdma-client.h"
+#include <ns3/rdma-hw.h>
 
 namespace ns3 {
 
@@ -51,7 +52,7 @@ public:
    * \param port The port number of the remote udp server
    */
 
-  RdmaClientHelper (uint16_t pg, Ipv4Address sip, Ipv4Address dip, uint16_t sport, uint16_t dport, uint64_t size, uint32_t win, uint64_t baseRtt);
+  RdmaClientHelper (const ScheduledFlow& flow, uint32_t win);
 
   /**
    * Record an attribute to be set in each Application after it is is created.
@@ -74,6 +75,7 @@ private:
   static NodeContainer FilterServers(NodeContainer c);
 
 private:
+  ScheduledFlow m_flow;
   ObjectFactory m_factory;
 };
 

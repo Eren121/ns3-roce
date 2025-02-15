@@ -50,6 +50,11 @@ void RdmaReliableSQ::Acknowledge(uint64_t next_psn_expected)
 	
 	if(next_psn_expected > m_snd_una) {
 		m_snd_una = next_psn_expected;
+		
+		if(m_snd_una > m_snd_nxt) {
+			m_snd_nxt = m_snd_una;
+		}
+
 		NotifyPendingCompEvents();
 	}
 	
@@ -80,6 +85,8 @@ void RdmaReliableSQ::OnRetrTimeout()
 
 void RdmaReliableSQ::NotifyPendingCompEvents()
 {
+	bool at_least_one_completion{false};
+
 	while(!m_to_send.empty()) {
 		auto it{m_to_send.begin()};
 		const SendRequest& next{it->second};
@@ -91,6 +98,10 @@ void RdmaReliableSQ::NotifyPendingCompEvents()
 		if(on_ack) { on_ack(); }
 		m_to_send.erase(it);
 
+		at_least_one_completion = true;
+	}
+
+	if(at_least_one_completion) {
 		// This may unblock, because next op could have been blocked until ACK is received
 		TriggerDevTransmit();
 	}
@@ -109,7 +120,11 @@ bool RdmaReliableSQ::IsWinBound() const
 
 bool RdmaReliableSQ::HasDataToSend() const
 {
-	return m_next_op_first_psn > m_snd_nxt;
+	if(m_to_send.empty() && m_next_op_first_psn > m_snd_nxt) {
+		NS_LOG_WARN("Should not happen");
+	}
+
+	return m_next_op_first_psn > m_snd_nxt && !m_to_send.empty();
 }
 
 bool RdmaReliableSQ::IsReadyToSend() const
@@ -156,20 +171,6 @@ void RdmaReliableSQ::PostSend(SendRequest sr)
 	TriggerDevTransmit();
 }
 
-void RdmaReliableSQ::TriggerDevTransmit()
-{
-	NS_LOG_FUNCTION(this);
-	NS_LOG_LOGIC("Try to send at " << m_nextAvail.GetSeconds());
-
-	// Trigger to possibly send
-	if(m_nextAvail <= Simulator::Now()) {
-		Simulator::Schedule(Seconds(0), &QbbNetDevice::TriggerTransmit, GetDevice());
-	}
-	else {
-		Simulator::Schedule(m_nextAvail - Simulator::Now(), &QbbNetDevice::TriggerTransmit, GetDevice());
-	}
-}
-
 Ptr<Packet> RdmaReliableSQ::GetNextPacket()
 {
 	NS_LOG_FUNCTION(this);
@@ -179,12 +180,12 @@ Ptr<Packet> RdmaReliableSQ::GetNextPacket()
 		return nullptr;
 	}
 	auto it{m_to_send.upper_bound(m_snd_nxt)};
-	NS_ASSERT(it != m_to_send.begin());
+	NS_ASSERT_MSG(it != m_to_send.begin(), "{m_snd_nxt=" << m_snd_nxt << ",m_snd_una=" << m_snd_una << ",it->second.first_psn=" << it->second.first_psn << "}");
 
 	const SendRequest& sr{(--it)->second};
 	const psn_t sr_already_sent_payload{m_snd_nxt - sr.first_psn};
+	NS_ASSERT(m_snd_nxt >= sr.first_psn);
 	const psn_t sr_rem_to_send{sr.payload_size - sr_already_sent_payload};
-
 	NS_ASSERT(sr_rem_to_send > 0);
 	const psn_t packet_size = std::min<psn_t>(m_mtu, sr_rem_to_send);
 
@@ -258,7 +259,7 @@ Ptr<Packet> RdmaReliableSQ::GetNextPacket()
 void RdmaReliableSQ::RecoverNack(uint64_t next_psn_expected)
 {
 	NS_LOG_FUNCTION(this << next_psn_expected);
-	NS_ASSERT(next_psn_expected >= m_snd_una);
+	// NS_ASSERT(next_psn_expected >= m_snd_una);
 
 	Acknowledge(next_psn_expected);
 	Rollback();
@@ -267,7 +268,8 @@ void RdmaReliableSQ::RecoverNack(uint64_t next_psn_expected)
 
 void RdmaReliableSQ::Rollback()
 {
-	NS_ASSERT(!m_to_send.empty());
+	// NS_ASSERT(!m_to_send.empty());
+	NS_ASSERT_MSG(m_snd_nxt >= m_snd_una, "{m_snd_nxt=" << m_snd_nxt << ",m_snd_una=" << m_snd_una << "}");
 	m_snd_nxt = m_snd_una;
 	highest_ack_psn = m_snd_una;
 
@@ -451,7 +453,7 @@ void RdmaReliableRQ::ReceiveUdp(Ptr<Packet> p, const CustomHeader &ch)
 		// send
 		Ptr<QbbNetDevice> dev = m_tx->GetDevice();
 		dev->RdmaEnqueueHighPrioQ(newp);
-		dev->TriggerTransmit();
+		m_tx->TriggerDevTransmit();
 	}
 
 	// If no error, call completion event
@@ -505,7 +507,7 @@ void RdmaReliableRQ::ReceiveAck(Ptr<Packet> p, const CustomHeader &ch)
 	
 	// ACK may advance the on-the-fly window, allowing more packets to send
 	Ptr<QbbNetDevice> dev = m_tx->GetDevice();
-	dev->TriggerTransmit();
+	m_tx->TriggerDevTransmit();
 }
 
 }

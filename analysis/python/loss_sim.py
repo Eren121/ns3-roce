@@ -11,75 +11,117 @@ import matplotlib.pyplot as plt
 import itertools
 import pathlib
 import os
+from collections import namedtuple
+from dataclasses import dataclass
+import tempfile
+import json
+import topology
 
 
 def get_path_rel_to_container(path: pathlib.Path) -> str:
-    return os.path.relpath(path, project.simulation_path())
+    """
+    Convert a host path to a container path.
+    The path should be mounted in the container.
+    Root of the git project is mounted in container.
+    """
+    if not path.is_relative_to(project.root_path()):
+        raise Exception("Path should be inside git directory.")
+    return os.path.relpath(path, project.simulation_path()) # Avoid `walk_up` which needs recent Python 3.12
 
-def run_simulation(config_path: pathlib.Path):
-    # Working directory of ns-3 process in container is `project.simulation_path()`.
-    # `project.root_path()` is mounted in container.
-    if not config_path.is_relative_to(project.root_path()):
-        raise Exception("Config path should be inside Docker mounted directory (inside project's directory).")
-    # Convert the host path to container path.
-    # Avoid `walk_up` which needs recent Python 3.12
-    docker_config_path = get_path_rel_to_container(config_path)
+SimulationConfigFile = namedtuple("SimulationConfigFile", "name data")
 
-    magic = "Elapsed simulation time: "
-    sim_time = 0.0
-    def capture_last_line(line):
-        nonlocal sim_time
-        if(line.startswith(magic)):
-            tmp = line.strip()[len(magic):]
-            sim_time = float(tmp)
-
-    pyu.run_process(argv=["make", "-C", project.root_path().as_posix(), "run", f"config={docker_config_path}", "docker_interactive="],
-                    each_line=capture_last_line)
+class SimulationConfig:
+    def __init__(self, tmp_dir: pathlib.Path):
+        self.templates = {}
+        self.tmp_dir = tempfile.TemporaryDirectory(dir=tmp_dir) 
+        self.tmp_path = pathlib.Path(self.tmp_dir.name)
+        self.custom_data = {}
     
-    return sim_time
+    def set_data(self, key: str, val) -> None:
+        self.custom_data[key] = val
+
+    def get_data(self, key: str):
+        return self.custom_data[key]
+
+    def add_config_file(self, file: SimulationConfigFile) -> None:
+        self.templates[file.name] = file
+    
+    def generate_config_files(self) -> None:
+        for template in self.templates.values():
+            template_path = self.tmp_path / template.name
+            pyu.write_to_file(template_path, json.dumps(template.data, indent=2))
+
+    def run(self) -> None:
+        """
+        Working directory of ns-3 process in container is host path `project.simulation_path()`.
+        """
+        config_name = "config.json"
+        if config_name not in self.templates:
+            raise Exception(f"Should have at least a {config_name} file in the templates")
+        self.generate_config_files()
+        config_path = self.tmp_path / config_name
+        argv=[
+            "make", "-C",
+            project.root_path().as_posix(),
+            "run",
+            f"config={get_path_rel_to_container(config_path)}", "docker_interactive="]
+        pyu.run_process(argv=argv)
+        return self
+
+
+def add_missed_chunks_percent_col(res: pd.DataFrame) -> None:
+    res[missed_chunks_percent_col] = 0.
+    res[bandwidth_col] = 0.
+    for i, row in res.iterrows():
+        res.at[i, missed_chunks_percent_col] = res.at[i, missed_chunks_col] / total_chunks
+        res.at[i, bandwidth_col]             = (total_chunks * chunk_size * 8) / res.at[i, tot_time_col]
+
+
+def plot(allgather_results: list):
+    res = pd.DataFrame.from_records(allgather_results)
+    print(res)
+    ax = sns.lineplot(data=res, x="bg_bandwidth_percent", y="total_chunk_lost_percent", color=sns.color_palette()[0])
+    ax.set_title("Missed chunk % per error rate")
+    plt.show()
+
 
 def main() -> None:
     script_dir = pathlib.Path(__file__).parent
-    in_dir = script_dir / "in"
-    out_dir = script_dir / "out"
-    config_template_path = in_dir / "config.json.jinja"
+    tmp_dir = script_dir / "out"
 
-    error_rate_col = 'error_rate'
-    sim_time_col = 'sim_time'
+    tree_config = topology.FatTreeConfig(depth=2, link_bw=100e9, link_latency=1e-6)
+    tree = topology.FatTree(tree_config)
 
-    res_data = {
-        error_rate_col: [],
-        sim_time_col: []
-    }
+    out_allgather = "out_allgather.json"    
+    same_test_count = 1
+    configs = []
 
-    def run_sim(error_rate: float):
-        config_vars = {
-            "ERROR_RATE_PER_LINK": error_rate,
-            "IN_DIR": get_path_rel_to_container(in_dir),
-            "OUT_DIR": get_path_rel_to_container(out_dir)
+    for bandwidth_percent in np.repeat(np.linspace(0.01, 0.3, 500), same_test_count):
+        flows = {
+            "flows": [
+                topology.make_flow_allgather(size=1e7, output_file=out_allgather),
+                topology.make_flow_multicast(size=1e9, src=4, dst=1, bandwidth_percent=bandwidth_percent)
+            ]
         }
-        config_file = pyu.build_template_file(in_path=config_template_path, vars=config_vars)
-        sim_time = run_simulation(pathlib.Path(config_file.name))
-        
-        print(error_rate, ",", sim_time)
-        
-        return {
-            error_rate_col: error_rate,
-            sim_time_col: sim_time
-        }
-    
-    repeat_same = 8
-    test_cases = np.repeat(np.linspace(0, 0.1, 100), repeat_same)
-    
-    for tmp in pyu.parallel_for(test_cases, run_sim):
-        res_data[error_rate_col].append(tmp[error_rate_col])
-        res_data[sim_time_col].append(tmp[sim_time_col])
-    
-    res = pd.DataFrame(res_data)
-    sns.scatterplot(data=res,
-                    x=error_rate_col,
-                    y=sim_time_col)
-    plt.show()
+
+        sim_config = json.loads(pyu.read_all_file(script_dir / "default_config.json"))
+        config = SimulationConfig(tmp_dir)
+        config.add_config_file(SimulationConfigFile(name="config.json", data=sim_config))
+        config.add_config_file(SimulationConfigFile(name=sim_config["topology_file"], data=tree.get_topology()))
+        config.add_config_file(SimulationConfigFile(name=sim_config["groups_file"], data=tree.get_groups()))
+        config.add_config_file(SimulationConfigFile(name=sim_config["trace_file"], data={}))
+        config.add_config_file(SimulationConfigFile(name=sim_config["flow_file"], data=flows))
+        config.set_data("bg_bandwidth_percent", bandwidth_percent)
+        configs.append(config)
+
+
+    allgather_results = []
+    for cur_config in pyu.parallel_for(configs, lambda config: config.run()):
+        result = json.loads(pyu.read_all_file(cur_config.tmp_path / out_allgather))
+        result["bg_bandwidth_percent"] = cur_config.get_data("bg_bandwidth_percent")
+        allgather_results.append(result)
+
+    plot(allgather_results)
 
 if __name__ == "__main__":
     main()

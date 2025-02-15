@@ -177,11 +177,7 @@ void RdmaHw::RegisterQP(Ptr<RdmaTxQueuePair> sq, Ptr<RdmaRxQueuePair> rq)
 	// set init variables
 	NS_ASSERT(m_cc_mode == 1);
 	DataRate m_bps = sq->GetDevice()->GetDataRate();
-	sq->m_rate = m_bps;
-	sq->m_max_rate = m_bps;
-	if (m_cc_mode == 1){
-		sq->mlx.m_targetRate = m_bps;
-	}
+	sq->SetMaxRate(m_bps);
 
 	// Notify Nic
 	NS_ASSERT(m_nic.size() == 1);
@@ -305,7 +301,7 @@ void RdmaHw::UpdateNextAvail(Ptr<RdmaTxQueuePair> qp, Time interframeGap, uint32
 	if (m_rateBound)
 		sendingTime = interframeGap + Seconds(qp->m_rate.CalculateTxTime(pkt_size));
 	else
-		sendingTime = interframeGap + Seconds(qp->m_max_rate.CalculateTxTime(pkt_size));
+		sendingTime = interframeGap + Seconds(qp->GetMaxRate().CalculateTxTime(pkt_size));
 	qp->m_nextAvail = Simulator::Now() + sendingTime;
 }
 

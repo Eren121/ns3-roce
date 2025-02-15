@@ -72,6 +72,37 @@ RdmaTxQueuePair::~RdmaTxQueuePair()
 	StopTimers();
 }
 
+void RdmaTxQueuePair::SetRateFactor(double rate_factor)
+{
+	m_rate_multiplier = rate_factor;
+}
+
+void RdmaTxQueuePair::SetMaxRate(DataRate max_rate)
+{
+	m_max_rate = max_rate.GetBitRate() * m_rate_multiplier;
+	m_rate = m_max_rate;
+	mlx.m_targetRate = m_max_rate;
+}
+
+DataRate RdmaTxQueuePair::GetMaxRate() const
+{
+	return m_max_rate;
+}
+
+void RdmaTxQueuePair::TriggerDevTransmit()
+{
+	NS_LOG_FUNCTION(this);
+	NS_LOG_LOGIC("Try to send at " << m_nextAvail.GetSeconds());
+
+	// Trigger to possibly send
+	if(m_nextAvail <= Simulator::Now()) {
+		Simulator::Schedule(Seconds(0), &QbbNetDevice::TriggerTransmit, GetDevice());
+	}
+	else {
+		Simulator::Schedule(m_nextAvail - Simulator::Now(), &QbbNetDevice::TriggerTransmit, GetDevice());
+	}
+}
+
 void RdmaTxQueuePair::StopTimers()
 {
 	Simulator::Cancel(mlx.m_eventUpdateAlpha);
@@ -93,7 +124,9 @@ void RdmaTxQueuePair::LazyInitCnp()
 	Ptr<RdmaHw> rdma = m_node->GetObject<RdmaHw>();
 	const uint32_t cc = rdma->GetCC();
 	NS_ASSERT(cc == 1);
-	
+	NS_ASSERT(m_rate > 0);
+
+	#if 0
 	if (m_rate == 0)			//lazy initialization	
 	{
 		m_rate = dev->GetDataRate();
@@ -101,6 +134,7 @@ void RdmaTxQueuePair::LazyInitCnp()
 			mlx.m_targetRate = dev->GetDataRate();
 		}
 	}
+	#endif
 }
 
 /*********************

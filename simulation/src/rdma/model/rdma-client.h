@@ -31,8 +31,11 @@
 #include <ns3/node-container.h>
 #include <ns3/rdma-reliable-qp.h>
 #include <ns3/rdma-unreliable-qp.h>
+#include <ns3/rdma-hw.h>
 #include <ns3/ag-recovery.h>
 #include <unordered_set>
+#include <ns3/rdma-random.h>
+#include <memory>
 
 #define LOG_VAR(x) #x << "=" << (x)
 
@@ -54,9 +57,16 @@ class Packet;
 class RdmaClient : public Application
 {
 public:
-  static std::unordered_map<uint32_t, AgRecovery::RecoveryRequest> m_recovery_request_map; // Easier than serializing / deserializing... No problem as long as we dont use MPI.
-  static int m_completed_apps;
-  
+  struct SharedState {
+    ScheduledFlow flow;
+    Time elapsed_mcast_time{};
+    std::unordered_map<uint32_t, AgRecovery::RecoveryRequest> recovery_request_map; //!< Easier than serializing / deserializing... No problem as long as we dont use MPI.
+    uint64_t completed_apps{}; //!< Count of finished apps.
+    uint64_t completed_mcasts{}; //!< Count of finished mcast phases across all apps.
+    uint64_t total_chunk_lost{}; //!< Count of chunk lost across all apps after the mcast phase.
+  };
+
+public:
   static TypeId GetTypeId();
 
   enum class Neighbor {
@@ -66,6 +76,7 @@ public:
   RdmaClient();
   ~RdmaClient() override;
   void SetServers(NodeContainer servers) { m_servers = std::move(servers); }
+  void SetSharedState(std::shared_ptr<SharedState> shared) { m_shared = shared; }
 
 private:
   uint32_t GetMTU() const;
@@ -112,7 +123,6 @@ private:
 
   uint16_t m_pg;              //<! Priority group.
   uint32_t m_win;             //<! Bound of on-the-fly packets.
-  uint64_t m_baseRtt;         //<! Base Rtt.
   Callback<void, RdmaClient&> m_onFlowFinished; //< Callback when flow finished.
 
   std::unordered_set<uint64_t> m_recv_chunks; //!< Succesfully received chunks
@@ -135,6 +145,9 @@ private:
 
   EventId m_timeout_ev; //! Timeout for when no mcast packet is received
   Time timeout{MicroSeconds(1000)};
+
+private:
+  std::shared_ptr<SharedState> m_shared;
 };
 
 } // namespace ns3
