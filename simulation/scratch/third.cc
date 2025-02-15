@@ -112,6 +112,7 @@ struct SimConfig
 	double u_target = 0.95;
 	uint32_t int_multi = 1;
 	bool rate_bound = true;
+	std::string anim_output_file;
 
 	uint32_t ack_high_prio = 0;
 
@@ -164,7 +165,7 @@ struct SimConfig
 		rp_timer, ewma_gain, fast_recovery_times, rate_ai, rate_hai, min_rate, dctcp_rate_ai, error_rate_per_link,
 		l2_chunk_size, l2_ack_interval, l2_back_to_zero, nak_interval, has_win, global_t, var_win, fast_react,
 		u_target, mi_thresh, int_multi, multi_rate, sample_feedback, pint_log_base, pint_prob, rate_bound, ack_high_prio, link_down, enable_trace,
-		kmax_map, kmin_map, pmax_map, buffer_size, qlen_mon_file, qlen_mon_start, qlen_mon_end, rng_seed);
+		kmax_map, kmin_map, pmax_map, buffer_size, qlen_mon_file, qlen_mon_start, qlen_mon_end, rng_seed, anim_output_file);
 };
 
 class FlowsConfig
@@ -1038,7 +1039,7 @@ int main(int argc, char *argv[])
 	Simulator::Schedule(NanoSeconds(simConfig.qlen_mon_start), &monitor_buffer, qlen_output, &simConfig, &n);
 
 	std::unique_ptr<AnimationInterface> anim;
-	if(simConfig.enable_trace)
+	if(!simConfig.anim_output_file.empty())
 	{
 		for (uint32_t i = 0; i < node_num; i++){
 			const TopoConfig::Node& node_config = topo.nodes[i];
@@ -1050,7 +1051,7 @@ int main(int argc, char *argv[])
 		}
 
 		// Save trace for animation
-		anim.reset(new AnimationInterface{"anim.xml"});
+		anim.reset(new AnimationInterface{(config_dir / simConfig.anim_output_file).c_str()});
 		// High polling interval; the nodes never move. Reduces XML size.
 		anim->SetMobilityPollInterval(Seconds(1e9));
 		anim->EnablePacketMetadata(true);
