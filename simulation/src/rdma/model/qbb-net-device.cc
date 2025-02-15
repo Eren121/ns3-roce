@@ -314,8 +314,12 @@ namespace ns3 {
 				if(t < Simulator::Now()) { t = Simulator::Now(); }
 				// if(t < Simulator::GetMaximumSimulationTime()) { t += MicroSeconds(1); }
 				
-				if (m_nextSend.IsExpired() && t < Simulator::GetMaximumSimulationTime()){
-					m_nextSend = Simulator::Schedule(t - Simulator::Now(), &QbbNetDevice::DequeueAndTransmit, this);
+				// Multiple QPs with different rate share the same RdmaHW.
+				// Thus, we wan to make sure that a low rate QP will not
+				// limit the rate of a high rate QP.
+				
+				if (t < Simulator::GetMaximumSimulationTime()){
+					UpdateNextAvail(t);
 				}
 			}
 			return;
@@ -551,9 +555,14 @@ namespace ns3 {
 		m_linkUp = false;
 	}
 
-	void QbbNetDevice::UpdateNextAvail(Time t){
-		if (!m_nextSend.IsExpired() && t < Time(m_nextSend.GetTs())){
-			Simulator::Cancel(m_nextSend);
+	void QbbNetDevice::UpdateNextAvail(Time t) {
+		// This can only make the next event more quick
+
+		if (m_nextSend.IsExpired() || t < Time(m_nextSend.GetTs())) {
+			if(!m_nextSend.IsExpired()) {
+				Simulator::Cancel(m_nextSend);
+			}
+
 			Time delta = t < Simulator::Now() ? Time(0) : t - Simulator::Now();
 			m_nextSend = Simulator::Schedule(delta, &QbbNetDevice::DequeueAndTransmit, this);
 		}
