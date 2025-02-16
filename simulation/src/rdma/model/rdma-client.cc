@@ -324,6 +324,12 @@ void RdmaClient::StartMulticast()
 
     const AgConfig::chunk_id_t chunk{m_config.current_node * m_config.GetChunkCountPerBlock() + i};
     sr.imm = chunk;
+
+    // Sometimes the recovery phase starts before the mast transmission ends
+    // If the mcast got delayed because of background traffic
+    // We want to make sure each node has its own block to not deadlock
+    // So before `on_send`, register block
+    m_recovery.ReceiveMcastChunk(chunk);
     
     sr.on_send = [this, i, chunk]() {
       // Mark the sent chunk as received immediately, because the sender cannot miss any of them
