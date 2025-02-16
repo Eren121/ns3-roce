@@ -35,6 +35,7 @@
 #include <ns3/ag-recovery.h>
 #include <unordered_set>
 #include <ns3/rdma-random.h>
+#include <ns3/json.h>
 #include <memory>
 
 #define LOG_VAR(x) #x << "=" << (x)
@@ -59,7 +60,7 @@ class RdmaClient : public Application
 public:
   struct SharedState {
     ScheduledFlow flow;
-    Time elapsed_mcast_time{};
+    nlohmann::json log; //!< Data to be saved on the disk
     std::unordered_map<uint32_t, AgRecovery::RecoveryRequest> recovery_request_map; //!< Easier than serializing / deserializing... No problem as long as we dont use MPI.
     uint64_t completed_apps{}; //!< Count of finished apps.
     uint64_t completed_mcasts{}; //!< Count of finished mcast phases across all apps.
@@ -89,7 +90,8 @@ private:
   void OnRecvMcastChunk(AgConfig::chunk_id_t chunk);
 
   void OnMulticastTransmissionEnd(AgConfig::chunk_id_t last_chunk);
-
+  void OnCutoffTimer();
+  
   void InitConfig();
   void InitPrevNextQP();
   void InitLeftRightQP();
@@ -144,7 +146,7 @@ private:
   Phase m_phase = Phase::Mcast;
 
   EventId m_timeout_ev; //! Timeout for when no mcast packet is received
-  Time timeout{MicroSeconds(1000)};
+  Time m_cutoff_timer;
 
 private:
   std::shared_ptr<SharedState> m_shared;

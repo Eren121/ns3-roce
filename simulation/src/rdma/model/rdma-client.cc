@@ -236,15 +236,9 @@ void RdmaClient::OnRecvMcastChunk(AgConfig::chunk_id_t chunk)
   }
 
   m_recovery.ReceiveMcastChunk(chunk);
-
-  // Reset the timeout
-  Simulator::Cancel(m_timeout_ev);
   
   if(m_recovery.IsMcastComplete()) {
     RunRecoveryPhase();
-  }
-  else {
-    m_timeout_ev = Simulator::Schedule(timeout, &RdmaClient::OnMcastTimeout, this);
   }
 }
 
@@ -252,6 +246,14 @@ void RdmaClient::OnMcastTimeout()
 {
   NS_LOG_FUNCTION(this);
   NS_LOG_INFO("[" << m_config.current_node << "] Multicast timeout");
+  RunRecoveryPhase();
+}
+
+void RdmaClient::OnCutoffTimer()
+{
+  json& j = m_shared->log["cutoff_timers_triggered"];
+  j = j.get<uint64_t>() + 1;
+
   RunRecoveryPhase();
 }
 
@@ -267,9 +269,15 @@ void RdmaClient::InitMcastQP()
   m_mcast_qp.sq->SetRateFactor(1.0 / m_config.root_count); // We should reserve bandwidth for each of the multicast that happen in the same time
   rdma->RegisterQP(m_mcast_qp.sq, m_mcast_qp.rq);
 
-  
-  m_timeout_ev = Simulator::Schedule(timeout, &RdmaClient::RunRecoveryPhase, this);
+  // Paper value
+  const uint64_t additional_delay{GetMTU() * 100}; // Should be > RTT
+  const uint64_t cutoff_size{m_config.size * m_config.root_count + additional_delay};
+  m_cutoff_timer = (m_mcast_qp.sq->GetMaxRate() * (1.0 / m_config.root_count)).CalculateBytesTxTime(cutoff_size);
+  m_shared->log["cutoff_timer"] = m_cutoff_timer.GetSeconds();
+  m_shared->log["cutoff_timers_triggered"] = 0;
 
+  m_timeout_ev = Simulator::Schedule(m_cutoff_timer, &RdmaClient::OnCutoffTimer, this);
+  
   // Register callback
   m_mcast_qp.rq->SetOnRecv([this](RdmaRxQueuePair::RecvNotif notif) mutable {
     NS_ASSERT(notif.has_imm);
@@ -353,6 +361,8 @@ void RdmaClient::RunRecoveryPhase()
     // We are already running the recovery phase
     return;
   }
+  
+  Simulator::Cancel(m_timeout_ev);
 
   m_phase = Phase::Recovery;
 
@@ -375,7 +385,7 @@ void RdmaClient::RunRecoveryPhase()
     const float total_chunk_lost_percent{1.0f * m_shared->total_chunk_lost / m_config.GetTotalChunkCount() / m_config.node_count};
     std::cout << "Chunks lost across all nodes: " << m_shared->total_chunk_lost << " (" << (total_chunk_lost_percent * 100.0f) << "%)" << std::endl;
 
-    m_shared->elapsed_mcast_time = Simulator::Now();
+    m_shared->log["elapsed_mcast_time"] = Simulator::Now().GetSeconds();
   }
 
   // Request missed chunks to the left node
@@ -449,11 +459,10 @@ void RdmaClient::TryUpdateState()
       const std::string& out_path{m_shared->flow.output_file};
       if(!out_path.empty()) {
         std::ofstream ofs{out_path.c_str()};
-        json j;
-        j["elapsed_total_time"] = Simulator::Now().GetSeconds();
-        j["elapsed_mcast_time"] = m_shared->elapsed_mcast_time.GetSeconds();
-        j["total_chunk_lost_percent"] = 1.0f * m_shared->total_chunk_lost / m_config.GetTotalChunkCount() / m_config.node_count;
-        ofs << j.dump(4) << std::endl;
+
+        m_shared->log["elapsed_total_time"] = Simulator::Now().GetSeconds();
+        m_shared->log["total_chunk_lost_percent"] = 1.0f * m_shared->total_chunk_lost / m_config.GetTotalChunkCount() / m_config.node_count;
+        ofs << m_shared->log.dump(4) << std::endl;
       }
     }
   }
