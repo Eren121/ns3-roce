@@ -50,7 +50,7 @@ configure_release: configure
 
 .PHONY: configure
 configure:	
-	$(docker_run) ./simulation/ns3 configure -d $(build_type) --disable-werror
+	$(docker_run) ./simulation/ns3 configure -d $(build_type) --disable-werror --cxx-standard=20
 
 .PHONY: build
 build:
