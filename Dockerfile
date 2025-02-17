@@ -16,6 +16,7 @@ RUN apt install -y \
   python3-jinja2 \
   python3-seaborn \
   python3-joblib \
-  python3-git
+  python3-git \
+  python3-rich
 
 WORKDIR /app
