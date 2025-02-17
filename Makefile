@@ -24,6 +24,11 @@ docker_run ?= docker run --rm \
 	$(docker_extra) \
 	$(docker_tag)
 
+# Don't run programs via docker if we are already in container
+ifneq ("$(wildcard /.dockerenv)", "")
+	docker_run =
+endif
+
 # Default config file path (starting at git root)
 # When running ns-3
 app_config ?= rdma-config/config.json
