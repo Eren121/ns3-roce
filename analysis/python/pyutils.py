@@ -62,7 +62,7 @@ def run_process(argv: list, each_line=print_each_line) -> None:
         None.
     """
     print(f"Running {argv}")
-    proc = sp.Popen(argv, stdout=sp.PIPE)
+    proc = sp.Popen(argv, stdout=sp.PIPE, stderr=sp.STDOUT)
     running = True
     while running:
         line = proc.stdout.readline()
@@ -77,5 +77,8 @@ def run_process(argv: list, each_line=print_each_line) -> None:
 
 
 def parallel_for(data: list, func, jobs: int = 0):
-    results = joblib.Parallel(n_jobs=(-1 if jobs <= 0 else jobs))(joblib.delayed(func)(i) for i in data)
+    # Some bugs with loky backend and rich.progress.
+    # We actually don't need parallel python code,
+    # because we spawn a new Process for each task.
+    results = joblib.Parallel(backend="threading", n_jobs=(-1 if jobs <= 0 else jobs))(joblib.delayed(func)(i) for i in data)
     return results

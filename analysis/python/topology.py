@@ -1,11 +1,16 @@
 from dataclasses import dataclass
 from collections import namedtuple
+import numpy as np
+
 
 FatTreeConfig = namedtuple("FatTreeConfig", "depth link_bw link_latency")
 
 class FatTree:
   def __init__(self, config: FatTreeConfig):
     self.config = config
+  
+  def get_depth(self, idx) -> int:
+      return int(np.log2(idx + 1))
   
   def node_count(self) -> int:
      return 2 ** (self.config.depth + 1) - 1
@@ -31,10 +36,11 @@ class FatTree:
     }
   
   def build_link(self, src: int, dst: int) -> dict:
+     depth = min(self.get_depth(src), self.get_depth(dst))
      return {
       "src": src,
       "dst": dst,
-      "bandwidth": self.config.link_bw,
+      "bandwidth": self.config.link_bw * (self.config.depth - depth),
       "latency": self.config.link_latency,
       "error_rate": 0.0
      }
@@ -42,12 +48,17 @@ class FatTree:
   def get_topology(self) -> dict:
     nodes = []
     for idx in range(self.node_count()):
+      depth = self.get_depth(idx)
+      cols = 2 ** depth
+      col = idx - (2 ** int(np.log2(idx + 1)) - 1)
+      half_col = 0.5 / cols
+      zoom = 3
       node = {
         "id": idx,
         "is_switch": self.is_switch(idx),
         "pos": {
-          "x": idx,
-          "y": idx * 2
+          "x": ((col / cols + half_col) - 0.5) * (2 ** self.config.depth) * zoom,
+          "y": depth * zoom
         }
       }
       nodes.append(node)
