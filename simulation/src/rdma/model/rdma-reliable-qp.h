@@ -64,7 +64,7 @@ public:
 	bool Receive(Ptr<Packet> p, const CustomHeader& ch) override;
 
 	uint32_t GetChunk() const { return DynamicCast<RdmaReliableSQ>(m_tx)->GetChunk(); }
-	void SetNackInterval(double nack_itv) { m_nack_interval = nack_itv; }
+	void SetNackInterval(Time nack_itv) { m_nack_interval = nack_itv; }
 	void SetBackTo0(bool backto0) { m_backto0 = backto0; }
 
 protected:
@@ -72,8 +72,8 @@ protected:
 	uint32_t ReceiverNextExpectedSeq{0};
 
 	Time m_nackTimer{Time(0)};
+	Time m_nack_interval{0};
 	uint32_t m_lastNACK{0};
-	double m_nack_interval{0};
 	bool m_backto0{false};
 	
 	int ReceiverCheckSeq(uint32_t seq, uint32_t size);

@@ -23,14 +23,6 @@ RdmaUnicastAppHelper::SetAttribute(const std::string& name, const AttributeValue
 ApplicationContainer
 RdmaUnicastAppHelper::Install(NodeContainer c)
 {
-  Ptr<RdmaUnicastApp> src_app = m_factory.Create<RdmaUnicastApp>();
-  Ptr<RdmaUnicastApp> dst_app = m_factory.Create<RdmaUnicastApp>();
-  uint32_t src_node = src_app->GetSrcId();
-  uint32_t dst_node = src_app->GetDstId();
-
-  // Finished = when last ACK is received
-  src_app->SetAttribute("OnFlowFinished", CallbackValue(m_on_complete));
-
   ApplicationContainer apps;
 
   for(NodeContainer::Iterator i = c.Begin (); i != c.End (); ++i)
@@ -41,6 +33,10 @@ RdmaUnicastAppHelper::Install(NodeContainer c)
       app->SetNodes(c);
 		  node->AddApplication(app);
       apps.Add(app);
+      
+      if(app->IsSrc()) {
+        app->SetAttribute("OnFlowFinished", CallbackValue(m_on_complete));
+      }
     }
   }
 

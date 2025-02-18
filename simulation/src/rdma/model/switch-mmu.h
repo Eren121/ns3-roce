@@ -3,6 +3,7 @@
 
 #include <unordered_map>
 #include <ns3/node.h>
+#include <ns3/queue-size.h>
 
 namespace ns3 {
 
@@ -38,12 +39,17 @@ public:
 	void ConfigEcn(uint32_t port, uint32_t _kmin, uint32_t _kmax, double _pmax);
 	void ConfigHdrm(uint32_t port, uint32_t size);
 	void ConfigNPort(uint32_t n_port);
-	void ConfigBufferSize(uint32_t size);
 
 	// config
 	uint32_t node_id;
-	uint32_t buffer_size;
 	uint32_t pfc_a_shift[pCnt];
+
+private:
+	QueueSize m_buffer_size;
+
+public:
+
+	//! Bytes reserved in each `ingress_bytes[port][qIndex]`
 	uint32_t reserve;
 	uint32_t headroom[pCnt];
 	uint32_t resume_offset;

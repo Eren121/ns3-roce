@@ -77,8 +77,13 @@ class FatTree:
 def make_flow_allgather(**kwargs) -> dict:
   ret = {
     "type": "allgather",
+    "group": 1,
     "start_time": 0,
-    "priority": 3
+    "priority": 3,
+    "size": 0,
+    "background": False,
+    "bandwidth_percent": 1,
+    "output_file": ""
   }
   ret.update(kwargs)
   return ret
@@ -86,11 +91,15 @@ def make_flow_allgather(**kwargs) -> dict:
 
 def make_flow_multicast(**kwargs) -> dict:
   ret = {
-    "type": "flow",
+    "type": "multicast",
     "start_time": 0,
     "priority": 3,
-    "multicast": True,
-    "reliable": False
+    "size": 0,
+    "src": 0,
+    "group": 1,
+    "background": False,
+    "bandwidth_percent": 1,
+    "output_file": ""
   }
   ret.update(kwargs)
   return ret

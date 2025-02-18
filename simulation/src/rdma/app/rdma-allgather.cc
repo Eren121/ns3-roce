@@ -32,7 +32,7 @@
 #include "ns3/callback.h"
 #include "ns3/rdma-random.h"
 #include "ns3/qbb-net-device.h"
-#include "rdma-client.h"
+#include "rdma-allgather.h"
 #include "ns3/rdma-seq-header.h"
 #include <ns3/rdma-hw.h>
 #include <ns3/switch-node.h>
@@ -47,65 +47,65 @@ using json = nlohmann::json;
 
 namespace ns3 {
 
-NS_LOG_COMPONENT_DEFINE ("RdmaClient");
-NS_OBJECT_ENSURE_REGISTERED (RdmaClient);
+NS_LOG_COMPONENT_DEFINE ("RdmaAllgather");
+NS_OBJECT_ENSURE_REGISTERED (RdmaAllgather);
 
 TypeId
-RdmaClient::GetTypeId()
+RdmaAllgather::GetTypeId()
 {
-  static TypeId tid = TypeId ("ns3::RdmaClient")
+  static TypeId tid = TypeId ("ns3::RdmaAllgather")
     .SetParent<Application> ()
-    .AddConstructor<RdmaClient> ()
+    .AddConstructor<RdmaAllgather> ()
     .AddAttribute ("WriteSize",
                    "The number of bytes to write",
                    UintegerValue (10000),
-                   MakeUintegerAccessor (&RdmaClient::m_size),
+                   MakeUintegerAccessor (&RdmaAllgather::m_size),
                    MakeUintegerChecker<uint64_t> ())
 	.AddAttribute ("PriorityGroup", "The priority group of this flow",
 				   UintegerValue (0),
-				   MakeUintegerAccessor (&RdmaClient::m_pg),
+				   MakeUintegerAccessor (&RdmaAllgather::m_pg),
 				   MakeUintegerChecker<uint16_t> ())
     .AddAttribute ("Window",
                    "Bound of on-the-fly packets",
                    UintegerValue (0),
-                   MakeUintegerAccessor (&RdmaClient::m_win),
+                   MakeUintegerAccessor (&RdmaAllgather::m_win),
                    MakeUintegerChecker<uint32_t> ())
     .AddAttribute("OnFlowFinished",
                   "Callback when the flow finishes",
                   CallbackValue(),
-                  MakeCallbackAccessor(&RdmaClient::m_onFlowFinished),
+                  MakeCallbackAccessor(&RdmaAllgather::m_onFlowFinished),
                   MakeCallbackChecker());
     ;
   return tid;
 }
 
-RdmaClient::RdmaClient()
+RdmaAllgather::RdmaAllgather()
 {
   NS_LOG_FUNCTION(this);
 }
 
-RdmaClient::~RdmaClient()
+RdmaAllgather::~RdmaAllgather()
 {
   NS_LOG_FUNCTION(this);
 }
 
-Ipv4Address RdmaClient::GetLeftIp() const
+Ipv4Address RdmaAllgather::GetLeftIp() const
 {
   return m_servers.Get(FindNeighbor(Neighbor::Left))->GetObject<Ipv4>()->GetAddress(1, 0).GetLocal();
 }
 
-Ipv4Address RdmaClient::GetRightIp() const
+Ipv4Address RdmaAllgather::GetRightIp() const
 {
   return m_servers.Get(FindNeighbor(Neighbor::Right))->GetObject<Ipv4>()->GetAddress(1, 0).GetLocal();
 }
 
-Ipv4Address RdmaClient::GetLocalIp() const
+Ipv4Address RdmaAllgather::GetLocalIp() const
 {
   return GetNode()->GetObject<Ipv4>()->GetAddress(1, 0).GetLocal();
 }
 
 
-void RdmaClient::MakeLeftRightReliableConnection(RdmaReliableQP& left_qp, uint16_t left_dst_port, RdmaReliableQP& right_qp, uint16_t right_dst_port)
+void RdmaAllgather::MakeLeftRightReliableConnection(RdmaReliableQP& left_qp, uint16_t left_dst_port, RdmaReliableQP& right_qp, uint16_t right_dst_port)
 {
   Ptr<Node> node{GetNode()};
   Ptr<RdmaHw> rdma{node->GetObject<RdmaHw>()};
@@ -121,7 +121,7 @@ void RdmaClient::MakeLeftRightReliableConnection(RdmaReliableQP& left_qp, uint16
   rdma->RegisterQP(right_qp.sq, right_qp.rq);
 }
 
-void RdmaClient::InitLeftRightQP()
+void RdmaAllgather::InitLeftRightQP()
 {
   MakeLeftRightReliableConnection(m_left_qp, PORT_LNODE, m_right_qp, PORT_RNODE);
 
@@ -170,7 +170,7 @@ void RdmaClient::InitLeftRightQP()
   });
 }
 
-uint32_t RdmaClient::FindMyIndex() const
+uint32_t RdmaAllgather::FindMyIndex() const
 {
   for(uint32_t i{0}; i < m_servers.GetN(); i++) {
     if(m_servers.Get(i) == GetNode()) {
@@ -182,7 +182,7 @@ uint32_t RdmaClient::FindMyIndex() const
   return 0;
 }
 
-uint32_t RdmaClient::FindNeighbor(RdmaClient::Neighbor n) const
+uint32_t RdmaAllgather::FindNeighbor(RdmaAllgather::Neighbor n) const
 {
   int increment;
   switch(n) {
@@ -200,7 +200,7 @@ uint32_t RdmaClient::FindNeighbor(RdmaClient::Neighbor n) const
   return (m_config.current_node + increment) % m_config.node_count;
 }
 
-void RdmaClient::InitPrevNextQP()
+void RdmaAllgather::InitPrevNextQP()
 {
   MakeLeftRightReliableConnection(m_prev_qp, PORT_PREV, m_next_qp, PORT_NEXT);
 
@@ -210,14 +210,14 @@ void RdmaClient::InitPrevNextQP()
   });
 }
 
-uint32_t RdmaClient::GetMTU() const
+uint32_t RdmaAllgather::GetMTU() const
 {
   Ptr<Node> node = GetNode();
   Ptr<RdmaHw> rdma = node->GetObject<RdmaHw>();
   return rdma->GetMTU();  
 }
 
-void RdmaClient::InitConfig()
+void RdmaAllgather::InitConfig()
 {
   m_config.chunk_size = GetMTU();
   m_config.node_count = m_servers.GetN();
@@ -227,7 +227,7 @@ void RdmaClient::InitConfig()
   m_recovery = AgRecovery{m_config};
 }
 
-void RdmaClient::OnRecvMcastChunk(AgConfig::chunk_id_t chunk)
+void RdmaAllgather::OnRecvMcastChunk(AgConfig::chunk_id_t chunk)
 {
   NS_LOG_FUNCTION(this);
   
@@ -242,22 +242,17 @@ void RdmaClient::OnRecvMcastChunk(AgConfig::chunk_id_t chunk)
   }
 }
 
-void RdmaClient::OnMcastTimeout()
+void RdmaAllgather::OnCutoffTimer()
 {
   NS_LOG_FUNCTION(this);
-  NS_LOG_INFO("[" << m_config.current_node << "] Multicast timeout");
-  RunRecoveryPhase();
-}
 
-void RdmaClient::OnCutoffTimer()
-{
   json& j = m_shared->log["cutoff_timers_triggered"];
   j = j.get<uint64_t>() + 1;
 
   RunRecoveryPhase();
 }
 
-void RdmaClient::InitMcastQP()
+void RdmaAllgather::InitMcastQP()
 {
   Ptr<Node> node{GetNode()};
   Ptr<RdmaHw> rdma{node->GetObject<RdmaHw>()};
@@ -272,24 +267,20 @@ void RdmaClient::InitMcastQP()
   // Paper value
   const uint64_t additional_delay{GetMTU() * 100}; // Should be > RTT
   const uint64_t cutoff_size{m_config.size * m_config.root_count + additional_delay};
-  m_cutoff_timer = (m_mcast_qp.sq->GetMaxRate() * (1.0 / m_config.root_count)).CalculateBytesTxTime(cutoff_size);
+  m_cutoff_timer = m_mcast_qp.sq->GetMaxRate().CalculateBytesTxTime(cutoff_size);
   m_shared->log["cutoff_timer"] = m_cutoff_timer.GetSeconds();
   m_shared->log["cutoff_timers_triggered"] = 0;
 
-  m_timeout_ev = Simulator::Schedule(m_cutoff_timer, &RdmaClient::OnCutoffTimer, this);
+  m_timeout_ev = Simulator::Schedule(m_cutoff_timer, &RdmaAllgather::OnCutoffTimer, this);
   
   // Register callback
   m_mcast_qp.rq->SetOnRecv([this](RdmaRxQueuePair::RecvNotif notif) mutable {
     NS_ASSERT(notif.has_imm);
-
-    if(GenRandomDouble(0.0, 1.0) < 0.00) {
-      return; // Drop randomly
-    }
     OnRecvMcastChunk(notif.imm);
   });
 }
 
-void RdmaClient::StartApplication()
+void RdmaAllgather::StartApplication()
 {
   NS_LOG_FUNCTION(this);
   InitConfig();
@@ -304,7 +295,7 @@ void RdmaClient::StartApplication()
   }
 }
 
-void RdmaClient::StartMulticast()
+void RdmaAllgather::StartMulticast()
 {
   NS_LOG_FUNCTION(this);
 
@@ -344,7 +335,7 @@ void RdmaClient::StartMulticast()
   }
 }
 
-void RdmaClient::OnMulticastTransmissionEnd(AgConfig::chunk_id_t last_chunk)
+void RdmaAllgather::OnMulticastTransmissionEnd(AgConfig::chunk_id_t last_chunk)
 {
   NS_LOG_FUNCTION(this);
 
@@ -359,7 +350,7 @@ void RdmaClient::OnMulticastTransmissionEnd(AgConfig::chunk_id_t last_chunk)
   m_next_qp.sq->PostSend(sr);
 }
 
-void RdmaClient::RunRecoveryPhase()
+void RdmaAllgather::RunRecoveryPhase()
 {
   NS_LOG_FUNCTION(this);
 
@@ -385,7 +376,7 @@ void RdmaClient::RunRecoveryPhase()
 
   m_shared->completed_mcasts++;
   m_shared->total_chunk_lost += AgRecovery::GetTotalMissedChunks(req);
-
+  
   if(m_shared->completed_mcasts == m_config.node_count) {
     std::cout << "Elapsed mcast time: " << Simulator::Now().GetSeconds() << std::endl;
     const float total_chunk_lost_percent{1.0f * m_shared->total_chunk_lost / m_config.GetTotalChunkCount() / m_config.node_count};
@@ -410,7 +401,7 @@ void RdmaClient::RunRecoveryPhase()
   m_left_qp.sq->PostSend(recover_request);
 }
 
-void RdmaClient::TryUpdateState()
+void RdmaAllgather::TryUpdateState()
 {
   NS_LOG_FUNCTION(this);
 
@@ -432,6 +423,7 @@ void RdmaClient::TryUpdateState()
 
     for(const auto& [block, chunk_count] : right_recover_req) {
       if(m_blocks_sent_to_right.count(block) > 0) {
+        NS_LOG_LOGIC("Skip block ale=ready sent " << block);
         continue; // Don't send the same block multiple time!
       }
 
@@ -450,6 +442,9 @@ void RdmaClient::TryUpdateState()
         };
         m_right_qp.sq->PostSend(sr);
       }
+      else {
+        NS_LOG_LOGIC(m_config.current_node << " cannot send block " << block);
+      }
     }
   }
 
@@ -459,10 +454,8 @@ void RdmaClient::TryUpdateState()
 
     m_shared->completed_apps++;
     if(m_shared->completed_apps == m_servers.GetN()) {
-      std::cout << "Elapsed simulation time: " << Simulator::Now().GetSeconds() << std::endl;
-      Simulator::Stop();
 
-      const std::string& out_path{m_shared->flow.output_file};
+      const std::string& out_path{m_shared->flow.base().output_file};
       if(!out_path.empty()) {
         std::ofstream ofs{out_path.c_str()};
 
@@ -470,11 +463,15 @@ void RdmaClient::TryUpdateState()
         m_shared->log["total_chunk_lost_percent"] = 1.0f * m_shared->total_chunk_lost / m_config.GetTotalChunkCount() / m_config.node_count;
         ofs << m_shared->log.dump(4) << std::endl;
       }
+      
+      if(m_shared->on_finish) {
+        m_shared->on_finish();
+      }
     }
   }
 }
 
-void RdmaClient::StopApplication()
+void RdmaAllgather::StopApplication()
 {
   NS_LOG_FUNCTION(this);
   // TODO stop the queue pair

@@ -61,7 +61,7 @@ class Singleton
 {
 public:
   // Delete copy constructor and assignment operator to avoid misuse
-  Singleton<T> (const Singleton<T> &) = delete;
+  Singleton (const Singleton<T> &) = delete;
   Singleton<T> & operator = (const Singleton<T> &) = delete;
 
   /**
@@ -76,12 +76,12 @@ public:
 
 protected:
   /** Constructor. */
-  Singleton<T> ()
+  Singleton ()
   {
   }
 
   /** Destructor. */
-  virtual ~Singleton<T> ()
+  virtual ~Singleton ()
   {
   }
 };

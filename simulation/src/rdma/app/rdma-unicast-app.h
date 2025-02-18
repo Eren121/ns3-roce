@@ -15,12 +15,10 @@ public:
   using OnComplete = Callback<void>;
   static TypeId GetTypeId();
 
-  uint32_t GetSrcId() const { return m_src; }
-  uint32_t GetDstId() const { return m_dst; }
+  bool IsSrc() const;
 
 private:
   void InitQP();
-  bool IsSrc() const;
   void StartApplication() override;
   void StopApplication() override;
   

@@ -44,8 +44,8 @@ class SimulationSingleton
 {
 public:
   // Delete default constructor, copy constructor and assignment operator to avoid misuse
-  SimulationSingleton<T> () = delete;
-  SimulationSingleton<T> (const SimulationSingleton<T> &) = delete;
+  SimulationSingleton () = delete;
+  SimulationSingleton (const SimulationSingleton<T> &) = delete;
   SimulationSingleton<T> & operator = (const SimulationSingleton<T> &) = delete;
 
   /**

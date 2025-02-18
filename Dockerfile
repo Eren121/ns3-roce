@@ -17,4 +17,20 @@ RUN apt install -y \
   python3-git \
   python3-rich
 
+
+# BUild reflect-cpp
+RUN git clone https://github.com/getml/reflect-cpp --branch v0.17.0 /reflectcpp
+
+WORKDIR /reflectcpp
+
+RUN cmake -S . -B build -DCMAKE_CXX_STANDARD=20 -DCMAKE_BUILD_TYPE=Release -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
+  && cmake --build build \
+  && cmake --build build --target install \
+  && cmake --build build --target clean
+
+RUN cmake -S . -B build -DCMAKE_CXX_STANDARD=20 -DCMAKE_BUILD_TYPE=Debug -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
+  && cmake --build build \
+  && cmake --build build --target install \
+  && cmake --build build --target clean
+
 WORKDIR /app

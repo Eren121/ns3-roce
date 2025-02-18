@@ -19,9 +19,10 @@
 #include "ns3/rdma-unreliable-qp.h"
 #include "ns3/log.h"
 
-NS_LOG_COMPONENT_DEFINE("RdmaHw");
+namespace ns3 {
 
-namespace ns3{
+NS_LOG_COMPONENT_DEFINE("RdmaHw");
+NS_OBJECT_ENSURE_REGISTERED(RdmaHw);
 
 TypeId RdmaHw::GetTypeId (void)
 {
@@ -46,10 +47,10 @@ TypeId RdmaHw::GetTypeId (void)
 				MakeUintegerAccessor(&RdmaHw::m_cc_mode),
 				MakeUintegerChecker<uint32_t>())
 		.AddAttribute("NackInterval",
-				"The NACK Generation interval in microseconds.",
-				DoubleValue(500.0),
-				MakeDoubleAccessor(&RdmaHw::m_nack_interval),
-				MakeDoubleChecker<double>())
+				"The NACK Generation interval.",
+				TimeValue(MicroSeconds(500.0)),
+				MakeTimeAccessor(&RdmaHw::m_nack_interval),
+				MakeTimeChecker())
 		.AddAttribute("L2ChunkSize",
 				"Layer 2 chunk size for Go-Back-0. Disable chunk mode if equals to 0.",
 				UintegerValue(0),

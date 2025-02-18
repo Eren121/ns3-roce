@@ -330,7 +330,7 @@ int RdmaReliableRQ::ReceiverCheckSeq(uint32_t seq, uint32_t size)
 	// Generate NACK
 		if (Simulator::Now() >= m_nackTimer || m_lastNACK != expected) {
 			NS_LOG_LOGIC("Send NACK {time=" << Simulator::Now().GetSeconds() << ",timer=" << m_nackTimer.GetSeconds() << "last_nack=" << m_lastNACK << ",expected=" << expected << "}");	
-			m_nackTimer = Simulator::Now() + MicroSeconds(m_nack_interval);
+			m_nackTimer = Simulator::Now() + m_nack_interval;
 			m_lastNACK = expected;
 			if (m_backto0){
 				ReceiverNextExpectedSeq = ReceiverNextExpectedSeq / GetChunk() * GetChunk();

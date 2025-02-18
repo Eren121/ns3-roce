@@ -1,21 +1,37 @@
 {
   "flows": [
     {
-      "type": "allgather",
+      "type": "unicast",
       "start_time": 0,
       "priority": 3,
-      "size": 1000000.0,
-      "output_file": "out_allgather.json"
+      "size": 1e8,
+      "reliable": true,
+      "src": 3,
+      "dst": 4,
+      "background": false,
+      "bandwidth_percent": 1,
+      "output_file": ""
     },
     {
-      "type": "flow",
+      "type": "allgather",
+      "group": 1,
       "start_time": 0,
       "priority": 3,
-      "multicast": true,
-      "size": 1000000.0,
+      "size": 1e7,
+      "background": false,
+      "bandwidth_percent": 1,
+      "output_file": ""
+    },
+    {
+      "type": "multicast",
+      "start_time": 0,
+      "priority": 3,
+      "size": 1e9,
       "src": 4,
-      "dst": 1,
-      "bandwidth_percent": 0.1
+      "group": 1,
+      "background": true,
+      "bandwidth_percent": 0.0,
+      "output_file": ""
     }
   ]
 }

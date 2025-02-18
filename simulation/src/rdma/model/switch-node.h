@@ -66,6 +66,10 @@ protected:
 	uint32_t m_ackHighPrio; // set high priority for ACK/NACK
 
 private:
+	//! Lat packets of a single multicast to dequeue.
+	std::unordered_set<Ptr<Packet>> m_mcast_lasts;
+
+private:
 	int GetOutDev(Ptr<const Packet>, CustomHeader &ch);
 	void SendToDev(Ptr<Packet>p, CustomHeader &ch);
 	void SendMultiToDevs(Ptr<Packet> p, CustomHeader& ch, int in_inface);

@@ -13,30 +13,6 @@
 
 namespace ns3 {
 
-enum FlowType {
-	Flow, Allgather
-};
-
-NLOHMANN_JSON_SERIALIZE_ENUM(FlowType, {
-	{FlowType::Flow, "flow"},
-	{FlowType::Allgather, "allgather"}
-});
-
-struct ScheduledFlow {
-	FlowType type;
-	uint32_t src{};
-	uint32_t dst{};
-	uint16_t dst_port{};
-	uint64_t size{};
-	double start_time{};
-	uint32_t priority{};
-	bool reliable{};
-	bool multicast{};
-	double bandwidth_percent{1};
-	std::string output_file;
-	NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(ScheduledFlow, type, src, dst, dst_port, size, start_time, priority, reliable, multicast, bandwidth_percent, output_file);
-};
-
 class RdmaHw : public Object {
 public:
 
@@ -98,7 +74,7 @@ private:
 	DataRate m_minRate;		//< Min sending rate
 	uint32_t m_mtu;
 	uint32_t m_cc_mode;
-	double m_nack_interval;
+	Time m_nack_interval;
 	uint32_t m_chunk;
 	uint32_t m_ack_interval;
 	bool m_backto0;

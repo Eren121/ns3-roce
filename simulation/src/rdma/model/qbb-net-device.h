@@ -170,7 +170,7 @@ protected:
   //pfc
   bool m_qbbEnabled;	//< PFC behaviour enabled
   bool m_dynamicth;
-  uint32_t m_pausetime;	//< Time for each Pause
+  Time m_pausetime;	//< Time for each Pause
   bool m_paused[qCnt];	//< Whether a queue paused
 
   //qcn

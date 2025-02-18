@@ -27,15 +27,16 @@
 #include "ns3/event-id.h"
 #include "ns3/ptr.h"
 #include "ns3/ipv4-address.h"
-#include <ns3/rdma.h>
-#include <ns3/node-container.h>
-#include <ns3/rdma-reliable-qp.h>
-#include <ns3/rdma-unreliable-qp.h>
-#include <ns3/rdma-hw.h>
-#include <ns3/ag-recovery.h>
+#include "ns3/rdma.h"
+#include "ns3/node-container.h"
+#include "ns3/rdma-reliable-qp.h"
+#include "ns3/rdma-unreliable-qp.h"
+#include "ns3/rdma-hw.h"
+#include "ns3/ag-recovery.h"
+#include "ns3/rdma-random.h"
+#include "ns3/json.h"
+#include "ns3/rdma-flow.h"
 #include <unordered_set>
-#include <ns3/rdma-random.h>
-#include <ns3/json.h>
 #include <memory>
 
 #define LOG_VAR(x) #x << "=" << (x)
@@ -46,8 +47,8 @@ class Socket;
 class Packet;
 
 /**
- * \ingroup rdmaclientserver
- * \class RdmaClient
+ * \ingroup RdmaAllgatherserver
+ * \class RdmaAllgather
  * \brief An RDMA client.
  * 
  * An RDMA client sends a flow of data to another QP which simulates an RDMA Write operation.
@@ -55,16 +56,23 @@ class Packet;
  * For UD QP, the application stops when all data is sent.
  * See the format of `flow.txt` which defines the flow of the client.
  */
-class RdmaClient : public Application
+class RdmaAllgather : public Application
 {
 public:
   struct SharedState {
-    ScheduledFlow flow;
+    SharedState(const FlowAllgather& flow)
+      : flow{flow}
+    { 
+    }
+
+    const FlowAllgather& flow;
     nlohmann::json log; //!< Data to be saved on the disk
     std::unordered_map<uint32_t, AgRecovery::RecoveryRequest> recovery_request_map; //!< Easier than serializing / deserializing... No problem as long as we dont use MPI.
     uint64_t completed_apps{}; //!< Count of finished apps.
     uint64_t completed_mcasts{}; //!< Count of finished mcast phases across all apps.
     uint64_t total_chunk_lost{}; //!< Count of chunk lost across all apps after the mcast phase.
+    
+    std::function<void()> on_finish;
   };
 
 public:
@@ -74,8 +82,8 @@ public:
     Left, Right
   };
 
-  RdmaClient();
-  ~RdmaClient() override;
+  RdmaAllgather();
+  ~RdmaAllgather() override;
   void SetServers(NodeContainer servers) { m_servers = std::move(servers); }
   void SetSharedState(std::shared_ptr<SharedState> shared) { m_shared = shared; }
 
@@ -91,7 +99,7 @@ private:
 
   void OnMulticastTransmissionEnd(AgConfig::chunk_id_t last_chunk);
   void OnCutoffTimer();
-  
+
   void InitConfig();
   void InitPrevNextQP();
   void InitLeftRightQP();
@@ -105,7 +113,6 @@ private:
 
   void TryUpdateState();
 
-  void OnMcastTimeout();
   void RunRecoveryPhase();
   Ipv4Address GetLeftIp() const;
   Ipv4Address GetRightIp() const;
@@ -125,7 +132,7 @@ private:
 
   uint16_t m_pg;              //<! Priority group.
   uint32_t m_win;             //<! Bound of on-the-fly packets.
-  Callback<void, RdmaClient&> m_onFlowFinished; //< Callback when flow finished.
+  Callback<void, RdmaAllgather&> m_onFlowFinished; //< Callback when flow finished.
 
   std::unordered_set<uint64_t> m_recv_chunks; //!< Succesfully received chunks
   std::vector<uint32_t> m_order; //!< Indices of the multicast sources in order.

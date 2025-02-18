@@ -12,18 +12,27 @@
 #include "ns3/rdma-random.h"
 #include "switch-mmu.h"
 
-NS_LOG_COMPONENT_DEFINE("SwitchMmu");
 namespace ns3 {
+
+	NS_LOG_COMPONENT_DEFINE("SwitchMmu");
+	NS_OBJECT_ENSURE_REGISTERED (SwitchMmu);
+
 	TypeId SwitchMmu::GetTypeId(void){
 		static TypeId tid = TypeId("ns3::SwitchMmu")
 			.SetParent<Object>()
-			.AddConstructor<SwitchMmu>();
+			.AddConstructor<SwitchMmu>()
+			.AddAttribute ("BufferSize",
+				"Buffer size. PFC threshold depends on it.",
+				QueueSizeValue(QueueSize("12MiB")),
+				MakeQueueSizeAccessor(&SwitchMmu::m_buffer_size),
+				MakeQueueSizeChecker())
+			;
 		return tid;
 	}
 
 	SwitchMmu::SwitchMmu(void)
 	{
-		buffer_size = 12 * 1024 * 1024;
+		m_buffer_size = QueueSize(QueueSizeUnit::BYTES, 12 * 1024 * 1024);
 		reserve = 4 * 1024;
 		resume_offset = 3 * 1024;
 
@@ -97,7 +106,8 @@ namespace ns3 {
 			return false;
 		}
 		
-		NS_LOG_DEBUG("usage: " << GetSharedUsed(port, qIndex));
+		NS_LOG_DEBUG("(to pause) usage: " << GetSharedUsed(port, qIndex)
+													 << "/" << GetPfcThreshold(port));
 
 		if(hdrm_bytes[port][qIndex] > 0) {
 			NS_LOG_LOGIC("PFC headroom not empty");
@@ -113,7 +123,8 @@ namespace ns3 {
 	}
 	bool SwitchMmu::CheckShouldResume(uint32_t port, uint32_t qIndex)
 	{
-		NS_LOG_DEBUG("usage: " << GetSharedUsed(port, qIndex));
+		NS_LOG_DEBUG("(to resume) usage: " << GetSharedUsed(port, qIndex)
+													 << "/" << GetPfcThreshold(port));
 
 		if (!paused[port][qIndex])
 			return false;
@@ -127,8 +138,14 @@ namespace ns3 {
 		paused[port][qIndex] = false;
 	}
 
-	uint32_t SwitchMmu::GetPfcThreshold(uint32_t port){
-		return (buffer_size - total_hdrm - total_rsrv - shared_used_bytes) >> pfc_a_shift[port];
+	uint32_t SwitchMmu::GetPfcThreshold(uint32_t port) {
+		// Should have at least ~200KB in the buffer size from the test to be safe
+		if(m_buffer_size.GetValue() < total_hdrm + total_rsrv + shared_used_bytes) {
+			NS_LOG_WARN("Buffer size is smaller than reserved size");
+			return 0;
+		}
+
+		return (m_buffer_size.GetValue() - total_hdrm - total_rsrv - shared_used_bytes) >> pfc_a_shift[port];
 	}
 	uint32_t SwitchMmu::GetSharedUsed(uint32_t port, uint32_t qIndex){
 		uint32_t used = ingress_bytes[port][qIndex];
@@ -137,16 +154,20 @@ namespace ns3 {
 	bool SwitchMmu::ShouldSendCN(uint32_t ifindex, uint32_t qIndex)
 	{
 		NS_LOG_FUNCTION(this);
-		NS_LOG_DEBUG("Egress byte buffer " << egress_bytes[ifindex][qIndex] << "/" << kmin[ifindex]);
 
-		if (qIndex == 0)
+		if (qIndex == 0) {
 			return false;
-		if (egress_bytes[ifindex][qIndex] > kmax[ifindex])
+		}
+		if (egress_bytes[ifindex][qIndex] > kmax[ifindex]) {
+			NS_LOG_LOGIC("ECN should send: " << egress_bytes[ifindex][qIndex] << "/" << kmin[ifindex]);
 			return true;
-		if (egress_bytes[ifindex][qIndex] > kmin[ifindex]){
+		}
+		if (egress_bytes[ifindex][qIndex] > kmin[ifindex]) {
 			double p = pmax[ifindex] * double(egress_bytes[ifindex][qIndex] - kmin[ifindex]) / (kmax[ifindex] - kmin[ifindex]);
-			if (GenRandomDouble(0, 1) < p)
+			if (GenRandomDouble(0, 1) < p) {
+				NS_LOG_LOGIC("ECN should send: " << egress_bytes[ifindex][qIndex] << "/" << kmin[ifindex] << ", p=" << p);
 				return true;
+			}
 		}
 		return false;
 	}
@@ -165,8 +186,5 @@ namespace ns3 {
 			total_hdrm += headroom[i];
 			total_rsrv += reserve;
 		}
-	}
-	void SwitchMmu::ConfigBufferSize(uint32_t size){
-		buffer_size = size;
 	}
 }

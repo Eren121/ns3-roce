@@ -25,7 +25,7 @@
 #include "ns3/node-container.h"
 #include "ns3/object-factory.h"
 #include "ns3/ipv4-address.h"
-#include "ns3/rdma-client.h"
+#include "ns3/rdma-allgather.h"
 #include <ns3/rdma-hw.h>
 
 namespace ns3 {
@@ -33,26 +33,19 @@ namespace ns3 {
 /**
  * \brief Create a client application which does RDMA write
  */
-class RdmaClientHelper
+class RdmaAllgatherHelper
 {
 
 public:
   /**
-   * Create RdmaClientHelper which will make life easier for people trying
-   * to set up simulations with udp-client-server.
-   *
-   */
-  RdmaClientHelper ();
-
-  /**
-   *  Create RdmaClientHelper which will make life easier for people trying
+   *  Create RdmaAllgatherHelper which will make life easier for people trying
    * to set up simulations with udp-client-server.
    *
    * \param ip The IP address of the remote udp server
    * \param port The port number of the remote udp server
    */
 
-  RdmaClientHelper (const ScheduledFlow& flow, uint32_t win);
+   RdmaAllgatherHelper (const FlowAllgather& flow, uint32_t win);
 
   /**
    * Record an attribute to be set in each Application after it is is created.
@@ -71,11 +64,17 @@ public:
      */
   ApplicationContainer Install (NodeContainer c);
 
+  void SetOnComplete(std::function<void()> on_finish)
+  {
+    m_on_finish = on_finish;
+  }
+
 private:
   static NodeContainer FilterServers(NodeContainer c);
 
 private:
-  ScheduledFlow m_flow;
+  std::function<void()> m_on_finish;
+  const FlowAllgather& m_flow;
   ObjectFactory m_factory;
 };
 

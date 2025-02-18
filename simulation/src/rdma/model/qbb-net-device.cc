@@ -50,11 +50,12 @@
 #include "ns3/assert.h"
 #include "ns3/switch-node.h"
 #include "ns3/rdma-reliable-qp.h"
+#include "ns3/rdma-hw.h"
 #include <iostream>
 
-NS_LOG_COMPONENT_DEFINE("QbbNetDevice");
-
 namespace ns3 {
+	
+NS_LOG_COMPONENT_DEFINE("QbbNetDevice");
 	
 	uint32_t RdmaEgressQueue::ack_q_idx = 3;
 	// RdmaEgressQueue
@@ -185,10 +186,10 @@ namespace ns3 {
 				MakeBooleanAccessor(&QbbNetDevice::m_dynamicth),
 				MakeBooleanChecker())
 			.AddAttribute("PauseTime",
-				"Number of microseconds to pause upon congestion",
-				UintegerValue(5),
-				MakeUintegerAccessor(&QbbNetDevice::m_pausetime),
-				MakeUintegerChecker<uint32_t>())
+				"Time to pause upon congestion",
+				TimeValue(MicroSeconds(5)),
+				MakeTimeAccessor(&QbbNetDevice::m_pausetime),
+				MakeTimeChecker())
 			.AddAttribute ("TxBeQueue", 
 					"A queue to use as the transmit queue in the device.",
 					PointerValue (),
@@ -306,7 +307,7 @@ namespace ns3 {
 				Time t = Simulator::GetMaximumSimulationTime();
 				for (uint32_t i = 0; i < m_rdmaEQ->GetFlowCount(); i++){
 					Ptr<RdmaTxQueuePair> qp = m_rdmaEQ->GetQp(i);
-					if(qp->HasDataToSend()) {
+					if(qp->HasDataToSend() && !m_paused[qp->GetPG()]) {
 						t = Min(qp->GetNextAvailTime(), t);
 					}
 				}
@@ -446,7 +447,9 @@ namespace ns3 {
 		NS_LOG_FUNCTION(this);
 
 		Ptr<Packet> p = Create<Packet>(0);
-		PauseHeader pauseh((type == 0 ? m_pausetime : 0), qIndex);
+
+		// TODO Not implemented!!
+		PauseHeader pauseh((type == 0 ? m_pausetime.GetMicroSeconds() : 0), qIndex);
 		p->AddHeader(pauseh);
 		Ipv4Header ipv4h;  // Prepare IPv4 header
 		ipv4h.SetProtocol(0xFE);
@@ -488,7 +491,7 @@ namespace ns3 {
 		m_phyTxBeginTrace(m_currentPkt);
 		Time txTime = m_bps.CalculateBytesTxTime(p->GetSize());
 		Time txCompleteTime = txTime + m_tInterframeGap;
-		NS_LOG_LOGIC("Schedule TransmitCompleteEvent in " << txCompleteTime.GetSeconds() << "sec");
+		// NS_LOG_LOGIC("Schedule TransmitCompleteEvent in " << txCompleteTime.GetSeconds() << "sec");
 		Simulator::Schedule(txCompleteTime, &QbbNetDevice::TransmitComplete, this);
 
 		bool result = m_channel->TransmitStart(p, this, txTime);

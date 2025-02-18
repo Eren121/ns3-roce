@@ -7,7 +7,7 @@
 #include <cassert>
 #include <unordered_map>
 
-class SimSetting{
+class SimSetting {
 public:
 	std::unordered_map<uint16_t, std::unordered_map<uint8_t, uint64_t> > port_speed; // port_speed[i][j] is node i's j-th port's speed
 	uint32_t win; // window bound

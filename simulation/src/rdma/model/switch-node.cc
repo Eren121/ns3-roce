@@ -22,6 +22,7 @@
 namespace ns3 {
 
 NS_LOG_COMPONENT_DEFINE("SwitchNode");
+NS_OBJECT_ENSURE_REGISTERED (SwitchNode);
 
 TypeId SwitchNode::GetTypeId (void)
 {
@@ -162,6 +163,8 @@ void SwitchNode::SendMultiToDevs(Ptr<Packet> packet, CustomHeader& ch, int in_if
 		NS_LOG_LOGIC("Drop: Cannot find ports for multicast group " << ch.dip);
 		return;
 	}
+
+	Ptr<Packet> last;
 	for(int idx : iface_it->second) {
 		if(idx == in_iface) {
 			continue;
@@ -171,16 +174,21 @@ void SwitchNode::SendMultiToDevs(Ptr<Packet> packet, CustomHeader& ch, int in_if
 
 		Ptr<Packet> p = packet->Copy();
 
+		// (Done)
 		// TODO: now we increase the input interface buffer usage for each output device in the routing table of the multicast destination
 		// It would be more logical to increase only once, regardless of the count of the output devices.
 		// This is easy to do like here, but maybe it changes behaviour when the buffer is almost at full capacity, because the buffer full capacity is triggered earlier than what it should.
 		// See `SwitchNotifyDequeue::RemoveFromIngressAdmission()`
 		// We need to keep trace of the output packet because increasing only once would do an integer underflow resulting in buffer usage of 4 billion....
-		m_mmu->UpdateIngressAdmission(inDev, qIndex, packet->GetSize());
-		
+		last = packet;
+		m_mmu->UpdateIngressAdmission(inDev, qIndex, last->GetSize());
 		m_mmu->UpdateEgressAdmission(idx, qIndex, packet->GetSize());
 		if(qIndex != 0) { m_bytes[inDev][idx][qIndex] += p->GetSize(); }
 		SwitchSend(GetDevice(idx), qIndex, p);
+	}
+
+	if(last) {
+		m_mcast_lasts.insert(last);
 	}
 
 	if(qIndex != 0) {
@@ -306,7 +314,16 @@ void SwitchNode::SwitchNotifyDequeue(uint32_t ifIndex, uint32_t qIndex, Ptr<Pack
 	p->PeekPacketTag(t);
 	if (qIndex != 0){
 		uint32_t inDev = t.GetFlowId();
+
+		{
+			// Last packet of the mcast, remove from ingress port
+			auto it{m_mcast_lasts.find(p)};
+			if(it != m_mcast_lasts.end()) {
+				m_mcast_lasts.erase(it);
+			}
+		}
 		m_mmu->RemoveFromIngressAdmission(inDev, qIndex, p->GetSize());
+			
 		m_mmu->RemoveFromEgressAdmission(ifIndex, qIndex, p->GetSize());
 		m_bytes[inDev][ifIndex][qIndex] -= p->GetSize();
 		if (m_ecnEnabled){

@@ -87,16 +87,27 @@ void RdmaUnicastApp::InitQP()
 	NS_ASSERT(!m_ud_qp.sq && !m_rc_qp.sq);
   
   Ipv4Address local_ip{GetServerAddress(GetNode())};
-  m_peer_ip = (m_multicast ? Ipv4Address{m_dst} : GetServerAddress(m_nodes.Get(m_dst)));
   uint16_t local_port;
 
   if(IsSrc()) {
     local_port = m_sport;
     m_peer_port = m_dport;
+    if(m_multicast) {
+      m_peer_ip = Ipv4Address{m_dst};
+    }
+    else {
+      m_peer_ip = GetServerAddress(NodeContainer::GetGlobal().Get(m_dst));
+    }
   }
   else {
     local_port = m_dport;
     m_peer_port = m_sport;
+    if(m_multicast) {
+      m_peer_ip = Ipv4Address{m_dst};
+    }
+    else {
+      m_peer_ip = GetServerAddress(NodeContainer::GetGlobal().Get(m_src));
+    }
   }
 
   const Ptr<RdmaHw> rdma{m_node->GetObject<RdmaHw>()};
@@ -126,7 +137,7 @@ void RdmaUnicastApp::StartApplication()
 {
   NS_LOG_FUNCTION(this);
 
-  if(!IsSrc() && !m_multicast) {
+  if(!IsSrc() && !m_multicast && GetNode()->GetId() != m_dst) {
     StopApplication();
     return;
   }

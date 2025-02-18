@@ -24761,5 +24761,10 @@ inline void swap(nlohmann::NLOHMANN_BASIC_JSON_TPL& j1, nlohmann::NLOHMANN_BASIC
 #undef JSON_HEDLEY_FALL_THROUGH
 
 
+// Only change of this file for ns3
+namespace ns3 {
+using json = nlohmann::json;
+}
+
 
 #endif  // INCLUDE_NLOHMANN_JSON_HPP_
