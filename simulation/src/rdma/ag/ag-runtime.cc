@@ -195,7 +195,7 @@ void AgRuntime::RegisterMissedChunks()
 
   uint64_t total{};
 
-  for(chunk_id_t chunk; chunk < m_config->GetTotalChunkCount(); chunk++) {
+  for(chunk_id_t chunk{0}; chunk < m_config->GetTotalChunkCount(); chunk++) {
     if(!m_recv.contains(chunk)) {
       m_shared->AddMissedChunk(m_block, chunk);
       total++;
