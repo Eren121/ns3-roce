@@ -8,7 +8,7 @@
 
 namespace ns3 {
 
-void PopulateAttributes(ObjectBase& obj, const rfl::Generic::Object& config, bool)
+void PopulateAttributes(ObjectBase& obj, const rfl::Object<rfl::Generic>& config)
 {
   const TypeId& type{obj.GetInstanceTypeId()};
 
@@ -19,6 +19,20 @@ void PopulateAttributes(ObjectBase& obj, const rfl::Generic::Object& config, boo
     }
 
     attr_info.accessor->Set(&obj, *ConvertJsonToAttribute(attr_generic, attr_info));
+  }
+}
+
+void PopulateAttributes(ObjectFactory& factory, const rfl::Object<rfl::Generic>& config)
+{
+  const TypeId& type{factory.GetTypeId()};
+
+  for (const auto& [attr_name, attr_generic] : config) {
+    TypeId::AttributeInformation attr_info;
+    if(!type.LookupAttributeByName(attr_name, &attr_info)) {
+      NS_ABORT_MSG("Cannot find attribute " << attr_name << " in " << type.GetName());
+    }
+
+    factory.Set(attr_name, *ConvertJsonToAttribute(attr_generic, attr_info));
   }
 }
 

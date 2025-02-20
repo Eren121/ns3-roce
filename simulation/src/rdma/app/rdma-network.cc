@@ -16,6 +16,27 @@ namespace ns3 {
 
 NS_LOG_COMPONENT_DEFINE("RdmaNetwork");
 
+double FindEcnThreshold(const std::vector<BandwidthToEcnThreshold>& map, double bps)
+{
+	std::map<uint64_t, BandwidthToEcnThreshold> sorted{};
+	for(const auto& entry : map) {
+		sorted[entry.bandwidth] = entry;
+	}
+
+	// Just used the entry lower or equals
+	// This permit to avoid crash when the bandwidth is not in the map
+	// This just crash if the first item in the map is higher than `bps`
+	auto it{sorted.lower_bound(bps)};
+	NS_ABORT_MSG_IF(it == sorted.begin(), "Cannot find ECN threshold related to bandwidth " << bps);
+	return (--it)->second.ecn_threshold;
+}
+
+RdmaNetwork& RdmaNetwork::GetInstance()
+{
+  static RdmaNetwork instance;
+  return instance;
+}
+
 RdmaNetwork::~RdmaNetwork()
 {
   NS_LOG_FUNCTION(this);
@@ -27,7 +48,7 @@ RdmaNetwork::~RdmaNetwork()
 
 void RdmaNetwork::CreateNodes()
 {
-	const size_t node_count{m_topology->nodes.size()};
+const size_t node_count{m_topology->nodes.size()};
   NodeContainer n;
 
 	for (const RdmaTopology::Node& node_config : m_topology->nodes) {
@@ -127,6 +148,8 @@ const RdmaConfig& RdmaNetwork::GetConfig() const
 
 void RdmaNetwork::SetTopology(std::shared_ptr<RdmaTopology> topology)
 {
+  NS_ASSERT_MSG(!m_topology, "RdmaNetwork has already been created");
+  
   m_topology = topology;
 
   CreateNodes();

@@ -2,36 +2,26 @@
   "flows": [
     {
       "type": "unicast",
-      "start_time": 0,
-      "priority": 3,
-      "size": 1e8,
-      "reliable": true,
-      "src": 3,
-      "dst": 4,
-      "background": false,
-      "bandwidth_percent": 1,
-      "output_file": ""
+      "background": true,
+      "parameters": {
+        "SrcNode": 3,
+        "DstNode": 4,
+        "WriteSize": 1e9,
+        "BandwidthPercent": 0.1
+      }
     },
     {
       "type": "allgather",
-      "group": 1,
-      "start_time": 0,
-      "priority": 3,
-      "size": 1e7,
-      "background": false,
-      "bandwidth_percent": 1,
-      "output_file": ""
-    },
-    {
-      "type": "multicast",
-      "start_time": 0,
-      "priority": 3,
-      "size": 1e9,
-      "src": 4,
-      "group": 1,
-      "background": true,
-      "bandwidth_percent": 0.0,
-      "output_file": ""
+      "parameters": {
+        "PerNodeBytes": 1e7,
+        "ParityChunkPerSegmentCount": 0,
+        "DataChunkPerSegmentCount": 1,
+        "RootCount": 2,
+        "McastGroup": 1,
+
+        "DumpStats": "out_allgather-stats.json",
+        "DumpMissedChunks": "out_allgather-miss.json"
+      }
     }
   ]
 }

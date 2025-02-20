@@ -51,7 +51,7 @@ def print_each_line(line: str) -> None:
     print(line, end="")
 
 
-def run_process(argv: list, each_line=print_each_line) -> None:
+def run_process(argv: list, each_line=None) -> None:
     """
     Run a process.
     Raise an exception if the process exists with failure.

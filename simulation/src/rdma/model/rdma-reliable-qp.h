@@ -87,12 +87,11 @@ protected:
 	 * @brief The sender receives back an ACK or NACK.
 	 */
 	virtual void ReceiveAck(Ptr<Packet> p, const CustomHeader &ch);
-
 };
 
 struct RdmaReliableQP {
-	Ptr<RdmaReliableSQ> sq;
-	Ptr<RdmaReliableRQ> rq;
+	Ptr<class RdmaReliableSQ> sq;
+	Ptr<class RdmaReliableRQ> rq;
 };
 
 }

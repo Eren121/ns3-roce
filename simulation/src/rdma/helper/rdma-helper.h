@@ -6,7 +6,25 @@
 #include <set>
 #include <functional>
 
+#ifndef DISALLOW_COPY
+#define DISALLOW_COPY(T) \
+  T(const T&) = delete; \
+  T& operator=(const T&) = delete
+#endif
+
 namespace ns3 {
+
+template<typename T>
+inline T CeilDiv(T num, T den)
+{
+  return (num + den - 1) / den;
+}
+
+template<typename T>
+T PositiveModulo(T i, T n)
+{
+  return (i % n + n) % n;
+}
 
 /**
  * Schedule an event by an absolute time rather than a relative one like `Simulator::Schedule()`.
@@ -27,6 +45,27 @@ auto ScheduleNow(Args&&... args)
   return Simulator::Schedule(Simulator::Now(), std::forward<Args>(args)...);
 }
 
+/**
+ * Lambdas does not work with MakeBoundCallback.
+ */
+template<typename Func>
+auto MakeLambdaCallback(Func&& func)
+{
+  class Lambda : public SimpleRefCount<Lambda>
+  {
+  public:
+    Lambda(Func func) : m_func(std::move(func)) {}
+    void Run() const { m_func(); }
+
+  private:
+    Func m_func;
+  };
+
+  Ptr<Lambda> lambda = Create<Lambda>(std::forward<Func>(func));
+  return MakeCallback(&Lambda::Run, lambda);
+}
+
+using group_id_t = uint32_t;
 using node_id_t = uint32_t;
 using iface_id_t = uint32_t;
 using byte_t = uint64_t;

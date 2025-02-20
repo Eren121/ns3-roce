@@ -14,6 +14,12 @@ void RdmaUnicastAppHelper::SetOnComplete(RdmaUnicastAppHelper::OnComplete on_com
   m_on_complete = on_complete;
 }
 
+ObjectFactory&
+RdmaUnicastAppHelper::GetFactory()
+{
+  return m_factory;
+}
+
 void
 RdmaUnicastAppHelper::SetAttribute(const std::string& name, const AttributeValue& value)
 {

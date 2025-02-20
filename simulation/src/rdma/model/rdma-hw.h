@@ -6,6 +6,8 @@
 #include <ns3/node.h>
 #include <ns3/custom-header.h>
 #include <ns3/json.h>
+#include <ns3/rdma-reliable-qp.h>
+#include <ns3/rdma-unreliable-qp.h>
 #include "qbb-net-device.h"
 #include <unordered_map>
 #include <functional>
@@ -28,8 +30,10 @@ public:
 	void RedistributeQp();
 
 	uint32_t GetCC() const { return m_cc_mode; }
-
 	uint32_t GetMTU() const { return m_mtu; }
+
+	RdmaReliableQP CreateReliableQP(uint16_t pg, uint16_t sport, Ipv4Address dip, uint16_t dport);
+	RdmaUnreliableQP CreateUnreliableQP(uint16_t pg, uint16_t sport);
 	
 private:
 	static uint64_t GetRxQpKey(uint16_t dport); // get the lookup key for m_rxQpMap

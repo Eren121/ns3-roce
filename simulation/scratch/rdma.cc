@@ -30,9 +30,9 @@
 #include "ns3/packet.h"
 #include "ns3/error-model.h"
 #include <ns3/rdma.h>
-#include <ns3/rdma-allgather.h>
+#include <ns3/ag-app.h>
 #include <ns3/rdma-random.h>
-#include <ns3/rdma-allgather-helper.h>
+#include <ns3/ag-app-helper.h>
 #include <ns3/rdma-unicast-app-helper.h>
 #include <ns3/rdma-hw.h>
 #include <ns3/rdma-flow.h>
@@ -101,16 +101,15 @@ int main(int argc, char *argv[])
 	// SeedManager::SetSeed(time(NULL));
 
 	auto topology = std::make_shared<RdmaTopology>(json::parse(std::ifstream{config->FindFile(config->topology_file)}));
-	auto network = std::make_shared<RdmaNetwork>();
-	network->SetConfig(config);
-	network->SetTopology(topology);
+	auto& network = RdmaNetwork::GetInstance();
+	network.SetConfig(config);
+	network.SetTopology(topology);
 
 	FlowScheduler flow_scheduler;
 	flow_scheduler.SetOnAllFlowsCompleted([]() {
 		NS_LOG_INFO("Simulation stopped at " << Simulator::Now().GetSeconds());
 		Simulator::Stop();
 	});
-	flow_scheduler.SetNetwork(network);
 	flow_scheduler.AddFlowsFromFile(config->FindFile(config->flow_file));
 
 	NS_LOG_INFO("Running Simulation");

@@ -26,7 +26,7 @@
     "ns3::RdmaHw::FastReact": true,
     "ns3::RdmaHw::RateBound": true,
 
-    "ns3::SwitchMmu::BufferSize": "32MiB"
+    "ns3::SwitchMmu::BufferSize": "12MiB"
   },
 
   "qlen_monitor": {

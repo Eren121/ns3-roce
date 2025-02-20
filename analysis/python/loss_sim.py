@@ -40,8 +40,8 @@ class CartesianProduct:
     def __init__(self):
         self.vars = {}
     
-    def set_param(self, name: str, values: list) -> None:
-        self.vars[name] = values
+    def set_param(self, name: str, values) -> None:
+        self.vars[name] = np.atleast_1d(values)
 
     def values(self):
         """Iterate the cartesian product of all values."""
@@ -53,6 +53,7 @@ class CartesianProduct:
 
         var_indices = []
         for values in var_values:
+            print(values)
             var_indices.append(np.arange(0, len(values)))
         
         ret = []
@@ -127,17 +128,27 @@ def plot(res: pd.DataFrame) -> None:
     img_dir = tmp_dir / "img"
     img_dir.mkdir(parents=True, exist_ok=True)
 
-    for y in ["elapsed_recovery_time", "total_chunk_lost_percent", "elapsed_mcast_time", "elapsed_total_time"]:
+    ys = []
+    ys.append("total_chunk_lost_percent")
+    ys.append(["elapsed_recovery_time", "elapsed_total_time"])
+    ys.append("bandwidth")
+    
+    for y in ys:
         x = "bg_bandwidth_percent"
-        ax = sns.lineplot(data=res, x=x, y=y, color=sns.color_palette()[0])
-        ax.set_title(f"{y}")
-        fig = ax.get_figure()
+        if not isinstance(y, list):
+            y = [y]
+        
+        for metric in y:
+            ax = sns.lineplot(data=res, x=x, y=metric, color=sns.color_palette()[0])
+            ax.set_title(f"{y}")
+        fig = plt.gcf()
         fig.tight_layout()
-        fig.savefig(img_dir / f"{y}.pdf")
+        fig.savefig(img_dir / f"{"-".join(y)}.pdf")
         fig.clf()
 
 def run_cases() -> list:
-    tree_config = topology.FatTreeConfig(depth=2, link_bw=100e9, link_latency=1e-6)
+    depth = 2
+    tree_config = topology.FatTreeConfig(depth=depth, link_bw=100e9, link_latency=1e-6)
     tree = topology.FatTree(tree_config)
     out_allgather = "out_allgather.json"
 
@@ -145,18 +156,21 @@ def run_cases() -> list:
     params_cases = CartesianProduct()
     params_cases.set_param("bg_bandwidth_percent", np.flip(np.linspace(0.0, 0.8, 60)))
     params_cases.set_param("iteration", np.arange(2))
+    params_cases.set_param("size", 1e7)
+    params_cases.set_param("root_count", 2 ** depth)
     
     enable_anim = False
-    keep_dir = True
+    keep_dir = False
     
     def generate_config():
         for params in params_cases.values():
-            flows = {
-                "flows": [
-                    topology.make_flow_allgather(size=1e7, output_file=out_allgather),
-                    topology.make_flow_multicast(size=1e9, src=4, dst=1, bandwidth_percent=params["bg_bandwidth_percent"])
-                ]
-            }
+            flows = []
+            flows.append(topology.make_flow_allgather(
+                size=params["size"],
+                output_file=out_allgather))
+            flows.append(topology.make_flow_multicast(
+                size=1e9, src=4, dst=1, background=True,
+                bandwidth_percent=params["bg_bandwidth_percent"]))
 
             sim_config = json.loads(pyu.read_all_file(script_dir / "default_config.json"))
 
@@ -165,7 +179,7 @@ def run_cases() -> list:
             config.add_config_file(SimulationConfigFile(name=sim_config["topology_file"], data=tree.get_topology()))
             config.add_config_file(SimulationConfigFile(name=sim_config["groups_file"], data=tree.get_groups()))
             config.add_config_file(SimulationConfigFile(name=sim_config["trace_file"], data={}))
-            config.add_config_file(SimulationConfigFile(name=sim_config["flow_file"], data=flows))
+            config.add_config_file(SimulationConfigFile(name=sim_config["flow_file"], data={"flows": flows}))
             sim_config["anim_output_file"] = "x.xml" if enable_anim else ""
             
             for name, value in params.items():
@@ -191,7 +205,16 @@ def run_cases() -> list:
 
     return allgather_results
 
+def ensure_built() -> None:
+    argv=[
+        "make", "-C",
+        project.root_path().as_posix(),
+        "build", "docker_interactive="]
+    pyu.run_process(argv=argv)
+    
+
 def main() -> None:
+    ensure_built()
     results_json_path = tmp_dir / "results.json"
     results_txt_path = tmp_dir / "results.txt"
 
@@ -204,6 +227,7 @@ def main() -> None:
  
     print(res)
     res["elapsed_recovery_time"] = res["elapsed_total_time"] - res["elapsed_mcast_time"]
+    res["bandwidth"] = 8 * res["size"] / res["elapsed_total_time"] * res["root_count"] / 1e9
     pyu.write_to_file(results_txt_path, res.to_string())    
     plot(res)
 

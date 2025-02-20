@@ -17,8 +17,8 @@
  *
  * Author: Mohamed Amine Ismail <amine.ismail@sophia.inria.fr>
  */
-#include "ns3/rdma-allgather-helper.h"
-#include "ns3/rdma-allgather.h"
+#include "ns3/ag-app-helper.h"
+#include "ns3/ag-app.h"
 #include "ns3/uinteger.h"
 #include "ns3/boolean.h"
 #include "ns3/string.h"
@@ -26,23 +26,24 @@
 
 namespace ns3 {
 
-RdmaAllgatherHelper::RdmaAllgatherHelper (const FlowAllgather& flow, uint32_t win)
-	: m_flow{flow}
+AgAppHelper::AgAppHelper()
 {
-	m_factory.SetTypeId (RdmaAllgather::GetTypeId ());
-	SetAttribute ("PriorityGroup", UintegerValue (flow.base().priority));
-	SetAttribute ("WriteSize", UintegerValue (flow.size));
-	SetAttribute ("Window", UintegerValue (win));
+	m_factory.SetTypeId (AgConfig::GetTypeId());
 }
 
 void
-RdmaAllgatherHelper::SetAttribute (std::string name, const AttributeValue &value)
+AgAppHelper::SetAttribute (std::string name, const AttributeValue &value)
 {
   m_factory.Set (name, value);
 }
 
+ObjectFactory&
+AgAppHelper::GetFactory()
+{
+	return m_factory;
+}
 
-NodeContainer RdmaAllgatherHelper::FilterServers(NodeContainer c)
+NodeContainer AgAppHelper::FilterServers(NodeContainer c)
 {
 	NodeContainer ret;
   for (NodeContainer::Iterator i{c.Begin()}; i != c.End (); ++i)
@@ -54,19 +55,21 @@ NodeContainer RdmaAllgatherHelper::FilterServers(NodeContainer c)
 }
 
 ApplicationContainer
-RdmaAllgatherHelper::Install (NodeContainer c)
+AgAppHelper::Install (NodeContainer c)
 {
 	const NodeContainer servers{FilterServers(c)};
-  ApplicationContainer apps;
 
-	auto shared_state = std::make_shared<RdmaAllgather::SharedState>(m_flow);
-	shared_state->on_finish = m_on_finish;
+	m_factory.Set("ChunkSize", UintegerValue(servers.Get(0)->GetObject<RdmaHw>()->GetMTU()));
+	Ptr<AgConfig> config{m_factory.Create<AgConfig>()};
+	config->SetBlockCount(servers.GetN());
+
+	Ptr<AgShared> shared{CreateObject<AgShared>(config, servers)};
+	
+  ApplicationContainer apps;
   for (NodeContainer::Iterator i{servers.Begin()}; i != servers.End (); ++i)
 	{
 		Ptr<Node> server{*i};
-		Ptr<RdmaAllgather> client{m_factory.Create<RdmaAllgather>()};
-		client->SetServers(servers);
-		client->SetSharedState(shared_state);
+		Ptr<AgApp> client{CreateObject<AgApp>(shared)};
 		server->AddApplication(client);
 		apps.Add(client);
 	}

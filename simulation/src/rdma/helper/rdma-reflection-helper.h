@@ -2,6 +2,7 @@
 
 #include "ns3/nstime.h"
 #include "ns3/type-id.h"
+#include "ns3/object-factory.h"
 #include <rfl/json.hpp>
 #include <rfl.hpp>
 #include <type_traits>
@@ -65,25 +66,22 @@ namespace ns3
  */
 bool IsExactInteger(double value);
 
-/**
- * Don't use this, use the wrapper with two arguments.
- * The unused bool argument is to prevent ambiguate overloaded call.
- */
-void PopulateAttributes(ObjectBase& obj, const rfl::Generic::Object& config, bool);
+void PopulateAttributes(ObjectBase& obj, const rfl::Object<rfl::Generic>& config);
+void PopulateAttributes(ObjectFactory& factory, const rfl::Object<rfl::Generic>& config);
 
 /**
- * From any structure `ConfigStruct` copy all the fields to the ns3 object.
+ * From any structure `T` copy all the fields to the ns3 object.
  */
-template<typename Ns3Obj, typename ConfigStruct>
-void PopulateAttributes(Ns3Obj& obj, const ConfigStruct& config)
+template<typename T>
+void PopulateAttributes(ObjectBase& obj, const T& config)
 {
-  PopulateAttributes(obj, rfl::to_generic(config).to_object().value(), true);
+  PopulateAttributes(obj, rfl::to_generic(config).to_object().value());
 }
 
-template<typename Ns3Obj, typename ConfigStruct>
-void PopulateAttributes(Ptr<Ns3Obj> obj, const ConfigStruct& config)
+template<typename T>
+void PopulateAttributes(ObjectFactory& factory, const T& config)
 {
-	PopulateAttributes(*obj, config);
+  PopulateAttributes(factory, rfl::to_generic(config).to_object().value());
 }
 
 /**

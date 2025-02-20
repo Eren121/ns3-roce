@@ -46,8 +46,8 @@ private:
 };
 
 struct RdmaUnreliableQP {
-	Ptr<RdmaUnreliableSQ> sq;
-	Ptr<RdmaUnreliableRQ> rq;
+	Ptr<class RdmaUnreliableSQ> sq;
+	Ptr<class RdmaUnreliableRQ> rq;
 };
 
 }

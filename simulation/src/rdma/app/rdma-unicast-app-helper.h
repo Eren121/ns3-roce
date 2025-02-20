@@ -15,6 +15,7 @@ public:
   
   void SetOnComplete(OnComplete on_complete);
   void SetAttribute(const std::string& name, const AttributeValue& value);
+  ObjectFactory& GetFactory();
   ApplicationContainer Install(NodeContainer c);
 
 private:

@@ -113,7 +113,7 @@ void SwitchNode::OnPeerJoinGroup(uint32_t ifIndex, uint32_t group)
 	}
 	
 	Ptr<QbbNetDevice> iface = DynamicCast<QbbNetDevice>(GetDevice(ifIndex));
-	for(int i = 0; i < GetNDevices(); i++) {
+	for(uint32_t i = 0; i < GetNDevices(); i++) {
 		Ptr<QbbNetDevice> dev = DynamicCast<QbbNetDevice>(GetDevice(i));
 		if(dev && dev != iface) { // First port can be null - maybe it is internal switch port 
 			dev->AddGroup(group);

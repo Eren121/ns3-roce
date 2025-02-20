@@ -72,14 +72,9 @@ RdmaTxQueuePair::~RdmaTxQueuePair()
 	StopTimers();
 }
 
-void RdmaTxQueuePair::SetRateFactor(double rate_factor)
-{
-	m_rate_multiplier = rate_factor;
-}
-
 void RdmaTxQueuePair::SetMaxRate(DataRate max_rate)
 {
-	m_max_rate = max_rate.GetBitRate() * m_rate_multiplier;
+	m_max_rate = max_rate.GetBitRate();
 	m_rate = m_max_rate;
 	mlx.m_targetRate = m_max_rate;
 }
@@ -174,7 +169,6 @@ bool RdmaRxQueuePair::Receive(Ptr<Packet> p, const CustomHeader &ch)
 void RdmaRxQueuePair::ReceiveUdp(Ptr<Packet> p, const CustomHeader &ch)
 {
 	const uint8_t ecnbits = ch.GetIpv4EcnBits();
-	const uint32_t payload_size = p->GetSize() - ch.GetSerializedSize();
 	
 	if (ecnbits != 0) {
 		m_ecn_source.ecnbits |= ecnbits;

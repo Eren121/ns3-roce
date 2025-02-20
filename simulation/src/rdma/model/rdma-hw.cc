@@ -160,6 +160,26 @@ void RdmaHw::Setup()
 	}
 }
 
+RdmaReliableQP RdmaHw::CreateReliableQP(uint16_t pg, uint16_t sport, Ipv4Address dip, uint16_t dport)
+{
+	RdmaReliableQP qp;
+  qp.sq = CreateObject<RdmaReliableSQ>(m_node, pg, GetServerAddress(m_node), sport, dip, dport);
+  qp.rq = CreateObject<RdmaReliableRQ>(qp.sq);
+  RegisterQP(qp.sq, qp.rq);
+
+	return qp;
+}
+
+RdmaUnreliableQP RdmaHw::CreateUnreliableQP(uint16_t pg, uint16_t sport)
+{
+	RdmaUnreliableQP qp;
+  qp.sq = CreateObject<RdmaUnreliableSQ>(m_node, pg, GetServerAddress(m_node), sport);
+  qp.rq = CreateObject<RdmaUnreliableRQ>(qp.sq);
+  RegisterQP(qp.sq, qp.rq);
+	
+	return qp;
+}
+
 void RdmaHw::RegisterQP(Ptr<RdmaTxQueuePair> sq, Ptr<RdmaRxQueuePair> rq)
 {
 	Ptr<RdmaReliableRQ> rel_rq = DynamicCast<RdmaReliableRQ>(rq);
@@ -180,6 +200,7 @@ void RdmaHw::RegisterQP(Ptr<RdmaTxQueuePair> sq, Ptr<RdmaRxQueuePair> rq)
 	NS_ASSERT(m_cc_mode == 1);
 	DataRate m_bps = sq->GetDevice()->GetDataRate();
 	sq->SetMaxRate(m_bps);
+	sq->SetMTU(m_mtu);
 
 	// Notify Nic
 	NS_ASSERT(m_nic.size() == 1);

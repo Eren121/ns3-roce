@@ -4,6 +4,7 @@
 #include <ns3/simulator.h>
 #include <ns3/log.h>
 #include <ns3/double.h>
+#include <ns3/rdma-helper.h>
 
 NS_LOG_COMPONENT_DEFINE("RdmaUnicastApp");
 
@@ -24,37 +25,32 @@ TypeId RdmaUnicastApp::GetTypeId()
                   UintegerValue(0),
                   MakeUintegerAccessor(&RdmaUnicastApp::m_dst),
                   MakeUintegerChecker<uint32_t>())
+    .AddAttribute("McastGroup",
+                  "Destination Node ID",
+                  UintegerValue(1),
+                  MakeUintegerAccessor(&RdmaUnicastApp::m_group),
+                  MakeUintegerChecker<uint32_t>())
 		.AddAttribute("SrcPort",
                   "Source port",
-                  UintegerValue(1500),
+                  UintegerValue(0),
                   MakeUintegerAccessor(&RdmaUnicastApp::m_sport),
                   MakeUintegerChecker<uint16_t>())
     .AddAttribute("DstPort",
                   "Destination port",
-                  UintegerValue(1500),
+                  UintegerValue(0),
                   MakeUintegerAccessor(&RdmaUnicastApp::m_dport),
                   MakeUintegerChecker<uint16_t>())
     .AddAttribute("WriteSize",
                   "The number of bytes to write",
-                  UintegerValue(10000),
+                  UintegerValue(1),
                   MakeUintegerAccessor(&RdmaUnicastApp::m_size),
                   MakeUintegerChecker<uint64_t>())
-    .AddAttribute("Mtu",
-                  "MTU",
-                  UintegerValue(1500),
-                  MakeUintegerAccessor(&RdmaUnicastApp::m_mtu),
-                  MakeUintegerChecker<uint32_t>())
 		.AddAttribute("PriorityGroup",
 							 	  "The priority group of this flow",
-				   		 	  UintegerValue(0),
+				   		 	  UintegerValue(3),
 				   		 	  MakeUintegerAccessor(&RdmaUnicastApp::m_pg),
 				   		 	  MakeUintegerChecker<uint16_t>())
-		.AddAttribute("Window",
-                  "Bound of on-the-fly packets",
-                  UintegerValue(0),
-                  MakeUintegerAccessor(&RdmaUnicastApp::m_win),
-                  MakeUintegerChecker<uint32_t>())
-    .AddAttribute("RateFactor",
+    .AddAttribute("BandwidthPercent",
                   "Bound percentage of the link bandwidth.",
                   DoubleValue(1.0),
                   MakeDoubleAccessor(&RdmaUnicastApp::m_rate_factor),
@@ -93,7 +89,7 @@ void RdmaUnicastApp::InitQP()
     local_port = m_sport;
     m_peer_port = m_dport;
     if(m_multicast) {
-      m_peer_ip = Ipv4Address{m_dst};
+      m_peer_ip = Ipv4Address{m_group};
     }
     else {
       m_peer_ip = GetServerAddress(NodeContainer::GetGlobal().Get(m_dst));
@@ -103,7 +99,7 @@ void RdmaUnicastApp::InitQP()
     local_port = m_dport;
     m_peer_port = m_sport;
     if(m_multicast) {
-      m_peer_ip = Ipv4Address{m_dst};
+      m_peer_ip = Ipv4Address{m_group};
     }
     else {
       m_peer_ip = GetServerAddress(NodeContainer::GetGlobal().Get(m_src));
@@ -128,9 +124,9 @@ void RdmaUnicastApp::InitQP()
     rx = m_rc_qp.rq;
   }
   
-  tx->SetMTU(m_mtu);
-  tx->SetRateFactor(m_rate_factor);
   rdma->RegisterQP(tx, rx);
+  tx->SetMaxRate(tx->GetMaxRate() * (1.0 / m_rate_factor));
+  m_mtu = tx->GetMTU();
 }
 
 void RdmaUnicastApp::StartApplication()
@@ -146,7 +142,7 @@ void RdmaUnicastApp::StartApplication()
 
   const int flow_count = 1;
 
-  const uint64_t packet_count{m_size / m_mtu};
+  const uint64_t packet_count{CeilDiv(m_size, m_mtu)};
   NS_LOG_INFO("Sending " << packet_count << " packets");
 
   auto on_send{[this, packet_count]() {

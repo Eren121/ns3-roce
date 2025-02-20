@@ -23,20 +23,7 @@ struct BandwidthToEcnThreshold
 	double ecn_threshold{0}; // Buffer size in KB
 };
 
-static double FindEcnThreshold(const std::vector<BandwidthToEcnThreshold>& map, double bps)
-{
-	std::map<uint64_t, BandwidthToEcnThreshold> sorted{};
-	for(const auto& entry : map) {
-		sorted[entry.bandwidth] = entry;
-	}
-
-	// Just used the entry lower or equals
-	// This permit to avoid crash when the bandwidth is not in the map
-	// This just crash if the first item in the map is higher than `bps`
-	auto it{sorted.lower_bound(bps)};
-	NS_ABORT_MSG_IF(it == sorted.begin(), "Cannot find ECN threshold related to bandwidth " << bps);
-	return (--it)->second.ecn_threshold;
-}
+double FindEcnThreshold(const std::vector<BandwidthToEcnThreshold>& map, double bps);
 
 /**
  * @brief Parameters for the configuration.
@@ -132,9 +119,6 @@ struct RdmaTopology
 
 struct RdmaMcastGroups
 {
-  using group_id_t = uint32_t;
-  using node_id_t = uint32_t;
-
   struct Group
   {
     group_id_t id;
@@ -149,8 +133,14 @@ struct RdmaMcastGroups
  */
 class RdmaNetwork
 {
-public:
+private:
+	RdmaNetwork() = default;
   ~RdmaNetwork();
+	
+	DISALLOW_COPY(RdmaNetwork);
+
+public:
+	static RdmaNetwork& GetInstance();
 
   struct Interface
   {
@@ -173,8 +163,6 @@ public:
 	uint64_t GetMtuBytes() const;
 
 public:
-  using node_id_t = uint32_t;
-
   static Ipv4Address GetNodeIp(node_id_t id);
 
 	NodeMap GetAllSwitches() const;

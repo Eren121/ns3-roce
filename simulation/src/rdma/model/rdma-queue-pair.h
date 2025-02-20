@@ -106,7 +106,8 @@ public:
 	Ipv4Address GetSrcIP() const { return m_sip; }
 	uint16_t GetSrcPort() const { return m_sport; }
 	uint16_t GetPG() const { return m_pg; }
-	void SetMTU(uint32_t mtu) { m_mtu = mtu; }
+	void SetMTU(uint64_t mtu) { m_mtu = mtu; }
+	uint64_t GetMTU() const { return m_mtu; }
 	
 	void LazyInitCnp();
 
@@ -122,7 +123,6 @@ public:
 
 	void StopTimers();
 
-	void SetRateFactor(double rate_factor);
 	void SetMaxRate(DataRate data_rate);
 	DataRate GetMaxRate() const;
 
@@ -188,9 +188,6 @@ protected:
 		DataRate m_curRate;
 		uint32_t m_incStage;
 	} hpccPint{};
-
-private:
-	double m_rate_multiplier{1.0}; //!< Limit the rate from the max. rate by this factor.
 };
 
 using RdmaImm = uint32_t;
@@ -200,18 +197,18 @@ public:
 	struct RecvNotif
 	{
 		Ptr<Packet> packet;
-		const CustomHeader* ch;
-		bool has_imm{false};
-		RdmaImm imm{0};
+		const CustomHeader* ch{};
+		bool has_imm{};
+		RdmaImm imm{};
 	};
 
 	using OnRecvCallback = std::function<void(RecvNotif)>;
 
 	struct ECNAccount{
-		uint16_t qIndex{0};
-		uint8_t ecnbits{0};
-		uint16_t qfb{0};
-		uint16_t total{0};
+		uint16_t qIndex{};
+		uint8_t ecnbits{};
+		uint16_t qfb{};
+		uint16_t total{};
 	};
 
 	static TypeId GetTypeId (void);
