@@ -125,7 +125,7 @@ void RdmaUnicastApp::InitQP()
   }
   
   rdma->RegisterQP(tx, rx);
-  tx->SetMaxRate(tx->GetMaxRate() * (1.0 / m_rate_factor));
+  tx->SetMaxRate(tx->GetMaxRate() * m_rate_factor);
   m_mtu = tx->GetMTU();
 }
 
