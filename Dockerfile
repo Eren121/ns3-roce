@@ -4,7 +4,7 @@ FROM ubuntu:24.04
 ARG DEBIAN_FRONTEND=noninteractive
 
 RUN apt update \
- && apt install -y gcc g++ gdb cmake python3
+ && apt install -y gcc g++ gdb cmake python3 valgrind
 
 # Download necessary stuff to build netanim
 RUN apt install -y mercurial qtbase5-dev qt5-qmake make
@@ -18,7 +18,7 @@ RUN apt install -y \
   python3-rich
 
 
-# BUild reflect-cpp
+# Build reflect-cpp
 RUN git clone https://github.com/getml/reflect-cpp --branch v0.17.0 /reflectcpp
 
 WORKDIR /reflectcpp

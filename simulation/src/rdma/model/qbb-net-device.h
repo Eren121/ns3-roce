@@ -117,6 +117,8 @@ public:
   void ConnectWithoutContext(const CallbackBase& callback);
   void DisconnectWithoutContext(const CallbackBase& callback);
 
+  Ptr<QbbNetDevice> GetPeerNetDevice() const;
+
   DataRate GetDataRate() const;
 
   bool Attach (Ptr<QbbChannel> ch);

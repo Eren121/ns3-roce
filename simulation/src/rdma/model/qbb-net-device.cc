@@ -578,6 +578,26 @@ NS_LOG_COMPONENT_DEFINE("QbbNetDevice");
 			sw->OnPeerJoinGroup(m_ifIndex, group);
 		}
 	}
+	
+  Ptr<QbbNetDevice> QbbNetDevice::GetPeerNetDevice() const
+	{
+		for(int i{0}; i < 2; i++) {
+			
+			if(m_channel->GetPointToPointDevice(i) == this) {
+				
+				const auto peer{m_channel->GetPointToPointDevice(1 - i)};
+				NS_ASSERT_MSG(peer, "Peer device does not exist");
+				
+				const auto qbb{DynamicCast<QbbNetDevice>(peer)};
+				NS_ASSERT_MSG(qbb, "Peer device is not a QbbNetDevice");
+
+				return qbb;
+			}
+		}
+		
+		NS_ABORT_MSG("Peer device not found");
+		return {};
+	}
 
 	void QbbNetDevice::AddGroup(uint32_t group)
 	{

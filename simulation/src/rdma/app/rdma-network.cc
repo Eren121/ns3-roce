@@ -304,6 +304,10 @@ void RdmaNetwork::CreateLinks()
 
     link_id++;
 	}
+
+  NodeContainer n;
+  for(const auto& [_, node] : m_nodes) { n.Add(node); }
+  SwitchNode::Rebuild(n);
 }
 
 void RdmaNetwork::ConfigureSwitches()
@@ -475,8 +479,12 @@ void RdmaNetwork::BuildRoutingTables()
 
 				const uint32_t interface{m_p2p[src_server][next].iface.idx};
 
-				if (IsSwitchNode(src_server)) { DynamicCast<SwitchNode>(src_server)->AddTableEntry(dst_addr, interface); }
-				else { src_server->GetObject<RdmaHw>()->AddTableEntry(dst_addr, interface); }
+				if (IsSwitchNode(src_server)) {
+          DynamicCast<SwitchNode>(src_server)->AddTableEntry(dst_addr, interface);
+        }
+				else {
+          src_server->GetObject<RdmaHw>()->AddTableEntry(dst_addr, interface);
+        }
 			}
 		}
 	}

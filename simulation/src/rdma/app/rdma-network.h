@@ -152,7 +152,7 @@ public:
 
   struct P2pInfo {
     Interface iface;
-    std::vector<Ptr<Node>> next_hops; //!< Mapping destination to next hop for each node: <hop0, hop1, ..., dst>
+    std::vector<Ptr<Node>> next_hops; //!< Mapping next hop after src to go to dst (vector because ECMP)
     uint64_t delay{}; //!< (ns) Sum of delay of all hops, without transmission delay ("time to transfer a single byte")
     uint64_t tx_delay{}; //!< (ns) Sum of transmission delays of all hops (time to fully push one MTU in the network)
     uint64_t bw{}; //!< (bps) Bandwidth of the slowest link in-between the two hosts

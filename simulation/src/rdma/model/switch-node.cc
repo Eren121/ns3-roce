@@ -73,15 +73,12 @@ int SwitchNode::GetOutDev(Ptr<const Packet> p, CustomHeader &ch){
 	// look up entries
 	auto entry = m_rtTable.find(ch.dip);
 
-	
 	// no matching entry
 	if (entry == m_rtTable.end())
 		return -1;
 
 	// entry found
 	auto &nexthops = entry->second;
-
-	NS_ASSERT_MSG(nexthops.size() == 1, "ECMP not supported for now");
 
 	// pick one next hop based on hash
 	union {
@@ -164,9 +161,45 @@ void SwitchNode::SendMultiToDevs(Ptr<Packet> packet, CustomHeader& ch, int in_if
 		return;
 	}
 
+	// Keep only one uplink outport port
+	// Never send to uplink if the packet comes from uplink
+	const bool from_uplink{m_uplink[in_iface]};
+
+	std::vector<iface_id_t> uplink_candidates;
+
+	for(iface_id_t iface : iface_it->second) {
+		if(m_uplink[iface]) {
+			uplink_candidates.push_back(iface);
+		}
+	}
+
+	iface_id_t uplink_elected{};
+	if(!uplink_candidates.empty()) {
+		// pick one next hop based on hash
+		union {
+			uint8_t u8[4+4+2+2];
+			uint32_t u32[3];
+		} buf;
+		buf.u32[0] = ch.sip;
+		buf.u32[1] = ch.dip;
+		if (ch.l3Prot == 0x6)
+			buf.u32[2] = ch.tcp.sport | ((uint32_t)ch.tcp.dport << 16);
+		else if (ch.l3Prot == 0x11)
+			buf.u32[2] = ch.udp.sport | ((uint32_t)ch.udp.dport << 16);
+		else if (ch.l3Prot == 0xFC || ch.l3Prot == 0xFD)
+			buf.u32[2] = ch.ack.sport | ((uint32_t)ch.ack.dport << 16);
+
+		uint32_t hash = EcmpHash(buf.u8, 12, m_ecmpSeed);
+		uplink_elected = uplink_candidates[hash % uplink_candidates.size()];
+	}
+
 	Ptr<Packet> last;
 	for(int idx : iface_it->second) {
 		if(idx == in_iface) {
+			continue;
+		}
+		
+		if(m_uplink[idx] && (from_uplink || uplink_elected != idx)) {
 			continue;
 		}
 
@@ -174,12 +207,12 @@ void SwitchNode::SendMultiToDevs(Ptr<Packet> packet, CustomHeader& ch, int in_if
 
 		Ptr<Packet> p = packet->Copy();
 
-		// (Done)
 		// TODO: now we increase the input interface buffer usage for each output device in the routing table of the multicast destination
 		// It would be more logical to increase only once, regardless of the count of the output devices.
 		// This is easy to do like here, but maybe it changes behaviour when the buffer is almost at full capacity, because the buffer full capacity is triggered earlier than what it should.
 		// See `SwitchNotifyDequeue::RemoveFromIngressAdmission()`
 		// We need to keep trace of the output packet because increasing only once would do an integer underflow resulting in buffer usage of 4 billion....
+		
 		last = packet;
 		m_mmu->UpdateIngressAdmission(inDev, qIndex, last->GetSize());
 		m_mmu->UpdateEgressAdmission(idx, qIndex, packet->GetSize());
@@ -281,8 +314,6 @@ void SwitchNode::AddTableEntry(Ipv4Address &dstAddr, uint32_t intf_idx){
 	
 	uint32_t dip = dstAddr.Get();
 	m_rtTable[dip].push_back(intf_idx);
-
-	NS_ASSERT_MSG(m_rtTable[dip].size() == 1, "ECMP not supported");
 }
 
 void SwitchNode::ClearTable(){
@@ -441,7 +472,8 @@ int SwitchNode::logres_shift(int b, int l){
 	return l - data[b];
 }
 
-int SwitchNode::log2apprx(int x, int b, int m, int l){
+int SwitchNode::log2apprx(int x, int b, int m, int l)
+{
 	int x0 = x;
 	int msb = int(log2(x)) + 1;
 	if (msb > m){
@@ -455,6 +487,107 @@ int SwitchNode::log2apprx(int x, int b, int m, int l){
 		#endif
 	}
 	return int(log2(x) * (1<<logres_shift(b, l)));
+}
+
+
+void SwitchNode::Rebuild(NodeContainer nodes)
+{
+	std::unordered_map<Ptr<SwitchNode>, int> dist_from_leaf;
+	std::unordered_set<Ptr<Node>> visited;
+	std::unordered_set<Ptr<Node>> visiting;
+	std::unordered_set<Ptr<Node>> tovisit;
+
+	ForEachSwitch(nodes, [](Ptr<SwitchNode> sw) {
+		sw->m_uplink.clear();
+	});
+
+	// First compute the inverse of the depth of each node
+	// So visit servers first
+	
+	for(int i{}; i < nodes.GetN(); i++) {
+
+		const Ptr<Node> node{nodes.Get(i)};
+
+		if(!IsSwitchNode(node)) {
+			tovisit.insert(node);
+		}
+	}
+
+	int leaf_dist{};
+
+	while(!tovisit.empty()) {
+
+		visiting = std::move(tovisit);
+		tovisit.clear();
+
+		for(Ptr<Node> node : visiting) {
+
+			const bool already_visited{!visited.insert(node).second};
+			NS_ABORT_IF(already_visited);
+			
+			const auto sw{DynamicCast<SwitchNode>(node)};
+			
+			if(sw) {
+				dist_from_leaf[sw] = leaf_dist;
+			}
+			
+			// Visit all connections in the next iterations
+			ForEachDevice(node, [&](Ptr<QbbNetDevice> dev) {
+
+				const auto peer_dev{dev->GetPeerNetDevice()};
+				const Ptr<Node> peer{peer_dev->GetNode()};
+
+				if(!visited.contains(peer)) {
+					tovisit.insert(peer);
+				}
+			});
+		}
+
+		leaf_dist++;
+	}
+	
+	NS_ABORT_IF(leaf_dist <= 0);
+	const int maxdepth{leaf_dist - 1};
+
+	ForEachSwitch(nodes, [&](Ptr<SwitchNode> sw) {
+
+		sw->m_depth = maxdepth - dist_from_leaf.at(sw);
+	});
+	
+	ForEachSwitch(nodes, [&](Ptr<SwitchNode> sw) {
+
+		ForEachDevice(sw, [&](Ptr<QbbNetDevice> dev) {
+
+			const Ptr<QbbNetDevice> peer_dev{dev->GetPeerNetDevice()};
+			const auto peer{peer_dev->GetNode()};
+			const iface_id_t iface{dev->GetIfIndex()};
+			EnsureSizeAtleast(sw->m_uplink, iface + 1);
+			
+			int peer_depth{maxdepth};
+
+			if(DynamicCast<SwitchNode>(peer)) {
+				peer_depth = DynamicCast<SwitchNode>(peer)->m_depth;
+			}
+
+			if(sw->m_depth == peer_depth + 1) {
+				sw->m_uplink[iface] = true;
+			}
+			else if(sw->m_depth == peer_depth - 1) {
+				sw->m_uplink[iface] = false;
+			}
+			else {
+				NS_ABORT_MSG("Invalid link between depths ("
+					<< sw->m_depth << ", " << peer_depth
+					<< ")"
+				);
+			}
+
+			NS_LOG_INFO("node "
+				<< sw->GetId() << "->" << peer->GetId()
+				<< " uplink=" << sw->m_uplink[iface]
+			);
+		});
+	});
 }
 
 bool IsSwitchNode(Ptr<Node> node)

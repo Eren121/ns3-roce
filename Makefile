@@ -40,6 +40,8 @@ build_type ?= default
 build_image:
 	docker build -t $(docker_tag) .
 
+ns3_run = ./simulation/ns3 run 'rdma ../$(app_config)'
+
 .PHONY: configure_debug
 configure_debug: build_type = debug
 configure_debug: configure
@@ -63,11 +65,15 @@ distclean:
 
 .PHONY: run
 run:
-	$(docker_run) ./simulation/ns3 run 'rdma ../$(app_config)'
+	$(docker_run) $(ns3_run)
 
 .PHONY: run_gdb
 run_gdb:
-	$(docker_run) ./simulation/ns3 run rdma --command-template="gdb -ex run --args %s ../$(app_config)"
+	$(docker_run) $(ns3_run) --command-template="gdb -ex run --args %s"
+
+.PHONY: run_valgrind
+run_valgrind:
+	$(docker_run) $(ns3_run) --command-template="valgrind %s "
 
 .PHONY: run_bash
 run_bash: docker_user =

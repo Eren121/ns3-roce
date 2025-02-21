@@ -1,10 +1,13 @@
 #pragma once
 
 #include "ns3/simulator.h"
+#include "ns3/node-container.h"
 #include "ns3/node.h"
 #include <map>
 #include <set>
 #include <functional>
+#include <vector>
+
 
 #ifndef DISALLOW_COPY
 #define DISALLOW_COPY(T) \
@@ -150,4 +153,12 @@ private:
   EventId m_event;
 };
 
+template<typename T>
+void EnsureSizeAtleast(T&& vec, size_t size)
+{
+  if(vec.size() < size) {
+    vec.resize(size);
+  }
 }
+
+} // namespace ns3

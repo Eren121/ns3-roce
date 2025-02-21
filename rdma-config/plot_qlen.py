@@ -14,13 +14,17 @@ sns.relplot(
   kind='line',
   x="time", y="bytes", hue="iface",
   row="node",
-  palette='plasma', aspect=4, height=2.5, alpha=0.7, style='iface',
+  linewidth=1,
+  palette='brg', aspect=4, height=2.5, style='iface',
+  legend=True,
   facet_kws={'sharey': False, 'sharex': False})
 
 plt.tight_layout()
 plt.show()
 
-df = pd.DataFrame.from_records(json.load(open(script_dir / "out_allgather-miss.json")))
+df = pd.DataFrame.from_records(
+  json.load(open(script_dir / "out_allgather-miss.json")),
+  columns=["block", "chunk"])
 print(df)
 
 sns.relplot(
