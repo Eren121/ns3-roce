@@ -2,25 +2,27 @@
   "flows": [
     {
       "type": "unicast",
-      "background": true,
+      "background": false,
       "parameters": {
-        "SrcNode": 3,
-        "DstNode": 4,
-        "WriteSize": 1e9,
-        "BandwidthPercent": 0.1
+        "SrcNode": 12,
+        "DstNode": 10,
+        "McastGroup": 1,
+        "WriteSize": 4e6,
+        "BandwidthPercent": 1,
+        "SrcPort": 900,
+        "DstPort": 5033
       }
     },
     {
-      "type": "allgather",
+      "type": "multicast",
+      "background": true,
       "parameters": {
-        "PerNodeBytes": 1e7,
-        "ParityChunkPerSegmentCount": 0,
-        "DataChunkPerSegmentCount": 1,
-        "RootCount": 2,
+        "SrcNode": 10,
         "McastGroup": 1,
-
-        "DumpStats": "out_allgather-stats.json",
-        "DumpMissedChunks": "out_allgather-miss.json"
+        "WriteSize": 1e9,
+        "BandwidthPercent": 0.1,
+        "SrcPort": 1,
+        "DstPort": 2
       }
     }
   ]

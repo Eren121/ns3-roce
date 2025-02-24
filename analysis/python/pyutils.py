@@ -7,7 +7,23 @@ import os
 import decimal
 import subprocess as sp
 import joblib
+import json
 
+
+class NpEncoder(json.JSONEncoder):
+    """https://stackoverflow.com/questions/50916422/python-typeerror-object-of-type-int64-is-not-json-serializable"""
+    def default(self, obj):
+        if isinstance(obj, np.integer):
+            return int(obj)
+        if isinstance(obj, np.floating):
+            return float(obj)
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        return super(NpEncoder, self).default(obj)
+    
+
+def dump_json(data, indent=4):
+    return json.dumps(data, cls=NpEncoder, indent=indent)
 
 def write_to_file(file: pathlib.Path, content: str) -> None:
     with open(file, "w") as text_file:
@@ -17,7 +33,13 @@ def write_to_file(file: pathlib.Path, content: str) -> None:
 def read_all_file(file: pathlib.Path) -> str:
     with open(file, "r") as text_file:
         return text_file.read()
-    return ""
+    raise Exception(f"Cannot read file {file}")
+
+
+def load_json(file: pathlib.Path) -> str:
+    with open(file, "r") as text_file:
+        return json.load(text_file)
+    raise Exception(f"Cannot read file {file}")
 
 
 def build_template_file(in_path: str, vars: dict, out_dir: str = None):

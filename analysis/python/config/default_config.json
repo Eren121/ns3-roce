@@ -26,7 +26,7 @@
     "ns3::RdmaHw::FastReact": true,
     "ns3::RdmaHw::RateBound": true,
 
-    "ns3::SwitchMmu::BufferSize": "200KB"
+    "ns3::SwitchMmu::BufferSize": "12MiB"
   },
 
   "qlen_monitor": {
@@ -39,7 +39,6 @@
 
   "topology_file": "topology.json",
   "flow_file": "flow.json",
-  "groups_file": "groups.json",
   "trace_file": "trace.json",
   
   "trace_output_file": "out_trace.tr",

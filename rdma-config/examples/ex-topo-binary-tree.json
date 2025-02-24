@@ -1,0 +1,125 @@
+{
+  "nodes": [
+    {
+      "id": 0,
+      "is_switch": true,
+      "pos": {
+        "x": 0.0,
+        "y": 0
+      }
+    },
+    {
+      "id": 1,
+      "is_switch": true,
+      "pos": {
+        "x": -3.0,
+        "y": 3
+      }
+    },
+    {
+      "id": 2,
+      "is_switch": true,
+      "pos": {
+        "x": 3.0,
+        "y": 3
+      }
+    },
+    {
+      "id": 3,
+      "is_switch": false,
+      "pos": {
+        "x": -4.5,
+        "y": 6
+      }
+    },
+    {
+      "id": 4,
+      "is_switch": false,
+      "pos": {
+        "x": -1.5,
+        "y": 6
+      }
+    },
+    {
+      "id": 5,
+      "is_switch": false,
+      "pos": {
+        "x": 1.5,
+        "y": 6
+      }
+    },
+    {
+      "id": 6,
+      "is_switch": false,
+      "pos": {
+        "x": 4.5,
+        "y": 6
+      }
+    },
+    {
+      "id": 7,
+      "is_switch": true,
+      "pos": {
+        "x": 2,
+        "y": 0
+      }
+    }
+  ],
+  "links": [
+    {
+      "src": 7,
+      "dst": 2,
+      "bandwidth": 100000000000.0,
+      "latency": 1e-06,
+      "error_rate": 0.0
+    },{
+      "src": 7,
+      "dst": 1,
+      "bandwidth": 100000000000.0,
+      "latency": 1e-06,
+      "error_rate": 0.0
+    },
+    {
+      "src": 0,
+      "dst": 1,
+      "bandwidth": 100000000000.0,
+      "latency": 1e-06,
+      "error_rate": 0.0
+    },
+    {
+      "src": 0,
+      "dst": 2,
+      "bandwidth": 100000000000.0,
+      "latency": 1e-06,
+      "error_rate": 0.0
+    },
+    {
+      "src": 1,
+      "dst": 3,
+      "bandwidth": 100000000000.0,
+      "latency": 1e-06,
+      "error_rate": 0.0
+    },
+    {
+      "src": 1,
+      "dst": 4,
+      "bandwidth": 100000000000.0,
+      "latency": 1e-06,
+      "error_rate": 0.0
+    },
+    {
+      "src": 2,
+      "dst": 5,
+      "bandwidth": 100000000000.0,
+      "latency": 1e-06,
+      "error_rate": 0.0
+    },
+    {
+      "src": 2,
+      "dst": 6,
+      "bandwidth": 100000000000.0,
+      "latency": 1e-06,
+      "error_rate": 0.0
+    }
+  ]
+}

@@ -86,7 +86,15 @@ namespace ns3 {
 		NS_LOG_FUNCTION(this << port << qIndex << psize);
 
 		uint32_t from_hdrm = std::min(hdrm_bytes[port][qIndex], psize);
+
+		NS_ABORT_IF(psize < from_hdrm);
+
 		uint32_t from_shared = std::min(psize - from_hdrm, ingress_bytes[port][qIndex] > reserve ? ingress_bytes[port][qIndex] - reserve : 0);
+		
+		NS_ABORT_IF(hdrm_bytes[port][qIndex] < from_hdrm);
+		NS_ABORT_IF(ingress_bytes[port][qIndex] < psize - from_hdrm);
+		NS_ABORT_IF(shared_used_bytes < from_shared);
+
 		hdrm_bytes[port][qIndex] -= from_hdrm;
 		ingress_bytes[port][qIndex] -= psize - from_hdrm;
 		shared_used_bytes -= from_shared;

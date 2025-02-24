@@ -163,6 +163,7 @@ void SwitchNode::SendMultiToDevs(Ptr<Packet> packet, CustomHeader& ch, int in_if
 
 	// Keep only one uplink outport port
 	// Never send to uplink if the packet comes from uplink
+
 	const bool from_uplink{m_uplink[in_iface]};
 
 	std::vector<iface_id_t> uplink_candidates;
@@ -194,7 +195,9 @@ void SwitchNode::SendMultiToDevs(Ptr<Packet> packet, CustomHeader& ch, int in_if
 	}
 
 	Ptr<Packet> last;
+	
 	for(int idx : iface_it->second) {
+
 		if(idx == in_iface) {
 			continue;
 		}
@@ -213,15 +216,17 @@ void SwitchNode::SendMultiToDevs(Ptr<Packet> packet, CustomHeader& ch, int in_if
 		// See `SwitchNotifyDequeue::RemoveFromIngressAdmission()`
 		// We need to keep trace of the output packet because increasing only once would do an integer underflow resulting in buffer usage of 4 billion....
 		
-		last = packet;
+		last = p;
+		
 		m_mmu->UpdateIngressAdmission(inDev, qIndex, last->GetSize());
-		m_mmu->UpdateEgressAdmission(idx, qIndex, packet->GetSize());
+		m_mmu->UpdateEgressAdmission(idx, qIndex, p->GetSize());
+		
 		if(qIndex != 0) { m_bytes[inDev][idx][qIndex] += p->GetSize(); }
 		SwitchSend(GetDevice(idx), qIndex, p);
 	}
 
 	if(last) {
-		m_mcast_lasts.insert(last);
+		m_egress_lasts.insert(last);
 	}
 
 	if(qIndex != 0) {
@@ -249,6 +254,8 @@ void SwitchNode::SendToDev(Ptr<Packet>p, CustomHeader &ch){
 		if (qIndex != 0){ //not highest priority
 			if (m_mmu->CheckIngressAdmission(inDev, qIndex, p->GetSize())){			// Admission control
 				m_mmu->UpdateIngressAdmission(inDev, qIndex, p->GetSize());
+				m_egress_lasts.insert(p);
+
 				m_mmu->UpdateEgressAdmission(idx, qIndex, p->GetSize());
 			}else{
 				NS_LOG_LOGIC("Drop: unicast packet not admitted");
@@ -347,14 +354,15 @@ void SwitchNode::SwitchNotifyDequeue(uint32_t ifIndex, uint32_t qIndex, Ptr<Pack
 		uint32_t inDev = t.GetFlowId();
 
 		{
-			// Last packet of the mcast, remove from ingress port
-			auto it{m_mcast_lasts.find(p)};
-			if(it != m_mcast_lasts.end()) {
-				m_mcast_lasts.erase(it);
+			// Last packet of the mcast (or unicast), remove from ingress port
+			auto it{m_egress_lasts.find(p)};
+			if(it != m_egress_lasts.end()) {
+				m_egress_lasts.erase(it);
 			}
 		}
 		m_mmu->RemoveFromIngressAdmission(inDev, qIndex, p->GetSize());
-			
+
+		std::cout << m_egress_lasts.size()<< "/" << m_bytes[inDev][ifIndex][qIndex] << std::endl;
 		m_mmu->RemoveFromEgressAdmission(ifIndex, qIndex, p->GetSize());
 		m_bytes[inDev][ifIndex][qIndex] -= p->GetSize();
 		if (m_ecnEnabled){

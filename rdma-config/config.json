@@ -26,15 +26,16 @@
     "ns3::RdmaHw::FastReact": true,
     "ns3::RdmaHw::RateBound": true,
 
-    "ns3::SwitchMmu::BufferSize": "12MiB"
+    "ns3::SwitchMmu::BufferSize": "1MiB"
   },
 
+  "enable_trace": 0,
   "qlen_monitor": {
     "enable": true,
     "output": "out_qlen.txt",
     "start": 0,
     "end": 1e9,
-    "interval": 1e-6
+    "interval": 1e-4
   },
 
   "topology_file": "topology.json",
@@ -42,7 +43,7 @@
   "groups_file": "groups.json",
   "trace_file": "trace.json",
   
-  "trace_output_file": "out_trace.tr",
+  "trace_output_file": "",
   "fct_output_file": "out_fct.txt",
   "pfc_output_file": "out_pfc.txt",
   "anim_output_file": "out_anim.xml",
@@ -59,8 +60,6 @@
     "src": 0,
     "dst": 0
   },
-
-  "enable_trace": 1,
 
   "kmax_map": [
     {

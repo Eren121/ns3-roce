@@ -72,13 +72,13 @@ Ptr<AttributeValue> ConvertJsonToAttribute(const rfl::Generic& obj, const TypeId
       // IntegerValue is not compatible with UintegerValue.
       if constexpr(is_int || is_real) {
         NS_ABORT_MSG_IF(value < 0, "Value should be positive");
-        NS_ABORT_MSG_IF(!IsExactInteger(value), "Value should be an integer");
+        // NS_ABORT_MSG_IF(!IsExactInteger(value), "Value should be an integer");
         return Create<UintegerValue>(value);
       }
     }
     else if(type == "ns3::IntegerValue") {
       if constexpr(is_int || is_real) {
-        NS_ABORT_MSG_IF(!IsExactInteger(value), "Value should be an integer");
+        // NS_ABORT_MSG_IF(!IsExactInteger(value), "Value should be an integer");
         return Create<IntegerValue>(value);
       }
     }

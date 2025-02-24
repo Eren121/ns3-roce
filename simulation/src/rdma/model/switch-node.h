@@ -80,8 +80,9 @@ protected:
 	uint32_t m_ackHighPrio; // set high priority for ACK/NACK
 
 private:
-	//! Lat packets of a single multicast to dequeue.
-	std::unordered_set<Ptr<Packet>> m_mcast_lasts;
+	//! Packets of a multicast, or every packets of a unicast to dequeue.
+	//! Permits to know when to release ingress memory.
+	std::unordered_set<Ptr<Packet>> m_egress_lasts;
 
 private:
 	int GetOutDev(Ptr<const Packet>, CustomHeader &ch);
@@ -113,6 +114,8 @@ public:
 	 * Should be called when interfaces have been added.
 	 */
 	static void Rebuild(NodeContainer nodes);
+
+private:
 };
 
 enum NodeType {

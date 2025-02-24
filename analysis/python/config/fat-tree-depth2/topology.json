@@ -49,6 +49,7 @@
     {"src": 5, "dst": 19, "bandwidth": 100000000000.0, "latency": 1e-06, "error_rate": 0.0},
     {"src": 5, "dst": 20, "bandwidth": 100000000000.0, "latency": 1e-06, "error_rate": 0.0},
     {"src": 5, "dst": 21, "bandwidth": 100000000000.0, "latency": 1e-06, "error_rate": 0.0}
+      
   ],
 
   "groups": [
