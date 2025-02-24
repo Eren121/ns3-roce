@@ -194,25 +194,70 @@ void RdmaNetwork::CreateAnimation()
 
 void RdmaNetwork::BuildGroups()
 {
-  const RdmaMcastGroups groups{m_config->LoadFromfile<RdmaMcastGroups>(m_config->groups_file)};
+  //
+  // Populate `m_mcast_groups`
+  //
 
-  for(const RdmaMcastGroups::Group& group : groups.groups) {
-    for(node_id_t node_id : group.nodes) {
-      NS_ASSERT(!IsSwitchNode(FindNode(node_id)));
+  for(const RdmaTopology::Group& group : m_topology->groups) {
 
-      m_mcast_groups[group.id].insert(node_id);
+    Ranges node_ranges{group.nodes};
 
-      // To make simple, don't support ECMP
-      // Assume the node has only one NIC and one link
+    if(node_ranges.IsWildcard()) {
+
+      for(const auto& [_, node] : m_servers) {
+        m_mcast_groups[group.id].insert(node->GetId());
+      }
+    }
+
+    for(const Ranges::Element& elem : node_ranges) {
+      
+      if(const auto* idx = std::get_if<Ranges::Index>(&elem)) {
+
+        const int node_id{*idx};
+        NS_ASSERT(!IsSwitchNode(FindNode(node_id)));
+        m_mcast_groups[group.id].insert(node_id);
+      }
+      else if(const auto* range = std::get_if<Ranges::Range>(&elem)) {
+
+        for(int node_id = range->first; node_id <= range->last; node_id++) {
+
+          NS_ASSERT(!IsSwitchNode(FindNode(node_id)));
+          m_mcast_groups[group.id].insert(node_id);
+        }
+      }
+      else {
+
+        NS_ABORT_MSG("Unknown range type");
+      }
+    }
+  }
+
+  //
+  // Initialize routing table for multicast groups
+  //
+
+  for(const auto& [group_id, nodes] : m_mcast_groups) {
+
+    for(node_id_t node_id : nodes) {
+
       const Ptr<Node> node{FindServer(node_id)};
       
+      NS_LOG_LOGIC("Group " << group_id << " has node " << node_id);
+
+      //
+      // Assume the node has only one NIC and one link
+      //
+
       const int nic_iface{1};
       Ptr<QbbNetDevice> qbb{DynamicCast<QbbNetDevice>(node->GetDevice(nic_iface))};
-      qbb->AddGroup(group.id);
+      qbb->AddGroup(group_id);
       
+      //
       // Add a table entry for the mcast address
-      // To know which interface to send packets
-      const Ipv4Address mcast_addr{group.id};
+      // To know which interface to send mcast packets
+      //
+
+      const Ipv4Address mcast_addr{group_id};
       node->GetObject<RdmaHw>()->AddTableEntry(mcast_addr, nic_iface);
     }
   }
@@ -288,10 +333,11 @@ void RdmaNetwork::CreateLinks()
         qbb->TraceConnectWithoutContext("QbbPfc", MakeBoundCallback(cb, this, qbb));
       }
 
-      NS_LOG_INFO("Link n=(" << src->GetId() << ", "
-                             << dst->GetId() << "): node "
-                             << src->GetId() << " use iface "
-                             << d.Get(0)->GetIfIndex());
+      NS_LOG_LOGIC("Link n=("
+        << src->GetId() << ", "
+        << dst->GetId() << "): node "
+        << src->GetId() << " use iface "
+        << d.Get(0)->GetIfIndex());
     }
 
 		// This is just to set up the connectivity between nodes. The IP addresses are useless

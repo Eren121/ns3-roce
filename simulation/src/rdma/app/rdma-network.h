@@ -39,7 +39,6 @@ struct RdmaConfig
 
 	fs::path topology_file;
 	fs::path flow_file;
-	fs::path groups_file;
 	fs::path trace_file;
 	fs::path trace_output_file;
 	fs::path fct_output_file;
@@ -90,7 +89,8 @@ struct RdmaTopology
 {
 	struct Node
   {
-		struct Pos {
+		struct Pos
+    {
 			double x = 0.0;
 			double y = 0.0;
 			NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(Pos, x, y);
@@ -112,20 +112,17 @@ struct RdmaTopology
 		NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(Link, src, dst, bandwidth, latency, error_rate);
 	};
 
-	std::vector<Node> nodes;
-	std::vector<Link> links;
-	NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(RdmaTopology, nodes, links);
-};
-
-struct RdmaMcastGroups
-{
   struct Group
   {
     group_id_t id;
-    std::set<node_id_t> nodes;
+    std::string nodes; // Contains node parsable from `Ranges`
+		NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(Group, id, nodes);
   };
 
+	std::vector<Node> nodes;
+	std::vector<Link> links;
   std::vector<Group> groups;
+	NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(RdmaTopology, nodes, links, groups);
 };
 
 /**
