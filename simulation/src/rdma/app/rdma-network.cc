@@ -337,7 +337,7 @@ void RdmaNetwork::CreateLinks()
         << src->GetId() << ", "
         << dst->GetId() << "): node "
         << src->GetId() << " use iface "
-        << d.Get(0)->GetIfIndex());
+        << d.Get(i)->GetIfIndex());
     }
 
 		// This is just to set up the connectivity between nodes. The IP addresses are useless
