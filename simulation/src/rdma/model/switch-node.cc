@@ -358,9 +358,9 @@ void SwitchNode::SwitchNotifyDequeue(uint32_t ifIndex, uint32_t qIndex, Ptr<Pack
 			auto it{m_egress_lasts.find(p)};
 			if(it != m_egress_lasts.end()) {
 				m_egress_lasts.erase(it);
+				m_mmu->RemoveFromIngressAdmission(inDev, qIndex, p->GetSize());
 			}
 		}
-		m_mmu->RemoveFromIngressAdmission(inDev, qIndex, p->GetSize());
 
 		std::cout << m_egress_lasts.size()<< "/" << m_bytes[inDev][ifIndex][qIndex] << std::endl;
 		m_mmu->RemoveFromEgressAdmission(ifIndex, qIndex, p->GetSize());
