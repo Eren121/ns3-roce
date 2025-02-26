@@ -44,6 +44,12 @@ RdmaNetwork::~RdmaNetwork()
   if(m_trace_output) {
 	  fclose(m_trace_output);
   }
+
+  if(!m_config->pfc_output_file.empty()) {
+    std::ofstream ofs(m_config->FindFile(m_config->pfc_output_file));
+    ofs << rfl::json::write(m_pfc_entries) << std::endl;
+  }  
+
 }
 
 void RdmaNetwork::CreateNodes()
@@ -265,10 +271,6 @@ void RdmaNetwork::BuildGroups()
 
 void RdmaNetwork::CreateLinks()
 {
-  if(!m_config->pfc_output_file.empty()) {
-    m_pfc_output.open(m_config->FindFile(m_config->pfc_output_file));
-  }  
-
   // Create the links; and initialize `p2p.iface`
   
   uint64_t next_rng_seed{m_config->rng_seed};
@@ -322,15 +324,13 @@ void RdmaNetwork::CreateLinks()
       m_p2p[src][dst].iface.bw = DynamicCast<QbbNetDevice>(d.Get(i))->GetDataRate();
 
       // Setup PFC trace
-      if(m_pfc_output.is_open()) {
-        
-        void(*cb)(RdmaNetwork* self, Ptr<QbbNetDevice> qbb, uint32_t type)
-             = [](RdmaNetwork* self, Ptr<QbbNetDevice> qbb, uint32_t type) {
-          self->MonitorPfc(qbb, type);
-        };
-
+      if(!m_config->pfc_output_file.empty()) {
         Ptr<QbbNetDevice> qbb{DynamicCast<QbbNetDevice>(d.Get(i))};
-        qbb->TraceConnectWithoutContext("QbbPfc", MakeBoundCallback(cb, this, qbb));
+        qbb->TraceConnectWithoutContext("QbbPfc",
+          MakeLambdaCallback<uint32_t>([this, qbb](uint32_t type) {
+            MonitorPfc(qbb, type);
+          }
+        ));
       }
 
       NS_LOG_LOGIC("Link n=("
@@ -618,12 +618,12 @@ void RdmaNetwork::MonitorPfc(Ptr<QbbNetDevice> qbb, uint32_t type)
 {
   NS_LOG_FUNCTION(this);
 
-  m_pfc_output << Simulator::Now().GetTimeStep() << " "
-               << qbb->GetNode()->GetId() << " "
-               << GetNodeType(qbb->GetNode()) << " "
-               << qbb->GetIfIndex() << " "
-               << type
-               << std::endl;
+  m_pfc_entries.emplace_back(
+    Simulator::Now().GetSeconds(),
+    qbb->GetNode()->GetId(),
+    qbb->GetIfIndex(),
+    type
+  );
 }
 
 } // namespace ns3

@@ -53,14 +53,14 @@ auto ScheduleNow(Args&&... args)
 /**
  * Lambdas does not work with MakeBoundCallback.
  */
-template<typename Func>
+template<typename... Args, typename Func>
 auto MakeLambdaCallback(Func&& func)
 {
   class Lambda : public SimpleRefCount<Lambda>
   {
   public:
     Lambda(Func func) : m_func(std::move(func)) {}
-    void Run() const { m_func(); }
+    void Run(Args... args) const { m_func(args...); }
 
   private:
     Func m_func;

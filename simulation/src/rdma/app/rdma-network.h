@@ -17,6 +17,14 @@
 
 namespace ns3 {
 
+struct PfcEntry
+{
+  double time;
+  int node;
+  int dev;
+  bool paused;
+};
+
 struct BandwidthToEcnThreshold
 {
 	double bandwidth{0}; // Bps
@@ -207,7 +215,7 @@ private:
   RdmaTraceList m_to_trace;
 	std::unique_ptr<QLenMonitor> m_qlen_monitor;
   FILE *m_trace_output{};
-  std::ofstream m_pfc_output;
+  std::vector<PfcEntry> m_pfc_entries;
 	std::map<uint32_t, std::set<node_id_t>> m_mcast_groups;
   std::unique_ptr<AnimationInterface> m_anim;
 
