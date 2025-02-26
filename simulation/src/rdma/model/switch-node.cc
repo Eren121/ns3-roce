@@ -362,7 +362,7 @@ void SwitchNode::SwitchNotifyDequeue(uint32_t ifIndex, uint32_t qIndex, Ptr<Pack
 			}
 		}
 
-		std::cout << m_egress_lasts.size()<< "/" << m_bytes[inDev][ifIndex][qIndex] << std::endl;
+		// std::cout << m_egress_lasts.size()<< "/" << m_bytes[inDev][ifIndex][qIndex] << std::endl;
 		m_mmu->RemoveFromEgressAdmission(ifIndex, qIndex, p->GetSize());
 		m_bytes[inDev][ifIndex][qIndex] -= p->GetSize();
 		if (m_ecnEnabled){
