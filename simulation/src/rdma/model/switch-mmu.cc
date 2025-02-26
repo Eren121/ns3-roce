@@ -114,7 +114,7 @@ namespace ns3 {
 			return false;
 		}
 		
-		NS_LOG_DEBUG("(to pause) usage: " << GetSharedUsed(port, qIndex)
+		NS_LOG_DEBUG("usage: " << GetSharedUsed(port, qIndex)
 													 << "/" << GetPfcThreshold(port));
 
 		if(hdrm_bytes[port][qIndex] > 0) {
@@ -131,7 +131,7 @@ namespace ns3 {
 	}
 	bool SwitchMmu::CheckShouldResume(uint32_t port, uint32_t qIndex)
 	{
-		NS_LOG_DEBUG("(to resume) usage: " << GetSharedUsed(port, qIndex)
+		NS_LOG_DEBUG("usage: " << GetSharedUsed(port, qIndex)
 													 << "/" << GetPfcThreshold(port));
 
 		if (!paused[port][qIndex])
