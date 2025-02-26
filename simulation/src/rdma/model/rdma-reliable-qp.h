@@ -32,9 +32,10 @@ public:
 	uint16_t GetDestPort() const { return m_dport; }
 	uint32_t GetDestIP() const { return m_dip.Get(); }
 	uint32_t GetFirstUnaPSN() const { return m_snd_una; }
+	uint32_t GetNextToSendPSN() const { return m_snd_nxt; }
+	uint32_t GetNextOpFirstPSN() const { return m_next_op_first_psn; }
 
 private:
-
 	bool ShouldReqAck(uint64_t payload_size) const;
 	void NotifyPendingCompEvents();
 	void Rollback();
