@@ -45,6 +45,7 @@ if(reflectcpp_FOUND)
       app/rdma-flow.cc
       app/rdma-network.cc
       app/rdma-qlen-monitor.cc
+      app/rdma-qp-monitor.cc
       app/rdma-unicast-app.cc
       app/rdma-unicast-app-helper.cc
       helper/rdma-helper.cc
@@ -79,6 +80,7 @@ if(reflectcpp_FOUND)
       app/rdma-flow.h
       app/rdma-network.h
       app/rdma-qlen-monitor.h
+      app/rdma-qp-monitor.h
       app/rdma-unicast-app.h
       app/rdma-unicast-app-helper.h
       app/sim-setting.h
