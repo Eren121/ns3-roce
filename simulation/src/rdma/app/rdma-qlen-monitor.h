@@ -11,10 +11,11 @@ class RdmaNetwork;
 
 struct QLenRecord
 {
-  node_id_t node;
-  iface_id_t iface;
-  double time;
-  byte_t bytes;
+  node_id_t node{};
+  iface_id_t iface{};
+  double time{};
+  byte_t egress{};
+  byte_t ingress{};
 };
 
 class QLenMonitor

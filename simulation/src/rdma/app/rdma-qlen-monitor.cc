@@ -59,10 +59,10 @@ void QLenMonitor::GatherData()
       entry.node = sw->GetId();
       entry.time = Simulator::Now().GetSeconds();
       entry.iface = j;
-      entry.bytes = 0;
 
       for (priority_t k{0}; k < SwitchMmu::qCnt; k++) {
-        entry.bytes += sw->m_mmu->egress_bytes[j][k];
+        entry.egress += sw->m_mmu->egress_bytes[j][k];
+        entry.ingress += sw->m_mmu->ingress_bytes[j][k];
       }
 
       m_records.push_back(entry);
