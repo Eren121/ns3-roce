@@ -31,6 +31,7 @@ public:
 
 	uint16_t GetDestPort() const { return m_dport; }
 	uint32_t GetDestIP() const { return m_dip.Get(); }
+	uint32_t GetFirstUnaPSN() const { return m_snd_una; }
 
 private:
 
@@ -66,6 +67,8 @@ public:
 	uint32_t GetChunk() const { return DynamicCast<RdmaReliableSQ>(m_tx)->GetChunk(); }
 	void SetNackInterval(Time nack_itv) { m_nack_interval = nack_itv; }
 	void SetBackTo0(bool backto0) { m_backto0 = backto0; }
+
+	uint32_t GetNextExpectedPSN() const { return ReceiverNextExpectedSeq; }
 
 protected:
 	//! Next expected PSN to receive.

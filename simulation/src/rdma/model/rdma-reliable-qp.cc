@@ -10,6 +10,32 @@
 
 namespace ns3 {
 
+	
+static uint64_t make_key(uint32_t sip, uint16_t sport) {
+	return (sip << 32) | sport;
+} 
+
+static uint64_t make_key(Ipv4Address sip, uint16_t sport) {
+	return (sip.Get() << 32) | sport;
+} 
+
+struct MonitoringRcQp
+{
+	// Moitoring a single flow
+	struct Info {
+		Time last; // Last time the QP was monitored
+		uint64_t sq_psn{};
+		uint64_t rq_psn{};
+		RdmaReliableSQ* sq; // TX SQ
+		RdmaReliableRQ* rq; // RX RQ
+	};
+
+	// (sip, sport)
+	std::unordered_map<uint64_t, Info> tomonitor;
+};
+
+static MonitoringRcQp rcqp_mon;
+
 NS_LOG_COMPONENT_DEFINE("RdmaReliableQP");
 
 RdmaReliableSQ::RdmaReliableSQ(Ptr<Node> node, uint16_t pg, Ipv4Address sip, uint16_t sport, Ipv4Address dip, uint16_t dport)
@@ -18,6 +44,9 @@ RdmaReliableSQ::RdmaReliableSQ(Ptr<Node> node, uint16_t pg, Ipv4Address sip, uin
       m_dport(dport)
 {
 	NS_LOG_FUNCTION(this);
+
+	auto& info = rcqp_mon.tomonitor[make_key(sip, sport)];
+	info.sq = this;
 }
 
 RdmaReliableSQ::~RdmaReliableSQ() = default;
@@ -175,6 +204,32 @@ Ptr<Packet> RdmaReliableSQ::GetNextPacket()
 {
 	NS_LOG_FUNCTION(this);
 
+	{
+		auto it = rcqp_mon.tomonitor.find(make_key(m_sip, m_sport));
+		if(it != rcqp_mon.tomonitor.end()) {
+			auto& info = rcqp_mon.tomonitor[make_key(m_sip, m_sport)];
+
+			const Time now = Simulator::Now();
+			if(now >= info.last + MicroSeconds(500)) {
+				info.last = now;
+				
+				const uint64_t sq_psn = GetFirstUnaPSN();
+				const uint64_t rq_psn = info.rq->GetNextExpectedPSN();
+				const uint64_t sq_inc = sq_psn - info.sq_psn;
+				const uint64_t rq_inc = rq_psn - info.rq_psn;
+				const int psn_percent = double(sq_psn) / rq_psn * 100.0;
+				
+				NS_LOG_DEBUG("QP " << m_dport << ": PSN: " << sq_psn << "/" << rq_psn);
+				NS_LOG_DEBUG(" (" << psn_percent << "%)");
+				NS_LOG_DEBUG(" increase: " << sq_inc << "/" << rq_inc);
+				NS_LOG_DEBUG(" at: " << Simulator::Now().GetSeconds() << std::endl);
+
+				info.sq_psn = sq_psn;
+				info.rq_psn = rq_psn;
+			}
+		}
+	}
+
 	if(m_to_send.empty()) {
 		NS_ASSERT(false);
 		return nullptr;
@@ -308,6 +363,8 @@ bool RdmaReliableRQ::Receive(Ptr<Packet> p, const CustomHeader& ch)
 RdmaReliableRQ::RdmaReliableRQ(Ptr<RdmaReliableSQ> sq)
 	: RdmaRxQueuePair{sq}
 {
+	auto& info = rcqp_mon.tomonitor[make_key(sq->GetDestIP(), sq->GetDestPort())];
+	info.rq = this;
 }
 
 int RdmaReliableRQ::ReceiverCheckSeq(uint32_t seq, uint32_t size)
