@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ns3/rdma-qlen-monitor.h"
+#include "ns3/rdma-qp-monitor.h"
 #include "ns3/qbb-helper.h"
 #include "ns3/switch-node.h"
 #include "ns3/node-container.h"
@@ -44,6 +45,7 @@ struct RdmaConfig
 	Time simulator_stop_time;
 
 	QLenMonitor::Config qlen_monitor;
+  QpMonitor::Config qp_monitor;
 
 	fs::path topology_file;
 	fs::path flow_file;
@@ -215,6 +217,7 @@ private:
   QbbHelper m_qbb;
   RdmaTraceList m_to_trace;
 	std::unique_ptr<QLenMonitor> m_qlen_monitor;
+  std::unique_ptr<QpMonitor> m_qp_monitor;
   FILE *m_trace_output{};
   std::vector<PfcEntry> m_pfc_entries;
 	std::map<uint32_t, std::set<node_id_t>> m_mcast_groups;

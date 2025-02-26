@@ -182,6 +182,9 @@ void RdmaNetwork::StartQLenMonitor()
 {
   m_qlen_monitor = std::make_unique<QLenMonitor>(*this);
   m_qlen_monitor->Start();
+
+  m_qp_monitor = std::make_unique<QpMonitor>(*this);
+  m_qp_monitor->Start();
 }
 
 void RdmaNetwork::CreateAnimation()
