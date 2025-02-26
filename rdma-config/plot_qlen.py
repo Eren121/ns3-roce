@@ -3,10 +3,35 @@ import json
 import pathlib
 import seaborn as sns
 import matplotlib.pyplot as plt
+from matplotlib.ticker import MaxNLocator
+import matplotlib.ticker as ticker
 
 sns.set_theme()
 
 script_dir = pathlib.Path(__file__).parent
+
+df = pd.DataFrame.from_records(
+  json.load(open(script_dir / "out_pfc.json")),
+  columns=["time", "dev", "paused", "node"])
+print(df)
+sns.relplot(
+  df,
+  kind='scatter',
+  x="time", y="dev",
+  hue="paused", s=30,
+  row="node",
+  aspect=8,
+  height=1,
+  linewidth=0 # Avoid outline when there is a lot of points
+)
+
+ax = plt.gca()
+ax.yaxis.set_major_locator(MaxNLocator(integer=True))
+
+plt.show()
+
+
+
 df = pd.DataFrame.from_records(json.load(open(script_dir / "out_qlen.txt")))
 
 sns.relplot(
@@ -47,9 +72,6 @@ for i in range(nodes):
   x1 = chunk_count / nodes * i
   x2 = x1
   plt.axline((x1, 0), (x2, nodes), linestyle="--", color="r")
-
-from matplotlib.ticker import MaxNLocator
-import matplotlib.ticker as ticker
 
 ax.yaxis.set_major_locator(MaxNLocator(integer=True))
 ax.xaxis.set_major_locator(ticker.MultipleLocator(chunk_count / nodes))
