@@ -134,8 +134,8 @@ uint16_t AgConfig::GetPort(AgPort port) const
     case AgPort::Multicast: return m_port_mcast; 
     case AgPort::RecoveryLeft: return m_port_lnode; 
     case AgPort::RecoveryRight: return m_port_rnode;
-    case AgPort::ChainPrev: return m_port_next;  
-    case AgPort::ChainNext: return m_port_prev; 
+    case AgPort::ChainPrev: return m_port_prev;  
+    case AgPort::ChainNext: return m_port_next; 
   }
 
   NS_ABORT_MSG("Trying to get an unknown port type");
