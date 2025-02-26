@@ -34,6 +34,11 @@ public:
 
 	RdmaReliableQP CreateReliableQP(uint16_t pg, uint16_t sport, Ipv4Address dip, uint16_t dport);
 	RdmaUnreliableQP CreateUnreliableQP(uint16_t pg, uint16_t sport);
+
+	const std::unordered_map<uint64_t, Ptr<RdmaTxQueuePair>>& GetAllSQs() const 
+	{
+		return m_qpMap;
+	}
 	
 private:
 	static uint64_t GetRxQpKey(uint16_t dport); // get the lookup key for m_rxQpMap
