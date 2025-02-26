@@ -1,16 +1,16 @@
 {
   "flows": [
     {
-      "type": "unicast",
-      "background": false,
+      "type": "allgather",
       "parameters": {
-        "SrcNode": 12,
-        "DstNode": 10,
+        "PerNodeBytes": 1e6,
+        "ParityChunkPerSegmentCount": 0,
+        "DataChunkPerSegmentCount": 1,
+        "RootCount": 2,
         "McastGroup": 1,
-        "WriteSize": 4e6,
-        "BandwidthPercent": 1,
-        "SrcPort": 900,
-        "DstPort": 5033
+
+        "DumpStats": "out_allgather-stats.json",
+        "DumpMissedChunks": "out_allgather-miss.json"
       }
     },
     {
@@ -19,10 +19,10 @@
       "parameters": {
         "SrcNode": 10,
         "McastGroup": 1,
-        "WriteSize": 1e9,
-        "BandwidthPercent": 0.1,
-        "SrcPort": 1,
-        "DstPort": 2
+        "WriteSize": 1,
+        "BandwidthPercent": 1,
+        "SrcPort": 900,
+        "DstPort": 901
       }
     }
   ]
