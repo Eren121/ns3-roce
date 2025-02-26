@@ -54,22 +54,22 @@ TypeId AgConfig::GetTypeId()
                   MakeUintegerAccessor(&AgConfig::m_port_mcast),
                   MakeUintegerChecker<uint16_t>())
     .AddAttribute("PortLeft",
-                  "Port to use for communication with left node",
+                  "Peer port to use for communication with left node",
                   UintegerValue(101),
                   MakeUintegerAccessor(&AgConfig::m_port_lnode),
                   MakeUintegerChecker<uint16_t>())
     .AddAttribute("PortRight",
-                  "Port to use for communication with right node",
+                  "Peer port to use for communication with right node",
                   UintegerValue(102),
                   MakeUintegerAccessor(&AgConfig::m_port_rnode),
                   MakeUintegerChecker<uint16_t>())
     .AddAttribute("PortPrev",
-                  "Port to use for communication with previous node (to receive notification to start multicast)",
+                  "Peer port to use for communication with previous node (to receive notification to start multicast)",
                   UintegerValue(103),
                   MakeUintegerAccessor(&AgConfig::m_port_prev),
                   MakeUintegerChecker<uint16_t>())
     .AddAttribute("PortNext",
-                  "Port to use for communication with next node (to start next multicast)",
+                  "Peer port to use for communication with next node (to start next multicast)",
                   UintegerValue(104),
                   MakeUintegerAccessor(&AgConfig::m_port_next),
                   MakeUintegerChecker<uint16_t>())
