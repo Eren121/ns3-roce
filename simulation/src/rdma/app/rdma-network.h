@@ -171,6 +171,7 @@ public:
   static Ipv4Address GetNodeIp(node_id_t id);
 
 	NodeMap GetAllSwitches() const;
+  NodeMap GetAllServers() const;
   Ptr<Node> FindNode(node_id_t id) const; //!< Crash if not found
   Ptr<Node> FindServer(node_id_t id) const; //!< Crash if not found
   Ipv4Address FindNodeIp(node_id_t id) const;

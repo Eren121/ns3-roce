@@ -132,6 +132,15 @@ NodeMap RdmaNetwork::GetAllSwitches() const
   return nodes;
 }
 
+NodeMap RdmaNetwork::GetAllServers() const
+{
+  NodeMap nodes;
+  for(const auto& [_, server] : m_servers) {
+    nodes.Add(server);
+  }
+  return nodes;
+}
+
 void RdmaNetwork::SetConfig(std::shared_ptr<RdmaConfig> config)
 {
   m_config = config;
