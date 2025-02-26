@@ -10,6 +10,28 @@ sns.set_theme()
 
 script_dir = pathlib.Path(__file__).parent
 
+
+def plot_qp() -> None:
+  df = pd.DataFrame.from_records(json.load(open(script_dir / "out_qp.json")))
+  df["inflight"] = df["end"] - df["acked"]
+  g = sns.relplot(
+    df,
+    kind='line',
+    x="time", y="inflight", hue="key", style="key",
+    col="node",
+    linewidth=1,
+    palette='brg',
+    col_wrap = 5,
+    height=3,
+    legend=True,
+    facet_kws={'sharey': False, 'sharex': False})
+  for axes in g.axes.flat:
+      axes.ticklabel_format(axis='both', style='scientific', scilimits=(0, 0))
+  plt.tight_layout()
+  plt.show()
+
+plot_qp()
+
 df = pd.DataFrame.from_records(
   json.load(open(script_dir / "out_pfc.json")),
   columns=["time", "dev", "paused", "node"])
@@ -32,20 +54,22 @@ plt.show()
 
 
 
-df = pd.DataFrame.from_records(json.load(open(script_dir / "out_qlen.txt")))
+df = pd.DataFrame.from_records(json.load(open(script_dir / "out_qlen.json")))
 
-sns.relplot(
-  df,
-  kind='line',
-  x="time", y="bytes", hue="iface",
-  row="node",
-  linewidth=1,
-  palette='brg', aspect=4, height=2.5, style='iface',
-  legend=True,
-  facet_kws={'sharey': False, 'sharex': False})
+for y in ['egress', 'ingress']:
+  sns.relplot(
+    df,
+    kind='line',
+    x="time", y=y, hue="iface",
+    row="node",
+    linewidth=2,
+    palette='brg', aspect=4, height=2.5, style='iface',
+    alpha=0.75,
+    legend=True,
+    facet_kws={'sharey': False, 'sharex': False})
 
-plt.tight_layout()
-plt.show()
+  plt.tight_layout()
+  plt.show()
 
 df = pd.DataFrame.from_records(
   json.load(open(script_dir / "out_allgather-miss.json")),
