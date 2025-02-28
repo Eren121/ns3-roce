@@ -14,7 +14,7 @@ namespace ns3 {
 class AgRuntime : public Object
 {
 public:
-  AgRuntime(Ptr<Node> node, Ptr<AgShared> shared);
+  AgRuntime(Ptr<Node> node, AgShared& shared);
 
   static TypeId GetTypeId();
   
@@ -57,7 +57,7 @@ private:
 
   block_id_t m_block;
   Ptr<AgConfig> m_config;
-  Ptr<AgShared> m_shared;
+  AgShared& m_shared;
   AgState m_state{AgState::Multicast};
   uint64_t m_completed_chains{}; //! Count of completed multicast chains
   std::set<chunk_id_t> m_recv; //!< All received chunk

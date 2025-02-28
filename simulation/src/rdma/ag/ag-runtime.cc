@@ -15,12 +15,12 @@ TypeId AgRuntime::GetTypeId()
   return tid;
 }
 
-AgRuntime::AgRuntime(Ptr<Node> node, Ptr<AgShared> shared)
-  : m_config{shared->GetConfig()},
+AgRuntime::AgRuntime(Ptr<Node> node, AgShared& shared)
+  : m_config{shared.GetConfig()},
     m_shared{shared}
 {
   bool found{false};
-  const NodeContainer& nodes{m_shared->GetServers()};
+  const NodeContainer& nodes{m_shared.GetServers()};
   for(block_id_t i{0}; i < nodes.GetN(); i++) {
     if(nodes.Get(i) == node) {
       m_block = i;
@@ -33,7 +33,7 @@ AgRuntime::AgRuntime(Ptr<Node> node, Ptr<AgShared> shared)
     NS_ABORT_MSG("Cannot find my node in the server list");
   }
 
-  shared->RegisterNode(this);
+  m_shared.RegisterNode(this);
 }
 
 bool AgRuntime::MarkChunkAsReceived(chunk_id_t chunk)
@@ -48,18 +48,18 @@ bool AgRuntime::MarkChunkAsReceived(chunk_id_t chunk)
 
 Ptr<Node> AgRuntime::GetNode() const
 {
-  return m_shared->GetServers().Get(m_block);
+  return m_shared.GetServers().Get(m_block);
 }
 
 Ptr<Node> AgRuntime::GetLeft() const
 {
-  const NodeContainer& nodes{m_shared->GetServers()};
+  const NodeContainer& nodes{m_shared.GetServers()};
   return nodes.Get(PositiveModulo<int64_t>(int64_t(m_block) - 1, nodes.GetN()));
 }
 
 Ptr<Node> AgRuntime::GetRight() const
 {
-  const NodeContainer& nodes{m_shared->GetServers()};
+  const NodeContainer& nodes{m_shared.GetServers()};
   return nodes.Get((m_block + 1) % nodes.GetN());
 }
 
@@ -95,7 +95,7 @@ void AgRuntime::SetState(AgState state)
   NS_LOG_FUNCTION(m_block << state);
 
   m_state = state;
-  m_shared->RegisterStateTransition(m_state);
+  m_shared.RegisterStateTransition(m_state);
 }
 
 void AgRuntime::TransitionToRecovery()
@@ -118,7 +118,7 @@ void AgRuntime::TransitionToRecovery()
 
 AgRuntime& AgRuntime::GetRightRuntime() const
 {
-  return *m_shared->GetNode((m_block + 1) % m_config->GetBlockCount());
+  return *m_shared.GetNode((m_block + 1) % m_config->GetBlockCount());
 }
 
 uint64_t AgRuntime::GetCutoffByteSize() const
@@ -197,7 +197,7 @@ void AgRuntime::RegisterMissedChunks()
 
   for(chunk_id_t chunk{0}; chunk < m_config->GetTotalChunkCount(); chunk++) {
     if(!m_recv.contains(chunk)) {
-      m_shared->AddMissedChunk(m_block, chunk);
+      m_shared.AddMissedChunk(m_block, chunk);
       total++;
     }
   }

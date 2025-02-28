@@ -155,7 +155,7 @@ void AgApp::StartApplication()
   NS_LOG_FUNCTION(this);
 
   NS_ASSERT(!m_runtime);
-  m_runtime = CreateObject<AgRuntime>(GetNode(), m_shared);
+  m_runtime = CreateObject<AgRuntime>(GetNode(), *m_shared);
 
   InitMulticastQP();
   InitChainQP();
