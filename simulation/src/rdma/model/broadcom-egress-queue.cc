@@ -57,7 +57,13 @@ NS_OBJECT_ENSURE_REGISTERED(BEgressQueue);
 		for (uint32_t i = 0; i < qCnt; i++)
 		{
 			m_bytesInQueue[i] = 0;
-			m_queues.push_back(CreateObject<DropTailQueue<Packet>>());
+
+			auto queue = CreateObject<DropTailQueue<Packet>>();
+			m_queues.push_back(queue);
+
+			// Override DropTailQueue default value of 100 packets
+			// Infinite queue
+			queue->SetMaxSize(QueueSize(QueueSizeUnit::PACKETS, std::numeric_limits<uint32_t>::max()));
 		}
 	}
 
