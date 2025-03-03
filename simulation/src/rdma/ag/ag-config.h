@@ -54,6 +54,7 @@ public:
   uint64_t GetRootCount() const;
   uint64_t GetPerBlockChunkCount() const;
   uint64_t GetTotalChunkCount() const;
+  block_id_t GetNearestFirstBlockHigherOrEqu(block_id_t block) const;
   bool IsFirstInChain(block_id_t block) const;
   AgChainOrder GetChainOrder(block_id_t block) const;
   block_id_t GetOriginalSender(chunk_id_t chunk) const;
@@ -73,6 +74,7 @@ public:
 
   fs::path dump_stats;
   fs::path dump_missed_chunks;
+  fs::path dump_recv_chunks;
 
 private:
   /**

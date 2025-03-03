@@ -132,9 +132,41 @@ void AgApp::InitMulticastQP()
   
   // Register callback
   m_mcast.rq->SetOnRecv([this](RdmaRxQueuePair::RecvNotif notif) mutable {
+
+    if(m_runtime->GetState() != AgState::Multicast) {
+      return;
+    }
+
     NS_ASSERT(notif.has_imm);
-    if(m_runtime->NotifyReceiveChunk(notif.imm)) {
+    const chunk_id_t chunk{notif.imm};
+    const block_id_t block{m_config->GetOriginalSender(chunk)};
+
+    if(m_runtime->NotifyReceiveChunk(chunk)) {
       StartRecoveryPhase();
+    }
+    else {
+      // Because of delays caused by congestion control,
+      // the multicast can take longer than `bandwidth * size`, so adjust the timer
+      // at each mcast packet received.
+    
+      const Ptr<RdmaHw> rdma{GetNode()->GetObject<RdmaHw>()};
+      const chunk_id_t chain_chunk_last{m_config->GetNearestFirstBlockHigherOrEqu(block + 1) * m_config->GetPerBlockChunkCount() - 1};
+      const chunk_id_t chain_chunk_rem{chain_chunk_last - chunk};
+      const byte_t chain_rem_bytes{chain_chunk_rem * m_config->GetChunkByteSize()};
+      const byte_t additional_delay{rdma->GetMTU() * 100}; // A bit random value, all should it be is > RTT
+      const byte_t cutoff_bytes{chain_rem_bytes + additional_delay};
+     
+      /*
+      std::cout << "--\nchunk=" << chunk << std::endl;
+      std::cout << "block=" << block
+      << "nearest=" << m_config->GetNearestFirstBlockHigherOrEqu(block + 1) << std::endl;
+      std::cout << "last_chunk=" << chain_chunk_last << std::endl;
+      std::cout << "cutoff_bytes=" << cutoff_bytes << std::endl;
+      */
+
+      m_cutoff_timer = m_mcast.sq->GetMaxRate().CalculateBytesTxTime(rdma->GetMTU() * 100);
+      m_timeout_ev.Cancel();
+      m_timeout_ev = Simulator::Schedule(m_cutoff_timer, &AgApp::OnCutoffTimer, this);      
     }
   });
 }

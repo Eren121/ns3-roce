@@ -182,6 +182,8 @@ bool AgRuntime::NotifyReceiveChunk(chunk_id_t chunk)
   if(m_state != AgState::Multicast) { return false; }
   if(!MarkChunkAsReceived(chunk)) { return false; }
 
+  m_shared.RegisterRecvChunk(m_block, chunk);
+  
   if(m_config->IsLastChunkOfChain(chunk)) {
     CompleteChain();
   }

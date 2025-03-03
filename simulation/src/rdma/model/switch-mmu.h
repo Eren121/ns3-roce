@@ -26,8 +26,14 @@ public:
 
 	bool CheckShouldPause(uint32_t port, uint32_t qIndex);
 	bool CheckShouldResume(uint32_t port, uint32_t qIndex);
+
+	/// @{
+	/// Paused means that the current switch has sent a pause frame to the
+	/// remote device at the given port.
 	void SetPause(uint32_t port, uint32_t qIndex);
 	void SetResume(uint32_t port, uint32_t qIndex);
+	/// @}
+
 	//void GetPauseClasses(uint32_t port, uint32_t qIndex);
 	//bool GetResumeClasses(uint32_t port, uint32_t qIndex);
 

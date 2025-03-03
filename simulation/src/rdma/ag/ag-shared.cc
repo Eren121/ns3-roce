@@ -20,6 +20,21 @@ AgShared::AgShared(Ptr<AgConfig> config, NodeContainer servers)
     m_servers{servers}
 {
   m_start = Simulator::Now();
+
+  {
+    // Load serializer for received chunks
+    if(!m_config->dump_recv_chunks.empty()) {
+      const fs::path out{FindFile(m_config->dump_recv_chunks)};
+      m_recv_chunks_writer = std::make_unique<RdmaSerializer<AgRecvChunkRecord>>(out);
+    }
+  }
+}
+
+fs::path AgShared::FindFile(fs::path in) const
+{
+  const RdmaConfig& rdma_config{RdmaNetwork::GetInstance().GetConfig()};
+  const std::string& path{rdma_config.FindFile(in)};
+  return path;
 }
   
 void AgShared::AddMissedChunk(block_id_t block, chunk_id_t chunk)
@@ -31,14 +46,19 @@ void AgShared::AddMissedChunk(block_id_t block, chunk_id_t chunk)
   m_missed.push_back(record);
 }
 
+void AgShared::Finish() const
+{
+  m_config->OnAllFinished();
+  DumpStats();
+  DumpMissedChunks();
+}
+
 void AgShared::RegisterStateTransition(AgState state)
 {
   if(state == AgState::Finished) {
     m_completed_apps++;
     if(m_completed_apps == m_config->GetBlockCount()) {
-      m_config->OnAllFinished();
-      DumpStats();
-      DumpMissedChunks();
+      Finish();
     }
   }
   else if(state == AgState::Recovery) {
@@ -49,15 +69,24 @@ void AgShared::RegisterStateTransition(AgState state)
   }
 }
 
+void AgShared::RegisterRecvChunk(block_id_t block, chunk_id_t chunk)
+{
+  if(m_recv_chunks_writer) {
+    AgRecvChunkRecord record;
+    record.node = block;
+    record.chunk = chunk;
+    record.time = Simulator::Now().GetSeconds();
+    m_recv_chunks_writer->write(record);
+  }
+}
+
 void AgShared::DumpStats() const
 {
   if(m_config->dump_stats.empty()) {
     return;
   }
 
-  const RdmaConfig& rdma_config{RdmaNetwork::GetInstance().GetConfig()};
-  const std::string& out_path{rdma_config.FindFile(m_config->dump_stats)};
-  std::ofstream ofs{out_path.c_str()};
+  std::ofstream ofs{FindFile(m_config->dump_stats).c_str()};
 
   json info;
   info["total_elapsed_time"] = Simulator::Now().GetSeconds() - m_start.GetSeconds();

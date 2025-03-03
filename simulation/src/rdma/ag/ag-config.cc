@@ -83,6 +83,11 @@ TypeId AgConfig::GetTypeId()
                   StringValue(""),
                   MakeStringAccessor(&AgConfig::dump_missed_chunks),
                   MakeStringChecker())
+    .AddAttribute("DumpRecvChunks",
+                  "Path to write received chunks over time records",
+                  StringValue(""),
+                  MakeStringAccessor(&AgConfig::dump_recv_chunks),
+                  MakeStringChecker())
     .AddAttribute("OnAllFinished",
                   "Callback called when the allgather is finished for all nodes",
                   CallbackValue(),
@@ -142,13 +147,14 @@ uint16_t AgConfig::GetPort(AgPort port) const
   return {};
 }
 
+block_id_t AgConfig::GetNearestFirstBlockHigherOrEqu(block_id_t block) const
+{
+  return CeilDiv(block * m_roots, m_nodes) * m_nodes / m_roots;
+}
+
 bool AgConfig::IsFirstInChain(block_id_t block) const
 {
-  const uint32_t nearest_first_block_higher_or_equ{
-    CeilDiv(block * m_roots, m_nodes) * m_nodes / m_roots
-  };
-
-  return block == nearest_first_block_higher_or_equ;
+  return block == GetNearestFirstBlockHigherOrEqu(block);
 }
 
 AgChainOrder AgConfig::GetChainOrder(block_id_t block) const
@@ -213,7 +219,9 @@ uint64_t AgConfig::GetPerSegmentDataChunkCount() const
 
 segment_id_t AgConfig::GetSegmentOfChunk(chunk_id_t chunk) const
 {
-  return chunk / (m_sdata + m_sparity);
+  const block_id_t block{GetOriginalSender(chunk)};
+  const segment_id_t first_segment{block * GetPerNodeSegmentCount()};
+  return first_segment + (chunk % GetPerNodeSegmentCount());
 }
 
 block_id_t AgConfig::GetBlockOfSegment(segment_id_t segment) const

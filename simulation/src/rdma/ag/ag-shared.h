@@ -2,6 +2,9 @@
 
 #include "ns3/ag-config.h"
 #include "ns3/node-container.h"
+#include "ns3/rdma-serdes.h"
+#include "ns3/ag-recv-chunk-record.h"
+#include <avro/Encoder.hh>
 #include <cstdint>
 #include <set>
 
@@ -30,6 +33,7 @@ public:
 
   void NotifyCutoffTimerTriggered(block_id_t block);
   void AddMissedChunk(block_id_t block, chunk_id_t chunk);
+  void RegisterRecvChunk(block_id_t block, chunk_id_t chunk);
   void RegisterStateTransition(AgState state);
 
   void RegisterNode(Ptr<AgRuntime> node);
@@ -38,8 +42,10 @@ public:
   NodeContainer GetServers() const;
 
 private:
+  void Finish() const;
   void DumpStats() const;
   void DumpMissedChunks() const;
+  fs::path FindFile(fs::path in) const;
 
 private:
   Time m_start;
@@ -51,6 +57,7 @@ private:
   int m_cutoff_triggered{};
   MissedChunkList m_missed;
   NodeContainer m_servers;
+  std::unique_ptr<RdmaSerializer<AgRecvChunkRecord>> m_recv_chunks_writer;
 };
 
 } // namesppace ns3

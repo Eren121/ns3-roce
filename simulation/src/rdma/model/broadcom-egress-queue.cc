@@ -80,7 +80,9 @@ NS_OBJECT_ENSURE_REGISTERED(BEgressQueue);
 
 		if (m_bytesInQueueTotal + p->GetSize() < m_maxSize.GetValue())  //infinite queue
 		{
-			m_queues[qIndex]->Enqueue(p);
+			// Admission should never fail here
+			NS_ABORT_IF(!m_queues[qIndex]->Enqueue(p));
+
 			m_bytesInQueueTotal += p->GetSize();
 			m_bytesInQueue[qIndex] += p->GetSize();
 		}
