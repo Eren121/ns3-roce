@@ -80,6 +80,10 @@ run_bash: docker_user =
 run_bash:
 	$(docker_run) /bin/bash
 
+.PHONY: gen_avro
+gen_avro:
+	$(docker_run) ./simulation/src/rdma/serdes/schemas/gen-avro-headers.sh
+
 #################
 ################# Analysis
 #################
