@@ -31,7 +31,15 @@
 
   "qlen_monitor": {
     "enable": false,
-    "output": "out_qlen.txt",
+    "output": "out_qlen.json",
+    "start": 0,
+    "end": 1e9,
+    "interval": 1e-6
+  },
+
+  "qp_monitor": {
+    "enable": false,
+    "output": "out_qp.json",
     "start": 0,
     "end": 1e9,
     "interval": 1e-6
@@ -41,10 +49,10 @@
   "flow_file": "flow.json",
   "trace_file": "trace.json",
   
-  "trace_output_file": "out_trace.tr",
-  "fct_output_file": "out_fct.txt",
-  "pfc_output_file": "out_pfc.txt",
-  "anim_output_file": "out_anim.xml",
+  "trace_output_file": "",
+  "fct_output_file": "",
+  "pfc_output_file": "",
+  "anim_output_file": "",
 
   "simulator_stop_time": 1e9,
 

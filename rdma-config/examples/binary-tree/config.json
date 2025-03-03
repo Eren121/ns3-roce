@@ -1,6 +1,6 @@
 {
   "defaults": {
-    "ns3::SwitchNode::EcnEnabled": true,
+    "ns3::SwitchNode::EcnEnabled": false,
 
     "ns3::QbbNetDevice::PauseTime": 5e-6,
     "ns3::QbbNetDevice::QbbEnabled": true,

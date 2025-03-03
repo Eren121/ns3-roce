@@ -1,29 +1,114 @@
 {
   "flows": [
-    {
-      "type": "allgather",
-      "parameters": {
-        "PerNodeBytes": 1e6,
-        "ParityChunkPerSegmentCount": 0,
-        "DataChunkPerSegmentCount": 1,
-        "RootCount": 2,
-        "McastGroup": 1,
-
-        "DumpStats": "out_allgather-stats.json",
-        "DumpMissedChunks": "out_allgather-miss.json"
+      {
+          "type": "unicast",
+          "background": true,
+          "parameters": {
+              "SrcNode": 6,
+              "DstNode": 14,
+              "SrcPort": 900,
+              "DstPort": 901,
+              "WriteSize": 1000000000.0,
+              "BandwidthPercent": 1.0
+          }
+      },
+      {
+          "type": "unicast",
+          "background": true,
+          "parameters": {
+              "SrcNode": 15,
+              "DstNode": 7,
+              "SrcPort": 902,
+              "DstPort": 903,
+              "WriteSize": 1000000000.0,
+              "BandwidthPercent": 1.0
+          }
+      },
+      {
+          "type": "unicast",
+          "background": true,
+          "parameters": {
+              "SrcNode": 8,
+              "DstNode": 16,
+              "SrcPort": 904,
+              "DstPort": 905,
+              "WriteSize": 1000000000.0,
+              "BandwidthPercent": 1.0
+          }
+      },
+      {
+          "type": "unicast",
+          "background": true,
+          "parameters": {
+              "SrcNode": 17,
+              "DstNode": 9,
+              "SrcPort": 906,
+              "DstPort": 907,
+              "WriteSize": 1000000000.0,
+              "BandwidthPercent": 1.0
+          }
+      },
+      {
+          "type": "unicast",
+          "background": true,
+          "parameters": {
+              "SrcNode": 10,
+              "DstNode": 18,
+              "SrcPort": 908,
+              "DstPort": 909,
+              "WriteSize": 1000000000.0,
+              "BandwidthPercent": 1.0
+          }
+      },
+      {
+          "type": "unicast",
+          "background": true,
+          "parameters": {
+              "SrcNode": 19,
+              "DstNode": 11,
+              "SrcPort": 910,
+              "DstPort": 911,
+              "WriteSize": 1000000000.0,
+              "BandwidthPercent": 1.0
+          }
+      },
+      {
+          "type": "unicast",
+          "background": true,
+          "parameters": {
+              "SrcNode": 12,
+              "DstNode": 20,
+              "SrcPort": 912,
+              "DstPort": 913,
+              "WriteSize": 1000000000.0,
+              "BandwidthPercent": 1.0
+          }
+      },
+      {
+          "type": "unicast",
+          "background": true,
+          "parameters": {
+              "SrcNode": 21,
+              "DstNode": 13,
+              "SrcPort": 914,
+              "DstPort": 915,
+              "WriteSize": 1000000000.0,
+              "BandwidthPercent": 1.0
+          }
+      },
+      {
+        "type": "allgather",
+        "parameters": {
+          "PerNodeBytes": 1e7,
+          "DataChunkPerSegmentCount": 20,
+          "ParityChunkPerSegmentCount": 1,
+          "RootCount": 2,
+          "McastGroup": 1,
+  
+          "DumpStats": "out_allgather-stats.json",
+          "DumpMissedChunks": "out_allgather-miss.json",
+          "DumpRecvChunks": "out_recv_chunks.avro"
+        }
       }
-    },
-    {
-      "type": "multicast",
-      "background": true,
-      "parameters": {
-        "SrcNode": 10,
-        "McastGroup": 1,
-        "WriteSize": 1,
-        "BandwidthPercent": 1,
-        "SrcPort": 900,
-        "DstPort": 901
-      }
-    }
   ]
 }
