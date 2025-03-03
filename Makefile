@@ -76,7 +76,7 @@ run_valgrind:
 	$(docker_run) $(ns3_run) --command-template="valgrind %s "
 
 .PHONY: run_bash
-run_bash:
+run_bash: docker_user =
 run_bash:
 	$(docker_run) /bin/bash
 
