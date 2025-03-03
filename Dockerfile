@@ -18,7 +18,7 @@ RUN apt install -y \
   python3-rich
 
 
-# Build reflect-cpp
+# Install reflect-cpp
 RUN git clone https://github.com/getml/reflect-cpp --branch v0.17.0 /reflectcpp
 
 WORKDIR /reflectcpp
@@ -30,6 +30,19 @@ RUN cmake -S . -B build -DCMAKE_CXX_STANDARD=20 -DCMAKE_BUILD_TYPE=Release -DCMA
 
 RUN cmake -S . -B build -DCMAKE_CXX_STANDARD=20 -DCMAKE_BUILD_TYPE=Debug -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
   && cmake --build build \
+  && cmake --build build --target install \
+  && cmake --build build --target clean
+
+# Install apache avro
+RUN apt -y install libboost-dev libboost-filesystem-dev libboost-system-dev libboost-program-options-dev libboost-iostreams-dev
+RUN apt -y install python3-avro
+
+RUN git clone https://github.com/apache/avro /avro \
+  && cd /avro \
+  && git checkout release-1.12.0 \
+  && cd lang/c++ \
+  && mkdir build \
+  && cmake -B build -S . -DCMAKE_BUILD_TYPE=Release -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
   && cmake --build build --target install \
   && cmake --build build --target clean
 
