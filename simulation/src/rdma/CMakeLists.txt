@@ -1,4 +1,5 @@
 find_package(reflectcpp REQUIRED)
+find_library(libavrocpp avrocpp REQUIRED)
 
 if(reflectcpp_FOUND)
   build_lib(
@@ -72,6 +73,8 @@ if(reflectcpp_FOUND)
       model/switch-mmu.cc
       model/switch-node.cc        
     HEADER_FILES
+      serdes/ag-recv-chunk-record.h
+      serdes/rdma-serdes.h
       ag/ag-app.h
       ag/ag-app-helper.h
       ag/ag-config.h
@@ -111,7 +114,7 @@ if(reflectcpp_FOUND)
       model/switch-mmu.h
       model/switch-node.h
       model/trace-format.h
-    LIBRARIES_TO_LINK reflectcpp
+    LIBRARIES_TO_LINK reflectcpp ${libavrocpp}
                       ${libinternet}
                       ${libnetwork}
                       ${libpoint-to-point}

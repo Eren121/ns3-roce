@@ -1,0 +1,9 @@
+{
+  "type": "record",
+  "name": "AgRecvChunkRecord",
+  "fields" : [
+      {"name": "node", "type": "int"},
+      {"name": "chunk", "type": "int"},
+      {"name": "time", "type" : "double"}
+  ]
+}
