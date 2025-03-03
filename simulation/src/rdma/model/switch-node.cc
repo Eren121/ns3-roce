@@ -138,6 +138,7 @@ void SwitchNode::SendMultiToDevs(Ptr<Packet> packet, CustomHeader& ch, int in_if
 	FlowIdTag t;
 	packet->PeekPacketTag(t);
 	const uint32_t inDev{t.GetFlowId()};
+	const uint32_t psize{packet->GetSize()};
 
 	// Determine the qIndex
 	uint32_t qIndex;
@@ -145,14 +146,6 @@ void SwitchNode::SendMultiToDevs(Ptr<Packet> packet, CustomHeader& ch, int in_if
 		qIndex = 0;
 	}else{
 		qIndex = (ch.l3Prot == 0x06 ? 1 : ch.udp.pg); // if TCP, put to queue 1
-	}
-
-	// Admission control
-	if (qIndex != 0) { //not highest priority
-		if(!m_mmu->CheckIngressAdmission(inDev, qIndex, packet->GetSize())) {
-			NS_LOG_LOGIC("Drop: Pause multicast " << qIndex);
-			return;
-		}
 	}
 
 	auto iface_it = m_ogroups.find(ch.dip);
@@ -195,6 +188,7 @@ void SwitchNode::SendMultiToDevs(Ptr<Packet> packet, CustomHeader& ch, int in_if
 	}
 
 	Ptr<Packet> last;
+	std::vector<std::pair<int, Ptr<Packet>>> tosend;
 	
 	for(int idx : iface_it->second) {
 
@@ -210,6 +204,22 @@ void SwitchNode::SendMultiToDevs(Ptr<Packet> packet, CustomHeader& ch, int in_if
 
 		Ptr<Packet> p = packet->Copy();
 
+		// Admission control
+		if (qIndex != 0) {
+			// if(!last)
+			{
+				if(!m_mmu->CheckIngressAdmission(inDev, qIndex, psize)) {
+					NS_LOG_LOGIC("Drop: Pause multicast " << qIndex);
+					break;
+				}
+				m_mmu->UpdateIngressAdmission(inDev, qIndex, psize);
+				// ++(*x);
+				m_egress_lasts[p] = std::make_shared<int>(1);
+			}
+
+			m_mmu->UpdateEgressAdmission(idx, qIndex, psize);
+		}
+
 		// TODO: now we increase the input interface buffer usage for each output device in the routing table of the multicast destination
 		// It would be more logical to increase only once, regardless of the count of the output devices.
 		// This is easy to do like here, but maybe it changes behaviour when the buffer is almost at full capacity, because the buffer full capacity is triggered earlier than what it should.
@@ -218,19 +228,19 @@ void SwitchNode::SendMultiToDevs(Ptr<Packet> packet, CustomHeader& ch, int in_if
 		
 		last = p;
 		
-		m_mmu->UpdateIngressAdmission(inDev, qIndex, last->GetSize());
-		m_mmu->UpdateEgressAdmission(idx, qIndex, p->GetSize());
-		
-		if(qIndex != 0) { m_bytes[inDev][idx][qIndex] += p->GetSize(); }
-		SwitchSend(GetDevice(idx), qIndex, p);
-	}
+		if(qIndex != 0) {
+			m_bytes[inDev][idx][qIndex] += psize;
+		}
 
-	if(last) {
-		m_egress_lasts.insert(last);
+		tosend.emplace_back(idx, p);
 	}
-
+	
 	if(qIndex != 0) {
 		CheckAndSendPfc(inDev, qIndex);
+	}
+
+	for(const auto& [idx, p] : tosend) {
+		SwitchSend(GetDevice(idx), qIndex, p);
 	}
 }
 
@@ -251,10 +261,12 @@ void SwitchNode::SendToDev(Ptr<Packet>p, CustomHeader &ch){
 		FlowIdTag t;
 		p->PeekPacketTag(t);
 		uint32_t inDev = t.GetFlowId();
-		if (qIndex != 0){ //not highest priority
+		if (qIndex != 0) { //not highest priority
 			if (m_mmu->CheckIngressAdmission(inDev, qIndex, p->GetSize())){			// Admission control
 				m_mmu->UpdateIngressAdmission(inDev, qIndex, p->GetSize());
-				m_egress_lasts.insert(p);
+				
+				auto x = std::make_shared<int>(1);
+				m_egress_lasts[p] = x;
 
 				m_mmu->UpdateEgressAdmission(idx, qIndex, p->GetSize());
 			}else{
@@ -355,11 +367,12 @@ void SwitchNode::SwitchNotifyDequeue(uint32_t ifIndex, uint32_t qIndex, Ptr<Pack
 
 		{
 			// Last packet of the mcast (or unicast), remove from ingress port
-			auto it{m_egress_lasts.find(p)};
-			if(it != m_egress_lasts.end()) {
-				m_egress_lasts.erase(it);
+			auto x = m_egress_lasts.at(p);
+			--(*x);
+			if(*x == 0) {
 				m_mmu->RemoveFromIngressAdmission(inDev, qIndex, p->GetSize());
 			}
+			m_egress_lasts.erase(p);
 		}
 
 		// std::cout << m_egress_lasts.size()<< "/" << m_bytes[inDev][ifIndex][qIndex] << std::endl;

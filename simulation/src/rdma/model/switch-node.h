@@ -8,6 +8,7 @@
 #include "ns3/switch-mmu.h"
 #include "ns3/pint.h"
 #include <unordered_map>
+#include <memory>
 #include <vector>
 
 namespace ns3 {
@@ -82,7 +83,7 @@ protected:
 private:
 	//! Packets of a multicast, or every packets of a unicast to dequeue.
 	//! Permits to know when to release ingress memory.
-	std::unordered_set<Ptr<Packet>> m_egress_lasts;
+	std::unordered_map<Ptr<Packet>, std::shared_ptr<int>> m_egress_lasts;
 
 private:
 	int GetOutDev(Ptr<const Packet>, CustomHeader &ch);
