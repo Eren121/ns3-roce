@@ -19,8 +19,20 @@ import topology
 import shutil
 from rich.progress import Progress
 
+#############################
+## Fixed global parameters
+
 script_dir = pathlib.Path(__file__).parent
 tmp_dir = script_dir / "out"
+
+#############################
+## Modifiable global parameters
+    
+enable_anim = False
+keep_dir = True
+overwrite_results = True
+
+#############################
 
 def get_path_rel_to_container(path: pathlib.Path) -> str:
     """
@@ -138,12 +150,12 @@ def plot(res: pd.DataFrame) -> None:
     img_dir.mkdir(parents=True, exist_ok=True)
 
     ys = []
-    ys.append(PlotData("lost_chunk_percent", "%"))
+    ys.append(PlotData("lost_chunk_percent", "percent"))
     ys.append(PlotData(["recovery_elapsed_time", "mcast_elapsed_time"], "second", "time_type"))
     ys.append(PlotData("bandwidth", "Gbps"))
     
     for data in ys:
-        x = "size"
+        x = "parity"
         y = data.cols
         melted = res.melt(
             id_vars=x,
@@ -172,12 +184,12 @@ def run_cases() -> list:
 
     params_cases = CartesianProduct()
     params_cases.set_param("bg_bandwidth_percent", 1.0)
-    params_cases.set_param("iteration", np.arange(5))
-    params_cases.set_param("size", np.flip(np.linspace(1e6, 3e6, 10)))
+    params_cases.set_param("iteration", np.arange(1))
+    params_cases.set_param("size", 1e7)
     params_cases.set_param("root_count", 2)
-    
-    enable_anim = False
-    keep_dir = False
+
+    # (data, parity)
+    params_cases.set_param("parity", np.arange(20))
 
     # Clear the simulation output folder
     if sim_dir.exists():
@@ -187,17 +199,20 @@ def run_cases() -> list:
     def generate_config():
         for params in params_cases.values():
             flows = []
-            for src in [12]:
+            first_left = 6
+            first_right = 14
+            for i in range(8):
+                left = first_left + i
+                right = first_right + i
                 flows.append({
-                    "type": "multicast",
+                    "type": "unicast",
                     "background": True,
                     "parameters": {
-                        "SrcNode": src,
-                        "McastGroup": 1,
+                        "SrcNode": left if i % 2 == 0 else right,
+                        "DstNode": right if i % 2 == 0 else left,
+                        "SrcPort": 900 + 2 * i,
+                        "DstPort": 900 + 2 * i + 1,
                         "WriteSize": 1e9,
-                        "SrcPort": 900,
-                        "DstPort": 901,
-
                         "BandwidthPercent": params["bg_bandwidth_percent"]
                     }
                 })
@@ -207,11 +222,9 @@ def run_cases() -> list:
                 "parameters": {
                     "McastGroup": 1,
                     "PerNodeBytes": params["size"],
-
-                    "ParityChunkPerSegmentCount": 0,
-                    "DataChunkPerSegmentCount": 1,
                     "RootCount": params["root_count"],
-
+                    "DataChunkPerSegmentCount": 20,
+                    "ParityChunkPerSegmentCount": params["parity"],
                     "DumpStats": out_allgather,
                     "DumpMissedChunks": ""
                 }
@@ -264,7 +277,6 @@ def main() -> None:
     ensure_built()
     results_json_path = tmp_dir / "results.json"
     results_txt_path = tmp_dir / "results.csv"
-    overwrite_results = True
 
     if results_json_path.exists() and not overwrite_results:
         print("Results exist, skip simulation")
@@ -274,7 +286,7 @@ def main() -> None:
         pyu.write_to_file(results_json_path, res.to_json(orient="records", indent=4))
         
     res["recovery_elapsed_time"] = res["total_elapsed_time"] - res["mcast_elapsed_time"]
-    res["bandwidth"] = 8 * res["size"] / res["total_elapsed_time"] * res["root_count"] / 1e9 # Gbps
+    res["bandwidth"] = 8 * res["size"] / res["total_elapsed_time"] * res["block_count"] / 1e9 # Gbps
     pyu.write_to_file(results_txt_path, res.to_string())    
     plot(res)
 
