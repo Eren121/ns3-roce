@@ -106,6 +106,16 @@ private:
 
   uint64_t m_nodes; //!< Count of nodes participating in the allgather
   Callback<void> m_on_all_finished;
+
+  //
+  // Parameters for simulating the mcast phase with markov chains
+  //
+
+  std::string m_mcastStrategy; // One of: "simulate", "markov"
+  double m_markovBurstDensity;
+  double m_markovGapDensity;
+  uint32_t m_markovBurstLength;
+  uint32_t m_markovGapLength;
 };
 
 } // namesppace ns3

@@ -1,5 +1,6 @@
 #include "ns3/ag-config.h"
 #include "ns3/uinteger.h"
+#include "ns3/double.h"
 #include "ns3/string.h"
 #include "ns3/rdma-helper.h"
 #include "ns3/rdma-reflection-helper.h"
@@ -14,85 +15,110 @@ TypeId AgConfig::GetTypeId()
     .SetParent<Object>()
     .AddConstructor<AgConfig>()
     .AddAttribute("PerNodeBytes",
-                  "Count of bytes to send per node",
-                  UintegerValue(1),
-                  MakeUintegerAccessor(&AgConfig::m_pernode),
-                  MakeUintegerChecker<uint64_t>())
+      "Count of bytes to send per node",
+      UintegerValue(1),
+      MakeUintegerAccessor(&AgConfig::m_pernode),
+      MakeUintegerChecker<uint64_t>())
     .AddAttribute("PriorityGroup",
-                  "PFC priority group for all communication",
-                  UintegerValue(3),
-                  MakeUintegerAccessor(&AgConfig::m_priority),
-                  MakeUintegerChecker<uint32_t>())
+      "PFC priority group for all communication",
+      UintegerValue(3),
+      MakeUintegerAccessor(&AgConfig::m_priority),
+      MakeUintegerChecker<uint32_t>())
     .AddAttribute("ParityChunkPerSegmentCount",
-                  "Count of parity chunks per segment",
-                  UintegerValue(0),
-                  MakeUintegerAccessor(&AgConfig::m_sparity),
-                  MakeUintegerChecker<uint64_t>())
+      "Count of parity chunks per segment",
+      UintegerValue(0),
+      MakeUintegerAccessor(&AgConfig::m_sparity),
+      MakeUintegerChecker<uint64_t>())
     .AddAttribute("DataChunkPerSegmentCount",
-                  "Count of data chunks per segment",
-                  UintegerValue(1),
-                  MakeUintegerAccessor(&AgConfig::m_sdata),
-                  MakeUintegerChecker<uint64_t>())
+      "Count of data chunks per segment",
+      UintegerValue(1),
+      MakeUintegerAccessor(&AgConfig::m_sdata),
+      MakeUintegerChecker<uint64_t>())
     .AddAttribute("ChunkSize",
-                  "Size of a chunk in bytes",
-                  UintegerValue(1),
-                  MakeUintegerAccessor(&AgConfig::m_csize),
-                  MakeUintegerChecker<uint64_t>())
+      "Size of a chunk in bytes",
+      UintegerValue(30000),
+      MakeUintegerAccessor(&AgConfig::m_csize),
+      MakeUintegerChecker<uint64_t>())
     .AddAttribute("RootCount",
-                  "Count of simultaneous multicasts",
-                  UintegerValue(1),
-                  MakeUintegerAccessor(&AgConfig::m_roots),
-                  MakeUintegerChecker<uint64_t>())
+      "Count of simultaneous multicasts",
+      UintegerValue(1),
+      MakeUintegerAccessor(&AgConfig::m_roots),
+      MakeUintegerChecker<uint64_t>())
     .AddAttribute("McastGroup",
-                  "Multicast group",
-                  UintegerValue(1),
-                  MakeUintegerAccessor(&AgConfig::m_group),
-                  MakeUintegerChecker<group_id_t>())
+      "Multicast group",
+      UintegerValue(1),
+      MakeUintegerAccessor(&AgConfig::m_group),
+      MakeUintegerChecker<group_id_t>())
     .AddAttribute("PortMcast",
-                  "Port to use for the multicast",
-                  UintegerValue(100),
-                  MakeUintegerAccessor(&AgConfig::m_port_mcast),
-                  MakeUintegerChecker<uint16_t>())
+      "Port to use for the multicast",
+      UintegerValue(100),
+      MakeUintegerAccessor(&AgConfig::m_port_mcast),
+      MakeUintegerChecker<uint16_t>())
     .AddAttribute("PortLeft",
-                  "Peer port to use for communication with left node",
-                  UintegerValue(101),
-                  MakeUintegerAccessor(&AgConfig::m_port_lnode),
-                  MakeUintegerChecker<uint16_t>())
+      "Peer port to use for communication with left node",
+      UintegerValue(101),
+      MakeUintegerAccessor(&AgConfig::m_port_lnode),
+      MakeUintegerChecker<uint16_t>())
     .AddAttribute("PortRight",
-                  "Peer port to use for communication with right node",
-                  UintegerValue(102),
-                  MakeUintegerAccessor(&AgConfig::m_port_rnode),
-                  MakeUintegerChecker<uint16_t>())
+      "Peer port to use for communication with right node",
+      UintegerValue(102),
+      MakeUintegerAccessor(&AgConfig::m_port_rnode),
+      MakeUintegerChecker<uint16_t>())
     .AddAttribute("PortPrev",
-                  "Peer port to use for communication with previous node (to receive notification to start multicast)",
-                  UintegerValue(103),
-                  MakeUintegerAccessor(&AgConfig::m_port_prev),
-                  MakeUintegerChecker<uint16_t>())
+      "Peer port to use for communication with previous node (to receive notification to start multicast)",
+      UintegerValue(103),
+      MakeUintegerAccessor(&AgConfig::m_port_prev),
+      MakeUintegerChecker<uint16_t>())
     .AddAttribute("PortNext",
-                  "Peer port to use for communication with next node (to start next multicast)",
-                  UintegerValue(104),
-                  MakeUintegerAccessor(&AgConfig::m_port_next),
-                  MakeUintegerChecker<uint16_t>())
+      "Peer port to use for communication with next node (to start next multicast)",
+      UintegerValue(104),
+      MakeUintegerAccessor(&AgConfig::m_port_next),
+      MakeUintegerChecker<uint16_t>())
     .AddAttribute("DumpStats",
-                  "Path to write statistics",
-                  StringValue(""),
-                  MakeStringAccessor(&AgConfig::dump_stats),
-                  MakeStringChecker())
+      "Path to write statistics",
+      StringValue(""),
+      MakeStringAccessor(&AgConfig::dump_stats),
+      MakeStringChecker())
     .AddAttribute("DumpMissedChunks",
-                  "Path to write missed chunks records",
-                  StringValue(""),
-                  MakeStringAccessor(&AgConfig::dump_missed_chunks),
-                  MakeStringChecker())
+      "Path to write missed chunks records",
+      StringValue(""),
+      MakeStringAccessor(&AgConfig::dump_missed_chunks),
+      MakeStringChecker())
     .AddAttribute("DumpRecvChunks",
-                  "Path to write received chunks over time records",
-                  StringValue(""),
-                  MakeStringAccessor(&AgConfig::dump_recv_chunks),
-                  MakeStringChecker())
+      "Path to write received chunks over time records",
+      StringValue(""),
+      MakeStringAccessor(&AgConfig::dump_recv_chunks),
+      MakeStringChecker())
+    .AddAttribute("McastStrategy",
+      "One of 'markov', 'simulate'",
+      StringValue("simulate"),
+      MakeStringAccessor(&AgConfig::m_mcastStrategy),
+      MakeStringChecker())
+    .AddAttribute("MarkovBurstDensity",
+      "Fraction of packets lost within a burst",
+      DoubleValue(0.5),
+      MakeDoubleAccessor(&AgConfig::m_markovBurstDensity),
+      MakeDoubleChecker<double>())
+    .AddAttribute("MarkovGapDensity",
+      "Fraction of packets lost within a gap",
+      DoubleValue(0.01),
+      MakeDoubleAccessor(&AgConfig::m_markovGapDensity),
+      MakeDoubleChecker<double>())
+    .AddAttribute("MarkovBurstLength",
+      "Average number of packets lost in a burst",
+      UintegerValue(5),
+      MakeUintegerAccessor(&AgConfig::m_markovBurstLength),
+      MakeUintegerChecker<uint32_t>())
+    .AddAttribute("MarkovGapLength",
+      "Average number of packets received in a gap",
+      UintegerValue(5000),
+      MakeUintegerAccessor(&AgConfig::m_markovGapLength),
+      MakeUintegerChecker<uint32_t>())
     .AddAttribute("OnAllFinished",
-                  "Callback called when the allgather is finished for all nodes",
-                  CallbackValue(),
-                  MakeCallbackAccessor(&AgConfig::m_on_all_finished),
-                  MakeCallbackChecker())
+      "Callback called when the allgather is finished for all nodes",
+      CallbackValue(),
+      MakeCallbackAccessor(&AgConfig::m_on_all_finished),
+      MakeCallbackChecker())
   ;
   return tid;
 }
