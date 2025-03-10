@@ -33,6 +33,7 @@ AgRuntime::AgRuntime(Ptr<Node> node, AgShared& shared)
     NS_ABORT_MSG("Cannot find my node in the server list");
   }
 
+  m_chunk_progresses.resize(m_config->GetBlockCount());
   m_shared.RegisterNode(this);
 }
 
@@ -177,18 +178,38 @@ bool AgRuntime::HasAllChunks() const
     && m_torecover.size() == 0;
 }
 
-bool AgRuntime::NotifyReceiveChunk(chunk_id_t chunk)
+bool AgRuntime::NotifyReceivePacket(pkt_id_t packet)
 {
-  if(m_state != AgState::Multicast) { return false; }
-  if(!MarkChunkAsReceived(chunk)) { return false; }
+  if(m_state != AgState::Multicast) {
+    return false;
+  }
 
-  m_shared.RegisterRecvChunk(m_block, chunk);
-  
-  if(m_config->IsLastChunkOfChain(chunk)) {
-    CompleteChain();
+  block_id_t sender;
+  chunk_id_t chunk;
+  m_config->ParseMcastImmData(packet, sender, chunk);
+
+  ChunkProgress& progress{m_chunk_progresses[sender]};
+
+  if(progress.chunk != chunk) {
+    progress.chunk = chunk;
+    progress.pkts = 1;
+  }
+  else {
+    progress.pkts++;
   }
   
-  return m_state == AgState::Recovery;
+  bool new_chunk{false};
+  if(progress.pkts == m_config->GetPerChunkPacketCount()) {
+    new_chunk = MarkChunkAsReceived(chunk);
+    if(new_chunk) {
+      m_shared.RegisterRecvChunk(m_block, chunk);
+      if(m_config->IsLastChunkOfChain(chunk)) {
+        CompleteChain();
+      }
+    }
+  }
+  
+  return new_chunk && m_state == AgState::Recovery;
 }
 
 void AgRuntime::RegisterMissedChunks()

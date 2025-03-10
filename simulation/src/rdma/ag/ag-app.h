@@ -81,7 +81,7 @@ private:
   LeftRightConnection MakeLRConnection(uint16_t left_dst_port, uint16_t right_dst_port);
   void OnRecvMcastChunk(chunk_id_t chunk);
 
-  void OnMulticastTransmissionEnd(chunk_id_t last_chunk);
+  void OnMulticastTransmissionEnd();
 
   void OnCutoffTimer();
 
@@ -91,6 +91,8 @@ private:
 
   void StartMulticast();
   void StartRecoveryPhase();
+
+  void RunMarkovMcast();
   
 private:
   Ptr<AgShared> m_shared;

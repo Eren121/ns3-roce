@@ -27,7 +27,7 @@ public:
   
   void NotifyRecvRecoveryRequest();
   void NotifyRecovery(block_id_t block);
-  bool NotifyReceiveChunk(chunk_id_t chunk); //!< Returns true when the recovery is ready to start
+  bool NotifyReceivePacket(pkt_id_t packet); //!< Returns true when the recovery is ready to start
 
   /**
    * @return Cutoff timer (in bytes, needs to be converted to time with bandwidth).
@@ -63,6 +63,19 @@ private:
   std::set<chunk_id_t> m_recv; //!< All received chunk
   std::set<block_id_t> m_rec_sent; //!< All blocks sent for recovery
   std::map<block_id_t, uint64_t> m_torecover; // !< Missed chunk count per block (taking into account FEC)
+
+
+  // Since receved packets of a single chunks are contiguous, keep trace of
+  // the count of packets received to know when a chunk is complete.
+  // In theory, storing as many counters as there are multicast roots will be suficient, but storing
+  // one counter per block is easier and not a memory bottleneck.
+
+  struct ChunkProgress
+  {
+    chunk_id_t chunk{}; //!< Chunk ID
+    int pkts{}; //!< Count of packets received for this chunk.
+  };
+  std::vector<ChunkProgress> m_chunk_progresses; //! One for each block
   
   //
   // Recovery state machine

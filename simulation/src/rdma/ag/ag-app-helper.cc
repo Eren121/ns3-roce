@@ -59,9 +59,9 @@ AgAppHelper::Install (NodeContainer c)
 {
 	const NodeContainer servers{FilterServers(c)};
 
-	m_factory.Set("ChunkSize", UintegerValue(servers.Get(0)->GetObject<RdmaHw>()->GetMTU()));
 	Ptr<AgConfig> config{m_factory.Create<AgConfig>()};
 	config->SetBlockCount(servers.GetN());
+	config->SetMtu(servers.Get(0)->GetObject<RdmaHw>()->GetMTU());
 
 	Ptr<AgShared> shared{CreateObject<AgShared>(config, servers)};
 	

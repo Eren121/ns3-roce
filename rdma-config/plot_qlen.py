@@ -9,6 +9,11 @@ from avro.io import DatumReader, DatumWriter
 from avro.datafile import DataFileReader, DataFileWriter
 
 script_dir = pathlib.Path(__file__).parent
+img_dir = script_dir / "img"
+img_dir.mkdir(exist_ok=True)
+
+def savefig(name):
+  plt.savefig(img_dir / f"{name}.png")
 
 def main():
   sns.set_theme()
@@ -31,7 +36,7 @@ def main():
   ax = plt.gca()
   ax.yaxis.set_major_locator(MaxNLocator(integer=True))
 
-  plt.show()
+  savefig("pfc")
 
   df = pd.DataFrame.from_records(json.load(open(script_dir / "out_qlen.json")))
 
@@ -48,7 +53,7 @@ def main():
       facet_kws={'sharey': False, 'sharex': False})
     plt.gca().set_ylim(bottom=0)
     plt.tight_layout()
-    plt.show()
+    savefig(f"{y}")
 
   df = pd.DataFrame.from_records(
     json.load(open(script_dir / "out_allgather-miss.json")),
@@ -81,6 +86,7 @@ def main():
 
   plt.tight_layout()
   plt.show()
+  savefig("miss")
 
 def scientific_axis(g):
    for axes in g.axes.flat:
@@ -107,7 +113,7 @@ def plot_recv_chunks():
   scientific_axis(g)
   plt.gca().set_ylim(bottom=0)
   plt.tight_layout()
-  plt.show()
+  savefig("recv")
 
 def plot_qp() -> None:
   df = pd.DataFrame.from_records(json.load(open(script_dir / "out_qp.json")))
@@ -127,9 +133,9 @@ def plot_qp() -> None:
       axes.ticklabel_format(axis='both', style='scientific', scilimits=(0, 0))
   plt.gca().set_ylim(bottom=0)
   plt.tight_layout()
-  plt.show()
+  savefig("qp")
 
 plot_qp()
 
 if __name__ == "__main__":
-   main()
+  main()

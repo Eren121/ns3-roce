@@ -154,6 +154,13 @@ void SwitchNode::SendMultiToDevs(Ptr<Packet> packet, CustomHeader& ch, int in_if
 		return;
 	}
 
+	if(!m_mmu->CheckIngressAdmission(inDev, qIndex, psize)) {
+		NS_LOG_LOGIC("Drop: Pause multicast " << qIndex);
+		return;
+	}
+
+	m_mmu->UpdateIngressAdmission(inDev, qIndex, psize);
+
 	// Keep only one uplink outport port
 	// Never send to uplink if the packet comes from uplink
 
@@ -187,9 +194,10 @@ void SwitchNode::SendMultiToDevs(Ptr<Packet> packet, CustomHeader& ch, int in_if
 		uplink_elected = uplink_candidates[hash % uplink_candidates.size()];
 	}
 
-	Ptr<Packet> last;
 	std::vector<std::pair<int, Ptr<Packet>>> tosend;
 	
+	auto x = std::make_shared<int>(0);
+
 	for(int idx : iface_it->second) {
 
 		if(idx == in_iface) {
@@ -206,18 +214,10 @@ void SwitchNode::SendMultiToDevs(Ptr<Packet> packet, CustomHeader& ch, int in_if
 
 		// Admission control
 		if (qIndex != 0) {
-			// if(!last)
-			{
-				if(!m_mmu->CheckIngressAdmission(inDev, qIndex, psize)) {
-					NS_LOG_LOGIC("Drop: Pause multicast " << qIndex);
-					break;
-				}
-				m_mmu->UpdateIngressAdmission(inDev, qIndex, psize);
-				// ++(*x);
-				m_egress_lasts[p] = std::make_shared<int>(1);
-			}
-
+			++(*x);
+			m_egress_lasts[p] = x;
 			m_mmu->UpdateEgressAdmission(idx, qIndex, psize);
+			m_bytes[inDev][idx][qIndex] += psize;
 		}
 
 		// TODO: now we increase the input interface buffer usage for each output device in the routing table of the multicast destination
@@ -226,11 +226,6 @@ void SwitchNode::SendMultiToDevs(Ptr<Packet> packet, CustomHeader& ch, int in_if
 		// See `SwitchNotifyDequeue::RemoveFromIngressAdmission()`
 		// We need to keep trace of the output packet because increasing only once would do an integer underflow resulting in buffer usage of 4 billion....
 		
-		last = p;
-		
-		if(qIndex != 0) {
-			m_bytes[inDev][idx][qIndex] += psize;
-		}
 
 		tosend.emplace_back(idx, p);
 	}

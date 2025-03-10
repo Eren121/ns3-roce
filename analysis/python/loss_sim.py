@@ -17,19 +17,22 @@ import tempfile
 import json
 import topology
 import shutil
-from rich.progress import Progress
+from rich.progress import Progress, MofNCompleteColumn 
 
 #############################
 ## Fixed global parameters
 
 script_dir = pathlib.Path(__file__).parent
+out_allgather = "out_allgather.json"
 tmp_dir = script_dir / "out"
+sim_dir = tmp_dir / "sim"
+mtu = 1500
 
 #############################
 ## Modifiable global parameters
     
 enable_anim = False
-keep_dir = True
+keep_dir = False
 overwrite_results = True
 
 #############################
@@ -135,13 +138,16 @@ class SimulationConfig:
 
 
 class PlotData:
-    def __init__(self, cols, unit, type=None):
-        self.cols = np.atleast_1d(cols)
-        self.unit = unit
-        self.type = type
+    def __init__(self, x, x_unit, ys, y_unit, type=None):
+        self.x = x
+        self.x_unit = x_unit
+        self.ys = np.atleast_1d(ys)
+        self.y_unit = y_unit
+        self.type = type # When len(ys) > 1, describe the type of each y
         
         if self.type is None:
-            self.type = self.cols[0]
+            assert(len(self.ys) == 1)
+            self.type = self.ys[0]
 
     
 def plot(res: pd.DataFrame) -> None:
@@ -149,105 +155,117 @@ def plot(res: pd.DataFrame) -> None:
     img_dir = tmp_dir / "img"
     img_dir.mkdir(parents=True, exist_ok=True)
 
-    ys = []
-    ys.append(PlotData("lost_chunk_percent", "percent"))
-    ys.append(PlotData(["recovery_elapsed_time", "mcast_elapsed_time"], "second", "time_type"))
-    ys.append(PlotData("bandwidth", "Gbps"))
+    toplot = []
+    x = ["parity", "B"]
+    #x = ["parity", "packets"]
+    toplot.append(PlotData(*x, "lost_chunk_percent", "percent"))
+    toplot.append(PlotData(*x, ["recovery_elapsed_time", "mcast_elapsed_time"], "second", "time"))
+    toplot.append(PlotData(*x, "bandwidth", "Gbps"))
+    toplot.append(PlotData(*x, "padded_size", "B"))
     
-    for data in ys:
-        x = "parity"
-        y = data.cols
+    for data in toplot:
         melted = res.melt(
-            id_vars=x,
-            value_vars=data.cols,
+            id_vars=data.x,
+            value_vars=data.ys,
             var_name=data.type,
-            value_name=data.unit)
+            value_name=data.y_unit)
         
         print(melted)
         
     
-        ymax = melted[data.unit].max() * 1.3
+        ymax = melted[data.y_unit].max() * 1.3
         
-        ax = sns.lineplot(melted, x=x, y=data.unit, hue=data.type)
-        ax.set_title(f"{data.cols}")
+        ax = sns.lineplot(melted, x=data.x, y=data.y_unit, hue=data.type)
+        ax.set_title(f"{data.type}")
         ax.set_ylim(bottom=0, top=ymax)
+        ax.set_xlabel(f"{data.x} ({data.x_unit})")
+        ax.set_ylabel(f"{data.type} ({data.y_unit})")
         fig = plt.gcf()
         fig.tight_layout()
-        fig.savefig(img_dir / f"{'-'.join(y)}.pdf")
+        fig.savefig(img_dir / f"{data.type}-{data.x}.pdf")
         fig.clf()
 
-def run_cases() -> list:
-    sim_dir = tmp_dir / "sim"
-    out_allgather = "out_allgather.json"
 
-    # `np.flip()` to start with longer cases, to have time upper bound estimation
 
-    params_cases = CartesianProduct()
-    params_cases.set_param("bg_bandwidth_percent", 1.0)
-    params_cases.set_param("iteration", np.arange(1))
-    params_cases.set_param("size", 1e7)
-    params_cases.set_param("root_count", 2)
+def model1(params_cases):
+    """
+    Fat tree model wit 16 leaf nodes.
+    Bisection background traffic.
+    Parameters:
+        size: Per node size for the allgather.
+        root_count: Allgather parameter.
+        chunk_size: Allgather parameter.
+        data: Count of data chunks per segment.
+        parity: Count of parity chunks per segment.
+        bisec: If true, add background bisection traffic.
+    """
+    for params in params_cases.values():
+        flows = []
+        if params["bisec"]:
+            first_left = 6
+            first_right = 14
+            for i in range(8):
+                left = first_left + i
+                right = first_right + i
+                for j in range(2):
+                    flows.append({
+                        "type": "unicast",
+                        "background": True,
+                        "parameters": {
+                            "SrcNode": left if j == 0 else right,
+                            "DstNode": right if j == 0 else left,
+                            "SrcPort": 900 + 4 * i + 2 * j,
+                            "DstPort": 900 + 4 * i + 2 * j + 1,
+                            "WriteSize": 1e9,
+                            "BandwidthPercent": 1.0
+                        }
+                    })
+        flows.append({
+            "type": "allgather",
+            "background": False,
+            "parameters": {
+                "McastGroup": 1,
+                "McastStrategy": "markov",
+                "PerNodeBytes": params["size"],
+                "RootCount": params["root_count"],
+                "ChunkSize": params["chunk_size"],
+                "DataChunkPerSegmentCount": 20,
+                "ParityChunkPerSegmentCount": params["parity"],
+                "DumpStats": out_allgather,
+                "DumpMissedChunks": ""
+            }
+        })
 
-    # (data, parity)
-    params_cases.set_param("parity", np.arange(20))
+        config_dir = script_dir / "config"
+        fat_tree_depth2_dir = config_dir / "fat-tree-depth2"
+        
+        sim_config = pyu.load_json(config_dir / "default_config.json")
+        
+        config = SimulationConfig(sim_dir, keep_dir=keep_dir)
+        config.add_config_file(SimulationConfigFile(name="config.json", data=sim_config))
+        config.add_config_file(SimulationConfigFile(name=sim_config["topology_file"], data=pyu.load_json(fat_tree_depth2_dir / "topology.json")))
+        config.add_config_file(SimulationConfigFile(name=sim_config["trace_file"], data={}))
+        config.add_config_file(SimulationConfigFile(name=sim_config["flow_file"], data={"flows": flows}))
+        sim_config["anim_output_file"] = "anim.xml" if enable_anim else ""
+        
+        for name, value in params.items():
+            config.set_data(name, value)
+        
+        yield config
+
+
+def run_cases(model, params_cases) -> list:
+    config_generator = model(params_cases)
 
     # Clear the simulation output folder
     if sim_dir.exists():
         shutil.rmtree(sim_dir)
         sim_dir.mkdir(parents=True, exist_ok=True)
     
-    def generate_config():
-        for params in params_cases.values():
-            flows = []
-            first_left = 6
-            first_right = 14
-            for i in range(8):
-                left = first_left + i
-                right = first_right + i
-                flows.append({
-                    "type": "unicast",
-                    "background": True,
-                    "parameters": {
-                        "SrcNode": left if i % 2 == 0 else right,
-                        "DstNode": right if i % 2 == 0 else left,
-                        "SrcPort": 900 + 2 * i,
-                        "DstPort": 900 + 2 * i + 1,
-                        "WriteSize": 1e9,
-                        "BandwidthPercent": params["bg_bandwidth_percent"]
-                    }
-                })
-            flows.append({
-                "type": "allgather",
-                "background": False,
-                "parameters": {
-                    "McastGroup": 1,
-                    "PerNodeBytes": params["size"],
-                    "RootCount": params["root_count"],
-                    "DataChunkPerSegmentCount": 20,
-                    "ParityChunkPerSegmentCount": params["parity"],
-                    "DumpStats": out_allgather,
-                    "DumpMissedChunks": ""
-                }
-            })
-
-            config_dir = script_dir / "config"
-            fat_tree_depth2_dir = config_dir / "fat-tree-depth2"
-            
-            sim_config = pyu.load_json(config_dir / "default_config.json")
-            
-            config = SimulationConfig(sim_dir, keep_dir=keep_dir)
-            config.add_config_file(SimulationConfigFile(name="config.json", data=sim_config))
-            config.add_config_file(SimulationConfigFile(name=sim_config["topology_file"], data=pyu.load_json(fat_tree_depth2_dir / "topology.json")))
-            config.add_config_file(SimulationConfigFile(name=sim_config["trace_file"], data={}))
-            config.add_config_file(SimulationConfigFile(name=sim_config["flow_file"], data={"flows": flows}))
-            sim_config["anim_output_file"] = "x.xml" if enable_anim else ""
-            
-            for name, value in params.items():
-                config.set_data(name, value)
-            
-            yield config
-
-    progress = Progress()
+    progress = Progress(
+        *Progress.get_default_columns(),
+        MofNCompleteColumn()
+    )
 
     with progress:
         progress_task = progress.add_task("running all simulation cases...", total=len(params_cases.values()))
@@ -258,7 +276,7 @@ def run_cases() -> list:
             return config
 
         allgather_results = []
-        for cur_config in pyu.parallel_for(data=generate_config(), func=run_config):
+        for cur_config in pyu.parallel_for(data=config_generator, func=run_config):
             result = pyu.load_json(cur_config.tmp_path / out_allgather)
             cur_config.insert_fields(result)
             allgather_results.append(result)
@@ -278,16 +296,37 @@ def main() -> None:
     results_json_path = tmp_dir / "results.json"
     results_txt_path = tmp_dir / "results.csv"
 
+    # `np.flip()` to start with longer cases, to have time upper bound estimation
+
+
+    max_chunk_size = 5e6
+    params_cases = CartesianProduct()
+    params_cases.set_param("iteration", np.arange(1))
+    params_cases.set_param("size", 1e7)
+    params_cases.set_param("root_count", 2)
+    #params_cases.set_param("chunk_size", np.floor(np.linspace(1, max_chunk_size / mtu, 100)) * mtu)
+    params_cases.set_param("chunk_size", 9000)
+    #params_cases.set_param("parity", 0)
+    params_cases.set_param("parity", np.arange(10))
+    params_cases.set_param("data", 10)
+    params_cases.set_param("bisec", False)
+
     if results_json_path.exists() and not overwrite_results:
         print("Results exist, skip simulation")
         res = pd.DataFrame.from_records(json.loads(pyu.read_all_file(results_json_path)))
     else:
-        res = pd.DataFrame.from_records(run_cases())
+        res = pd.DataFrame.from_records(run_cases(model1, params_cases))
         pyu.write_to_file(results_json_path, res.to_json(orient="records", indent=4))
         
+    # Size taking into account padding (due to ceil division rounding of packets/chunks/segments)
+    res["padded_size"] = res["total_chunk_count"] * res["chunk_size"] / res["block_count"]
+    # Remove parity packets
+    res["padded_size"] = res["padded_size"] / (res["data"] + res["parity"]) * res["data"]
+
     res["recovery_elapsed_time"] = res["total_elapsed_time"] - res["mcast_elapsed_time"]
-    res["bandwidth"] = 8 * res["size"] / res["total_elapsed_time"] * res["block_count"] / 1e9 # Gbps
-    pyu.write_to_file(results_txt_path, res.to_string())    
+    res["bandwidth"] = 8 * res["padded_size"] / res["total_elapsed_time"] * res["block_count"] / 1e9 # Gbps
+    
+    pyu.write_to_file(results_txt_path, res.to_string())
     plot(res)
 
 if __name__ == "__main__":

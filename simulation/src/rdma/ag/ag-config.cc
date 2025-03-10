@@ -4,6 +4,7 @@
 #include "ns3/string.h"
 #include "ns3/rdma-helper.h"
 #include "ns3/rdma-reflection-helper.h"
+#include "ns3/rdma-random.h"
 
 namespace ns3 {
 
@@ -123,6 +124,33 @@ TypeId AgConfig::GetTypeId()
   return tid;
 }
 
+void AgConfig::SetMtu(uint32_t mtu)
+{
+  m_mtu = mtu;
+}
+
+uint32_t AgConfig::GetPerChunkPacketCount() const
+{
+  return static_cast<uint32_t>(CeilDiv(m_csize, m_mtu));
+}
+
+uint32_t AgConfig::GetPerBlockPacketCount() const
+{
+  return static_cast<uint32_t>(GetPerChunkPacketCount() * GetPerBlockChunkCount());
+}
+
+uint32_t AgConfig::GetMcastImmData(block_id_t sender, pkt_id_t pkt_offset) const
+{
+  const pkt_id_t start{sender * GetPerBlockPacketCount()};
+  return static_cast<uint32_t>(start + pkt_offset);
+}
+
+void AgConfig::ParseMcastImmData(uint32_t imm, block_id_t& sender, chunk_id_t& chunk) const
+{
+  chunk = imm / GetPerChunkPacketCount();
+  sender = GetOriginalSender(chunk);
+}
+
 void AgConfig::OnAllFinished()
 {
   m_on_all_finished();
@@ -224,8 +252,8 @@ uint64_t AgConfig::GetTotalChunkCount() const
 
 uint64_t AgConfig::GetPerNodeSegmentCount() const
 {
-  const uint64_t pernode_data_packets{CeilDiv(m_pernode, m_csize)};
-  return CeilDiv(pernode_data_packets, m_sdata);
+  const uint64_t pernode_data_chunks{CeilDiv(m_pernode, m_csize)};
+  return CeilDiv(pernode_data_chunks, m_sdata);
 }
 
 uint64_t AgConfig::GetTotalSegmentCount() const
@@ -287,6 +315,80 @@ std::map<segment_id_t, uint64_t> AgConfig::BuildPartialSegments(const std::set<c
   }
 
   return missed_per_segment;
+}
+
+enum MarkovState {
+  B_L, // Burst loss
+  B_R, // Burst recv
+  G_L, // Gap loss
+  G_R // Gap recv
+};
+
+MarkovState nextState(MarkovState currentState, double p_b, double p_g, double L_b, double L_g)
+{
+  double rand_val = GenRandomDouble(0.0, 1.0);
+
+  // B_R and G_L are "fake" states that last zero time
+  
+  switch (currentState) {
+    case B_R:
+      currentState = B_L;
+      break;
+    case G_L:
+      currentState = G_R;
+      break;
+  }
+
+  switch (currentState) {
+      case B_L:
+        if(rand_val < (1.0 / L_b)) {
+          return G_R;
+        }
+        else {
+          rand_val = GenRandomDouble(0.0, 1.0);
+          if(rand_val < p_b) {
+            return B_L;
+          }
+          else {
+            return B_R;
+          }
+        }
+      case G_R:
+        if(rand_val < (1.0 / L_g)) {
+          return B_L;
+        }
+        else {
+          rand_val = GenRandomDouble(0.0, 1.0);
+          if(rand_val < p_g) {
+            return G_L;
+          }
+          else {
+            return G_R;
+          }
+        }
+  }
+
+  throw std::invalid_argument{"Unknown state"};
+}
+
+std::set<pkt_id_t> AgConfig::SimulateMarkov() const
+{
+  std::set<pkt_id_t> recv;
+  MarkovState state{G_R};
+
+  const uint64_t tot_pkt{GetTotalChunkCount() * GetPerChunkPacketCount()};
+  for(pkt_id_t pkt{0}; pkt < tot_pkt; pkt++) {
+    state = nextState(
+      state,
+      m_markovBurstDensity, m_markovGapDensity,
+      m_markovBurstLength, m_markovGapLength);
+
+    if (state == B_R || state == G_R) {
+      recv.insert(pkt);
+    }
+  }
+
+  return recv;
 }
 
 std::ostream& operator<<(std::ostream& lhs, AgState rhs)

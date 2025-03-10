@@ -92,7 +92,9 @@ void AgShared::DumpStats() const
   info["total_elapsed_time"] = Simulator::Now().GetSeconds() - m_start.GetSeconds();
   info["mcast_elapsed_time"] = m_mcast_elapsed.GetSeconds();
   info["lost_chunk_count"] = m_missed.size();
+
   info["lost_chunk_percent"] = double(m_missed.size()) / (m_config->GetTotalChunkCount() * m_config->GetBlockCount());
+  
   info["cutoff_timer_triggered_count"] = m_cutoff_triggered;
   info["total_chunk_count"] = m_config->GetTotalChunkCount();
   info["chunk_size"] = m_config->GetChunkByteSize();

@@ -12,6 +12,7 @@ namespace ns3 {
 using chunk_id_t = uint64_t;
 using block_id_t = uint64_t;
 using segment_id_t = uint64_t;
+using pkt_id_t = uint64_t;
 
 enum class AgState {
   Multicast,
@@ -45,7 +46,16 @@ public:
 
   void OnAllFinished();
   void SetBlockCount(uint64_t count);
+  void SetMtu(uint32_t mtu);
+
+  uint32_t GetPerChunkPacketCount() const;
+  uint32_t GetPerBlockPacketCount() const;
   
+  /// @param pkt_offset For a block, should be in [0; `GetPerBlockPacketCount()`)
+  uint32_t GetMcastImmData(block_id_t sender, pkt_id_t pkt_offset) const;
+  void ParseMcastImmData(uint32_t imm, block_id_t& sender, chunk_id_t& chunk) const;
+  
+
   uint64_t GetChunkByteSize() const;
   uint32_t GetMulticastGroup() const;
   uint32_t GetPriority() const;
@@ -72,10 +82,17 @@ public:
    */
   std::map<block_id_t, uint64_t> BuildToRecover(const std::set<chunk_id_t>& recv) const;
 
+  /**
+   * @return Simulated received chunks be running the markov model.
+   */
+  std::set<pkt_id_t> SimulateMarkov() const;
+
   fs::path dump_stats;
   fs::path dump_missed_chunks;
   fs::path dump_recv_chunks;
 
+  bool ShouldSkipMcast() const { return m_mcastStrategy == "markov"; }
+  
 private:
   /**
    * @return Count of unrecoverable chunks per segment.
@@ -85,6 +102,8 @@ private:
   //
   // Data that is likely identical between all allgathers
   //
+
+  uint64_t m_mtu;
 
   uint64_t m_sparity; //!< How many parity chunks per segment
   uint64_t m_sdata; //!< How many data chunks per segment

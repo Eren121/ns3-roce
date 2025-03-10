@@ -138,10 +138,8 @@ void AgApp::InitMulticastQP()
     }
 
     NS_ASSERT(notif.has_imm);
-    const chunk_id_t chunk{notif.imm};
-    const block_id_t block{m_config->GetOriginalSender(chunk)};
 
-    if(m_runtime->NotifyReceiveChunk(chunk)) {
+    if(m_runtime->NotifyReceivePacket(notif.imm)) {
       StartRecoveryPhase();
     }
     else {
@@ -149,24 +147,30 @@ void AgApp::InitMulticastQP()
       // the multicast can take longer than `bandwidth * size`, so adjust the timer
       // at each mcast packet received.
     
+      block_id_t sender;
+      chunk_id_t chunk;
+      m_config->ParseMcastImmData(notif.imm, sender, chunk);
+  
       const Ptr<RdmaHw> rdma{GetNode()->GetObject<RdmaHw>()};
-      const chunk_id_t chain_chunk_last{m_config->GetNearestFirstBlockHigherOrEqu(block + 1) * m_config->GetPerBlockChunkCount() - 1};
+      const chunk_id_t chain_chunk_last{m_config->GetNearestFirstBlockHigherOrEqu(sender + 1) * m_config->GetPerBlockChunkCount() - 1};
       const chunk_id_t chain_chunk_rem{chain_chunk_last - chunk};
       const byte_t chain_rem_bytes{chain_chunk_rem * m_config->GetChunkByteSize()};
-      const byte_t additional_delay{rdma->GetMTU() * 100}; // A bit random value, all should it be is > RTT
+      const byte_t additional_delay{rdma->GetMTU() * 1}; // A bit random value, all should it be is > RTT
       const byte_t cutoff_bytes{chain_rem_bytes + additional_delay};
      
+      
       /*
       std::cout << "--\nchunk=" << chunk << std::endl;
-      std::cout << "block=" << block
-      << "nearest=" << m_config->GetNearestFirstBlockHigherOrEqu(block + 1) << std::endl;
+      std::cout << "block=" << sender
+      << "nearest=" << m_config->GetNearestFirstBlockHigherOrEqu(sender + 1) << std::endl;
       std::cout << "last_chunk=" << chain_chunk_last << std::endl;
       std::cout << "cutoff_bytes=" << cutoff_bytes << std::endl;
       */
 
-      m_cutoff_timer = m_mcast.sq->GetMaxRate().CalculateBytesTxTime(rdma->GetMTU() * 100);
+      m_cutoff_timer = m_mcast.sq->GetMaxRate().CalculateBytesTxTime(cutoff_bytes);
       m_timeout_ev.Cancel();
-      m_timeout_ev = Simulator::Schedule(m_cutoff_timer, &AgApp::OnCutoffTimer, this);      
+      m_timeout_ev = Simulator::Schedule(m_cutoff_timer, &AgApp::OnCutoffTimer, this);
+      
     }
   });
 }
@@ -193,9 +197,32 @@ void AgApp::StartApplication()
   InitChainQP();
   InitRecoveryQP();
 
-  if(m_runtime->IsFirstInChain()) {
+
+  //
+  // Run a markov chain version and skip the simulation
+  //
+
+  if(m_config->ShouldSkipMcast()) {
+    Simulator::Cancel(m_timeout_ev);
+    m_timeout_ev = Simulator::Schedule(m_cutoff_timer, &AgApp::RunMarkovMcast, this);
+  }
+  else if(m_runtime->IsFirstInChain()) {
     StartMulticast();
   }
+}
+
+void AgApp::RunMarkovMcast()
+{
+  bool transitioned{false};
+  for(pkt_id_t pkt : m_config->SimulateMarkov()) {
+    if(m_runtime->NotifyReceivePacket(pkt)) {
+      transitioned = true;
+    }
+  }
+  if(!transitioned) {
+    m_runtime->TransitionToRecovery();
+  }
+  StartRecoveryPhase();
 }
 
 void AgApp::StartMulticast()
@@ -210,33 +237,26 @@ void AgApp::StartMulticast()
   // Schedule multicast flow
   //
 
-  const chunk_id_t offset{m_runtime->GetBlock() * m_config->GetPerBlockChunkCount()};
-  for(chunk_id_t i{0}; i < m_config->GetPerBlockChunkCount(); i++) {
-    const chunk_id_t chunk{offset + i};
-
+  for(pkt_id_t i{0}; i < m_config->GetPerBlockPacketCount(); i++) {
     RdmaTxQueuePair::SendRequest sr;
-    sr.payload_size = m_config->GetChunkByteSize();
+    sr.payload_size = m_mcast.sq->GetMTU();
     sr.dip = Ipv4Address(m_config->GetMulticastGroup());
     sr.dport = m_config->GetPort(AgPort::Multicast);
     sr.multicast = true;
-    sr.imm = chunk;
-    sr.on_send = [this, i, chunk]() {
-      if(i == m_config->GetPerBlockChunkCount() - 1) {
-        OnMulticastTransmissionEnd(chunk);
-      }
-    };
+    sr.imm = m_config->GetMcastImmData(m_runtime->GetBlock(), i);
 
-    // Sometimes the recovery phase starts before the mast transmission ends
-    // If the mcast got delayed because of background traffic
-    // We want to make sure each node has its own block to not deadlock
-    // So before `on_send`, register block
-    // TODO should nto be true???
+    const bool last{i == m_config->GetPerBlockPacketCount() - 1};
+    if(last) {
+      sr.on_send = [this]() {
+        OnMulticastTransmissionEnd();
+      };
+    }
 
     m_mcast.sq->PostSend(sr);
   }
 }
 
-void AgApp::OnMulticastTransmissionEnd(chunk_id_t last_chunk)
+void AgApp::OnMulticastTransmissionEnd()
 {
   NS_LOG_FUNCTION(this);
 
