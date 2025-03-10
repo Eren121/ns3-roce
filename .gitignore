@@ -22,6 +22,7 @@ out_*
 ################## Python
 
 *.pyc
+__pycache__/
 
 ################## Netanim built
 

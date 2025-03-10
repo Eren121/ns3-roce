@@ -46,8 +46,8 @@
   },
 
   "topology_file": "topology.json",
-  "flow_file": "flow.json",
-  "trace_file": "trace.json",
+  "flow_file": "flows.json",
+  "trace_file": "",
   
   "trace_output_file": "",
   "fct_output_file": "",
