@@ -304,7 +304,10 @@ def plot(res: pd.DataFrame, toplot, img_dir: pathlib.Path) -> None:
         
         ax = sns.lineplot(melted, x=data.x, y=data.y_unit, hue=data.type)
         ax.set_title(f"{data.type}")
-        ax.set_ylim(bottom=0, top=ymax)
+
+        if not np.isinf(ymax):
+            ax.set_ylim(bottom=0, top=ymax)
+
         ax.set_xlabel(f"{data.x} ({data.x_unit})")
         ax.set_ylabel(f"{data.type} ({data.y_unit})")
         fig = plt.gcf()
@@ -312,6 +315,7 @@ def plot(res: pd.DataFrame, toplot, img_dir: pathlib.Path) -> None:
 
         exts = ["png", "pdf"]
         for e in exts:
-            fig.savefig(img_dir / f"{data.type}-{data.x}.{e}")
+            (img_dir / e).mkdir(exist_ok=True, parents=True)
+            fig.savefig(img_dir / e / f"{data.type}-{data.x}.{e}")
 
         fig.clf()

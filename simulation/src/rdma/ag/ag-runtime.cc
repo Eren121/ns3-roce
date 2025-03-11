@@ -1,6 +1,7 @@
 #include "ns3/ag-runtime.h"
 #include "ns3/rdma-helper.h"
 #include "ns3/rdma-hw.h"
+#include "ns3/rdma-network.h"
 
 namespace ns3 {
 
@@ -129,7 +130,11 @@ uint64_t AgRuntime::GetCutoffByteSize() const
   const uint64_t max_mcast_chain_length{CeilDiv(m_config->GetBlockCount(), m_config->GetRootCount())};
 
   // Paper value
-  const uint64_t additional_delay{rdma->GetMTU() * 100}; // A bit random value, all should it be is > RTT
+  uint64_t additional_delay{rdma->GetMTU() * 100}; // A bit random value, all should it be is > RTT
+  std::cout << "ADD=" << additional_delay << std::endl;
+  additional_delay = RdmaNetwork::GetInstance().GetMaxBdp();
+  std::cout << "AD2=" << additional_delay << std::endl;
+  
   const uint64_t cutoff_bytes{per_node_bytes * max_mcast_chain_length + additional_delay};
   
   return cutoff_bytes;
@@ -224,6 +229,13 @@ void AgRuntime::RegisterMissedChunks()
       total++;
     }
   }
+
+  uint64_t data_chunks_missed{};
+  for(const auto& [block, missed] : m_torecover) {
+    data_chunks_missed += missed;
+  }
+
+  m_shared.RegisterMissedDataChunkCount(m_block, data_chunks_missed);
 
   NS_LOG_INFO("Missed " << total << " chunks in " << m_torecover.size() << " blocks");
 }

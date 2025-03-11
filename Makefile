@@ -14,6 +14,7 @@ docker_interactive ?= -it
 docker_env = -e NS_LOG='$(NS_LOG)' -e CXXFLAGS='-Wall'
 
 docker_extra =
+docker_wd = 
 
 # Command to run the docker container
 docker_run ?= docker run --rm \
@@ -22,6 +23,7 @@ docker_run ?= docker run --rm \
 	$(docker_user) \
 	$(docker_env) \
 	$(docker_extra) \
+	$(docker_wd) \
 	$(docker_tag)
 
 # Don't run programs via docker if we are already in container
@@ -89,8 +91,9 @@ gen_avro:
 #################
 
 .PHONY: analysis
+analysis: docker_wd = -w /app/analysis/src
 analysis:
-	$(docker_run) python3 analysis/python/loss_sim.py
+	$(docker_run) python3 -m models.ft16
 
 #################
 ################# Netanim

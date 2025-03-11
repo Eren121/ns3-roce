@@ -64,6 +64,7 @@ public:
   uint64_t GetRootCount() const;
   uint64_t GetPerBlockChunkCount() const;
   uint64_t GetTotalChunkCount() const;
+  uint64_t GetTotalDataChunkCount() const;
   block_id_t GetNearestFirstBlockHigherOrEqu(block_id_t block) const;
   bool IsFirstInChain(block_id_t block) const;
   AgChainOrder GetChainOrder(block_id_t block) const;

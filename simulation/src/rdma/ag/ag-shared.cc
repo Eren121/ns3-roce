@@ -80,6 +80,11 @@ void AgShared::RegisterRecvChunk(block_id_t block, chunk_id_t chunk)
   }
 }
 
+void AgShared::RegisterMissedDataChunkCount(block_id_t block, uint64_t count)
+{
+  m_missed_data_chunks_tot += count;
+}
+
 void AgShared::DumpStats() const
 {
   if(m_config->dump_stats.empty()) {
@@ -92,9 +97,11 @@ void AgShared::DumpStats() const
   info["total_elapsed_time"] = Simulator::Now().GetSeconds() - m_start.GetSeconds();
   info["mcast_elapsed_time"] = m_mcast_elapsed.GetSeconds();
   info["lost_chunk_count"] = m_missed.size();
-
-  info["lost_chunk_percent"] = double(m_missed.size()) / (m_config->GetTotalChunkCount() * m_config->GetBlockCount());
+  info["lost_data_chunk_count"] = m_missed_data_chunks_tot;
+  info["total_data_chunk_count"] = m_config->GetTotalDataChunkCount();
   
+  info["lost_chunk_percent"] = double(m_missed.size()) / (m_config->GetTotalChunkCount() * m_config->GetBlockCount());
+  info["lost_data_chunk_percent"] = double(m_missed_data_chunks_tot) / (m_config->GetTotalDataChunkCount() * m_config->GetBlockCount());
   info["cutoff_timer_triggered_count"] = m_cutoff_triggered;
   info["total_chunk_count"] = m_config->GetTotalChunkCount();
   info["chunk_size"] = m_config->GetChunkByteSize();

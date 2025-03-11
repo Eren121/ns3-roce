@@ -250,6 +250,11 @@ uint64_t AgConfig::GetTotalChunkCount() const
   return GetPerBlockChunkCount() * m_nodes;
 }
 
+uint64_t AgConfig::GetTotalDataChunkCount() const
+{
+  return GetPerNodeSegmentCount() * m_sdata * m_nodes;
+}
+
 uint64_t AgConfig::GetPerNodeSegmentCount() const
 {
   const uint64_t pernode_data_chunks{CeilDiv(m_pernode, m_csize)};

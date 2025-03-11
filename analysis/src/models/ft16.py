@@ -53,8 +53,10 @@ class Model(simulation.Model):
             "parameters": {
                 "McastGroup": 1,
                 "McastStrategy": "markov",
-                "MarkovBurstLength": 100,
+                "MarkovBurstLength": 50,
                 "MarkovGapLength": 50,
+                "MarkovGapDensity": 0.0,
+                "MarkovBurstDensity": 0.1,
                 "PerNodeBytes": self.get("per_node"),
                 "RootCount": self.get("root_count"),
                 "ChunkSize": self.get("chunk_size"),
@@ -69,11 +71,11 @@ class Model(simulation.Model):
 def main():
     max_chunk_size = 5e6
     scenarios = simulation.CartesianProduct()
-    scenarios.add("per_node", 1e8)
+    scenarios.add("per_node", 1e7)
     scenarios.add("root_count", 2)
-    scenarios.add("chunk_size", 9000)
-    scenarios.add("parity", np.arange(10))
-    scenarios.add("data", 10)
+    scenarios.add("chunk_size", 1500)
+    scenarios.add("parity", np.linspace(0, 40, num=10, dtype=int))
+    scenarios.add("data", 100)
     scenarios.add("bisec", False)
     
     #scenarios.set_param("chunk_size", np.floor(np.linspace(1, max_chunk_size / mtu, 100)) * mtu)
@@ -99,8 +101,25 @@ def plot(batch: simulation.Batch) -> None:
         rows.append(row)
     df = pd.DataFrame(rows)
 
-    # padded_size: per node data in bytes
-    # Size taking into account padding (due to ceil division rounding of packets/chunks/segments)
+    # ag.padded_size:
+    #   Per node data in bytes,
+    #   taking into account padding (due to ceil division rounding of packets/chunks/segments).
+    #
+    # ag.recovery_elapsed_time:
+    #   Total time minus mcast time
+    #
+    # ag.bandwidth:
+    #   Bandwidth (Gb/s) taking into acount only data.
+    #
+    # ag.cost_ratio:
+    #   Relative cost to send data of recovery over the cost to send data over mcast.
+    #   Since the recovery part is reliable, it can take more time to send data.
+    #   Eg. if `ag.cost_ratio == 1.1`, that means sending data with the recovery is 10% more expensive
+    #   than sending data with mcast.
+    #   Averaged over all data.
+
+    blocks = df["ag.block_count"]
+
     assert((df["ag.total_chunk_count"] % df["ag.block_count"] == 0).all())
     df["ag.padded_size"] = df["ag.total_chunk_count"] * df["ag.chunk_size"] / df["ag.block_count"]
 
@@ -110,17 +129,36 @@ def plot(batch: simulation.Batch) -> None:
 
     df["ag.recovery_elapsed_time"] = df["ag.total_elapsed_time"] - df["ag.mcast_elapsed_time"]
     df["ag.bandwidth"] = 8 * df["ag.padded_size"] / df["ag.total_elapsed_time"] * df["ag.block_count"] / 1e9 # Gbps
+
+    # Per byte cost (taking into account all data sent, including parity chunks)
+    # Approx. : each block does not send its own chunks, so ` - 1`
+    mcast_cost = df["ag.mcast_elapsed_time"] / (df["ag.total_chunk_count"] * (blocks - 1))
+    recovery_cost = df["ag.recovery_elapsed_time"] / df["ag.lost_data_chunk_count"]
+
+    df["ag.cost_ratio"] = mcast_cost / recovery_cost
+
+    # % of parity chunks added over all chunks
+    # eg. 0.1 means 10% of parity chunks are added in addition to the data chunks
+    df["model.parity_percent"] = df["model.parity"] / df["model.data"]
+
+
+    # recovery_cost can be infinite
+    df.replace([np.inf, -np.inf], 0.0, inplace=True)
+
     
     result_file = batch.batch_dir / "result.txt"
     pyu.write_to_file(result_file, df.to_string())
-
+    
     toplot = []
-    x = ["model.parity", "chunks"]
+    x = ["model.parity_percent", "normalized"]
     #x = ["parity", "packets"]
     toplot.append(simulation.PlotData(*x, "ag.lost_chunk_percent", "normalized"))
     toplot.append(simulation.PlotData(*x, ["ag.recovery_elapsed_time", "ag.mcast_elapsed_time"], "second", "time"))
     toplot.append(simulation.PlotData(*x, "ag.bandwidth", "Gbps"))
     toplot.append(simulation.PlotData(*x, "ag.padded_size", "B"))
+    toplot.append(simulation.PlotData(*x, "ag.lost_data_chunk_percent", "normalized"))
+    toplot.append(simulation.PlotData(*x, "ag.cost_ratio", "mcast / recovery"))
+    toplot.append(simulation.PlotData(*x, "ag.lost_data_chunk_count", "chunks"))
     simulation.plot(df, toplot, batch.img_dir)
     
 

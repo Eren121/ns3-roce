@@ -34,6 +34,7 @@ public:
   void NotifyCutoffTimerTriggered(block_id_t block);
   void AddMissedChunk(block_id_t block, chunk_id_t chunk);
   void RegisterRecvChunk(block_id_t block, chunk_id_t chunk);
+  void RegisterMissedDataChunkCount(block_id_t block, uint64_t count);
   void RegisterStateTransition(AgState state);
 
   void RegisterNode(Ptr<AgRuntime> node);
@@ -54,6 +55,7 @@ private:
   std::map<block_id_t, Ptr<AgRuntime>> m_nodes;
   uint64_t m_completed_apps{}; //!< Count of finished apps.
   uint64_t m_completed_mcasts{};
+  uint64_t m_missed_data_chunks_tot{};
   int m_cutoff_triggered{};
   MissedChunkList m_missed;
   NodeContainer m_servers;
