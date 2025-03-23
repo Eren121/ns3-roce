@@ -1,8 +1,7 @@
 mod sim;
 mod ag;
 
-use ag::{Simulator, Node, Config};
-use sim::time::{Time,Bw};
+use ag::*;
 
 fn main() {
     let config = Config {
@@ -18,12 +17,17 @@ fn main() {
         e: 0.75,
         g: Bw::from_gbits(100)
     };
+    let n = config.n();
     let mut nodes = Node::new_topology(&config);
     Node::fill_chunks_randomly(&mut nodes, 12345);
 
-    let elapsed = Simulator::run(nodes, |ctxt| {
-        Node::start_recovery(ctxt);
-    });
-
-    println!("Elapsed: {}", elapsed);
+    let mut sim = Simulator::new(&mut nodes);
+    sim.schedule_now(Box::new(move |ctxt| {
+        for i in 0..n {
+            Node::start_recovery(i, ctxt);
+        }
+    }));
+    
+    sim.run();
+    println!("Elapsed: {}", sim.now());
 }

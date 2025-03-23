@@ -1,10 +1,12 @@
 pub mod node;
+pub use node::Node;
 
-pub use node::*;
-pub type Simulator = crate::sim::Simulator;
-pub type Context<'a> = crate::sim::Context<Node<'a>>;
+use crate::sim;
+pub use crate::sim::time::{Time, Bw, Bytes};
+pub use crate::sim::event::EventContext;
 
-use crate::sim::time::{Time, Bw, Bytes};
+pub type Simulator<'a> = sim::Simulator<'a, Node<'a>>;
+
 
 #[derive(Clone)]
 pub struct Config {
