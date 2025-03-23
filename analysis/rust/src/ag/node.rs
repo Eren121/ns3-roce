@@ -1,3 +1,5 @@
+use std::fmt;
+
 use bit_set::BitSet;
 use rand::Rng;
 use crate::sim::event::EventContext;
@@ -46,6 +48,23 @@ impl<'a> Node<'a> {
             nodes.push(Node::new(config, i as i64));
         }
         nodes
+    }
+
+    pub fn print_chunks(&self) {
+        print!("Chunks for node {:3}: ", self.i);
+        for i in 0..self.config.chunk_count() {
+            print!("{}", {if self.chunks.contains(i as usize) { 1 } else { 0 } });
+        }
+        println!();
+    }
+
+    pub fn print_misses(&self) {
+        print!("Misses for node {:3}: ", self.i);
+        for i in 0..self.config.n() {
+            let s = format!("{}/{}", self.misses[i as usize], self.right_misses[i as usize]);
+            print!("{:10}", s);
+        }
+        println!();
     }
     
     /// Fill the chunks with a random loss model.
@@ -119,8 +138,15 @@ impl<'a> Node<'a> {
             let i = *block as usize;
 
             if node.misses[i] == 0 && node.right_misses[i] > 0 {
+                let chunks = node.right_misses[i];
                 node.right_misses[i] = 0; // Register we send data to right
-                delay += config.g.bytes_tx_time(node.right_misses[i] * config.c());
+
+                let bytes = chunks * config.b();
+
+                // Take into consideration retransmissions
+                let bytes = config.with_loss(bytes);
+
+                delay += config.g.bytes_tx_time(bytes);
                 
                 cbs.push((Box::new(
                     move |ctxt: &mut Simulator<'a>| {

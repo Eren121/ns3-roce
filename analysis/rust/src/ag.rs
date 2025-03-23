@@ -1,4 +1,5 @@
 pub mod node;
+
 pub use node::Node;
 
 use crate::sim;
@@ -7,6 +8,7 @@ pub use crate::sim::event::EventContext;
 
 pub type Simulator<'a> = sim::Simulator<'a, Node<'a>>;
 
+use bytesize::ByteSize;
 
 #[derive(Clone)]
 pub struct Config {
@@ -29,6 +31,30 @@ impl Config {
         self.c() * self.n()
     }
 
+    /// Size of a block in bytes
+    pub fn block_bytes(&self) -> i64 {
+        self.c() * self.b()
+    }
+
+    /// Estimation of lost chunks per block in the multicast after applying FEC
+    pub fn cm(&self) -> i64 {
+        let c0 = self.c0 as f64;
+        let c1 = self.c1 as f64;
+        ((self.l * c0 - self.e * (1. - self.l) * c1).ceil() as i64).max(0)
+    }
+
+    /// Estimation recovery time
+    pub fn est_rec_t(&self) -> Time {
+        let bp = (self.b() as f64 / (1. - self.l)) as i64;
+        (self.g.bytes_tx_time(bp * self.cm()) + self.dn()) * (self.n() - 1) as i128
+        
+    }
+
+    // Compute how many bytes to send in average with retransmission taking into account packet loss
+    pub fn with_loss(&self, bytes: Bytes) -> Bytes {
+        ((bytes as f64) * (1. / (1. - self.l))).ceil() as Bytes
+    }
+
     pub fn n(&self) -> i64 { self.m * self.s }
     pub fn c(&self) -> i64 { self.c0 + self.c1 }
     pub fn k(&self) -> i64 { self.k }
@@ -45,5 +71,13 @@ impl Config {
     
     pub fn dn(&self) -> Time {
         (self.d0 * (self.s - 1) as i128 + self.d1) / self.s as i128
+    }
+
+    pub fn print(&self) {
+        println!("Block size: {}", ByteSize::b(self.block_bytes() as u64));
+        println!("Buffer size: {}", ByteSize::b((self.n() * self.block_bytes()) as u64));
+
+        let est = self.chunk_count() * self.n() / 8;
+        println!("Estimated simulation memory: {}", ByteSize::b(est as u64))
     }
 }
