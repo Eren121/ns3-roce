@@ -1,5 +1,6 @@
 mod sim;
 mod ag;
+mod gilbert_elliott;
 
 use ag::{Simulator, Node, Config};
 use sim::time::{Time,Bw};

@@ -1,4 +1,5 @@
 pub mod time;
+pub mod queue;
 
 use std::cmp::Ordering;
 use std::sync::atomic::AtomicI32;
