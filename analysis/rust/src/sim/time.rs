@@ -7,38 +7,25 @@ type Quanta = i128;
 #[derive(Copy, Clone, PartialOrd, Ord, PartialEq, Eq)]
 pub struct Time(Quanta);
 
-macro_rules! pow10 {
-    ($p:expr) => {
-        {
-            let mut res = 1i128;
-            let mut i: i32 = 0;
-            while i < $p {
-                res *= 10i128;
-                i += 1;
-            }
-            res
-        }
-    }
-}
-
-const ONE_SECOND_BASE10: i32 = 15;
-const ONE_SECOND: Quanta = pow10!(ONE_SECOND_BASE10);
+const TEN: Quanta = 10;
+const ONE_SECOND_BASE10: u32 = 15;
+const ONE_SECOND: Quanta = TEN.pow(ONE_SECOND_BASE10);
 
 impl Time {
     pub fn seconds(s: Quanta) -> Self {
-        Self(s * pow10!(ONE_SECOND_BASE10))
+        Self(s * TEN.pow(ONE_SECOND_BASE10))
     }
 
     pub fn millis(ms: Quanta) -> Self {
-        Self(ms * pow10!(ONE_SECOND_BASE10 - 3))
+        Self(ms * TEN.pow(ONE_SECOND_BASE10 - 3))
     }
 
     pub fn micros(us: Quanta) -> Self {
-        Self(us * pow10!(ONE_SECOND_BASE10 - 6))
+        Self(us * TEN.pow(ONE_SECOND_BASE10 - 6))
     }
 
     pub fn nanos(ns: Quanta) -> Self {
-        Self(ns * pow10!(ONE_SECOND_BASE10 - 9))
+        Self(ns * TEN.pow(ONE_SECOND_BASE10 - 9))
     }
 
     fn as_seconds_dec(&self) -> BigDecimal {
@@ -51,11 +38,11 @@ impl Time {
     }
 
     pub fn as_millis(&self) -> f64 {
-        (self.as_seconds_dec() * pow10!(3)).to_f64().unwrap()
+        (self.as_seconds_dec() * TEN.pow(3)).to_f64().unwrap()
     }
 
     pub fn as_micros(&self) -> f64 {
-        (self.as_seconds_dec() * pow10!(6)).to_f64().unwrap()
+        (self.as_seconds_dec() * TEN.pow(6)).to_f64().unwrap()
     }
 
     pub fn zero() -> Self {
@@ -136,16 +123,14 @@ impl Bw {
             rhs
         }
     }
-}
 
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn pow10() {
-        assert_eq!(pow10!(0), 1);
-        assert_eq!(pow10!(1), 10);
-        assert_eq!(pow10!(2), 100);
-        assert_eq!(pow10!(14), 100_000_000_000_000);
+    pub fn min<'a>(lhs: &'a Time, rhs: &'a Time) -> &'a Time {
+        if lhs.0 < rhs.0 {
+            lhs
+        }
+        else {
+            rhs
+        }
     }
 }
 

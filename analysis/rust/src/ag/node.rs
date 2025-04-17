@@ -1,7 +1,11 @@
+use std::fmt;
+
 use bit_set::BitSet;
 use rand::Rng;
+use crate::sim::event::EventContext;
+
 use super::Config;
-use super::Context;
+use super::Simulator;
 use rand_xoshiro::rand_core::SeedableRng;
 use rand_xoshiro::Xoshiro256PlusPlus;
 
@@ -44,6 +48,23 @@ impl<'a> Node<'a> {
             nodes.push(Node::new(config, i as i64));
         }
         nodes
+    }
+
+    pub fn print_chunks(&self) {
+        print!("Chunks for node {:3}: ", self.i);
+        for i in 0..self.config.chunk_count() {
+            print!("{}", {if self.chunks.contains(i as usize) { 1 } else { 0 } });
+        }
+        println!();
+    }
+
+    pub fn print_misses(&self) {
+        print!("Misses for node {:3}: ", self.i);
+        for i in 0..self.config.n() {
+            let s = format!("{}/{}", self.misses[i as usize], self.right_misses[i as usize]);
+            print!("{:10}", s);
+        }
+        println!();
     }
     
     /// Fill the chunks with a random loss model.
@@ -96,43 +117,53 @@ impl<'a> Node<'a> {
     }
     
     /// Start the recovery phase
-    pub fn start_recovery(ctxt: &mut Context<'a>) {
-        
-        let n = ctxt.node().config.n();
+    pub fn start_recovery(me: i64, ctxt: &mut Simulator<'a>) {
+        let node = ctxt.node(me as i32);
+        let n = node.config.n();
+
         // Try to send all blocks
         let blocks: Vec<i64> = (0..n).collect();
-        Self::send_to_right(ctxt, blocks.as_slice());
+        Self::send_to_right(me, ctxt, blocks.as_slice());
     }
 
-    fn send_to_right(ctxt: &mut Context<'a>, blocks: &[i64]) {
-        let node = ctxt.node();
+    fn send_to_right(me: i64, ctxt: &mut Simulator<'a>, blocks: &[i64]) {
+        let node = ctxt.node(me as i32);
+        let right = node.right();
         let config = node.config;
+
         let mut delay = config.dn();
         let mut cbs = Vec::new();
+
         for block in blocks {
             let i = *block as usize;
-            if node.misses[i] == 0 && node.right_misses[i] > 0 { 
-                delay += config.g.bytes_tx_time(node.right_misses[i] * config.c());
+
+            if node.misses[i] == 0 && node.right_misses[i] > 0 {
+                let chunks = node.right_misses[i];
+                node.right_misses[i] = 0; // Register we send data to right
+
+                let bytes = chunks * config.b();
+
+                // Take into consideration retransmissions
+                let bytes = config.with_loss(bytes);
+
+                delay += config.g.bytes_tx_time(bytes);
                 
                 cbs.push((Box::new(
-                    move |ctxt: &mut Context<'a>| {
-                    Self::on_recv_block(ctxt, i as i64);
+                    move |ctxt: &mut Simulator<'a>| {
+                    Self::on_recv_block(right, ctxt, i as i64);
                 }), delay));
-                node.right_misses[i] = 0;
             }
         }
 
-        let right = node.right();
         for (cb, when) in cbs {
-            ctxt.schedule(right, when, cb);
+            ctxt.schedule(when, cb);
         }
     }
 
     /// Called when a block is fully complete,
     /// the node tries to send to its neighbor the still missed chunks.
-    fn on_recv_block(ctxt: &mut Context<'a>, block: i64) {
-        let node = ctxt.node();
-        node.misses[block as usize] = 0;
-        Self::send_to_right(ctxt, vec![block].as_slice());
+    fn on_recv_block(me: i64, ctxt: &mut Simulator<'a>, block: i64) {
+        ctxt.node(me as i32).misses[block as usize] = 0;
+        Self::send_to_right(me, ctxt, vec![block].as_slice());
     }
 }
