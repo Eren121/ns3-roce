@@ -57,6 +57,11 @@
   "anim_output_file": "out_anim.xml",
 
   "simulator_stop_time": 0.06,
+  
+  "link_stats_monitor": {
+    "enable": false,
+    "output_bytes": "out_link_bytes.json"
+  },
 
   "has_win": false,
   "global_t": true,
