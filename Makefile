@@ -5,7 +5,7 @@ docker_tag = hpcc
 docker_user ?= -u $(shell id -u):$(shell id -g)
 
 # When running image, mount git directory in the container in /app
-docker_mount = --mount type=bind,src=.,dst=/app
+docker_mount = --mount type=bind,src=$(shell pwd),dst=/app
 
 # If set, flag to run the docker container as interactive
 docker_interactive ?= -it
