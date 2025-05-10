@@ -17,7 +17,7 @@ void FlowScheduler::AddFlowsFromFile(fs::path json_path)
 {
   NS_LOG_FUNCTION(this << json_path);
 
-  JsonFlowList list{rfl::json::read<JsonFlowList>(raf::read_all_file(json_path)).value()};
+  JsonFlowList list{rfl::json::read<JsonFlowList>(read_all_file(json_path)).value()};
   for(JsonFlow& flow : list.flows) {
     AddFlow(std::move(flow));
   }

@@ -20,6 +20,8 @@ AgRuntime::AgRuntime(Ptr<Node> node, AgShared& shared)
   : m_config{shared.GetConfig()},
     m_shared{shared}
 {
+  m_recv.resize(m_config->GetTotalChunkCount());
+
   bool found{false};
   const NodeContainer& nodes{m_shared.GetServers()};
   for(block_id_t i{0}; i < nodes.GetN(); i++) {
@@ -42,8 +44,8 @@ bool AgRuntime::MarkChunkAsReceived(chunk_id_t chunk)
 {
   NS_ASSERT(m_state == AgState::Multicast);
   
-  auto it{m_recv.insert(chunk)};
-  const bool newly_inserted{it.second};
+  const bool newly_inserted{!m_recv[chunk]};
+  m_recv[chunk] = true;
 
   return newly_inserted;
 }
@@ -131,9 +133,7 @@ uint64_t AgRuntime::GetCutoffByteSize() const
 
   // Paper value
   uint64_t additional_delay{rdma->GetMTU() * 100}; // A bit random value, all should it be is > RTT
-  std::cout << "ADD=" << additional_delay << std::endl;
   additional_delay = RdmaNetwork::GetInstance().GetMaxBdp();
-  std::cout << "AD2=" << additional_delay << std::endl;
   
   const uint64_t cutoff_bytes{per_node_bytes * max_mcast_chain_length + additional_delay};
   
@@ -167,8 +167,13 @@ void AgRuntime::NotifyRecovery(block_id_t block)
 
   NS_ASSERT(m_state == AgState::Recovery); // The recovery cannot be completed until all notifs have been received
 
-  NS_LOG_LOGIC("Node " << m_block << " received recovery of block " << block);
-  m_torecover.erase(block);
+  // std::numeric_limits<block_id_t>::max() is a special value just to trigger side effects of this function.
+  if(block != std::numeric_limits<block_id_t>::max()) {
+
+    NS_LOG_LOGIC("Node " << m_block << " received recovery of block " << block);
+    m_torecover.erase(block);
+    m_shared.NotifyChunkRecovered();
+  }
   
   if(m_torecover.empty()) {
     m_has_recovered_all = true;
@@ -224,7 +229,7 @@ void AgRuntime::RegisterMissedChunks()
   uint64_t total{};
 
   for(chunk_id_t chunk{0}; chunk < m_config->GetTotalChunkCount(); chunk++) {
-    if(!m_recv.contains(chunk)) {
+    if(!m_recv[chunk]) {
       m_shared.AddMissedChunk(m_block, chunk);
       total++;
     }

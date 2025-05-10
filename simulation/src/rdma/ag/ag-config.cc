@@ -115,6 +115,11 @@ TypeId AgConfig::GetTypeId()
       UintegerValue(5000),
       MakeUintegerAccessor(&AgConfig::m_markovGapLength),
       MakeUintegerChecker<uint32_t>())
+    .AddAttribute("BlockingRing",
+      "Whether in the recovery phase, neighbor should wait having recovered all blocks",
+      UintegerValue(5000),
+      MakeUintegerAccessor(&AgConfig::m_markovGapLength),
+      MakeUintegerChecker<uint32_t>())
     .AddAttribute("OnAllFinished",
       "Callback called when the allgather is finished for all nodes",
       CallbackValue(),
@@ -129,14 +134,14 @@ void AgConfig::SetMtu(uint32_t mtu)
   m_mtu = mtu;
 }
 
-uint32_t AgConfig::GetPerChunkPacketCount() const
+uint64_t AgConfig::GetPerChunkPacketCount() const
 {
-  return static_cast<uint32_t>(CeilDiv(m_csize, m_mtu));
+  return CeilDiv(m_csize, m_mtu);
 }
 
-uint32_t AgConfig::GetPerBlockPacketCount() const
+uint64_t AgConfig::GetPerBlockPacketCount() const
 {
-  return static_cast<uint32_t>(GetPerChunkPacketCount() * GetPerBlockChunkCount());
+  return GetPerChunkPacketCount() * GetPerBlockChunkCount();
 }
 
 uint32_t AgConfig::GetMcastImmData(block_id_t sender, pkt_id_t pkt_offset) const
@@ -288,7 +293,7 @@ block_id_t AgConfig::GetBlockOfSegment(segment_id_t segment) const
   return segment / GetPerNodeSegmentCount();
 }
 
-std::map<block_id_t, uint64_t> AgConfig::BuildToRecover(const std::set<chunk_id_t>& recv) const
+std::map<block_id_t, uint64_t> AgConfig::BuildToRecover(const std::vector<bool>& recv) const
 {
   std::map<block_id_t, uint64_t> missed_per_block;
 
@@ -303,11 +308,11 @@ std::map<block_id_t, uint64_t> AgConfig::BuildToRecover(const std::set<chunk_id_
   return missed_per_block;
 }
 
-std::map<segment_id_t, uint64_t> AgConfig::BuildPartialSegments(const std::set<chunk_id_t>& recv) const
+std::map<segment_id_t, uint64_t> AgConfig::BuildPartialSegments(const std::vector<bool>& recv) const
 {
   std::map<segment_id_t, uint64_t> missed_per_segment;
   for(chunk_id_t chunk{0}; chunk < GetTotalChunkCount(); chunk++) {
-    if(!recv.contains(chunk)) {
+    if(!recv[chunk]) {
       const segment_id_t segment{GetSegmentOfChunk(chunk)};
       missed_per_segment[segment]++;
     }
@@ -376,12 +381,13 @@ MarkovState nextState(MarkovState currentState, double p_b, double p_g, double L
   throw std::invalid_argument{"Unknown state"};
 }
 
-std::set<pkt_id_t> AgConfig::SimulateMarkov() const
+std::vector<bool> AgConfig::SimulateMarkov() const
 {
-  std::set<pkt_id_t> recv;
+  const uint64_t tot_pkt{GetTotalChunkCount() * GetPerChunkPacketCount()};
+  std::vector<bool> recv(tot_pkt);
+
   MarkovState state{G_R};
 
-  const uint64_t tot_pkt{GetTotalChunkCount() * GetPerChunkPacketCount()};
   for(pkt_id_t pkt{0}; pkt < tot_pkt; pkt++) {
     state = nextState(
       state,
@@ -389,7 +395,7 @@ std::set<pkt_id_t> AgConfig::SimulateMarkov() const
       m_markovBurstLength, m_markovGapLength);
 
     if (state == B_R || state == G_R) {
-      recv.insert(pkt);
+      recv[pkt] = true;
     }
   }
 

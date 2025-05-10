@@ -21,12 +21,10 @@ AgShared::AgShared(Ptr<AgConfig> config, NodeContainer servers)
 {
   m_start = Simulator::Now();
 
-  {
-    // Load serializer for received chunks
-    if(!m_config->dump_recv_chunks.empty()) {
-      const fs::path out{FindFile(m_config->dump_recv_chunks)};
-      m_recv_chunks_writer = std::make_unique<RdmaSerializer<AgRecvChunkRecord>>(out);
-    }
+  // Load serializer for received chunks
+  if(!m_config->dump_recv_chunks.empty()) {
+    const fs::path out{FindFile(m_config->dump_recv_chunks)};
+    m_recv_chunks_writer = std::make_unique<RdmaSerializer<AgRecvChunkRecord>>(out);
   }
 }
 
@@ -39,11 +37,7 @@ fs::path AgShared::FindFile(fs::path in) const
   
 void AgShared::AddMissedChunk(block_id_t block, chunk_id_t chunk)
 {
-  MissedChunkRecord record;
-  record.block = block;
-  record.chunk = chunk;
-
-  m_missed.push_back(record);
+  m_missed_chunks_tot++;
 }
 
 void AgShared::Finish() const
@@ -96,22 +90,26 @@ void AgShared::DumpStats() const
   json info;
   info["total_elapsed_time"] = Simulator::Now().GetSeconds() - m_start.GetSeconds();
   info["mcast_elapsed_time"] = m_mcast_elapsed.GetSeconds();
-  info["lost_chunk_count"] = m_missed.size();
+  info["lost_chunk_count"] = m_missed_chunks_tot;
   info["lost_data_chunk_count"] = m_missed_data_chunks_tot;
   info["total_data_chunk_count"] = m_config->GetTotalDataChunkCount();
   
-  info["lost_chunk_percent"] = double(m_missed.size()) / (m_config->GetTotalChunkCount() * m_config->GetBlockCount());
+  info["lost_chunk_percent"] = double(m_missed_chunks_tot) / (m_config->GetTotalChunkCount() * m_config->GetBlockCount());
   info["lost_data_chunk_percent"] = double(m_missed_data_chunks_tot) / (m_config->GetTotalDataChunkCount() * m_config->GetBlockCount());
   info["cutoff_timer_triggered_count"] = m_cutoff_triggered;
   info["total_chunk_count"] = m_config->GetTotalChunkCount();
   info["chunk_size"] = m_config->GetChunkByteSize();
   info["block_count"] = m_config->GetBlockCount();
+  info["retr_chunks_tot"] = m_retr_chunks_tot;
   
   ofs << info.dump(4);
 }
 
 void AgShared::DumpMissedChunks() const
 {
+  // To refactor without json and memory usage
+  /*
+
   if(m_config->dump_missed_chunks.empty()) {
     return;
   }
@@ -121,6 +119,7 @@ void AgShared::DumpMissedChunks() const
   std::ofstream ofs{out_path.c_str()};
 
   ofs << rfl::json::write(m_missed);
+  */
 }
 
 void AgShared::RegisterNode(Ptr<AgRuntime> node)

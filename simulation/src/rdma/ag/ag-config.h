@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <map>
 #include <set>
+#include <unordered_set>
 
 namespace ns3 {
 
@@ -48,18 +49,18 @@ public:
   void SetBlockCount(uint64_t count);
   void SetMtu(uint32_t mtu);
 
-  uint32_t GetPerChunkPacketCount() const;
-  uint32_t GetPerBlockPacketCount() const;
+  uint64_t GetPerChunkPacketCount() const;
+  uint64_t GetPerBlockPacketCount() const;
   
   /// @param pkt_offset For a block, should be in [0; `GetPerBlockPacketCount()`)
   uint32_t GetMcastImmData(block_id_t sender, pkt_id_t pkt_offset) const;
   void ParseMcastImmData(uint32_t imm, block_id_t& sender, chunk_id_t& chunk) const;
-  
 
-  uint64_t GetChunkByteSize() const;
   uint32_t GetMulticastGroup() const;
   uint32_t GetPriority() const;
   uint16_t GetPort(AgPort port) const;
+
+  uint64_t GetChunkByteSize() const;
   uint64_t GetBlockCount() const;
   uint64_t GetRootCount() const;
   uint64_t GetPerBlockChunkCount() const;
@@ -81,14 +82,21 @@ public:
   /**
    * @return The count of missed chunks per block, taking into account FEC.
    */
-  std::map<block_id_t, uint64_t> BuildToRecover(const std::set<chunk_id_t>& recv) const;
+  std::map<block_id_t, uint64_t> BuildToRecover(const std::vector<bool>& recv) const;
 
   /**
-   * @return Simulated received chunks be running the markov model.
+   * @return Simulated received packets by running the markov model.
    */
-  std::set<pkt_id_t> SimulateMarkov() const;
+  std::vector<bool> SimulateMarkov() const;
 
+  /**
+   * Dump Allgather statistics in this JSON file.
+   * Entries are:
+   * - `retr_chunks_tot`: Incremented by one each time a node retransmits a chunk in the recovery phase.
+   *  
+   */
   fs::path dump_stats;
+
   fs::path dump_missed_chunks;
   fs::path dump_recv_chunks;
 
@@ -98,7 +106,7 @@ private:
   /**
    * @return Count of unrecoverable chunks per segment.
    */
-  std::map<segment_id_t, uint64_t> BuildPartialSegments(const std::set<chunk_id_t>& recv) const;
+  std::map<segment_id_t, uint64_t> BuildPartialSegments(const std::vector<bool>& recv) const;
 
   //
   // Data that is likely identical between all allgathers
@@ -136,6 +144,8 @@ private:
   double m_markovGapDensity;
   uint32_t m_markovBurstLength;
   uint32_t m_markovGapLength;
+
+  bool m_blockingRing;
 };
 
 } // namesppace ns3

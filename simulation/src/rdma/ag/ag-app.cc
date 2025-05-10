@@ -100,7 +100,7 @@ void AgApp::InitRecoveryQP()
     NS_ASSERT(notif.has_imm);
     m_runtime->NotifyRecovery(notif.imm);
   });
-
+  
   m_recovery.right.rq->SetOnRecv([this](RdmaRxQueuePair::RecvNotif notif) {
     m_runtime->NotifyRecvRecoveryRequest();
   });
@@ -127,7 +127,10 @@ void AgApp::InitMulticastQP()
   m_mcast.sq->SetMaxRate(m_mcast.sq->GetMaxRate() * (1.0 / m_config->GetRootCount()));
 
 
-  m_cutoff_timer = m_mcast.sq->GetMaxRate().CalculateBytesTxTime(m_runtime->GetCutoffByteSize());
+  // *** Don't use CalculateBytesTxTime ***
+  // It works with uint32_t, overflow
+
+  m_cutoff_timer = Seconds(m_runtime->GetCutoffByteSize() * 8) / m_mcast.sq->GetMaxRate().GetBitRate();
   m_timeout_ev = Simulator::Schedule(m_cutoff_timer, &AgApp::OnCutoffTimer, this);
   
   // Register callback
@@ -167,7 +170,7 @@ void AgApp::InitMulticastQP()
       std::cout << "cutoff_bytes=" << cutoff_bytes << std::endl;
       */
 
-      m_cutoff_timer = m_mcast.sq->GetMaxRate().CalculateBytesTxTime(cutoff_bytes);
+      m_cutoff_timer = Seconds(m_runtime->GetCutoffByteSize() * 8) / m_mcast.sq->GetMaxRate().GetBitRate();
       m_timeout_ev.Cancel();
       m_timeout_ev = Simulator::Schedule(m_cutoff_timer, &AgApp::OnCutoffTimer, this);
       
@@ -214,9 +217,22 @@ void AgApp::StartApplication()
 void AgApp::RunMarkovMcast()
 {
   bool transitioned{false};
-  for(pkt_id_t pkt : m_config->SimulateMarkov()) {
-    if(m_runtime->NotifyReceivePacket(pkt)) {
-      transitioned = true;
+
+  // Simulate the markov chain for all packets of the Allgather.
+  // A single chunk may be composed of multiple packets.
+
+  const std::vector<bool> pkts(m_config->SimulateMarkov());
+  for(pkt_id_t i = 0; i < pkts.size(); i++) {
+
+    // A block cannot miss its own packets, so override the markov chain results in this case.
+
+    const uint64_t pkt_block = i / m_config->GetPerBlockPacketCount();
+    const bool owns_pkt = (pkt_block == m_runtime->GetBlock());
+
+    if(pkts[i] || owns_pkt) {
+      if(m_runtime->NotifyReceivePacket(i)) {
+        transitioned = true;
+      }
     }
   }
   if(!transitioned) {

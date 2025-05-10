@@ -5,6 +5,7 @@
 #include "ns3/ag-shared.h"
 #include "ns3/rdma-reliable-qp.h"
 #include <set>
+#include <unordered_set>
 
 namespace ns3 {
 
@@ -60,7 +61,7 @@ private:
   AgShared& m_shared;
   AgState m_state{AgState::Multicast};
   uint64_t m_completed_chains{}; //! Count of completed multicast chains
-  std::set<chunk_id_t> m_recv; //!< All received chunk
+  std::vector<bool> m_recv; //!< All received chunk
   std::set<block_id_t> m_rec_sent; //!< All blocks sent for recovery
   std::map<block_id_t, uint64_t> m_torecover; // !< Missed chunk count per block (taking into account FEC)
 

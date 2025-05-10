@@ -42,9 +42,14 @@ public:
   Ptr<AgConfig> GetConfig() const;
   NodeContainer GetServers() const;
 
+  void NotifyChunkRecovered() {
+    m_retr_chunks_tot++;
+  }
+  
 private:
   void Finish() const;
   void DumpStats() const;
+
   void DumpMissedChunks() const;
   fs::path FindFile(fs::path in) const;
 
@@ -56,8 +61,9 @@ private:
   uint64_t m_completed_apps{}; //!< Count of finished apps.
   uint64_t m_completed_mcasts{};
   uint64_t m_missed_data_chunks_tot{};
+  uint64_t m_missed_chunks_tot{};
+  uint64_t m_retr_chunks_tot{}; // Total count of retransmitted chunks in the recovery phase.
   int m_cutoff_triggered{};
-  MissedChunkList m_missed;
   NodeContainer m_servers;
   std::unique_ptr<RdmaSerializer<AgRecvChunkRecord>> m_recv_chunks_writer;
 };

@@ -15,6 +15,7 @@ if(reflectcpp_FOUND)
       app/rdma-qlen-monitor.cc
       app/rdma-unicast-app.cc
       app/rdma-unicast-app-helper.cc
+      helper/filesystem.cc
       helper/rdma-helper.cc
       helper/rdma-reflection-helper.cc
       model/broadcom-egress-queue.cc
@@ -43,6 +44,7 @@ if(reflectcpp_FOUND)
       ag/ag-config.cc
       ag/ag-runtime.cc
       ag/ag-shared.cc
+      app/rdma-config.cc
       app/rdma-flow.cc
       app/rdma-network.cc
       app/rdma-qlen-monitor.cc
@@ -80,6 +82,7 @@ if(reflectcpp_FOUND)
       ag/ag-config.h
       ag/ag-runtime.h
       ag/ag-shared.h
+      app/rdma-config.h
       app/rdma-flow.h
       app/rdma-network.h
       app/rdma-qlen-monitor.h
