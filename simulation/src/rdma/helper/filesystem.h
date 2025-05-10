@@ -2,21 +2,17 @@
 
 #include <filesystem>
 #include <string>
-#include <fstream>
 
 #if __cplusplus < 202002L
-# error Should be at least C++20
+#   error C++ standard should be at least C++20
 #endif
 
+// It's pretty common to wrap `std::filesystem` in `fs`.
 namespace fs = std::filesystem;
 
-namespace raf
-{
+namespace ns3 {
 
-inline std::string read_all_file(const fs::path& in_file)
-{
-  std::ifstream ifs{in_file};
-  return std::string((std::istreambuf_iterator<char>(ifs)), std::istreambuf_iterator<char>());
-}
+//! Reads completely a file and stores it into a string.
+std::string read_all_file(const fs::path& in_file);
 
-}
+} // namespace ns3

@@ -16,23 +16,48 @@ namespace ns3 {
 
 NS_LOG_COMPONENT_DEFINE("RdmaNetwork");
 
-double FindEcnThreshold(const std::vector<BandwidthToEcnThreshold>& map, double bps)
-{
-	std::map<uint64_t, BandwidthToEcnThreshold> sorted{};
-	for(const auto& entry : map) {
-		sorted[entry.bandwidth] = entry;
-	}
+bool RdmaNetwork::m_initialized = false;
 
-	// Just used the entry lower or equals
-	// This permit to avoid crash when the bandwidth is not in the map
-	// This just crash if the first item in the map is higher than `bps`
-	auto it{sorted.lower_bound(bps)};
-	NS_ABORT_MSG_IF(it == sorted.begin(), "Cannot find ECN threshold related to bandwidth " << bps);
-	return (--it)->second.ecn_threshold;
+void RdmaNetwork::Initialize(const fs::path& config_path)
+{
+  NS_ABORT_MSG_IF(m_initialized, "You cannot initialize RdmaNetwork twice");
+  m_initialized = true;
+
+	const auto config = RdmaConfig::from_file(config_path);
+
+	NS_LOG_INFO("Config: " << rfl::json::write(*config));
+
+	config->ApplyDefaultAttributes();
+
+	const fs::path topology_path = config->FindFile(config->topology_file);
+	auto topology = std::make_shared<RdmaTopology>(json::parse(std::ifstream{topology_path}));
+
+  auto& instance = GetInstance();
+  instance.InitConfig(config);
+  instance.InitTopology(topology);
+
+	Simulator::Stop(config->simulator_stop_time);
+
+	FlowScheduler flow_scheduler;
+	flow_scheduler.SetOnAllFlowsCompleted([]() {
+		NS_LOG_INFO("Simulation stopped at " << Simulator::Now().GetSeconds());
+		Simulator::Stop();
+	});
+	flow_scheduler.AddFlowsFromFile(config->FindFile(config->flow_file));
+
+	NS_LOG_INFO("Running Simulation");
+
+	Simulator::Run();
+
+	NS_LOG_INFO("Exit.");
+
+	Simulator::Destroy();
 }
 
 RdmaNetwork& RdmaNetwork::GetInstance()
 {
+  NS_ABORT_MSG_IF(!m_initialized, "RdmaNetwork is not initialized");
+
   static RdmaNetwork instance;
   return instance;
 }
@@ -48,13 +73,50 @@ RdmaNetwork::~RdmaNetwork()
   if(!m_config->pfc_output_file.empty()) {
     std::ofstream ofs(m_config->FindFile(m_config->pfc_output_file));
     ofs << rfl::json::write(m_pfc_entries) << std::endl;
-  }  
+  }
 
+  //
+  // Write link stats to file
+  //
+
+  if(m_config->link_stats_monitor.enable) {
+    if(!m_config->link_stats_monitor.output_bytes.empty()) {
+      
+      struct Record
+      {
+        int src;
+        int dst;
+        uint64_t bytes;
+      };
+      
+      std::vector<Record> records;
+
+      for(size_t tx = 0; tx < m_txrx_bytes.size(); tx++) {
+        for(size_t rx = 0; rx < m_txrx_bytes.size(); rx++) {
+          Record r;
+          r.src = tx;
+          r.dst = rx;
+          r.bytes = m_txrx_bytes[tx][rx];
+          
+          // Save only where a NIC sends data, not a switch
+          const bool is_tx_nic = !m_topology->nodes[tx].is_switch;
+
+          if(r.bytes > 0 && is_tx_nic) {
+            records.push_back(r);
+          }
+        }
+      }
+
+      const fs::path out{m_config->FindFile(m_config->link_stats_monitor.output_bytes)};
+      std::ofstream ofs{out};
+      ofs << rfl::json::write(records) << std::endl;
+    }
+  }
 }
 
 void RdmaNetwork::CreateNodes()
 {
-const size_t node_count{m_topology->nodes.size()};
+  const size_t node_count{m_topology->nodes.size()};
   NodeContainer n;
 
 	for (const RdmaTopology::Node& node_config : m_topology->nodes) {
@@ -70,6 +132,11 @@ const size_t node_count{m_topology->nodes.size()};
   for (NodeContainer::Iterator i{n.Begin()}; i != n.End (); ++i) {
     AddNode(*i);
 	}
+
+  m_txrx_bytes.resize(node_count);
+  for(auto& v : m_txrx_bytes) {
+    v.resize(node_count);
+  }
 }
 
 void RdmaNetwork::AddNode(Ptr<Node> node)
@@ -98,15 +165,6 @@ Ptr<Node> RdmaNetwork::FindServer(node_id_t id) const
 Ipv4Address RdmaNetwork::FindNodeIp(node_id_t id) const
 {
   return GetNodeIp(id);
-}
-
-uint64_t RdmaNetwork::FindBdp(node_id_t src, node_id_t dst) const
-{
-  if(m_config->global_t == 1) {
-    return m_maxBdp;
-  }
-  
-  return m_p2p.at(FindNode(src)).at(FindNode(dst)).bdp;
 }
 
 uint64_t RdmaNetwork::GetMaxBdp() const
@@ -141,8 +199,10 @@ NodeMap RdmaNetwork::GetAllServers() const
   return nodes;
 }
 
-void RdmaNetwork::SetConfig(std::shared_ptr<RdmaConfig> config)
+void RdmaNetwork::InitConfig(std::shared_ptr<RdmaConfig> config)
 {
+  NS_ASSERT_MSG(!m_config, "RdmaNetwork has already a config");
+  
   m_config = config;
   
 	// set ACK priority on hosts
@@ -161,9 +221,9 @@ const RdmaConfig& RdmaNetwork::GetConfig() const
   return *m_config;
 }
 
-void RdmaNetwork::SetTopology(std::shared_ptr<RdmaTopology> topology)
+void RdmaNetwork::InitTopology(std::shared_ptr<RdmaTopology> topology)
 {
-  NS_ASSERT_MSG(!m_topology, "RdmaNetwork has already been created");
+  NS_ASSERT_MSG(!m_topology, "RdmaNetwork has already a topology");
   
   m_topology = topology;
 
@@ -185,6 +245,21 @@ void RdmaNetwork::StartQLenMonitor()
 
   m_qp_monitor = std::make_unique<QpMonitor>(*this);
   m_qp_monitor->Start();
+
+  
+  Config::ConnectFailSafe ("/ChannelList/*/TxRxPointToPoint", MakeCallback(&RdmaNetwork::DevTxTrace, this));
+}
+
+
+void RdmaNetwork::DevTxTrace(
+  std::string context,
+  Ptr<const Packet> p,
+  Ptr<NetDevice> tx,
+  Ptr<NetDevice> rx,
+  Time txTime,
+  Time rxTime)
+{
+  m_txrx_bytes[tx->GetNode()->GetId()][rx->GetNode()->GetId()] += p->GetSize();
 }
 
 void RdmaNetwork::CreateAnimation()
@@ -379,11 +454,9 @@ void RdmaNetwork::ConfigureSwitches()
       Ptr<QbbNetDevice> dev = DynamicCast<QbbNetDevice>(sw->GetDevice(j));
 
       // Init ECN
-      uint64_t rate{dev->GetDataRate().GetBitRate()};
-      const uint32_t kmin{FindEcnThreshold(m_config->kmin_map, rate)};
-      const uint32_t kmax{FindEcnThreshold(m_config->kmax_map, rate)};
-      const double pmax{FindEcnThreshold(m_config->pmax_map, rate)};
-      sw->m_mmu->ConfigEcn(j, kmin, kmax, pmax);
+      uint64_t rate = dev->GetDataRate().GetBitRate();
+      const auto ecn = FindEcnConfigFromBps(m_config->ecn, rate);
+      sw->m_mmu->ConfigEcn(j, ecn.min_buf_bytes, ecn.max_buf_bytes, ecn.max_probability);
 
       // Init PFC
       const uint64_t delay{DynamicCast<QbbChannel>(dev->GetChannel())->GetDelay().GetTimeStep()};

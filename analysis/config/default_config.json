@@ -45,6 +45,11 @@
     "interval": 1e-6
   },
 
+  "link_stats_monitor": {
+    "enable": false,
+    "output_bytes": "../out/link-stats-bytes.json"
+  },
+
   "topology_file": "topology.json",
   "flow_file": "flows.json",
   "trace_file": "",

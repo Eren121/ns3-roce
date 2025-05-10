@@ -63,52 +63,24 @@
   "ack_high_prio": false,
   "rng_seed": 50,
 
-  "link_down": {
-    "time": 0,
-    "src": 0,
-    "dst": 0
-  },
-
-  "kmax_map": [
+  "ecn": [
     {
-      "bandwidth": 25e9,
-      "ecn_threshold": 400
+      "bandwidth_bps": 25e9,
+      "min_buf_bytes": 100e3,
+      "max_buf_bytes": 400e3,
+      "max_probability": 0.2
     },
     {
-      "bandwidth": 50e9,
-      "ecn_threshold": 800
+      "bandwidth_bps": 50e9,
+      "min_buf_bytes": 200e3,
+      "max_buf_bytes": 800e3,
+      "max_probability": 0.2
     },
     {
-      "bandwidth": 100e9,
-      "ecn_threshold": 1600
-    }
-  ],
-  "kmin_map": [
-    {
-      "bandwidth": 25e9,
-      "ecn_threshold": 100
-    },
-    {
-      "bandwidth": 50e9,
-      "ecn_threshold": 200
-    },
-    {
-      "bandwidth": 100e9,
-      "ecn_threshold": 400
-    }
-  ],
-  "pmax_map": [
-    {
-      "bandwidth": 25e9,
-      "ecn_threshold": 0.2
-    },
-    {
-      "bandwidth": 50e9,
-      "ecn_threshold": 0.2
-    },
-    {
-      "bandwidth": 100e9,
-      "ecn_threshold": 0.2
+      "bandwidth_bps": 100e9,
+      "min_buf_bytes": 400e3,
+      "max_buf_bytes": 1600e3,
+      "max_probability": 0.2
     }
   ]
 }

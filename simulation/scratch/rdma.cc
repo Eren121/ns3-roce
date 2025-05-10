@@ -50,30 +50,6 @@ using namespace ns3;
 
 NS_LOG_COMPONENT_DEFINE("main");
 
-void SetupCC(const RdmaConfig& config)
-{
-#if RAF_WAITS_REFACTORING
-	// set int_multi
-	IntHop::multi = config.int_multi;
-	// IntHeader::mode
-	if (config.cc_mode == 7) // timely, use ts
-		IntHeader::mode = IntHeader::TS;
-	else if (config.cc_mode == 3) // hpcc, use int
-		IntHeader::mode = IntHeader::NORMAL;
-	else if (config.cc_mode == 10) // hpcc-pint
-		IntHeader::mode = IntHeader::PINT;
-	else // others, no extra header
-		IntHeader::mode = IntHeader::NONE;
-
-	// Set Pint
-	if (config.cc_mode == 10) {
-		Pint::set_log_base(config.pint_log_base);
-		IntHeader::pint_bytes = Pint::get_n_bytes();
-		printf("PINT bits: %d bytes: %d\n", Pint::get_n_bits(), Pint::get_n_bytes());
-	}
-#endif
-}
-
 int main(int argc, char *argv[])
 {
 	LogComponentEnable("main", LOG_LEVEL_INFO);
@@ -81,44 +57,11 @@ int main(int argc, char *argv[])
 	LogComponentEnable("FlowScheduler", LOG_LEVEL_INFO);
 	
 	if(argc < 2) {
-		std::cout << "Error: require a config file" << std::endl;
+		std::cout << "Error: require a config file a unique program argument." << std::endl;
 		return EXIT_FAILURE;
 	}
-
-	auto config = std::make_shared<RdmaConfig>(rfl::json::read<RdmaConfig>(raf::read_all_file(argv[1])).value());
-	config->config_dir = fs::path{argv[1]}.parent_path();
-
-	NS_LOG_INFO("Config: " << rfl::json::write(*config));
-
-	for(const auto& [key, val] : config->defaults) {
-		Ptr<AttributeValue> new_val{ConvertJsonToAttribute(val, FindConfigAttribute(key))};
-		Config::SetDefault(key, *new_val);
-		NS_LOG_INFO("Set " << key << " to " << new_val->SerializeToString(MakeEmptyAttributeChecker()));
-	}
 	
-	SetupCC(*config);
+	RdmaNetwork::Initialize(argv[1]);
 
-	// SeedManager::SetSeed(time(NULL));
-
-	auto topology = std::make_shared<RdmaTopology>(json::parse(std::ifstream{config->FindFile(config->topology_file)}));
-	auto& network = RdmaNetwork::GetInstance();
-	network.SetConfig(config);
-	network.SetTopology(topology);
-
-	FlowScheduler flow_scheduler;
-	flow_scheduler.SetOnAllFlowsCompleted([]() {
-		NS_LOG_INFO("Simulation stopped at " << Simulator::Now().GetSeconds());
-		Simulator::Stop();
-	});
-	flow_scheduler.AddFlowsFromFile(config->FindFile(config->flow_file));
-
-	NS_LOG_INFO("Running Simulation");
-
-	Simulator::Stop(config->simulator_stop_time);
-	Simulator::Run();
-	
-	NS_LOG_INFO("Exit.");
-	
-	Simulator::Destroy();
 	return EXIT_SUCCESS;
 }
