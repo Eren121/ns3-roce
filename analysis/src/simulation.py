@@ -114,11 +114,19 @@ SimulationConfigFile = namedtuple(
 
 class Simulation:
     def __init__(self, sim_dir: pathlib.Path, keep_dir: bool):
+        # `templates`: Defined by child class, extend the basic configuration of the simulation.
         self.templates = {}
+        # `sim_dir`: Each simulation has a dedicated folder
         self.sim_dir = mkdir_p(sim_dir)
+        # `config_dir`: Where all config-related files of the simulation are.
         self.config_dir = mkdir_p(self.sim_dir / "config")
+        # `out_dir`: Where all the output statistic datasets of the simulation are.
         self.out_dir = mkdir_p(self.sim_dir / "out")
+        # `img_dir`: Where all output images should be written.
+        self.img_dir = mkdir_p(self.sim_dir / "img")
+        # `stdout_path`: Where the stdout of the simulation program is stored.
         self.stdout_path = self.out_dir / "stdout.txt"
+        # `stdout_file`: A python file to write to `stdout_path`.
         self.stdout_file = open(self.stdout_path, "w")
     
     def add_config(self, file: SimulationConfigFile) -> None:
@@ -203,12 +211,12 @@ class Model:
         """
         return self.__inputs
 
-    def _configure(self) -> None:
+    def _configure(self, sim: Simulation) -> None:
         """Override in child"""
         raise NotImplementedError()
 
     def configure(self, sim: Simulation) -> None:
-        self._configure()
+        self._configure(sim)
         sim.add_config(SimulationConfigFile("config.json", self._config))
         sim.add_config(SimulationConfigFile("topology.json", self._topo))
         sim.add_config(SimulationConfigFile("flows.json", {"flows": self._flows}))
@@ -243,7 +251,7 @@ class Batch:
         # Will store all the results
         self.res = None
 
-    def run(self, model_class, scenarios: CartesianProduct) -> List[BatchResult]:
+    def run(self, model_class, scenarios: CartesianProduct, jobs=0) -> List[BatchResult]:
         """
         Run the model for each value of the cartesian product.
         """
@@ -271,7 +279,7 @@ class Batch:
                 one_case.sim.run()
                 progress.update(task, advance=1)
 
-            pyu.parallel_for(data=all_cases, func=in_parallel)
+            pyu.parallel_for(data=all_cases, func=in_parallel, jobs=jobs)
         
         self.res = all_cases
         return all_cases

@@ -8,7 +8,10 @@ import decimal
 import subprocess as sp
 import joblib
 import json
-
+from avro.io import DatumReader, DatumWriter
+from avro.datafile import DataFileReader, DataFileWriter
+import seaborn as sns
+import pandas as pd
 
 class NpEncoder(json.JSONEncoder):
     """https://stackoverflow.com/questions/50916422/python-typeerror-object-of-type-int64-is-not-json-serializable"""
@@ -106,3 +109,16 @@ def parallel_for(data: list, func, jobs: int = 0):
     # because we spawn a new Process for each task.
     results = joblib.Parallel(backend="threading", n_jobs=(-1 if jobs <= 0 else jobs))(joblib.delayed(func)(i) for i in data)
     return results
+
+
+def read_avro(path: pathlib.Path) -> pd.DataFrame:
+  """Read an avro dataset into a pandas DataFrame"""
+  with open(path, "rb") as file:
+    reader = DataFileReader(file, DatumReader())
+    return pd.DataFrame.from_records([r for r in reader])
+  
+
+def scientific_axis(g: sns.FacetGrid) -> None:
+   """Display a matplotlib axis as scientific notation"""
+   for axes in g.axes.flat:
+      axes.ticklabel_format(axis='both', style='scientific', scilimits=(0, 0))
