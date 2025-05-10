@@ -17,6 +17,9 @@ RUN apt install -y \
   python3-git \
   python3-rich
 
+RUN apt install -y python3-pip
+RUN pip install latex --break-system-packages
+
 
 # Install reflect-cpp
 RUN git clone https://github.com/getml/reflect-cpp --branch v0.17.0 /reflectcpp
