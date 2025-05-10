@@ -1,3 +1,9 @@
+# All commands are run in the docker container,
+# so no dependencies except Make and Docker.
+#
+#
+#
+
 # Docker image tag
 docker_tag = hpcc
 
@@ -77,6 +83,10 @@ run_gdb:
 run_valgrind:
 	$(docker_run) $(ns3_run) --command-template="valgrind %s "
 
+.PHONY: run_massif
+run_massif:
+	$(docker_run) $(ns3_run) --command-template="valgrind --tool=massif %s "
+
 .PHONY: run_bash
 run_bash: docker_user =
 run_bash:
@@ -94,6 +104,11 @@ gen_avro:
 analysis: docker_wd = -w /app/analysis/src
 analysis:
 	$(docker_run) python3 -m models.ft16
+
+.PHONY: plots
+plots: docker_wd = -w /app/analysis/src
+plots:
+	$(docker_run) python3 -m pr.efficiency
 
 #################
 ################# Netanim
