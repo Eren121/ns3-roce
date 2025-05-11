@@ -1,0 +1,12 @@
+{
+  "type": "record",
+  "name": "QpRecord",
+  "fields" : [
+      {"name": "node", "type": "int"},
+      {"name": "lkey", "type": "long"},
+      {"name": "time", "type" : "double"},
+      {"name": "lowest_unacked_psn", "type" : "long"},
+      {"name": "lowest_unsent_psn", "type" : "long"},
+      {"name": "end_work_psn", "type" : "long"}
+  ]
+}

@@ -302,4 +302,18 @@ private:
   std::vector<Element> m_elements;
 };
 
+/*
+ * Provides a way to pick a unique port per node.
+ */
+uint16_t GetNextUniquePort(Ptr<Node> node);
+
+inline uint16_t wrapped_increment(uint16_t x) {
+  if(x == std::numeric_limits<uint16_t>::max()) {
+    return 0;
+  }
+  else {
+    return x + 1;
+  }
+}
+
 } // namespace ns3

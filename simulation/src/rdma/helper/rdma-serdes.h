@@ -1,5 +1,6 @@
 #pragma once
 
+#include "ns3/filesystem.h"
 #include "ns3/rdma-helper.h"
 #include <avro/Compiler.hh>
 #include <avro/DataFile.hh>
@@ -9,6 +10,7 @@
 #include <string>
 #include <sstream>
 #include <stdexcept>
+#include <memory>
 
 namespace ns3 {
 
@@ -38,9 +40,11 @@ public:
    */
   RdmaSerializer(const fs::path& output_path)
     : m_schema{LoadSchema()},
-      m_writer{output_path.c_str(), m_schema}
+      m_writer{std::make_unique<avro::DataFileWriter<T>>(output_path.c_str(), m_schema)}
   {
   }
+
+  RdmaSerializer() = default;
 
   /**
    * Append an object as a record to the output file.
@@ -48,15 +52,15 @@ public:
    */
   void write(const T& record)
   {
-    m_writer.write(record);
+    m_writer->write(record);
   }
 
 private:
   static avro::ValidSchema LoadSchema()
   {
     const char* const schema_json = GetAvroSchema(static_cast<T*>(nullptr));
-    const std::string schema_str{json};
-    const std::istringstream schema_is(schema_str);
+    const std::string schema_str{schema_json};
+    std::istringstream schema_is(schema_str);
     avro::ValidSchema ret_schema;
     avro::compileJsonSchema(schema_is, ret_schema);
     return ret_schema;
@@ -66,7 +70,8 @@ private:
   //! Schema shared between all `T` instances.
   avro::ValidSchema m_schema;
   //! Writer to the output file.
-  avro::DataFileWriter<T> m_writer;
+  //! Unique pointer to allow default constructor.
+  std::unique_ptr<avro::DataFileWriter<T>> m_writer;
 };
 
 } // namespace ns3

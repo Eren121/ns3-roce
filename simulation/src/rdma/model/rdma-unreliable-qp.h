@@ -16,9 +16,13 @@ public:
 	Ptr<Packet> GetNextPacket() override;
 	
 private:
-	uint16_t m_ipid{0}; //!< IP packet header number, incremented by one on each packet.
-	uint64_t m_snd_nxt{0}; //!< RDMA packet header byte offset, incremented by the size of the payload on each packet.
-	std::queue<SendRequest> m_to_send; //!< Pending packet to send.
+ 	//!< IP packet header number, incremented by one on each packet.
+	//! Wraps-around to zero after max is reached.
+	uint16_t m_ipid{0};
+	//!< RDMA packet header byte offset, incremented by the size of the payload on each packet.
+	uint64_t m_snd_nxt{0};
+	//!< Pending send requests.
+	std::queue<SendRequest> m_to_send;
 	
 	struct AckCallback
 	{

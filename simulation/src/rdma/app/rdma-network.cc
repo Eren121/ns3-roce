@@ -6,8 +6,7 @@
 #include "ns3/rdma-hw.h"
 #include "ns3/internet-stack-helper.h"
 #include "ns3/ipv4-global-routing-helper.h"
-#include "ns3/sim-setting.h"
-#include "ns3/rdma-flow.h"
+#include "ns3/rdma-flow-scheduler.h"
 #include <array>
 #include <type_traits>
 #include <cmath>
@@ -23,34 +22,36 @@ void RdmaNetwork::Initialize(const fs::path& config_path)
   NS_ABORT_MSG_IF(m_initialized, "You cannot initialize RdmaNetwork twice");
   m_initialized = true;
 
+  // Load configuration.
 	const auto config = RdmaConfig::from_file(config_path);
-
 	NS_LOG_INFO("Config: " << rfl::json::write(*config));
-
 	config->ApplyDefaultAttributes();
+  
+  if(!config->simulator_stop_time.IsZero()) {
+	  Simulator::Stop(config->simulator_stop_time);
+  }
 
+  // Load topology.
 	const fs::path topology_path = config->FindFile(config->topology_file);
 	auto topology = std::make_shared<RdmaTopology>(json::parse(std::ifstream{topology_path}));
-
+  
+  // Initialize the `RdmaNetwork`.
   auto& instance = GetInstance();
   instance.InitConfig(config);
   instance.InitTopology(topology);
+  instance.InitModules();
 
-	Simulator::Stop(config->simulator_stop_time);
-
-	FlowScheduler flow_scheduler;
+  // Load flows.
+	FlowScheduler flow_scheduler{instance, config->FindFile(config->flows_file)};
 	flow_scheduler.SetOnAllFlowsCompleted([]() {
-		NS_LOG_INFO("Simulation stopped at " << Simulator::Now().GetSeconds());
+		NS_LOG_INFO("Simulation stopped at " << Simulator::Now().GetSeconds() << "s.");
 		Simulator::Stop();
 	});
-	flow_scheduler.AddFlowsFromFile(config->FindFile(config->flow_file));
 
-	NS_LOG_INFO("Running Simulation");
-
+  // Run the simulation.
+	NS_LOG_INFO("Running Simulation.");
 	Simulator::Run();
-
-	NS_LOG_INFO("Exit.");
-
+  NS_LOG_INFO("Exit stopped at " << Simulator::Now().GetSeconds() << "s.");
 	Simulator::Destroy();
 }
 
@@ -62,61 +63,10 @@ RdmaNetwork& RdmaNetwork::GetInstance()
   return instance;
 }
 
-RdmaNetwork::~RdmaNetwork()
-{
-  NS_LOG_FUNCTION(this);
-   
-  if(m_trace_output) {
-	  fclose(m_trace_output);
-  }
-
-  if(!m_config->pfc_output_file.empty()) {
-    std::ofstream ofs(m_config->FindFile(m_config->pfc_output_file));
-    ofs << rfl::json::write(m_pfc_entries) << std::endl;
-  }
-
-  //
-  // Write link stats to file
-  //
-
-  if(m_config->link_stats_monitor.enable) {
-    if(!m_config->link_stats_monitor.output_bytes.empty()) {
-      
-      struct Record
-      {
-        int src;
-        int dst;
-        uint64_t bytes;
-      };
-      
-      std::vector<Record> records;
-
-      for(size_t tx = 0; tx < m_txrx_bytes.size(); tx++) {
-        for(size_t rx = 0; rx < m_txrx_bytes.size(); rx++) {
-          Record r;
-          r.src = tx;
-          r.dst = rx;
-          r.bytes = m_txrx_bytes[tx][rx];
-          
-          // Save only where a NIC sends data, not a switch
-          const bool is_tx_nic = !m_topology->nodes[tx].is_switch;
-
-          if(r.bytes > 0 && is_tx_nic) {
-            records.push_back(r);
-          }
-        }
-      }
-
-      const fs::path out{m_config->FindFile(m_config->link_stats_monitor.output_bytes)};
-      std::ofstream ofs{out};
-      ofs << rfl::json::write(records) << std::endl;
-    }
-  }
-}
-
 void RdmaNetwork::CreateNodes()
 {
-  const size_t node_count{m_topology->nodes.size()};
+  NS_ABORT_MSG_IF(!m_nodes.empty(), "Nodes already created");
+
   NodeContainer n;
 
 	for (const RdmaTopology::Node& node_config : m_topology->nodes) {
@@ -129,14 +79,9 @@ void RdmaNetwork::CreateNodes()
 		}
 	}
 
-  for (NodeContainer::Iterator i{n.Begin()}; i != n.End (); ++i) {
+  for (NodeContainer::Iterator i = n.Begin(); i != n.End(); ++i) {
     AddNode(*i);
 	}
-
-  m_txrx_bytes.resize(node_count);
-  for(auto& v : m_txrx_bytes) {
-    v.resize(node_count);
-  }
 }
 
 void RdmaNetwork::AddNode(Ptr<Node> node)
@@ -159,7 +104,7 @@ Ptr<Node> RdmaNetwork::FindNode(node_id_t id) const
 
 Ptr<Node> RdmaNetwork::FindServer(node_id_t id) const
 {
-  return m_nodes.at(id);
+  return m_servers.at(id);
 }
 
 Ipv4Address RdmaNetwork::FindNodeIp(node_id_t id) const
@@ -223,7 +168,7 @@ const RdmaConfig& RdmaNetwork::GetConfig() const
 
 void RdmaNetwork::InitTopology(std::shared_ptr<RdmaTopology> topology)
 {
-  NS_ASSERT_MSG(!m_topology, "RdmaNetwork has already a topology");
+  NS_ABORT_MSG_IF(m_topology, "Topology already initialized");
   
   m_topology = topology;
 
@@ -234,55 +179,24 @@ void RdmaNetwork::InitTopology(std::shared_ptr<RdmaTopology> topology)
   InstallRdma();
   BuildRoutes();
   BuildGroups();
-  CreateAnimation();
-  StartQLenMonitor();
 }
 
-void RdmaNetwork::StartQLenMonitor()
+void RdmaNetwork::InitModules()
 {
-  m_qlen_monitor = std::make_unique<QLenMonitor>(*this);
-  m_qlen_monitor->Start();
+  NS_ABORT_MSG_IF(!m_modules.empty(), "Modules already initialized");
 
-  m_qp_monitor = std::make_unique<QpMonitor>(*this);
-  m_qp_monitor->Start();
+  for(const auto& module_info : m_config->modules) {
+    if(!module_info.enable) {
+      continue;
+    }
 
-  
-  Config::ConnectFailSafe ("/ChannelList/*/TxRxPointToPoint", MakeCallback(&RdmaNetwork::DevTxTrace, this));
-}
+    ObjectFactory factory{module_info.path};
+    PopulateAttributes(factory, module_info.attributes);
 
-
-void RdmaNetwork::DevTxTrace(
-  std::string context,
-  Ptr<const Packet> p,
-  Ptr<NetDevice> tx,
-  Ptr<NetDevice> rx,
-  Time txTime,
-  Time rxTime)
-{
-  m_txrx_bytes[tx->GetNode()->GetId()][rx->GetNode()->GetId()] += p->GetSize();
-}
-
-void RdmaNetwork::CreateAnimation()
-{
-	if(m_config->anim_output_file.empty()) {
-    return;
+    Ptr<RdmaConfigModule> module_instance = factory.Create<RdmaConfigModule>();
+    module_instance->OnModuleLoaded(*this);
+    m_modules.push_back(module_instance);
   }
-
-  for (const RdmaTopology::Node& node_config : m_topology->nodes) {
-    const Ptr<Node> node{FindNode(node_config.id)};
-    Vector3D p{};
-    p.x = node_config.pos.x;
-    p.y = node_config.pos.y;
-    AnimationInterface::SetConstantPosition(node, p.x, p.y, p.z);
-  }
-
-  // Save trace for animation
-  m_anim = std::make_unique<AnimationInterface>(m_config->FindFile(m_config->anim_output_file));
-  
-  // High polling interval; the nodes never move. Reduces XML size.
-  m_anim->SetMobilityPollInterval(Seconds(1e9));
-
-  m_anim->EnablePacketMetadata(true);
 }
 
 void RdmaNetwork::BuildGroups()
@@ -306,7 +220,7 @@ void RdmaNetwork::BuildGroups()
       
       if(const auto* idx = std::get_if<Ranges::Index>(&elem)) {
 
-        const int node_id{*idx};
+        const unsigned int node_id{*idx};
         NS_ASSERT(!IsSwitchNode(FindNode(node_id)));
         m_mcast_groups[group.id].insert(node_id);
       }
@@ -356,6 +270,24 @@ void RdmaNetwork::BuildGroups()
   }
 }
 
+NetDeviceContainer RdmaNetwork::GetAllQbbNetDevices() const
+{
+  NetDeviceContainer res;
+	for(const auto& [_, node] : m_nodes) {
+    for(uint32_t dev_i = 0; dev_i < node->GetNDevices(); dev_i++) {
+      auto const dev = DynamicCast<QbbNetDevice>(node->GetDevice(dev_i));
+      if(dev) {
+        res.Add(dev);
+      }
+    }
+  }
+
+  // Each node should have exactly one net device!
+  NS_ABORT_IF(res.GetN() != m_nodes.size());
+
+  return res;
+}
+
 void RdmaNetwork::CreateLinks()
 {
   // Create the links; and initialize `p2p.iface`
@@ -363,6 +295,10 @@ void RdmaNetwork::CreateLinks()
   uint64_t next_rng_seed{m_config->rng_seed};
 
   size_t link_id{0};
+
+  // Note: since `m_qbb` is member, we need to pay attention to reset the fields for each link.
+
+  // Iterate all links in the configuration topology.
 	for (const RdmaTopology::Link& link : m_topology->links) {
     
 		const node_id_t src{link.src};
@@ -370,10 +306,12 @@ void RdmaNetwork::CreateLinks()
 		const Ptr<Node> snode{FindNode(link.src)};
 		const Ptr<Node> dnode{FindNode(link.dst)};
 
+    // Set link delay and bandwidth based on the configuration.
 		m_qbb.SetDeviceAttribute("DataRate", DataRateValue(DataRate(link.bandwidth)));
 		m_qbb.SetChannelAttribute("Delay", TimeValue(Seconds(link.latency)));
 
-		if (link.error_rate > 0) // Set the packet drop rate if necessary, otherwise never drop
+    // Set the packet drop rate if necessary, otherwise never drop
+		if(link.error_rate > 0)
 		{
 			Ptr<RateErrorModel> rem{CreateObject<RateErrorModel>()};
 			Ptr<UniformRandomVariable> uv{CreateObject<UniformRandomVariable>()};
@@ -383,100 +321,139 @@ void RdmaNetwork::CreateLinks()
 			rem->SetAttribute("ErrorUnit", StringValue("ERROR_UNIT_PACKET"));
 			m_qbb.SetDeviceAttribute("ReceiveErrorModel", PointerValue(rem));
 		}
-
-		// Assigne server IP
-		// Note: this should be before the automatic assignment below (ipv4.Assign(d)),
-		// because we want our IP to be the primary IP (first in the IP address list),
-		// so that the global routing is based on our IP
-
-		NetDeviceContainer d{m_qbb.Install(snode, dnode)};
-    
-		// Used to create a graph of the topology
-    // Initialize both src -> dst and dst -> src
-    
-    const std::array<Ptr<Node>, 2> pair{snode, dnode};
-    for(size_t i{0}; i < pair.size(); i++) {
-      const Ptr<Node> src{pair[i]};
-      const Ptr<Node> dst{pair[1 - i]};
-
-      if (!IsSwitchNode(src)) {
-        Ptr<Ipv4> ipv4 = src->GetObject<Ipv4>();
-        ipv4->AddInterface(d.Get(i));
-        ipv4->AddAddress(1, Ipv4InterfaceAddress(GetNodeIp(src->GetId()), Ipv4Mask(0xff000000)));
-      }
-  
-      m_p2p[src][dst].iface.idx = DynamicCast<QbbNetDevice>(d.Get(i))->GetIfIndex();
-      m_p2p[src][dst].iface.up = true;
-      m_p2p[src][dst].iface.delay = DynamicCast<QbbChannel>(DynamicCast<QbbNetDevice>(d.Get(i))->GetChannel())->GetDelay();
-      m_p2p[src][dst].iface.bw = DynamicCast<QbbNetDevice>(d.Get(i))->GetDataRate();
-
-      // Setup PFC trace
-      if(!m_config->pfc_output_file.empty()) {
-        Ptr<QbbNetDevice> qbb{DynamicCast<QbbNetDevice>(d.Get(i))};
-        qbb->TraceConnectWithoutContext("QbbPfc",
-          MakeLambdaCallback<uint32_t>([this, qbb](uint32_t type) {
-            MonitorPfc(qbb, type);
-          }
-        ));
-      }
-
-      NS_LOG_LOGIC("Link n=("
-        << src->GetId() << ", "
-        << dst->GetId() << "): node "
-        << src->GetId() << " use iface "
-        << d.Get(i)->GetIfIndex());
+    else {
+      // Set the error model as NULL.
+			m_qbb.SetDeviceAttribute("ReceiveErrorModel", PointerValue());
     }
 
-		// This is just to set up the connectivity between nodes. The IP addresses are useless
+		// Create the net devices.
+    // A net device is just a queue to receive and send packets.
+    // This does not assign any IP address for now, just a MAC address.
+		NetDeviceContainer pair_devs{m_qbb.Install(snode, dnode)};
     
-		char ipstring[32];
-		snprintf(ipstring, sizeof(ipstring), "10.%d.%d.0", link_id / 254 + 1, link_id % 254 + 1);
-    Ipv4AddressHelper ipv4;
-		ipv4.SetBase(ipstring, "255.255.255.0");
-		ipv4.Assign(d);
+		// Create a graph of the topology.
+    const std::array<Ptr<Node>, 2> pair_nodes{snode, dnode};
+    
+    // Iterate for `snode -> dnode` and `dnode -> snode`.
+    // `i` can only be zero or one.
+    for(size_t i{0}; i < pair_nodes.size(); i++) {
+      const Ptr<Node> src{pair_nodes[i]};
+      const Ptr<Node> dst{pair_nodes[1 - i]};
+      const Ptr<QbbNetDevice> src_dev{DynamicCast<QbbNetDevice>(pair_devs.Get(i))};
+      const Ptr<QbbChannel> src_channel{DynamicCast<QbbChannel>(src_dev->GetChannel())};
+
+      // Assign the IP address on `src`.
+      if (!IsSwitchNode(src)) {
+        Ptr<Ipv4> ipv4{src->GetObject<Ipv4>()};
+        
+        // Associate the net device as the output interface during packet forwarding.
+        const uint32_t iface{ipv4->AddInterface(src_dev)};
+        NS_ABORT_MSG_IF(iface != 1, "The node should have no interface");
+
+        // Assign the IP address to the just added interface.
+        const bool success{ipv4->AddAddress(iface, Ipv4InterfaceAddress(GetNodeIp(src->GetId()), Ipv4Mask(0xff000000)))};
+        NS_ABORT_MSG_IF(!success, "Cannot assign IP address");
+      }
+  
+      // Initialize the P2P info.
+      Interface iface;
+      iface.up = true;
+      iface.idx = src_dev->GetIfIndex();
+      iface.delay = src_channel->GetDelay();
+      iface.bw = src_dev->GetDataRate();
+      m_p2p[src][dst].iface = iface;
+
+      NS_LOG_LOGIC("Link (src,dst)=("
+        << src->GetId() << ", "
+        << dst->GetId() << ")."
+        << " Source uses interface "
+        << src_dev->GetIfIndex());
+    }
+
+		// This is just to set up the connectivity between nodes.
+    // The IP addresses are useless.
+    {
+      char ipstring[32];
+      snprintf(ipstring, sizeof(ipstring), "10.%d.%d.0", link_id / 254 + 1, link_id % 254 + 1);
+      Ipv4AddressHelper ipv4;
+      ipv4.SetBase(ipstring, "255.255.255.0");
+      ipv4.Assign(pair_devs);
+    }
 
     link_id++;
 	}
 
-  NodeContainer n;
-  for(const auto& [_, node] : m_nodes) { n.Add(node); }
-  SwitchNode::Rebuild(n);
+  NodeContainer all_nodes;
+  for(const auto& [_, node] : m_nodes) {
+    all_nodes.Add(node);
+  }
+  SwitchNode::Rebuild(all_nodes);
+}
+
+bool RdmaNetwork::HaveAllServersSameBandwidth() const
+{
+  const RdmaTopology::Link* first_server_link{};
+
+	for (const RdmaTopology::Link& link : m_topology->links) {
+		const node_id_t src{link.src};
+		const node_id_t dst{link.dst};
+		const Ptr<Node> snode{FindNode(link.src)};
+		const Ptr<Node> dnode{FindNode(link.dst)};
+
+    const bool is_server_link{IsSwitchNode(snode) || !IsSwitchNode(dnode)};
+    if(is_server_link) {
+      if(!first_server_link) {
+        first_server_link = &link;
+      }
+      else if(first_server_link->bandwidth != link.bandwidth) {
+        return false;
+      }
+    }
+  }
+
+  return true;
 }
 
 void RdmaNetwork::ConfigureSwitches()
 {
+  NS_ABORT_IF(!HaveAllServersSameBandwidth());
+
+  // Get the rate of the servers.
+  // Assumes all servers have the same bandwidth.
+  // In a fat tree all servers have same link bandwidth (the lowest of the topology).
+  const uint64_t nic_rate{DynamicCast<QbbNetDevice>(begin(m_servers)->second->GetDevice(1))->GetDataRate().GetBitRate()};
+
   for (const auto& [_, sw] : m_switches) {
     
-    // Multiplies the switch memory by `1 << shift`
-    const uint32_t shift{3}; // By default 1/8 (?)
+    auto& mmu = *sw->m_mmu;
+
+    // Multiply the switch memory by `1 << shift`.
+    // By default 1/8 (original project: why?).
+    const uint32_t shift{3};
 
     for (uint32_t j = 1; j < sw->GetNDevices(); j++) {
       Ptr<QbbNetDevice> dev = DynamicCast<QbbNetDevice>(sw->GetDevice(j));
-
-      // Init ECN
+      
+      // Init ECN.
       uint64_t rate = dev->GetDataRate().GetBitRate();
       const auto ecn = FindEcnConfigFromBps(m_config->ecn, rate);
-      sw->m_mmu->ConfigEcn(j, ecn.min_buf_bytes, ecn.max_buf_bytes, ecn.max_probability);
+      mmu.ConfigEcn(j, ecn.min_buf_bytes, ecn.max_buf_bytes, ecn.max_probability);
 
-      // Init PFC
+      // Init PFC.
       const uint64_t delay{DynamicCast<QbbChannel>(dev->GetChannel())->GetDelay().GetTimeStep()};
       const uint32_t headroom{rate * delay / 8 / 1e9 * 3};
-      sw->m_mmu->ConfigHdrm(j, headroom);
-
-      // Get the rate of the servers
-      // In a fat tree all servers have same link bandwidth (the lowest of the topology)
-      const uint64_t nic_rate{DynamicCast<QbbNetDevice>(begin(m_servers)->second->GetDevice(1))->GetDataRate().GetBitRate()};
+      mmu.ConfigHdrm(j, headroom);
       
-      // Init PFC alpha, proportional to link bandwidth
-      sw->m_mmu->pfc_a_shift[j] = shift;
-      while (rate > nic_rate && sw->m_mmu->pfc_a_shift[j] > 0){
-        sw->m_mmu->pfc_a_shift[j]--;
+      // Init PFC alpha, proportional to link bandwidth.
+      mmu.pfc_a_shift[j] = shift;
+      while(rate > nic_rate && mmu.pfc_a_shift[j] > 0) {
+        mmu.pfc_a_shift[j]--;
         rate /= 2;
       }
     }
 
-    sw->m_mmu->ConfigNPort(sw->GetNDevices() - 1);
-    sw->m_mmu->node_id = sw->GetId();
+    mmu.ConfigNPort(sw->GetNDevices() - 1);
+    mmu.node_id = sw->GetId();
   }
 }
 
@@ -484,30 +461,11 @@ void RdmaNetwork::InstallRdma()
 {
 	for(const auto& [_, node] : m_servers) {
 
-    // create RdmaHw
-    
+    // Create RDMA hardware.
     Ptr<RdmaHw> rdmaHw = CreateObject<RdmaHw>();
-    
-    #if RAF_WAITS_REFACTORING
-    rdmaHw->SetAttribute("MiThresh", UintegerValue(m_config->mi_thresh));
-    #endif
-
-    #if RAF_WAITS_REFACTORING
-    rdmaHw->SetAttribute("MultiRate", BooleanValue(m_config->multi_rate));
-    rdmaHw->SetAttribute("SampleFeedback", BooleanValue(m_config->sample_feedback));
-    rdmaHw->SetAttribute("TargetUtil", DoubleValue(m_config->u_target));
-    #endif
-    
-    #if RAF_WAITS_REFACTORING
-    rdmaHw->SetAttribute("DctcpRateAI", DataRateValue(DataRate(m_config->dctcp_rate_ai)));
-    rdmaHw->SetAttribute("PintSmplThresh", UintegerValue(m_config->pint_prob * 65536));
-    #endif
 
     node->AggregateObject(rdmaHw);
     rdmaHw->Setup();
-    
-    // TODO
-    // rdmaHw->TraceConnectWithoutContext("QpComplete", MakeBoundCallback(qp_finish, fct_output, m_config.get()));
   }
 }
 
@@ -533,7 +491,6 @@ void RdmaNetwork::BuildRoutes()
 	BuildRoutingTables();
   BuildP2pInfo();
 	Ipv4GlobalRoutingHelper::PopulateRoutingTables();
-  TraceNodes();
 }
 
 void RdmaNetwork::BuildRoute(Ptr<Node> host)
@@ -544,7 +501,7 @@ void RdmaNetwork::BuildRoute(Ptr<Node> host)
 	std::map<Ptr<Node>, uint64_t> tx_delay;
 	std::map<Ptr<Node>, uint64_t> bw;
 
-	// Init BFS
+	// Init BFS.
 
 	q.push_back(host); 
 	dis[host] = 0;
@@ -552,7 +509,7 @@ void RdmaNetwork::BuildRoute(Ptr<Node> host)
 	tx_delay[host] = 0;
 	bw[host] = 0xfffffffffffffffflu;
 
-	// Run BFS
+	// Run BFS.
 
 	for (int i = 0; i < (int)q.size(); i++) {
 		Ptr<Node> now = q[i];
@@ -560,25 +517,25 @@ void RdmaNetwork::BuildRoute(Ptr<Node> host)
 		for (auto it = m_p2p[now].begin(); it != m_p2p[now].end(); it++) {
       const P2pInfo& p2p{it->second};
 
-			// skip down link
+			// Skip down links.
 			if (!p2p.iface.up) {
         continue;
       }
 			
 			Ptr<Node> next = it->first;
 
-			// If 'next' have not been visited
+			// If `next` has not been visited.
 			if (dis.find(next) == dis.end()) {
 				dis[next] = d + 1;
 				delay[next] = delay[now] + p2p.delay;
 				tx_delay[next] = tx_delay[now] + GetMtuBytes() * 1e9 * 8 / p2p.bw;
 				bw[next] = std::min(bw[now], p2p.bw);
 				
-        // We only enqueue switch, because we do not want packets to go through host as middle point
+        // We only enqueue switch, because we do not want packets to go through host as middle point.
 				if (IsSwitchNode(next)) { q.push_back(next); }
 			}
 
-			// If 'now' is on the shortest path from 'next' to 'host'
+			// If `now` is on the shortest path from `next` to `host`.
 			if (d + 1 == dis[next]){
 				m_p2p[next][host].next_hops.push_back(now);
 			}
@@ -630,13 +587,15 @@ uint64_t RdmaNetwork::GetMtuBytes() const
 
 void RdmaNetwork::BuildP2pInfo()
 {
-	// Build p2p
+	// Builds `m_maxRtt`, `m_maxBdp`;
+  // and `rtt` and `bdp` of all `P2pInfo`.
+
 	m_maxRtt = 0;
   m_maxBdp = 0;
 
   // Iterate all pairs of node from server to server
-	for (const auto& [_, src] : m_servers) {
-    for (const auto& [_, dst] : m_servers) {
+	for(const auto& [_, src] : m_servers) {
+    for(const auto& [_, dst] : m_servers) {
       NS_ASSERT(!IsSwitchNode(src));
       NS_ASSERT(!IsSwitchNode(dst));
 
@@ -644,71 +603,21 @@ void RdmaNetwork::BuildP2pInfo()
 			p2p.rtt = p2p.delay * 2 + p2p.tx_delay;
 			p2p.bdp = p2p.rtt * p2p.bw / 1e9 / 8; 
 
-			if (p2p.bdp > m_maxBdp) { m_maxBdp = p2p.bdp; }
-			if (p2p.rtt > m_maxRtt) { m_maxRtt = p2p.rtt; }
+			if(p2p.bdp > m_maxBdp) {
+        m_maxBdp = p2p.bdp;
+      }
+
+			if(p2p.rtt > m_maxRtt) {
+        m_maxRtt = p2p.rtt;
+      }
 		}
 	}
-	printf("maxRtt=%lu maxBdp=%lu\n", m_maxRtt, m_maxBdp);
+
+	NS_LOG_INFO("maxRtt=" << m_maxRtt << "; maxBdp=" << m_maxBdp);
   
 	for (const auto& [_, sw] : m_switches) {
     sw->SetAttribute("MaxRtt", UintegerValue(m_maxRtt));
 	}
-}
-
-void RdmaNetwork::TraceNodes()
-{
-	if(!m_config->enable_trace) {
-    return;
-  }
-
-  if(m_config->trace_file.empty()) {
-    return;
-  }
-
-  m_to_trace = m_config->LoadFromfile<RdmaTraceList>(m_config->trace_file);
-
-	NodeContainer trace_nodes;
-  for(node_id_t node_id : m_to_trace.nodes) {
-    trace_nodes.Add(FindNode(node_id));
-  }
-
-  m_trace_output = fopen(m_config->FindFile(m_config->trace_output_file).c_str(), "w");
-  NS_ABORT_MSG_IF(!m_trace_output, "Cannot open output trace file"); 
-  m_qbb.EnableTracing(m_trace_output, trace_nodes); 
-
-	// Dump link speed to trace file
-
-	{
-		SimSetting sim_setting;
-
-    for(auto i : m_p2p) {
-      for(auto j : i.second) {
-        if(!j.second.iface.up) {
-          continue;
-        }
-
-				uint16_t node = i.first->GetId();
-				uint8_t intf = j.second.iface.idx;
-				uint64_t bps = DynamicCast<QbbNetDevice>(i.first->GetDevice(j.second.iface.idx))->GetDataRate().GetBitRate();
-				sim_setting.port_speed[node][intf] = bps;
-      }
-    }
-
-		sim_setting.win = m_maxBdp;
-		sim_setting.Serialize(m_trace_output);
-	}
-}
-
-void RdmaNetwork::MonitorPfc(Ptr<QbbNetDevice> qbb, uint32_t type)
-{
-  NS_LOG_FUNCTION(this);
-
-  m_pfc_entries.emplace_back(
-    Simulator::Now().GetSeconds(),
-    qbb->GetNode()->GetId(),
-    qbb->GetIfIndex(),
-    type
-  );
 }
 
 } // namespace ns3

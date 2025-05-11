@@ -33,11 +33,9 @@
 #include <ns3/ag-app.h>
 #include <ns3/rdma-random.h>
 #include <ns3/ag-app-helper.h>
-#include <ns3/rdma-unicast-app-helper.h>
 #include <ns3/rdma-hw.h>
 #include <ns3/rdma-flow.h>
 #include <ns3/switch-node.h>
-#include <ns3/sim-setting.h>
 #include <ns3/json.h>
 #include <ns3/animation-interface.h>
 #include <ns3/constant-position-mobility-model.h>

@@ -39,7 +39,7 @@ endif
 
 # Default config file path (starting at git root)
 # When running ns-3
-app_config ?= rdma-config/config.json
+app_config ?= rdma-config/default-config.json
 
 # Build type when configuring CMake
 build_type ?= default
@@ -94,7 +94,7 @@ run_bash:
 
 .PHONY: gen_avro
 gen_avro:
-	$(docker_run) ./simulation/src/rdma/serdes/schemas/gen-avro-headers.sh
+	$(docker_run) ./simulation/src/rdma/serdes/scripts/gen-avro-headers.sh
 
 #################
 ################# Analysis

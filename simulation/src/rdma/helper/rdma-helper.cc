@@ -82,7 +82,7 @@ Ranges::Ranges(const std::string& expr)
   }
 }
 
-Element Ranges::ParseNext(std::istringstream& is)
+Ranges::Element Ranges::ParseNext(std::istringstream& is)
 {
   // Will contain eg. "0" or "1-2".
   std::string expr;
@@ -120,6 +120,45 @@ Element Ranges::ParseNext(std::istringstream& is)
   }
 
   return Range{first, last};
+}
+
+namespace
+{
+
+class UniquePortTag : public Object
+{
+public:
+  static TypeId GetTypeId()
+  {
+    static TypeId tid = TypeId("ns3::UniquePortTag")
+    .SetParent<Object>()
+    .AddConstructor<UniquePortTag>();
+
+    return tid;
+  }
+
+public:
+  uint16_t GetNextPort()
+  {
+    return m_next_port++;
+  }
+
+private:
+  uint16_t m_next_port{2000};
+};
+
+} // namespace
+
+uint16_t GetNextUniquePort(Ptr<Node> node)
+{
+  Ptr<UniquePortTag> tag;
+  tag = node->GetObject<UniquePortTag>();
+  if(!tag) {
+    tag = CreateObject<UniquePortTag>();
+    node->AggregateObject(tag);
+  }
+
+  return tag->GetNextPort();
 }
 
 } // namespace ns3

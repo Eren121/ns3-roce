@@ -49,4 +49,6 @@ RUN git clone https://github.com/apache/avro /avro \
   && cmake --build build --target install \
   && cmake --build build --target clean
 
+RUN apt -y install ninja-build
+
 WORKDIR /app

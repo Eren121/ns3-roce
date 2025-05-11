@@ -1,14 +1,15 @@
-#include <ns3/rdma-unreliable-qp.h>
-#include <ns3/qbb-net-device.h>
-#include <ns3/rdma-bth.h>
-#include <ns3/rdma-seq-header.h>
-#include <ns3/cn-header.h>
-#include <ns3/ppp-header.h>
-#include <ns3/qbb-header.h>
-#include <ns3/rdma-seq-header.h>
-#include <ns3/simulator.h>
-#include <ns3/rdma-hw.h>
-#include <ns3/log.h>
+#include "ns3/rdma-unreliable-qp.h"
+#include "ns3/rdma-helper.h"
+#include "ns3/qbb-net-device.h"
+#include "ns3/rdma-bth.h"
+#include "ns3/rdma-seq-header.h"
+#include "ns3/cn-header.h"
+#include "ns3/ppp-header.h"
+#include "ns3/qbb-header.h"
+#include "ns3/rdma-seq-header.h"
+#include "ns3/simulator.h"
+#include "ns3/rdma-hw.h"
+#include "ns3/log.h"
 
 namespace ns3 {
 
@@ -16,9 +17,7 @@ NS_LOG_COMPONENT_DEFINE("RdmaUnreliableQP");
 
 void RdmaUnreliableSQ::PostSend(RdmaTxQueuePair::SendRequest sr)
 {
-  NS_LOG_FUNCTION(this);
-
-	NS_ASSERT_MSG(sr.payload_size <= m_mtu, "UD QP max. message size is MTU");
+  	NS_LOG_FUNCTION(this);
 
 	m_to_send.push(std::move(sr));	
 	TriggerDevTransmit();
@@ -31,7 +30,7 @@ bool RdmaUnreliableSQ::HasDataToSend() const
 
 bool RdmaUnreliableSQ::IsReadyToSend() const
 {
-  NS_LOG_FUNCTION(this);
+  	NS_LOG_FUNCTION(this);
 
 	const bool timer_ready = Simulator::Now().GetTimeStep() >= m_nextAvail.GetTimeStep();
 	const bool ready = HasDataToSend() && timer_ready;
@@ -43,14 +42,10 @@ bool RdmaUnreliableSQ::IsReadyToSend() const
 
 Ptr<Packet> RdmaUnreliableSQ::GetNextPacket()
 {
-  NS_LOG_FUNCTION(this);
-	if(m_to_send.empty()) {
-		NS_ASSERT(false);
-		return nullptr;
-	}
-
+  	NS_LOG_FUNCTION(this);
+	NS_ABORT_IF(m_to_send.empty());
+	
 	SendRequest sr = m_to_send.front();
-	NS_ASSERT_MSG(sr.payload_size <= m_mtu, "UD QP max. message size is MTU");
 
 	RdmaBTH bth;
 	bth.SetReliable(false);
@@ -59,12 +54,25 @@ Ptr<Packet> RdmaUnreliableSQ::GetNextPacket()
 	bth.SetDestQpKey(sr.dport);
 	bth.SetNotif(true);
 	bth.SetImm(sr.imm);
-	m_to_send.pop();
 
-	// UD QP notification is when sent, not when ACKed, because there is no ACK
-	// In fact, the packet still neds to be transmited, but maybe it is enough to call it here
-	if(sr.on_send) {
+	// Split big RDMA Write in MTU-Sized packets.
+	if(sr.payload_size > m_mtu) {
+		sr.payload_size = m_mtu;
+		m_to_send.front().payload_size -= m_mtu;
+
+		// Do not notify, RDMA Write is fragmented in multiple packets.
+		bth.SetNotif(false);
+	}
+	else {
+		// RDMA Write is complete.
+		m_to_send.pop();
+
+		// There is no ACK with unreliable QPs.
+		// The notification on the sender side is when the packet is sent, and we don't care if the RX receives it.
+		// In fact, the packet still neds to be transmited, but maybe it is enough to call it here.
+		if(sr.on_send) {
 			sr.on_send();
+		}
 	}
 	
 	Ptr<Packet> p = Create<Packet>(sr.payload_size);
@@ -100,9 +108,13 @@ Ptr<Packet> RdmaUnreliableSQ::GetNextPacket()
 	// Add BTH header
 	p->AddPacketTag(bth);
 
+	NS_LOG_LOGIC("Send (psn, ipid) =(" << m_snd_nxt << ", " << m_ipid << ")	");
+
 	// Update state
 	m_snd_nxt += sr.payload_size;
-	m_ipid++;
+
+	// Wraps around
+	m_ipid = wrapped_increment(m_ipid);
 
 	// return
 	return p;
@@ -111,7 +123,7 @@ Ptr<Packet> RdmaUnreliableSQ::GetNextPacket()
 
 void RdmaUnreliableRQ::ReceiveUdp(Ptr<Packet> p, const CustomHeader &ch)
 {
-  NS_LOG_FUNCTION(this);
+  	NS_LOG_FUNCTION(this);
 	
 	RdmaRxQueuePair::ReceiveUdp(p, ch);
 

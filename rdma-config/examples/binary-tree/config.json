@@ -47,12 +47,11 @@
   },
 
   "topology_file": "topology.json",
-  "flow_file": "flow.json",
+  "flows_file": "flows.json",
   "groups_file": "groups.json",
   "trace_file": "trace.json",
   
   "trace_output_file": "",
-  "fct_output_file": "out_fct.txt",
   "pfc_output_file": "out_pfc.json",
   "anim_output_file": "out_anim.xml",
 

@@ -1,0 +1,10 @@
+{
+  "type": "record",
+  "name": "PfcRecord",
+  "fields" : [
+      {"name": "time", "type": "double"},
+      {"name": "node", "type": "int"},
+      {"name": "dev", "type" : "int"},
+      {"name": "paused", "type" : "boolean"}
+  ]
+}

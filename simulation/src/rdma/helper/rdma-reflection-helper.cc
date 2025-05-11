@@ -42,7 +42,7 @@ bool IsExactInteger(double value)
   return {modf(value, &int_part) == 0.0};
 }
 
-Ptr<AttributeValue> ConvertJsonToAttribute(const rfl::Generic& obj, const TypeId::AttributeInformation& info)
+Ptr<AttributeValue> ConvertJsonToAttribute(const SerializedJsonAny& obj, const TypeId::AttributeInformation& info)
 {
   std::string type;
   if(info.checker) {
@@ -132,4 +132,23 @@ TypeId::AttributeInformation FindConfigAttribute(const std::string& fullName)
   NS_ABORT_MSG("Cannot find field " << fullName);
 }
   
+namespace {
+
+[[maybe_unused]]
+void compilation_test_should_success()
+{
+  // Check serialization works
+  struct TestStruct
+  {
+    std::string type;
+    std::optional<Time> start_time;
+    std::optional<bool> background; //! A background flow is not required to complete to finish the simulation
+    SerializedJsonObject parameters;
+  };
+  
+  rfl::json::read<TestStruct>("{}");
+}
+
+} //namespace
+
 } // namespace ns3

@@ -1,5 +1,5 @@
 {
-  "defaults": {
+  "default_attributes": {
     "ns3::SwitchNode::EcnEnabled": true,
 
     "ns3::QbbNetDevice::PauseTime": 5e-6,
@@ -29,39 +29,11 @@
     "ns3::SwitchMmu::BufferSize": "12MiB"
   },
 
-  "enable_trace": false,
-  "qlen_monitor": {
-    "enable": false,
-    "output": "out_qlen.json",
-    "start": 0,
-    "end": 1e9,
-    "interval": 1e-6
-  },
-
-  "qp_monitor": {
-    "enable": false,
-    "output": "out_qp.json",
-    "start": 0,
-    "end": 1e9,
-    "interval": 1e-6
-  },
-
-  "topology_file": "topology.json",
-  "flow_file": "flow.json",
+  "topology_file": "default-topology.json",
+  "flows_file": "default-flows.json",
   "groups_file": "groups.json",
-  "trace_file": "trace.json",
-  
-  "trace_output_file": "",
-  "fct_output_file": "out_fct.txt",
-  "pfc_output_file": "out_pfc.json",
-  "anim_output_file": "out_anim.xml",
 
-  "simulator_stop_time": 0.06,
-  
-  "link_stats_monitor": {
-    "enable": false,
-    "output_bytes": "out_link_bytes.json"
-  },
+  "simulator_stop_time": 0,
 
   "ack_high_prio": false,
   "rng_seed": 50,
@@ -84,6 +56,50 @@
       "min_buf_bytes": 400e3,
       "max_buf_bytes": 1600e3,
       "max_probability": 0.2
+    }
+  ],
+
+  "modules": [
+    {
+      "path": "ns3::SwitchBufferMonitor",
+      "enable": false,
+      "attributes": {
+        "AvroOutputFile": "out_sw_mem.avro",
+        "StartTime": 0,
+        "StopTime": 0,
+        "IntervalTime": 1e-6
+      }
+    },
+    {
+      "path": "ns3::QpMonitor",
+      "enable": false,
+      "attributes": {
+        "AvroOutputFile": "out_qp.avro",
+        "StartTime": 0,
+        "StopTime": 1e9,
+        "IntervalTime": 1e-6
+      }
+    },
+    {
+      "path": "ns3::AnimMonitor",
+      "enable": false,
+      "attributes": {
+        "XmlOutput": "out_anim.xml"
+      }
+    },
+    {
+      "path": "ns3::PfcMonitor",
+      "enable": false,
+      "attributes": {
+        "AvroOutput": "out_pfc.avro"
+      }
+    },
+    {
+      "path": "ns3::TxMonitor",
+      "enable": false,
+      "attributes": {
+        "AvroOutput": "out_link_bytes.avro"
+      }
     }
   ]
 }

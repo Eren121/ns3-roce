@@ -11,10 +11,12 @@ if(reflectcpp_FOUND)
       ag/ag-runtime.cc
       ag/ag-shared.cc
       app/rdma-flow.cc
+      app/rdma-flow-scheduler.cc
       app/rdma-network.cc
-      app/rdma-qlen-monitor.cc
-      app/rdma-unicast-app.cc
-      app/rdma-unicast-app-helper.cc
+      app/rdma-switch-buffer-monitor.cc
+      app/rdma-pfc-monitor.cc
+      app/rdma-tx-monitor.cc
+      app/flows/rdma-flow-unicast.cc
       helper/filesystem.cc
       helper/rdma-helper.cc
       helper/rdma-reflection-helper.cc
@@ -45,12 +47,11 @@ if(reflectcpp_FOUND)
       ag/ag-runtime.cc
       ag/ag-shared.cc
       app/rdma-config.cc
+      app/rdma-config-module.cc
       app/rdma-flow.cc
       app/rdma-network.cc
-      app/rdma-qlen-monitor.cc
+      app/rdma-switch-buffer-monitor.cc
       app/rdma-qp-monitor.cc
-      app/rdma-unicast-app.cc
-      app/rdma-unicast-app-helper.cc
       helper/rdma-helper.cc
       helper/rdma-reflection-helper.cc
       model/broadcom-egress-queue.cc
@@ -75,25 +76,31 @@ if(reflectcpp_FOUND)
       model/switch-mmu.cc
       model/switch-node.cc        
     HEADER_FILES
-      serdes/ag-recv-chunk-record.h
-      serdes/rdma-serdes.h
+      serdes/generated/ag-recv-chunk-record.h
+      serdes/generated/pfc-record.h
+      serdes/generated/tx-record.h
+      serdes/generated/sw-mem-record.h
+      serdes/generated/qp-record.h
       ag/ag-app.h
       ag/ag-app-helper.h
       ag/ag-config.h
       ag/ag-runtime.h
       ag/ag-shared.h
       app/rdma-config.h
+      app/rdma-config-module.h
       app/rdma-flow.h
+      app/rdma-flow-scheduler.h
       app/rdma-network.h
-      app/rdma-qlen-monitor.h
+      app/rdma-switch-buffer-monitor.h
+      app/rdma-tx-monitor.h
+      app/rdma-pfc-monitor.h
       app/rdma-qp-monitor.h
-      app/rdma-unicast-app.h
-      app/rdma-unicast-app-helper.h
-      app/sim-setting.h
+      app/flows/rdma-flow-unicast.h
       helper/filesystem.h
       helper/json.h
       helper/rdma-helper.h
       helper/rdma-reflection-helper.h
+      helper/rdma-serdes.h
       model/broadcom-egress-queue.h
       model/cn-header.h
       model/custom-header.h

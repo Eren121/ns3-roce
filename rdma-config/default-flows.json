@@ -1,0 +1,17 @@
+{
+  "flows": [
+    {
+      "path": "ns3::RdmaFlowUnicast",
+      "enable": true,
+      "start_time": 0.0,
+      "in_background": false,
+      "attributes": {
+        "SourceNode": 100,
+        "DestinationNode": 101,
+        "IsReliable": false,
+        "PfcPriority": 3,
+        "WriteByteAmount": 1e6
+      }
+    }
+  ]
+}

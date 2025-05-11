@@ -1,5 +1,8 @@
 #pragma once
 
+#include "ns3/rdma-serdes.h"
+#include "ns3/qp-record.h"
+#include "ns3/rdma-config-module.h"
 #include "ns3/rdma-helper.h"
 #include "ns3/filesystem.h"
 #include <cstdint>
@@ -11,48 +14,43 @@ namespace ns3 {
 class RdmaNetwork;
 class RdmaReliableSQ;
 
-struct QpRecord
-{
-  node_id_t node; //! Source node
-  uint64_t key; //! Source QP key
-  double time; //! Time data is gather
-
-  byte_t acked; //! Lowest unacked PSN
-  byte_t send; //! Lowest unsent PSN
-  byte_t end; //! Amount of bytes pushed to the SQ to be transmitted
-};
-
-class QpMonitor
+/**
+ * Module to monitors the progress of all RDMA queue pairs.
+ * 
+ * The available columns in the records are:
+ * - node: Source node.
+ * - lkey: Source QP key.
+ * - time: Time data is gather.
+ * - lowest_unacked_psn: Lowest unacked PSN.
+ * - lowest_unsent_psn: Lowest unsent PSN.
+ * - end_work_psn: Amount of bytes pushed to the SQ to be transmitted.
+ */
+class QpMonitor final : public RdmaConfigModule
 {
 public:
-  struct Config
-  {
-    Time start;
-    Time end;
-    Time interval;
-    fs::path output; //!< JSON output
-    bool enable;
-  };
+    static TypeId GetTypeId();
 
 public:
-  QpMonitor(const RdmaNetwork& network);
-  ~QpMonitor();
+    ~QpMonitor();
+    void OnModuleLoaded(RdmaNetwork& network) override;
 
-  void Start();
-  bool Enabled() const;
-
-private:
-  void GatherData();
-  void Dump() const;
+    void Resume();
+    void Pause();
 
 private:
-  const RdmaNetwork& m_network;
-  PeriodicEvent m_event;
-  Config m_config;
-  NodeMap m_monitored;
-  std::vector<QpRecord> m_records;
-  std::vector<EventId> m_events;
-  std::unordered_map<Ptr<RdmaReliableSQ>, uint64_t> m_paused_sqs;
+    void OnInterval();
+
+private:
+    std::string m_avro_out;
+    Time m_start;
+    Time m_stop;
+    Time m_interval;
+    
+    PeriodicEvent m_event;
+    NodeMap m_monitored;
+    std::vector<EventId> m_events;
+    std::unordered_map<Ptr<RdmaReliableSQ>, uint64_t> m_paused_sqs;
+    RdmaSerializer<QpRecord> m_record_writer;
 };
 
 } // namespace ns3

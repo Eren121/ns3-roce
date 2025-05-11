@@ -1,0 +1,9 @@
+{
+  "type": "record",
+  "name": "TxRecord",
+  "fields" : [
+      {"name": "src", "type": "int"},
+      {"name": "dst", "type": "int"},
+      {"name": "bytes", "type" : "long"}
+  ]
+}

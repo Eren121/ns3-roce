@@ -1,0 +1,11 @@
+{
+  "type": "record",
+  "name": "SwMemRecord",
+  "fields" : [
+      {"name": "node", "type": "int"},
+      {"name": "iface", "type": "int"},
+      {"name": "time", "type" : "double"},
+      {"name": "egress_bytes", "type" : "long"},
+      {"name": "ingress_bytes", "type" : "long"}
+  ]
+}

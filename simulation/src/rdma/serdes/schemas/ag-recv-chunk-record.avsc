@@ -3,7 +3,7 @@
   "name": "AgRecvChunkRecord",
   "fields" : [
       {"name": "node", "type": "int"},
-      {"name": "chunk", "type": "int"},
+      {"name": "chunk", "type": "long"},
       {"name": "time", "type" : "double"}
   ]
 }

@@ -297,6 +297,8 @@ Ptr<Packet> RdmaReliableSQ::GetNextPacket()
 
 	// Update state
 	m_snd_nxt += packet_size;
+
+	// Wrap-around is guaranteed in C++. This will reset to zero after overflow.
 	m_ipid++;
 
 	if(bth.GetAckReq()) {

@@ -12,7 +12,7 @@ public:
 	using psn_t = uint64_t;
 	
 	RdmaReliableSQ(Ptr<Node> node, uint16_t pg, Ipv4Address sip, uint16_t sport, Ipv4Address dip, uint16_t dport);
-  ~RdmaReliableSQ() override;
+  	~RdmaReliableSQ() override;
 	
 	void SetAckInterval(uint64_t chunk, uint64_t ack_interval);
 	void SetWin(uint32_t win);
@@ -51,7 +51,7 @@ private:
 	uint16_t m_dport{0};
 	uint16_t m_ipid{0};
 	uint64_t m_snd_nxt{0}; 	  		//<! Next PSN to send.
-  uint64_t m_snd_una{0}; 	  		//<! Lowest PSN unacknowledged.
+  	uint64_t m_snd_una{0}; 	  		//<! Lowest PSN unacknowledged.
 	uint32_t m_win{0}; 	   	  		//<! Bound of on-the-fly packets.
 	bool m_var_win{false}; 	  		//<! Variable window size?
 	uint64_t m_next_op_first_psn{};

@@ -1,6 +1,9 @@
 #pragma once
 
 #include "ns3/nstime.h"
+#include "ns3/string.h"
+#include "ns3/boolean.h"
+#include "ns3/uinteger.h"
 #include "ns3/type-id.h"
 #include "ns3/object-factory.h"
 #include <rfl/json.hpp>
@@ -33,9 +36,16 @@ constexpr PrimitiveTypeCategory CategoryOf =
   : std::is_integral_v<T>                      ? PrimitiveTypeCategory::Integer
   : std::is_floating_point_v<T>                ? PrimitiveTypeCategory::Double
   : std::is_same_v<T, std::string>             ? PrimitiveTypeCategory::String
-  : PrimitiveTypeCategory::Unknown;
+  :                                              PrimitiveTypeCategory::Unknown;
 
-using SerializedType = rfl::Variant<int64_t, double, std::string>;
+//! Represents a serialized C++ object, but can only represent basic types (primitives and string).
+using SerializedPrimitive = rfl::Variant<int64_t, double, std::string>;
+
+//! Represents any serialized JSON object.
+using SerializedJsonObject = rfl::Object<rfl::Generic>;
+
+//! Represents any serialized JSON object, or a primitive type.
+using SerializedJsonAny = rfl::Generic;
 
 } // namespace ns3
 
@@ -47,12 +57,17 @@ namespace rfl
  *
  * Time can be stored as numeric (in seconds) or as a string.
  * Serialization always serializes as numeric.
+ *
+ * @see https://rfl.getml.com/custom_parser/.
  */
 template <>
 struct Reflector<ns3::Time> {
 
+  //! The specialization of `Reflector` must have `ReflType` as member.
+  using ReflType = ns3::SerializedPrimitive;
+
   //! Deserializes the given time.
-  static ns3::Time to(const SerializedType& v) noexcept {
+  static ns3::Time to(const ns3::SerializedPrimitive& v) noexcept {
 
     // Support storing the Time in multiple different types.
     return v.visit([](const auto& underlying) {
@@ -74,7 +89,7 @@ struct Reflector<ns3::Time> {
   }
 
   //! Serializes the given time.
-  static SerializedType from(const ns3::Time& v) {
+  static ns3::SerializedPrimitive from(const ns3::Time& v) {
     return v.GetSeconds();
   }
 };
@@ -89,32 +104,127 @@ namespace ns3
  */
 bool IsExactInteger(double value);
 
-void PopulateAttributes(ObjectBase& obj, const rfl::Object<rfl::Generic>& config);
-void PopulateAttributes(ObjectFactory& factory, const rfl::Object<rfl::Generic>& config);
+/**
+ * @{
+ * Sets all attributes from a configuration to a ns3 object.
+ * @param ns3_obj The ns3 object ot modify the attributes.
+ * @param attributes The key-value serialized JSON object to apply the attributes.
+ *
+ * Crashs if an attribute does not exist in the ns3 object.
+ */
+void PopulateAttributes(ObjectBase& ns3_obj, const SerializedJsonObject& attributes);
 
 /**
- * From any structure `T` copy all the fields of `config` to the ns3 object.
+ * Wrapper that intelligentely extract C++ fields of the POD `attributes` dynamically.
  */
 template<typename T>
-void PopulateAttributes(ObjectBase& obj, const T& config)
+void PopulateAttributes(ObjectBase& ns3_obj, const T& attributes)
 {
-  PopulateAttributes(obj, rfl::to_generic(config).to_object().value());
+  PopulateAttributes(ns3_obj, rfl::to_generic(attributes).to_object().value());
 }
+//! @}
 
+/**
+ * @{
+ * Modifies the factory so any object created with the factory will have the attributes given in `attributes`.
+ */
+void PopulateAttributes(ObjectFactory& ns3_factory, const SerializedJsonObject& attributes);
+
+/**
+ * Wrapper that intelligentely extract C++ fields of the POD `attributes` dynamically.
+ */
 template<typename T>
 void PopulateAttributes(ObjectFactory& factory, const T& config)
 {
   PopulateAttributes(factory, rfl::to_generic(config).to_object().value());
 }
+//! @}
 
 /**
- * @param info Hint to interpret the Json value.
+ * Converts any serialized value to an attribute value.
+ * Crashs if it's impossible.
+ * The resulting attribute value can be used to set the attribute `info`.
+ *
+ * @param info Hint that helps to interpret the serialized value.
+ * For example, if `obj` is numeric but `info` is a Time,
+ * this will interpret the numeric value as an amount of seconds.
  */
-Ptr<AttributeValue> ConvertJsonToAttribute(const rfl::Generic& obj, const TypeId::AttributeInformation& info = {});
+Ptr<AttributeValue> ConvertJsonToAttribute(const SerializedJsonAny& obj, const TypeId::AttributeInformation& info = {});
 
 /**
+ * Finds a ns3 attribute globally from the full name of the attribute.
+ * Crashs if the attribute is not found.
  * @return Attribute information from the full name.
  */
 TypeId::AttributeInformation FindConfigAttribute(const std::string& fullName);
+
+/**
+ * Adds a Time attribute by typing less.
+ */
+template<typename T, typename F>
+void AddTimeAttribute(TypeId& tid,
+  const char* const field_name,
+  const char* const field_description,
+  F T::*field)
+{
+  tid.AddAttribute(
+    field_name,
+    field_description,
+    TimeValue(),
+    MakeTimeAccessor(field),
+    MakeTimeChecker());
+}
+
+/**
+ * Adds a String attribute by typing less.
+ */
+template<typename T, typename F>
+void AddStringAttribute(TypeId& tid,
+  const char* const field_name,
+  const char* const field_description,
+  F T::*field)
+{
+  tid.AddAttribute(
+    field_name,
+    field_description,
+    StringValue(),
+    MakeStringAccessor(field),
+    MakeStringChecker());
+}
+
+
+/**
+ * Adds a Boolean attribute by typing less.
+ */
+template<typename T, typename F>
+void AddBooleanAttribute(TypeId& tid,
+  const char* const field_name,
+  const char* const field_description,
+  F T::*field)
+{
+  tid.AddAttribute(
+    field_name,
+    field_description,
+    BooleanValue(false),
+    MakeBooleanAccessor(field),
+    MakeBooleanChecker());
+}
+
+/**
+ * Adds an unsigned integer attribute by typing less.
+ */
+template<typename T, typename F>
+void AddUintegerAttribute(TypeId& tid,
+  const char* const field_name,
+  const char* const field_description,
+  F T::*field)
+{
+  tid.AddAttribute(
+    field_name,
+    field_description,
+    UintegerValue(0),
+    MakeUintegerAccessor(field),
+    MakeUintegerChecker<F>());
+}
 
 } // namespace ns3

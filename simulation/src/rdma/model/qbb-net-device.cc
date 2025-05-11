@@ -276,7 +276,7 @@ NS_LOG_COMPONENT_DEFINE("QbbNetDevice");
 		if (!m_linkUp) return; // if link is down, return
 		if (m_txMachineState == BUSY) return;	// Quit if channel busy
 		Ptr<Packet> p;
-		if (!IsSwitchNode(m_node)){
+		if (!IsSwitchNode(m_node)) {
 			int qIndex = m_rdmaEQ->GetNextQindex(m_paused);
 			if (qIndex != -1024) {
 				if (qIndex == -1){ // high prio

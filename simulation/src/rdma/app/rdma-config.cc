@@ -41,7 +41,7 @@ fs::path RdmaConfig::FindFile(const fs::path& path) const
 
 void RdmaConfig::ApplyDefaultAttributes() const
 {
-	for(const auto& [key, val] : defaults) {
+	for(const auto& [key, val] : default_attributes) {
 		Ptr<AttributeValue> new_val{ConvertJsonToAttribute(val, FindConfigAttribute(key))};
 		Config::SetDefault(key, *new_val);
 		NS_LOG_INFO("Set " << key << " to " << new_val->SerializeToString(MakeEmptyAttributeChecker()));
