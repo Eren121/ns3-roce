@@ -117,10 +117,12 @@ if(reflectcpp_FOUND)
       model/switch-mmu.h
       model/switch-node.h
       model/trace-format.h
-    LIBRARIES_TO_LINK reflectcpp ${libavrocpp}
-                      ${libinternet}
-                      ${libnetwork}
-                      ${libpoint-to-point}
-                      ${libapplications}
+    LIBRARIES_TO_LINK
+      reflectcpp
+      ${libavrocpp}
+      ${libinternet}
+      ${libnetwork}
+      ${libpoint-to-point}
+      ${libapplications}
   )
 endif()

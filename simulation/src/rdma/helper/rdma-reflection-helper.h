@@ -7,51 +7,74 @@
 #include <rfl.hpp>
 #include <type_traits>
 
+/**
+ * @file This file contains a bunch of utility functions for conversions between ns3 type system, JSON and C++ types.
+ *
+ * We use the RFL library to automatically map C++ types to JSON.
+ */
+
 namespace ns3
 {
 
-enum class RflType {
+enum class PrimitiveTypeCategory {
   Bool, Integer, Double, String, Unknown
 };
 
+/*
+ * Permits to categorize types:
+ * - All integers (all sizes, regardless of signedness) are `Integer`.
+ * - All floating-point types are `Double`.
+ * - Only `std::string` is `String`.
+ * - All other types are `Unknown`.
+ */
 template<typename V, typename T = std::decay_t<V>>
-constexpr RflType rflTypeOf = 
-    std::is_same_v<T, bool>                    ? RflType::Bool
-  : std::is_integral_v<T>                      ? RflType::Integer
-  : std::is_floating_point_v<T>                ? RflType::Double
-  : std::is_same_v<T, std::string>             ? RflType::String
-  : RflType::Unknown;
-}
+constexpr PrimitiveTypeCategory CategoryOf = 
+    std::is_same_v<T, bool>                    ? PrimitiveTypeCategory::Bool
+  : std::is_integral_v<T>                      ? PrimitiveTypeCategory::Integer
+  : std::is_floating_point_v<T>                ? PrimitiveTypeCategory::Double
+  : std::is_same_v<T, std::string>             ? PrimitiveTypeCategory::String
+  : PrimitiveTypeCategory::Unknown;
+
+using SerializedType = rfl::Variant<int64_t, double, std::string>;
+
+} // namespace ns3
 
 namespace rfl
 {
 
 /**
- * Make `ns3::Time` usable with `rfl` reflection.
- * Allow `ns3::Time` to be stored as numeric (seconds) or string.
- * Serialization stores as numeric.
+ * Specialization of RFL library to make `ns3::Time` serializable.
+ *
+ * Time can be stored as numeric (in seconds) or as a string.
+ * Serialization always serializes as numeric.
  */
 template <>
 struct Reflector<ns3::Time> {
-  using ReflType = rfl::Variant<int64_t, double, std::string>;
 
-  static ns3::Time to(const ReflType& v) noexcept {
+  //! Deserializes the given time.
+  static ns3::Time to(const SerializedType& v) noexcept {
+
+    // Support storing the Time in multiple different types.
     return v.visit([](const auto& underlying) {
-      constexpr ns3::RflType type = ns3::rflTypeOf<decltype(underlying)>; 
-      
-      if constexpr(type == ns3::RflType::Integer
-                || type == ns3::RflType::Double) {
+      // Here `underlying` is the basic C++ type (int, string...) were is stored the time.
+      constexpr ns3::PrimitiveTypeCategory type = ns3::CategoryOf<decltype(underlying)>; 
+      constexpr bool is_numeric = (type == ns3::PrimitiveTypeCategory::Integer || type == ns3::PrimitiveTypeCategory::Double);
+
+      // Floats and integers are converted to seconds.
+      if constexpr(is_numeric) {
         return ns3::Seconds(underlying);
       }
-      else if constexpr(type == ns3::RflType::String) {
+      // String is parsed by `Time` constructor.
+      else if constexpr(type == ns3::PrimitiveTypeCategory::String) {
         return ns3::Time{underlying};
       }
-
+      // Otherwise crash.
       NS_ABORT_MSG("Cannot convert object to ns3::Time");
     });
   }
 
-  static ReflType from(const ns3::Time& v) {
+  //! Serializes the given time.
+  static SerializedType from(const ns3::Time& v) {
     return v.GetSeconds();
   }
 };
@@ -70,7 +93,7 @@ void PopulateAttributes(ObjectBase& obj, const rfl::Object<rfl::Generic>& config
 void PopulateAttributes(ObjectFactory& factory, const rfl::Object<rfl::Generic>& config);
 
 /**
- * From any structure `T` copy all the fields to the ns3 object.
+ * From any structure `T` copy all the fields of `config` to the ns3 object.
  */
 template<typename T>
 void PopulateAttributes(ObjectBase& obj, const T& config)
