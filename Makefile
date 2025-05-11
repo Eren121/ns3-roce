@@ -102,8 +102,9 @@ gen_avro:
 
 .PHONY: analysis
 analysis: docker_wd = -w /app/analysis/src
+analysis: analysis_model ?= ft16
 analysis:
-	$(docker_run) python3 -m models.ft16
+	$(docker_run) python3 -m models.$(analysis_model)
 
 .PHONY: plots
 plots: docker_wd = -w /app/analysis/src

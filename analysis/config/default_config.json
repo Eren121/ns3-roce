@@ -1,5 +1,5 @@
 {
-  "defaults": {
+  "default_attributes": {
     "ns3::SwitchNode::EcnEnabled": true,
 
     "ns3::QbbNetDevice::PauseTime": 5e-6,
@@ -29,90 +29,84 @@
     "ns3::SwitchMmu::BufferSize": "12MiB"
   },
 
-  "qlen_monitor": {
-    "enable": false,
-    "output": "out_qlen.json",
-    "start": 0,
-    "end": 1e9,
-    "interval": 1e-6
-  },
-
-  "qp_monitor": {
-    "enable": false,
-    "output": "out_qp.json",
-    "start": 0,
-    "end": 1e9,
-    "interval": 1e-6
-  },
-
-  "link_stats_monitor": {
-    "enable": false,
-    "output_bytes": "../out/link-stats-bytes.json"
-  },
-
   "topology_file": "topology.json",
   "flows_file": "flows.json",
-  "trace_file": "",
-  
-  "trace_output_file": "",
-  "pfc_output_file": "",
-  "anim_output_file": "",
+  "groups_file": "groups.json",
 
-  "simulator_stop_time": 1e9,
+  "simulator_stop_time": 0,
 
-  "has_win": false,
-  "global_t": true,
   "ack_high_prio": false,
   "rng_seed": 50,
 
-  "link_down": {
-    "time": 0,
-    "src": 0,
-    "dst": 0
-  },
-
-  "enable_trace": 0,
-
-  "kmax_map": [
+  "ecn": [
     {
-      "bandwidth": 25e9,
-      "ecn_threshold": 400
+      "bandwidth_bps": 25e9,
+      "min_buf_bytes": 100e3,
+      "max_buf_bytes": 400e3,
+      "max_probability": 0.2
     },
     {
-      "bandwidth": 50e9,
-      "ecn_threshold": 800
+      "bandwidth_bps": 50e9,
+      "min_buf_bytes": 200e3,
+      "max_buf_bytes": 800e3,
+      "max_probability": 0.2
     },
     {
-      "bandwidth": 100e9,
-      "ecn_threshold": 1600
+      "bandwidth_bps": 100e9,
+      "min_buf_bytes": 400e3,
+      "max_buf_bytes": 1600e3,
+      "max_probability": 0.2
     }
   ],
-  "kmin_map": [
+
+  "modules": [
     {
-      "bandwidth": 25e9,
-      "ecn_threshold": 100
+      "path": "ns3::RdmaModStats",
+      "enable": true,
+      "attributes": {
+        "JsonOutputFile": "../out/sim_stats.json"
+      }
     },
     {
-      "bandwidth": 50e9,
-      "ecn_threshold": 200
+      "path": "ns3::SwitchBufferMonitor",
+      "enable": false,
+      "attributes": {
+        "AvroOutputFile": "out_sw_mem.avro",
+        "StartTime": 0,
+        "StopTime": 0,
+        "IntervalTime": 1e-6
+      }
     },
     {
-      "bandwidth": 100e9,
-      "ecn_threshold": 400
-    }
-  ],
-  "pmax_map": [
-    {
-      "bandwidth": 25e9,
-      "ecn_threshold": 0.2
+      "path": "ns3::QpMonitor",
+      "enable": false,
+      "attributes": {
+        "AvroOutputFile": "out_qp.avro",
+        "StartTime": 0,
+        "StopTime": 1e9,
+        "IntervalTime": 1e-6
+      }
     },
     {
-      "bandwidth": 50e9,
-      "ecn_threshold": 0.2
+      "path": "ns3::AnimMonitor",
+      "enable": false,
+      "attributes": {
+        "XmlOutput": "out_anim.xml"
+      }
     },
     {
-      "bandwidth": 100e9,
-      "ecn_threshold": 0.2
+      "path": "ns3::PfcMonitor",
+      "enable": false,
+      "attributes": {
+        "AvroOutput": "out_pfc.avro"
+      }
+    },
+    {
+      "path": "ns3::TxMonitor",
+      "enable": false,
+      "attributes": {
+        "AvroOutput": "out_link_bytes.avro"
+      }
     }
   ]
 }

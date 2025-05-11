@@ -13,7 +13,9 @@ import json
 
 """
 Benchmark unicasts.
-Show unreliable and reliable completion time based on the amount of bytes to RDMA Write.
+Show unreliable or reliable completion time based on the amount of bytes to RDMA Write.
+
+Plot the completion time in `perf.pdf`.
 """
 
 class Model(simulation.Model):
@@ -33,7 +35,7 @@ class Model(simulation.Model):
         self.topo.n_leaf = 4
         self.topo.n_servers_per_leaf = 4
         self._topo.update(self.topo.to_json())
-                
+    
     def _configure(self, sim: simulation.Simulation) -> None:
         self._config.update({
             "ns3::RdmaHw::Mtu": self.get("mtu")
@@ -47,12 +49,14 @@ class Model(simulation.Model):
             "attributes": {
                 "SourceNode": 7,
                 "DestinationNode": 15,
-                "IsReliable": false,
+                "IsReliable": True,
                 "PfcPriority": 3,
                 "WriteByteAmount": self.get("bytes_to_write")
             }
         })
 
+        self.out_dir = sim.config_dir / ".." / "out"
+        self.out_sim_stats_path = self.out_dir / "sim_stats.json"
 
 def main():
     scenarios = simulation.CartesianProduct()
@@ -61,6 +65,26 @@ def main():
     
     batch = simulation.Batch()
     batch.run(Model, scenarios)
+
+    rows = []
+    for res in batch.res:
+        sim = res.sim
+        model = res.model
+        sim_stats = pyu.load_json(model.out_sim_stats_path)
+
+        row = {}
+        row["bytes_to_write"] = model.get("bytes_to_write")
+        row["completion_time"] = sim_stats["stop_time"]
+        rows.append(row)
+    
+    df = pd.DataFrame(rows)
+    
+    sns.set_theme()
+    
+    sns.scatterplot(data=df, x="bytes_to_write", y="completion_time")
+    plt.savefig(batch.img_dir / "perf.pdf")
+    plt.clf()
+
 
 
 if __name__ == "__main__":

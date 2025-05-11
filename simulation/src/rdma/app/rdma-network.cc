@@ -52,6 +52,10 @@ void RdmaNetwork::Initialize(const fs::path& config_path)
 	NS_LOG_INFO("Running Simulation.");
 	Simulator::Run();
   NS_LOG_INFO("Exit stopped at " << Simulator::Now().GetSeconds() << "s.");
+
+  // Permits to modules to get the time of the simulator, before it is destroyed.
+  instance.m_modules.clear();
+
 	Simulator::Destroy();
 }
 

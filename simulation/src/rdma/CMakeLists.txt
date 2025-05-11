@@ -74,7 +74,8 @@ if(reflectcpp_FOUND)
       model/rdma-seq-header.cc
       model/rdma-unreliable-qp.cc
       model/switch-mmu.cc
-      model/switch-node.cc        
+      model/switch-node.cc   
+      app/modules/rdma-mod-stats.cc     
     HEADER_FILES
       serdes/generated/ag-recv-chunk-record.h
       serdes/generated/pfc-record.h
@@ -124,6 +125,7 @@ if(reflectcpp_FOUND)
       model/switch-mmu.h
       model/switch-node.h
       model/trace-format.h
+      app/modules/rdma-mod-stats.h
     LIBRARIES_TO_LINK
       reflectcpp
       ${libavrocpp}
