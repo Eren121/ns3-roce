@@ -1,3020 +1,351 @@
 {
-  "nodes": [
-      {
-          "id": 8,
-          "is_switch": true,
-          "pos": {
-              "x": 7.0,
-              "y": 4
-          }
-      },
-      {
-          "id": 9,
-          "is_switch": true,
-          "pos": {
-              "x": 25.0,
-              "y": 4
-          }
-      },
-      {
-          "id": 10,
-          "is_switch": true,
-          "pos": {
-              "x": 43.0,
-              "y": 4
-          }
-      },
-      {
-          "id": 11,
-          "is_switch": true,
-          "pos": {
-              "x": 61.0,
-              "y": 4
-          }
-      },
-      {
-          "id": 12,
-          "is_switch": true,
-          "pos": {
-              "x": 79.0,
-              "y": 4
-          }
-      },
-      {
-          "id": 13,
-          "is_switch": true,
-          "pos": {
-              "x": 97.0,
-              "y": 4
-          }
-      },
-      {
-          "id": 14,
-          "is_switch": true,
-          "pos": {
-              "x": 115.0,
-              "y": 4
-          }
-      },
-      {
-          "id": 15,
-          "is_switch": true,
-          "pos": {
-              "x": 133.0,
-              "y": 4
-          }
-      },
-      {
-          "id": 16,
-          "is_switch": true,
-          "pos": {
-              "x": 151.0,
-              "y": 4
-          }
-      },
-      {
-          "id": 17,
-          "is_switch": true,
-          "pos": {
-              "x": 169.0,
-              "y": 4
-          }
-      },
-      {
-          "id": 18,
-          "is_switch": true,
-          "pos": {
-              "x": 187.0,
-              "y": 4
-          }
-      },
-      {
-          "id": 19,
-          "is_switch": true,
-          "pos": {
-              "x": 205.0,
-              "y": 4
-          }
-      },
-      {
-          "id": 20,
-          "is_switch": true,
-          "pos": {
-              "x": 223.0,
-              "y": 4
-          }
-      },
-      {
-          "id": 21,
-          "is_switch": true,
-          "pos": {
-              "x": 241.0,
-              "y": 4
-          }
-      },
-      {
-          "id": 22,
-          "is_switch": true,
-          "pos": {
-              "x": 259.0,
-              "y": 4
-          }
-      },
-      {
-          "id": 23,
-          "is_switch": true,
-          "pos": {
-              "x": 277.0,
-              "y": 4
-          }
-      },
-      {
-          "id": 0,
-          "is_switch": true,
-          "pos": {
-              "x": 37.0,
-              "y": 9
-          }
-      },
-      {
-          "id": 1,
-          "is_switch": true,
-          "pos": {
-              "x": 67.0,
-              "y": 9
-          }
-      },
-      {
-          "id": 2,
-          "is_switch": true,
-          "pos": {
-              "x": 97.0,
-              "y": 9
-          }
-      },
-      {
-          "id": 3,
-          "is_switch": true,
-          "pos": {
-              "x": 127.0,
-              "y": 9
-          }
-      },
-      {
-          "id": 4,
-          "is_switch": true,
-          "pos": {
-              "x": 157.0,
-              "y": 9
-          }
-      },
-      {
-          "id": 5,
-          "is_switch": true,
-          "pos": {
-              "x": 187.0,
-              "y": 9
-          }
-      },
-      {
-          "id": 6,
-          "is_switch": true,
-          "pos": {
-              "x": 217.0,
-              "y": 9
-          }
-      },
-      {
-          "id": 7,
-          "is_switch": true,
-          "pos": {
-              "x": 247.0,
-              "y": 9
-          }
-      },
-      {
-          "id": 24,
-          "is_switch": false,
-          "pos": {
-              "x": 0,
-              "y": 0
-          }
-      },
-      {
-          "id": 25,
-          "is_switch": false,
-          "pos": {
-              "x": 2,
-              "y": 0
-          }
-      },
-      {
-          "id": 26,
-          "is_switch": false,
-          "pos": {
-              "x": 4,
-              "y": 0
-          }
-      },
-      {
-          "id": 27,
-          "is_switch": false,
-          "pos": {
-              "x": 6,
-              "y": 0
-          }
-      },
-      {
-          "id": 28,
-          "is_switch": false,
-          "pos": {
-              "x": 8,
-              "y": 0
-          }
-      },
-      {
-          "id": 29,
-          "is_switch": false,
-          "pos": {
-              "x": 10,
-              "y": 0
-          }
-      },
-      {
-          "id": 30,
-          "is_switch": false,
-          "pos": {
-              "x": 12,
-              "y": 0
-          }
-      },
-      {
-          "id": 31,
-          "is_switch": false,
-          "pos": {
-              "x": 14,
-              "y": 0
-          }
-      },
-      {
-          "id": 32,
-          "is_switch": false,
-          "pos": {
-              "x": 18,
-              "y": 0
-          }
-      },
-      {
-          "id": 33,
-          "is_switch": false,
-          "pos": {
-              "x": 20,
-              "y": 0
-          }
-      },
-      {
-          "id": 34,
-          "is_switch": false,
-          "pos": {
-              "x": 22,
-              "y": 0
-          }
-      },
-      {
-          "id": 35,
-          "is_switch": false,
-          "pos": {
-              "x": 24,
-              "y": 0
-          }
-      },
-      {
-          "id": 36,
-          "is_switch": false,
-          "pos": {
-              "x": 26,
-              "y": 0
-          }
-      },
-      {
-          "id": 37,
-          "is_switch": false,
-          "pos": {
-              "x": 28,
-              "y": 0
-          }
-      },
-      {
-          "id": 38,
-          "is_switch": false,
-          "pos": {
-              "x": 30,
-              "y": 0
-          }
-      },
-      {
-          "id": 39,
-          "is_switch": false,
-          "pos": {
-              "x": 32,
-              "y": 0
-          }
-      },
-      {
-          "id": 40,
-          "is_switch": false,
-          "pos": {
-              "x": 36,
-              "y": 0
-          }
-      },
-      {
-          "id": 41,
-          "is_switch": false,
-          "pos": {
-              "x": 38,
-              "y": 0
-          }
-      },
-      {
-          "id": 42,
-          "is_switch": false,
-          "pos": {
-              "x": 40,
-              "y": 0
-          }
-      },
-      {
-          "id": 43,
-          "is_switch": false,
-          "pos": {
-              "x": 42,
-              "y": 0
-          }
-      },
-      {
-          "id": 44,
-          "is_switch": false,
-          "pos": {
-              "x": 44,
-              "y": 0
-          }
-      },
-      {
-          "id": 45,
-          "is_switch": false,
-          "pos": {
-              "x": 46,
-              "y": 0
-          }
-      },
-      {
-          "id": 46,
-          "is_switch": false,
-          "pos": {
-              "x": 48,
-              "y": 0
-          }
-      },
-      {
-          "id": 47,
-          "is_switch": false,
-          "pos": {
-              "x": 50,
-              "y": 0
-          }
-      },
-      {
-          "id": 48,
-          "is_switch": false,
-          "pos": {
-              "x": 54,
-              "y": 0
-          }
-      },
-      {
-          "id": 49,
-          "is_switch": false,
-          "pos": {
-              "x": 56,
-              "y": 0
-          }
-      },
-      {
-          "id": 50,
-          "is_switch": false,
-          "pos": {
-              "x": 58,
-              "y": 0
-          }
-      },
-      {
-          "id": 51,
-          "is_switch": false,
-          "pos": {
-              "x": 60,
-              "y": 0
-          }
-      },
-      {
-          "id": 52,
-          "is_switch": false,
-          "pos": {
-              "x": 62,
-              "y": 0
-          }
-      },
-      {
-          "id": 53,
-          "is_switch": false,
-          "pos": {
-              "x": 64,
-              "y": 0
-          }
-      },
-      {
-          "id": 54,
-          "is_switch": false,
-          "pos": {
-              "x": 66,
-              "y": 0
-          }
-      },
-      {
-          "id": 55,
-          "is_switch": false,
-          "pos": {
-              "x": 68,
-              "y": 0
-          }
-      },
-      {
-          "id": 56,
-          "is_switch": false,
-          "pos": {
-              "x": 72,
-              "y": 0
-          }
-      },
-      {
-          "id": 57,
-          "is_switch": false,
-          "pos": {
-              "x": 74,
-              "y": 0
-          }
-      },
-      {
-          "id": 58,
-          "is_switch": false,
-          "pos": {
-              "x": 76,
-              "y": 0
-          }
-      },
-      {
-          "id": 59,
-          "is_switch": false,
-          "pos": {
-              "x": 78,
-              "y": 0
-          }
-      },
-      {
-          "id": 60,
-          "is_switch": false,
-          "pos": {
-              "x": 80,
-              "y": 0
-          }
-      },
-      {
-          "id": 61,
-          "is_switch": false,
-          "pos": {
-              "x": 82,
-              "y": 0
-          }
-      },
-      {
-          "id": 62,
-          "is_switch": false,
-          "pos": {
-              "x": 84,
-              "y": 0
-          }
-      },
-      {
-          "id": 63,
-          "is_switch": false,
-          "pos": {
-              "x": 86,
-              "y": 0
-          }
-      },
-      {
-          "id": 64,
-          "is_switch": false,
-          "pos": {
-              "x": 90,
-              "y": 0
-          }
-      },
-      {
-          "id": 65,
-          "is_switch": false,
-          "pos": {
-              "x": 92,
-              "y": 0
-          }
-      },
-      {
-          "id": 66,
-          "is_switch": false,
-          "pos": {
-              "x": 94,
-              "y": 0
-          }
-      },
-      {
-          "id": 67,
-          "is_switch": false,
-          "pos": {
-              "x": 96,
-              "y": 0
-          }
-      },
-      {
-          "id": 68,
-          "is_switch": false,
-          "pos": {
-              "x": 98,
-              "y": 0
-          }
-      },
-      {
-          "id": 69,
-          "is_switch": false,
-          "pos": {
-              "x": 100,
-              "y": 0
-          }
-      },
-      {
-          "id": 70,
-          "is_switch": false,
-          "pos": {
-              "x": 102,
-              "y": 0
-          }
-      },
-      {
-          "id": 71,
-          "is_switch": false,
-          "pos": {
-              "x": 104,
-              "y": 0
-          }
-      },
-      {
-          "id": 72,
-          "is_switch": false,
-          "pos": {
-              "x": 108,
-              "y": 0
-          }
-      },
-      {
-          "id": 73,
-          "is_switch": false,
-          "pos": {
-              "x": 110,
-              "y": 0
-          }
-      },
-      {
-          "id": 74,
-          "is_switch": false,
-          "pos": {
-              "x": 112,
-              "y": 0
-          }
-      },
-      {
-          "id": 75,
-          "is_switch": false,
-          "pos": {
-              "x": 114,
-              "y": 0
-          }
-      },
-      {
-          "id": 76,
-          "is_switch": false,
-          "pos": {
-              "x": 116,
-              "y": 0
-          }
-      },
-      {
-          "id": 77,
-          "is_switch": false,
-          "pos": {
-              "x": 118,
-              "y": 0
-          }
-      },
-      {
-          "id": 78,
-          "is_switch": false,
-          "pos": {
-              "x": 120,
-              "y": 0
-          }
-      },
-      {
-          "id": 79,
-          "is_switch": false,
-          "pos": {
-              "x": 122,
-              "y": 0
-          }
-      },
-      {
-          "id": 80,
-          "is_switch": false,
-          "pos": {
-              "x": 126,
-              "y": 0
-          }
-      },
-      {
-          "id": 81,
-          "is_switch": false,
-          "pos": {
-              "x": 128,
-              "y": 0
-          }
-      },
-      {
-          "id": 82,
-          "is_switch": false,
-          "pos": {
-              "x": 130,
-              "y": 0
-          }
-      },
-      {
-          "id": 83,
-          "is_switch": false,
-          "pos": {
-              "x": 132,
-              "y": 0
-          }
-      },
-      {
-          "id": 84,
-          "is_switch": false,
-          "pos": {
-              "x": 134,
-              "y": 0
-          }
-      },
-      {
-          "id": 85,
-          "is_switch": false,
-          "pos": {
-              "x": 136,
-              "y": 0
-          }
-      },
-      {
-          "id": 86,
-          "is_switch": false,
-          "pos": {
-              "x": 138,
-              "y": 0
-          }
-      },
-      {
-          "id": 87,
-          "is_switch": false,
-          "pos": {
-              "x": 140,
-              "y": 0
-          }
-      },
-      {
-          "id": 88,
-          "is_switch": false,
-          "pos": {
-              "x": 144,
-              "y": 0
-          }
-      },
-      {
-          "id": 89,
-          "is_switch": false,
-          "pos": {
-              "x": 146,
-              "y": 0
-          }
-      },
-      {
-          "id": 90,
-          "is_switch": false,
-          "pos": {
-              "x": 148,
-              "y": 0
-          }
-      },
-      {
-          "id": 91,
-          "is_switch": false,
-          "pos": {
-              "x": 150,
-              "y": 0
-          }
-      },
-      {
-          "id": 92,
-          "is_switch": false,
-          "pos": {
-              "x": 152,
-              "y": 0
-          }
-      },
-      {
-          "id": 93,
-          "is_switch": false,
-          "pos": {
-              "x": 154,
-              "y": 0
-          }
-      },
-      {
-          "id": 94,
-          "is_switch": false,
-          "pos": {
-              "x": 156,
-              "y": 0
-          }
-      },
-      {
-          "id": 95,
-          "is_switch": false,
-          "pos": {
-              "x": 158,
-              "y": 0
-          }
-      },
-      {
-          "id": 96,
-          "is_switch": false,
-          "pos": {
-              "x": 162,
-              "y": 0
-          }
-      },
-      {
-          "id": 97,
-          "is_switch": false,
-          "pos": {
-              "x": 164,
-              "y": 0
-          }
-      },
-      {
-          "id": 98,
-          "is_switch": false,
-          "pos": {
-              "x": 166,
-              "y": 0
-          }
-      },
-      {
-          "id": 99,
-          "is_switch": false,
-          "pos": {
-              "x": 168,
-              "y": 0
-          }
-      },
-      {
-          "id": 100,
-          "is_switch": false,
-          "pos": {
-              "x": 170,
-              "y": 0
-          }
-      },
-      {
-          "id": 101,
-          "is_switch": false,
-          "pos": {
-              "x": 172,
-              "y": 0
-          }
-      },
-      {
-          "id": 102,
-          "is_switch": false,
-          "pos": {
-              "x": 174,
-              "y": 0
-          }
-      },
-      {
-          "id": 103,
-          "is_switch": false,
-          "pos": {
-              "x": 176,
-              "y": 0
-          }
-      },
-      {
-          "id": 104,
-          "is_switch": false,
-          "pos": {
-              "x": 180,
-              "y": 0
-          }
-      },
-      {
-          "id": 105,
-          "is_switch": false,
-          "pos": {
-              "x": 182,
-              "y": 0
-          }
-      },
-      {
-          "id": 106,
-          "is_switch": false,
-          "pos": {
-              "x": 184,
-              "y": 0
-          }
-      },
-      {
-          "id": 107,
-          "is_switch": false,
-          "pos": {
-              "x": 186,
-              "y": 0
-          }
-      },
-      {
-          "id": 108,
-          "is_switch": false,
-          "pos": {
-              "x": 188,
-              "y": 0
-          }
-      },
-      {
-          "id": 109,
-          "is_switch": false,
-          "pos": {
-              "x": 190,
-              "y": 0
-          }
-      },
-      {
-          "id": 110,
-          "is_switch": false,
-          "pos": {
-              "x": 192,
-              "y": 0
-          }
-      },
-      {
-          "id": 111,
-          "is_switch": false,
-          "pos": {
-              "x": 194,
-              "y": 0
-          }
-      },
-      {
-          "id": 112,
-          "is_switch": false,
-          "pos": {
-              "x": 198,
-              "y": 0
-          }
-      },
-      {
-          "id": 113,
-          "is_switch": false,
-          "pos": {
-              "x": 200,
-              "y": 0
-          }
-      },
-      {
-          "id": 114,
-          "is_switch": false,
-          "pos": {
-              "x": 202,
-              "y": 0
-          }
-      },
-      {
-          "id": 115,
-          "is_switch": false,
-          "pos": {
-              "x": 204,
-              "y": 0
-          }
-      },
-      {
-          "id": 116,
-          "is_switch": false,
-          "pos": {
-              "x": 206,
-              "y": 0
-          }
-      },
-      {
-          "id": 117,
-          "is_switch": false,
-          "pos": {
-              "x": 208,
-              "y": 0
-          }
-      },
-      {
-          "id": 118,
-          "is_switch": false,
-          "pos": {
-              "x": 210,
-              "y": 0
-          }
-      },
-      {
-          "id": 119,
-          "is_switch": false,
-          "pos": {
-              "x": 212,
-              "y": 0
-          }
-      },
-      {
-          "id": 120,
-          "is_switch": false,
-          "pos": {
-              "x": 216,
-              "y": 0
-          }
-      },
-      {
-          "id": 121,
-          "is_switch": false,
-          "pos": {
-              "x": 218,
-              "y": 0
-          }
-      },
-      {
-          "id": 122,
-          "is_switch": false,
-          "pos": {
-              "x": 220,
-              "y": 0
-          }
-      },
-      {
-          "id": 123,
-          "is_switch": false,
-          "pos": {
-              "x": 222,
-              "y": 0
-          }
-      },
-      {
-          "id": 124,
-          "is_switch": false,
-          "pos": {
-              "x": 224,
-              "y": 0
-          }
-      },
-      {
-          "id": 125,
-          "is_switch": false,
-          "pos": {
-              "x": 226,
-              "y": 0
-          }
-      },
-      {
-          "id": 126,
-          "is_switch": false,
-          "pos": {
-              "x": 228,
-              "y": 0
-          }
-      },
-      {
-          "id": 127,
-          "is_switch": false,
-          "pos": {
-              "x": 230,
-              "y": 0
-          }
-      },
-      {
-          "id": 128,
-          "is_switch": false,
-          "pos": {
-              "x": 234,
-              "y": 0
-          }
-      },
-      {
-          "id": 129,
-          "is_switch": false,
-          "pos": {
-              "x": 236,
-              "y": 0
-          }
-      },
-      {
-          "id": 130,
-          "is_switch": false,
-          "pos": {
-              "x": 238,
-              "y": 0
-          }
-      },
-      {
-          "id": 131,
-          "is_switch": false,
-          "pos": {
-              "x": 240,
-              "y": 0
-          }
-      },
-      {
-          "id": 132,
-          "is_switch": false,
-          "pos": {
-              "x": 242,
-              "y": 0
-          }
-      },
-      {
-          "id": 133,
-          "is_switch": false,
-          "pos": {
-              "x": 244,
-              "y": 0
-          }
-      },
-      {
-          "id": 134,
-          "is_switch": false,
-          "pos": {
-              "x": 246,
-              "y": 0
-          }
-      },
-      {
-          "id": 135,
-          "is_switch": false,
-          "pos": {
-              "x": 248,
-              "y": 0
-          }
-      },
-      {
-          "id": 136,
-          "is_switch": false,
-          "pos": {
-              "x": 252,
-              "y": 0
-          }
-      },
-      {
-          "id": 137,
-          "is_switch": false,
-          "pos": {
-              "x": 254,
-              "y": 0
-          }
-      },
-      {
-          "id": 138,
-          "is_switch": false,
-          "pos": {
-              "x": 256,
-              "y": 0
-          }
-      },
-      {
-          "id": 139,
-          "is_switch": false,
-          "pos": {
-              "x": 258,
-              "y": 0
-          }
-      },
-      {
-          "id": 140,
-          "is_switch": false,
-          "pos": {
-              "x": 260,
-              "y": 0
-          }
-      },
-      {
-          "id": 141,
-          "is_switch": false,
-          "pos": {
-              "x": 262,
-              "y": 0
-          }
-      },
-      {
-          "id": 142,
-          "is_switch": false,
-          "pos": {
-              "x": 264,
-              "y": 0
-          }
-      },
-      {
-          "id": 143,
-          "is_switch": false,
-          "pos": {
-              "x": 266,
-              "y": 0
-          }
-      },
-      {
-          "id": 144,
-          "is_switch": false,
-          "pos": {
-              "x": 270,
-              "y": 0
-          }
-      },
-      {
-          "id": 145,
-          "is_switch": false,
-          "pos": {
-              "x": 272,
-              "y": 0
-          }
-      },
-      {
-          "id": 146,
-          "is_switch": false,
-          "pos": {
-              "x": 274,
-              "y": 0
-          }
-      },
-      {
-          "id": 147,
-          "is_switch": false,
-          "pos": {
-              "x": 276,
-              "y": 0
-          }
-      },
-      {
-          "id": 148,
-          "is_switch": false,
-          "pos": {
-              "x": 278,
-              "y": 0
-          }
-      },
-      {
-          "id": 149,
-          "is_switch": false,
-          "pos": {
-              "x": 280,
-              "y": 0
-          }
-      },
-      {
-          "id": 150,
-          "is_switch": false,
-          "pos": {
-              "x": 282,
-              "y": 0
-          }
-      },
-      {
-          "id": 151,
-          "is_switch": false,
-          "pos": {
-              "x": 284,
-              "y": 0
-          }
-      }
-  ],
-  "groups": [
-      {
-          "id": 1,
-          "nodes": "*"
-      }
-  ],
-  "links": [
-      {
-          "src": 8,
-          "dst": 0,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 8,
-          "dst": 1,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 8,
-          "dst": 2,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 8,
-          "dst": 3,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 8,
-          "dst": 4,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 8,
-          "dst": 5,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 8,
-          "dst": 6,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 8,
-          "dst": 7,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 9,
-          "dst": 0,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 9,
-          "dst": 1,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 9,
-          "dst": 2,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 9,
-          "dst": 3,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 9,
-          "dst": 4,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 9,
-          "dst": 5,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 9,
-          "dst": 6,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 9,
-          "dst": 7,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 10,
-          "dst": 0,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 10,
-          "dst": 1,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 10,
-          "dst": 2,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 10,
-          "dst": 3,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 10,
-          "dst": 4,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 10,
-          "dst": 5,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 10,
-          "dst": 6,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 10,
-          "dst": 7,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 11,
-          "dst": 0,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 11,
-          "dst": 1,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 11,
-          "dst": 2,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 11,
-          "dst": 3,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 11,
-          "dst": 4,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 11,
-          "dst": 5,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 11,
-          "dst": 6,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 11,
-          "dst": 7,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 12,
-          "dst": 0,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 12,
-          "dst": 1,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 12,
-          "dst": 2,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 12,
-          "dst": 3,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 12,
-          "dst": 4,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 12,
-          "dst": 5,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 12,
-          "dst": 6,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 12,
-          "dst": 7,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 13,
-          "dst": 0,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 13,
-          "dst": 1,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 13,
-          "dst": 2,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 13,
-          "dst": 3,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 13,
-          "dst": 4,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 13,
-          "dst": 5,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 13,
-          "dst": 6,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 13,
-          "dst": 7,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 14,
-          "dst": 0,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 14,
-          "dst": 1,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 14,
-          "dst": 2,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 14,
-          "dst": 3,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 14,
-          "dst": 4,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 14,
-          "dst": 5,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 14,
-          "dst": 6,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 14,
-          "dst": 7,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 15,
-          "dst": 0,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 15,
-          "dst": 1,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 15,
-          "dst": 2,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 15,
-          "dst": 3,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 15,
-          "dst": 4,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 15,
-          "dst": 5,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 15,
-          "dst": 6,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 15,
-          "dst": 7,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 16,
-          "dst": 0,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 16,
-          "dst": 1,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 16,
-          "dst": 2,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 16,
-          "dst": 3,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 16,
-          "dst": 4,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 16,
-          "dst": 5,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 16,
-          "dst": 6,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 16,
-          "dst": 7,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 17,
-          "dst": 0,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 17,
-          "dst": 1,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 17,
-          "dst": 2,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 17,
-          "dst": 3,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 17,
-          "dst": 4,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 17,
-          "dst": 5,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 17,
-          "dst": 6,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 17,
-          "dst": 7,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 18,
-          "dst": 0,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 18,
-          "dst": 1,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 18,
-          "dst": 2,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 18,
-          "dst": 3,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 18,
-          "dst": 4,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 18,
-          "dst": 5,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 18,
-          "dst": 6,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 18,
-          "dst": 7,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 19,
-          "dst": 0,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 19,
-          "dst": 1,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 19,
-          "dst": 2,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 19,
-          "dst": 3,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 19,
-          "dst": 4,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 19,
-          "dst": 5,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 19,
-          "dst": 6,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 19,
-          "dst": 7,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 20,
-          "dst": 0,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 20,
-          "dst": 1,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 20,
-          "dst": 2,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 20,
-          "dst": 3,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 20,
-          "dst": 4,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 20,
-          "dst": 5,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 20,
-          "dst": 6,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 20,
-          "dst": 7,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 21,
-          "dst": 0,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 21,
-          "dst": 1,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 21,
-          "dst": 2,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 21,
-          "dst": 3,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 21,
-          "dst": 4,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 21,
-          "dst": 5,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 21,
-          "dst": 6,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 21,
-          "dst": 7,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 22,
-          "dst": 0,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 22,
-          "dst": 1,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 22,
-          "dst": 2,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 22,
-          "dst": 3,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 22,
-          "dst": 4,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 22,
-          "dst": 5,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 22,
-          "dst": 6,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 22,
-          "dst": 7,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 23,
-          "dst": 0,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 23,
-          "dst": 1,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 23,
-          "dst": 2,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 23,
-          "dst": 3,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 23,
-          "dst": 4,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 23,
-          "dst": 5,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 23,
-          "dst": 6,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 23,
-          "dst": 7,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 8,
-          "dst": 24,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 8,
-          "dst": 25,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 8,
-          "dst": 26,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 8,
-          "dst": 27,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 8,
-          "dst": 28,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 8,
-          "dst": 29,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 8,
-          "dst": 30,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 8,
-          "dst": 31,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 9,
-          "dst": 32,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 9,
-          "dst": 33,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 9,
-          "dst": 34,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 9,
-          "dst": 35,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 9,
-          "dst": 36,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 9,
-          "dst": 37,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 9,
-          "dst": 38,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 9,
-          "dst": 39,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 10,
-          "dst": 40,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 10,
-          "dst": 41,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 10,
-          "dst": 42,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 10,
-          "dst": 43,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 10,
-          "dst": 44,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 10,
-          "dst": 45,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 10,
-          "dst": 46,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 10,
-          "dst": 47,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 11,
-          "dst": 48,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 11,
-          "dst": 49,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 11,
-          "dst": 50,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 11,
-          "dst": 51,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 11,
-          "dst": 52,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 11,
-          "dst": 53,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 11,
-          "dst": 54,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 11,
-          "dst": 55,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 12,
-          "dst": 56,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 12,
-          "dst": 57,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 12,
-          "dst": 58,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 12,
-          "dst": 59,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 12,
-          "dst": 60,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 12,
-          "dst": 61,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 12,
-          "dst": 62,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 12,
-          "dst": 63,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 13,
-          "dst": 64,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 13,
-          "dst": 65,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 13,
-          "dst": 66,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 13,
-          "dst": 67,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 13,
-          "dst": 68,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 13,
-          "dst": 69,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 13,
-          "dst": 70,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 13,
-          "dst": 71,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 14,
-          "dst": 72,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 14,
-          "dst": 73,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 14,
-          "dst": 74,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 14,
-          "dst": 75,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 14,
-          "dst": 76,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 14,
-          "dst": 77,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 14,
-          "dst": 78,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 14,
-          "dst": 79,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 15,
-          "dst": 80,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 15,
-          "dst": 81,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 15,
-          "dst": 82,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 15,
-          "dst": 83,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 15,
-          "dst": 84,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 15,
-          "dst": 85,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 15,
-          "dst": 86,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 15,
-          "dst": 87,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 16,
-          "dst": 88,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 16,
-          "dst": 89,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 16,
-          "dst": 90,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 16,
-          "dst": 91,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 16,
-          "dst": 92,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 16,
-          "dst": 93,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 16,
-          "dst": 94,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 16,
-          "dst": 95,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 17,
-          "dst": 96,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 17,
-          "dst": 97,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 17,
-          "dst": 98,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 17,
-          "dst": 99,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 17,
-          "dst": 100,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 17,
-          "dst": 101,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 17,
-          "dst": 102,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 17,
-          "dst": 103,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 18,
-          "dst": 104,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 18,
-          "dst": 105,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 18,
-          "dst": 106,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 18,
-          "dst": 107,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 18,
-          "dst": 108,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 18,
-          "dst": 109,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 18,
-          "dst": 110,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 18,
-          "dst": 111,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 19,
-          "dst": 112,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 19,
-          "dst": 113,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 19,
-          "dst": 114,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 19,
-          "dst": 115,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 19,
-          "dst": 116,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 19,
-          "dst": 117,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 19,
-          "dst": 118,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 19,
-          "dst": 119,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 20,
-          "dst": 120,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 20,
-          "dst": 121,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 20,
-          "dst": 122,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 20,
-          "dst": 123,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 20,
-          "dst": 124,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 20,
-          "dst": 125,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 20,
-          "dst": 126,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 20,
-          "dst": 127,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 21,
-          "dst": 128,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 21,
-          "dst": 129,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 21,
-          "dst": 130,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 21,
-          "dst": 131,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 21,
-          "dst": 132,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 21,
-          "dst": 133,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 21,
-          "dst": 134,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 21,
-          "dst": 135,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 22,
-          "dst": 136,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 22,
-          "dst": 137,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 22,
-          "dst": 138,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 22,
-          "dst": 139,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 22,
-          "dst": 140,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 22,
-          "dst": 141,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 22,
-          "dst": 142,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 22,
-          "dst": 143,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 23,
-          "dst": 144,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 23,
-          "dst": 145,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 23,
-          "dst": 146,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 23,
-          "dst": 147,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 23,
-          "dst": 148,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 23,
-          "dst": 149,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 23,
-          "dst": 150,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      },
-      {
-          "src": 23,
-          "dst": 151,
-          "bandwidth": 100000000000.0,
-          "latency": 1e-06,
-          "error_rate": 0.0
-      }
-  ]
+    "nodes": [
+        {
+            "id": 2,
+            "is_switch": true,
+            "pos": {
+                "x": 3.0,
+                "y": 4
+            }
+        },
+        {
+            "id": 3,
+            "is_switch": true,
+            "pos": {
+                "x": 13.0,
+                "y": 4
+            }
+        },
+        {
+            "id": 4,
+            "is_switch": true,
+            "pos": {
+                "x": 23.0,
+                "y": 4
+            }
+        },
+        {
+            "id": 5,
+            "is_switch": true,
+            "pos": {
+                "x": 33.0,
+                "y": 4
+            }
+        },
+        {
+            "id": 0,
+            "is_switch": true,
+            "pos": {
+                "x": 13.0,
+                "y": 9
+            }
+        },
+        {
+            "id": 1,
+            "is_switch": true,
+            "pos": {
+                "x": 23.0,
+                "y": 9
+            }
+        },
+        {
+            "id": 6,
+            "is_switch": false,
+            "pos": {
+                "x": 0,
+                "y": 0
+            }
+        },
+        {
+            "id": 7,
+            "is_switch": false,
+            "pos": {
+                "x": 2,
+                "y": 0
+            }
+        },
+        {
+            "id": 8,
+            "is_switch": false,
+            "pos": {
+                "x": 4,
+                "y": 0
+            }
+        },
+        {
+            "id": 9,
+            "is_switch": false,
+            "pos": {
+                "x": 6,
+                "y": 0
+            }
+        },
+        {
+            "id": 10,
+            "is_switch": false,
+            "pos": {
+                "x": 10,
+                "y": 0
+            }
+        },
+        {
+            "id": 11,
+            "is_switch": false,
+            "pos": {
+                "x": 12,
+                "y": 0
+            }
+        },
+        {
+            "id": 12,
+            "is_switch": false,
+            "pos": {
+                "x": 14,
+                "y": 0
+            }
+        },
+        {
+            "id": 13,
+            "is_switch": false,
+            "pos": {
+                "x": 16,
+                "y": 0
+            }
+        },
+        {
+            "id": 14,
+            "is_switch": false,
+            "pos": {
+                "x": 20,
+                "y": 0
+            }
+        },
+        {
+            "id": 15,
+            "is_switch": false,
+            "pos": {
+                "x": 22,
+                "y": 0
+            }
+        },
+        {
+            "id": 16,
+            "is_switch": false,
+            "pos": {
+                "x": 24,
+                "y": 0
+            }
+        },
+        {
+            "id": 17,
+            "is_switch": false,
+            "pos": {
+                "x": 26,
+                "y": 0
+            }
+        },
+        {
+            "id": 18,
+            "is_switch": false,
+            "pos": {
+                "x": 30,
+                "y": 0
+            }
+        },
+        {
+            "id": 19,
+            "is_switch": false,
+            "pos": {
+                "x": 32,
+                "y": 0
+            }
+        },
+        {
+            "id": 20,
+            "is_switch": false,
+            "pos": {
+                "x": 34,
+                "y": 0
+            }
+        },
+        {
+            "id": 21,
+            "is_switch": false,
+            "pos": {
+                "x": 36,
+                "y": 0
+            }
+        }
+    ],
+    "groups": [],
+    "links": [
+        {
+            "src": 2,
+            "dst": 0,
+            "bandwidth": 100000000000.0,
+            "latency": 1e-06,
+            "error_rate": 0.0
+        },
+        {
+            "src": 2,
+            "dst": 1,
+            "bandwidth": 100000000000.0,
+            "latency": 1e-06,
+            "error_rate": 0.0
+        },
+        {
+            "src": 3,
+            "dst": 0,
+            "bandwidth": 100000000000.0,
+            "latency": 1e-06,
+            "error_rate": 0.0
+        },
+        {
+            "src": 3,
+            "dst": 1,
+            "bandwidth": 100000000000.0,
+            "latency": 1e-06,
+            "error_rate": 0.0
+        },
+        {
+            "src": 4,
+            "dst": 0,
+            "bandwidth": 100000000000.0,
+            "latency": 1e-06,
+            "error_rate": 0.0
+        },
+        {
+            "src": 4,
+            "dst": 1,
+            "bandwidth": 100000000000.0,
+            "latency": 1e-06,
+            "error_rate": 0.0
+        },
+        {
+            "src": 5,
+            "dst": 0,
+            "bandwidth": 100000000000.0,
+            "latency": 1e-06,
+            "error_rate": 0.0
+        },
+        {
+            "src": 5,
+            "dst": 1,
+            "bandwidth": 100000000000.0,
+            "latency": 1e-06,
+            "error_rate": 0.0
+        },
+        {
+            "src": 2,
+            "dst": 6,
+            "bandwidth": 100000000000.0,
+            "latency": 1e-06,
+            "error_rate": 0.0
+        },
+        {
+            "src": 2,
+            "dst": 7,
+            "bandwidth": 100000000000.0,
+            "latency": 1e-06,
+            "error_rate": 0.0
+        },
+        {
+            "src": 2,
+            "dst": 8,
+            "bandwidth": 100000000000.0,
+            "latency": 1e-06,
+            "error_rate": 0.0
+        },
+        {
+            "src": 2,
+            "dst": 9,
+            "bandwidth": 100000000000.0,
+            "latency": 1e-06,
+            "error_rate": 0.0
+        },
+        {
+            "src": 3,
+            "dst": 10,
+            "bandwidth": 100000000000.0,
+            "latency": 1e-06,
+            "error_rate": 0.0
+        },
+        {
+            "src": 3,
+            "dst": 11,
+            "bandwidth": 100000000000.0,
+            "latency": 1e-06,
+            "error_rate": 0.0
+        },
+        {
+            "src": 3,
+            "dst": 12,
+            "bandwidth": 100000000000.0,
+            "latency": 1e-06,
+            "error_rate": 0.0
+        },
+        {
+            "src": 3,
+            "dst": 13,
+            "bandwidth": 100000000000.0,
+            "latency": 1e-06,
+            "error_rate": 0.0
+        },
+        {
+            "src": 4,
+            "dst": 14,
+            "bandwidth": 100000000000.0,
+            "latency": 1e-06,
+            "error_rate": 0.0
+        },
+        {
+            "src": 4,
+            "dst": 15,
+            "bandwidth": 100000000000.0,
+            "latency": 1e-06,
+            "error_rate": 0.0
+        },
+        {
+            "src": 4,
+            "dst": 16,
+            "bandwidth": 100000000000.0,
+            "latency": 1e-06,
+            "error_rate": 0.0
+        },
+        {
+            "src": 4,
+            "dst": 17,
+            "bandwidth": 100000000000.0,
+            "latency": 1e-06,
+            "error_rate": 0.0
+        },
+        {
+            "src": 5,
+            "dst": 18,
+            "bandwidth": 100000000000.0,
+            "latency": 1e-06,
+            "error_rate": 0.0
+        },
+        {
+            "src": 5,
+            "dst": 19,
+            "bandwidth": 100000000000.0,
+            "latency": 1e-06,
+            "error_rate": 0.0
+        },
+        {
+            "src": 5,
+            "dst": 20,
+            "bandwidth": 100000000000.0,
+            "latency": 1e-06,
+            "error_rate": 0.0
+        },
+        {
+            "src": 5,
+            "dst": 21,
+            "bandwidth": 100000000000.0,
+            "latency": 1e-06,
+            "error_rate": 0.0
+        }
+    ]
 }

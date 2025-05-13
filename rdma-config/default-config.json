@@ -31,7 +31,6 @@
 
   "topology_file": "default-topology.json",
   "flows_file": "default-flows.json",
-  "groups_file": "groups.json",
 
   "simulator_stop_time": 0,
 
@@ -81,24 +80,24 @@
       }
     },
     {
-      "path": "ns3::AnimMonitor",
-      "enable": false,
+      "path": "ns3::RdmaModAnim",
+      "enable": true,
       "attributes": {
-        "XmlOutput": "out_anim.xml"
+        "XmlOutputFile": "out/anim.xml"
       }
     },
     {
       "path": "ns3::PfcMonitor",
       "enable": false,
       "attributes": {
-        "AvroOutput": "out_pfc.avro"
+        "AvroOutputFile": "out_pfc.avro"
       }
     },
     {
       "path": "ns3::TxMonitor",
       "enable": false,
       "attributes": {
-        "AvroOutput": "out_link_bytes.avro"
+        "AvroOutputFile": "out_link_bytes.avro"
       }
     }
   ]

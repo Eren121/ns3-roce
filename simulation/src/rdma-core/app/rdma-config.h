@@ -190,6 +190,7 @@ struct RdmaTopology
 	};
 
     //! Represents a multicast group.
+    //! The multicast group zero is reserved and represents all server nodes.
     //! Any node that is a server can be part of any multicast group.
     //! @note This class is serializable: field names matter.
     struct Group

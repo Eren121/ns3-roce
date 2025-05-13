@@ -1,0 +1,29 @@
+{
+  "type": "record",
+  "name": "AgBitmapsRecord",
+  "fields": [
+    {
+      "name": "bitmaps",
+      "type": {
+        "type": "array",
+        "items": {
+          "type": "record",
+          "name": "AgBitmapRecord",
+          "fields": [
+            {
+              "name": "server_id",
+              "type": "int"
+            },
+            {
+              "name": "recv_chunks",
+              "type": {
+                "type": "array",
+                "items": "boolean"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

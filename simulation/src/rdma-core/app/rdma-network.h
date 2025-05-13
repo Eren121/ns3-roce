@@ -10,6 +10,7 @@
 #include "ns3/rdma-reflection-helper.h"
 #include "ns3/filesystem.h"
 #include "ns3/rdma-config.h"
+#include "ns3/data-rate.h"
 #include <map>
 #include <vector>
 #include <cstdint>
@@ -58,9 +59,9 @@ public:
   //! Stores information between a pair of nodes `(source, destination)`.
   struct P2pInfo
   {
-    //! Stores information of the interface of the souce node.
+    //! Stores information of the interface of the source node.
     Interface iface;
-    //! Stores all possible next hops after the source node to go to the destination node
+    //! Stores all possible next hops after the source node to go to the destination node.
     //! There are multiple possibilities (vector), because we support multiple routes with ECMP.
     std::vector<Ptr<Node>> next_hops;
     //! Sum of delay in nanoseconds of all hops, without transmission delay ("time to transfer a single byte").
@@ -94,10 +95,23 @@ public:
   Ipv4Address FindNodeIp(node_id_t id) const;
   uint64_t GetMaxBdp() const;
 
+  //! Get the maximum delay between two pair of nodes.
+  //! With a normal fat tree, this should be the delay between two servers in different half of the tree.
+  Time GetMaxDelay() const;
+
   //! Get all nodes that belongs to the given multicast group.
-  NodeContainer FindMcastGroup(uint32_t id) const;
+  NodeMap FindMcastGroup(uint32_t id) const;
 
   const RdmaConfig& GetConfig() const;
+
+  //! Get the data rate of all servers.
+  //! Assumes all servers have same bandwidth.
+  DataRate GetAnyServerDataRate() const;
+
+  const RdmaTopology& GetTopology() const
+  {
+    return *m_topology;
+  }
   
 private:
   bool HaveAllServersSameBandwidth() const;

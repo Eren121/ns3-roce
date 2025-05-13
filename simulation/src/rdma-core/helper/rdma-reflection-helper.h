@@ -4,6 +4,7 @@
 #include "ns3/string.h"
 #include "ns3/boolean.h"
 #include "ns3/uinteger.h"
+#include "ns3/pointer.h"
 #include "ns3/type-id.h"
 #include "ns3/object-factory.h"
 #include <rfl/json.hpp>
@@ -200,12 +201,13 @@ template<typename T, typename F>
 void AddBooleanAttribute(TypeId& tid,
   const char* const field_name,
   const char* const field_description,
-  F T::*field)
+  F T::*field,
+  bool default_value = false)
 {
   tid.AddAttribute(
     field_name,
     field_description,
-    BooleanValue(false),
+    BooleanValue(default_value),
     MakeBooleanAccessor(field),
     MakeBooleanChecker());
 }
@@ -225,6 +227,23 @@ void AddUintegerAttribute(TypeId& tid,
     UintegerValue(0),
     MakeUintegerAccessor(field),
     MakeUintegerChecker<F>());
+}
+
+/**
+ * Adds an object attribute by typing less.
+ */
+template<typename T, typename F>
+void AddObjectAttribute(TypeId& tid,
+  const char* const field_name,
+  const char* const field_description,
+  F T::*field)
+{
+  tid.AddAttribute(
+    field_name,
+    field_description,
+    PointerValue(),
+    MakePointerAccessor<F>(field),
+    MakePointerChecker<F>());
 }
 
 } // namespace ns3

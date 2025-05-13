@@ -75,7 +75,7 @@ auto ScheduleNow(Args&&... args)
  * Otherwise, lambdas does not work with `MakeBoundCallback()`.
  */
 template<typename... Args, typename Func>
-auto MakeLambdaCallback(Func&& func)
+auto MakeLambdaCallback(Func func)
 {
   class Lambda : public SimpleRefCount<Lambda>
   {
@@ -87,7 +87,7 @@ auto MakeLambdaCallback(Func&& func)
     Func m_func;
   };
 
-  Ptr<Lambda> lambda = Create<Lambda>(std::forward<Func>(func));
+  Ptr<Lambda> lambda = Create<Lambda>(std::move(func));
   return MakeCallback(&Lambda::Run, lambda);
 }
 
@@ -130,6 +130,8 @@ private:
   };
 
 public:
+  NodeMap() = default;
+  
   /**
    * @{
    * Iterates nodes in the container.
@@ -161,6 +163,12 @@ public:
   Ptr<Node> Get(node_id_t id) const
   {
     return m_map.at(id);
+  }
+
+  //! Return all the nodes ordered by their global ID.
+  std::vector<Ptr<Node>> to_vector() const
+  {
+    return {begin(), end()}; 
   }
 
 private:
@@ -306,6 +314,13 @@ private:
  * Provides a way to pick a unique port per node.
  */
 uint16_t GetNextUniquePort(Ptr<Node> node);
+
+/**
+ * Provides a way to pick a globally unique port among all nodes.
+ * Multicast port should be the same on each receiver,
+ * and since `GetNextUniquePort()` is dependant to the node, we cannot use it.
+ */
+uint16_t GetNextMulticastUniquePort();
 
 inline uint16_t wrapped_increment(uint16_t x) {
   if(x == std::numeric_limits<uint16_t>::max()) {

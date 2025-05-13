@@ -53,14 +53,15 @@ Ptr<AttributeValue> ConvertJsonToAttribute(const SerializedJsonAny& obj, const T
 
     using JsonFieldType = std::decay_t<decltype(value)>;
 
-    // At most one of the `is_*` is true
+    // Check the serialized type.
+    // At most one of the `is_*` variables is true.
     constexpr bool is_bool{std::is_same_v<JsonFieldType, bool>};
     constexpr bool is_int{std::is_integral_v<JsonFieldType> && !is_bool};
     constexpr bool is_real{std::is_floating_point_v<JsonFieldType>};
     constexpr bool is_str{std::is_same_v<JsonFieldType, std::string>};
-    
-    // Special cases, conversions
+    constexpr bool is_obj{std::is_same_v<JsonFieldType, SerializedJsonObject>};
 
+    // Special case conversions based on the C++ attribute type.
     if(type == "ns3::TimeValue") {
       if constexpr(is_int || is_real) {
         // Allows to store seconds as numeric
@@ -102,8 +103,15 @@ Ptr<AttributeValue> ConvertJsonToAttribute(const SerializedJsonAny& obj, const T
     else if constexpr(is_str) {
       return Create<StringValue>(value);
     }
+    else if constexpr(is_obj) {
+      // Otherwise, try to deserialize as an object.
+      // Will crash if this is not an object.
+      ObjectFactory factory{type};
+      PopulateAttributes(factory, value);
+      return PointerValue(factory.Create<Object>());
+    }
     else {
-      NS_ABORT_MSG("Unsupported attribute field type");
+      NS_ABORT_MSG("Unsupported serialized attribute field type");
       return Create<EmptyAttributeValue>();
     }
   }, obj.get());

@@ -2,7 +2,7 @@
   "flows": [
     {
       "path": "ns3::RdmaFlowUnicast",
-      "enable": true,
+      "enable": false,
       "start_time": 0.0,
       "in_background": false,
       "attributes": {
@@ -11,6 +11,18 @@
         "IsReliable": false,
         "PfcPriority": 3,
         "WriteByteAmount": 1e6
+      }
+    },
+    {
+      "path": "ns3::AgFlowMcastPhase",
+      "enable": true,
+      "start_time": 0.0,
+      "in_background": false,
+      "attributes": {
+        "BitmapsAvroOut": "out_recv_chunks.avro",
+        "MulticastRootCount": 2,
+        "PerNodeChunkCount": 3,
+        "PerChunkPacketCount": 2
       }
     }
   ]

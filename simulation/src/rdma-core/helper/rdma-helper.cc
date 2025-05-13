@@ -161,4 +161,13 @@ uint16_t GetNextUniquePort(Ptr<Node> node)
   return tag->GetNextPort();
 }
 
+uint16_t GetNextMulticastUniquePort()
+{
+  // Assumes it doesn't conflict with `GetNextUniquePort()`.
+  // So no more than 3000 unique ports per node.
+  
+  static uint16_t next_port{5000};
+  return next_port++;
+}
+
 } // namespace ns3

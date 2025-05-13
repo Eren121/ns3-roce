@@ -48,7 +48,7 @@ build_type ?= default
 build_image:
 	docker build -t $(docker_tag) .
 
-ns3_run = ./simulation/ns3 run 'rdma ../$(app_config)'
+ns3_run = ./simulation/ns3 run 'rdma-ag ../$(app_config)'
 
 .PHONY: configure_debug
 configure_debug: build_type = debug
@@ -64,7 +64,7 @@ configure:
 
 .PHONY: build
 build:
-	$(docker_run) ./simulation/ns3 build rdma
+	$(docker_run) ./simulation/ns3 build rdma-ag
 
 # Clean all build files + generated binaries
 .PHONY: distclean
@@ -94,7 +94,7 @@ run_bash:
 
 .PHONY: gen_avro
 gen_avro:
-	$(docker_run) ./simulation/src/rdma/serdes/scripts/gen-avro-headers.sh
+	$(docker_run) ./simulation/src/rdma-core/serdes/scripts/gen-avro-headers.sh
 
 #################
 ################# Analysis
@@ -117,13 +117,13 @@ plots:
 
 .PHONY: build_netanim
 build_netanim:
-	$(docker_run) bash build-netanim.sh
+	$(docker_run) bash netanim/build-netanim.sh
 
 .PHONY: run_netanim
 run_netanim: docker_env     += -e DISPLAY=$(DISPLAY)
 run_netanim: docker_extra   += -v /tmp/.X11-unix:/tmp/.X11-unix
 run_netanim:
-	$(docker_run) ./netanim/NetAnim
+	$(docker_run) ./netanim/run-netanim.sh
 
 #################
 ################# Trace Reader

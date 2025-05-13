@@ -121,9 +121,14 @@ uint64_t RdmaNetwork::GetMaxBdp() const
   return m_maxBdp;
 }
 
-NodeContainer RdmaNetwork::FindMcastGroup(uint32_t id) const
+Time RdmaNetwork::GetMaxDelay() const
 {
-  NodeContainer nodes;
+  return NanoSeconds(m_maxRtt) / 2;
+}
+
+NodeMap RdmaNetwork::FindMcastGroup(uint32_t id) const
+{
+  NodeMap nodes;
   for(node_id_t node_id : m_mcast_groups.at(id)) {
     nodes.Add(FindServer(node_id));
   }
@@ -209,6 +214,14 @@ void RdmaNetwork::BuildGroups()
   // Populate `m_mcast_groups`
   //
 
+  // Add reserved multicast group zero which contains all nodes.
+  {
+    RdmaTopology::Group group_zero;
+    group_zero.id = 0;
+    group_zero.nodes = "*";
+    m_topology->groups.push_back(group_zero);
+  }
+
   for(const RdmaTopology::Group& group : m_topology->groups) {
 
     Ranges node_ranges{group.nodes};
@@ -225,14 +238,14 @@ void RdmaNetwork::BuildGroups()
       if(const auto* idx = std::get_if<Ranges::Index>(&elem)) {
 
         const unsigned int node_id{*idx};
-        NS_ASSERT(!IsSwitchNode(FindNode(node_id)));
+        NS_ABORT_IF(IsSwitchNode(FindNode(node_id)));
         m_mcast_groups[group.id].insert(node_id);
       }
       else if(const auto* range = std::get_if<Ranges::Range>(&elem)) {
 
         for(int node_id = range->first; node_id <= range->last; node_id++) {
 
-          NS_ASSERT(!IsSwitchNode(FindNode(node_id)));
+          NS_ABORT_IF(IsSwitchNode(FindNode(node_id)));
           m_mcast_groups[group.id].insert(node_id);
         }
       }
@@ -394,6 +407,21 @@ void RdmaNetwork::CreateLinks()
   SwitchNode::Rebuild(all_nodes);
 }
 
+DataRate RdmaNetwork::GetAnyServerDataRate() const
+{
+	for (const RdmaTopology::Link& link : m_topology->links) {
+		const node_id_t src{link.src};
+		const node_id_t dst{link.dst};
+		const Ptr<Node> snode{FindNode(link.src)};
+		const Ptr<Node> dnode{FindNode(link.dst)};
+
+    const bool is_server_link{!IsSwitchNode(snode) || !IsSwitchNode(dnode)};
+    if(is_server_link) {
+      return link.bandwidth;
+    }
+  }
+}
+
 bool RdmaNetwork::HaveAllServersSameBandwidth() const
 {
   const RdmaTopology::Link* first_server_link{};
@@ -404,7 +432,7 @@ bool RdmaNetwork::HaveAllServersSameBandwidth() const
 		const Ptr<Node> snode{FindNode(link.src)};
 		const Ptr<Node> dnode{FindNode(link.dst)};
 
-    const bool is_server_link{IsSwitchNode(snode) || !IsSwitchNode(dnode)};
+    const bool is_server_link{!IsSwitchNode(snode) || !IsSwitchNode(dnode)};
     if(is_server_link) {
       if(!first_server_link) {
         first_server_link = &link;
@@ -591,6 +619,7 @@ uint64_t RdmaNetwork::GetMtuBytes() const
 
 void RdmaNetwork::BuildP2pInfo()
 {
+  // Requires: All `delay`, `tx_delay` of `P2pInfo` are set.
 	// Builds `m_maxRtt`, `m_maxBdp`;
   // and `rtt` and `bdp` of all `P2pInfo`.
 
@@ -617,7 +646,8 @@ void RdmaNetwork::BuildP2pInfo()
 		}
 	}
 
-	NS_LOG_INFO("maxRtt=" << m_maxRtt << "; maxBdp=" << m_maxBdp);
+	NS_LOG_INFO("Highest RTT: " << NanoSeconds(m_maxRtt));
+  NS_LOG_INFO("Highest BDP: " << m_maxBdp << "B");
   
 	for (const auto& [_, sw] : m_switches) {
     sw->SetAttribute("MaxRtt", UintegerValue(m_maxRtt));

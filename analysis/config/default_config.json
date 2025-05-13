@@ -31,7 +31,6 @@
 
   "topology_file": "topology.json",
   "flows_file": "flows.json",
-  "groups_file": "groups.json",
 
   "simulator_stop_time": 0,
 

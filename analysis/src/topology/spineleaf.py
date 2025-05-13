@@ -1,6 +1,9 @@
 from dataclasses import dataclass
 from collections import namedtuple
 import numpy as np
+import argparse
+import json
+import pyutils as pyu
 
 
 class Style:
@@ -22,14 +25,14 @@ class Topology():
         self.config = Config()
         self.style = Style()
         self.n_servers_per_leaf = 4
-        self.n_leaf = 4
+        self.n_leafs = 4
         self.n_spines = 2
     
     def n_servers(self) -> int:
-        return self.n_servers_per_leaf * self.n_leaf
+        return self.n_servers_per_leaf * self.n_leafs
 
     def first_server(self) -> int:
-        return self.n_leaf + self.n_spines
+        return self.n_leafs + self.n_spines
     
     def first_leaf(self) -> int:
         return self.n_spines
@@ -56,7 +59,7 @@ class Topology():
         x = 0
         y = 0
         id = self.first_server()
-        for leaf in range(self.n_leaf):
+        for leaf in range(self.n_leafs):
             for s in range(self.n_servers_per_leaf):
                 servers.append({
                     "id": id,
@@ -77,7 +80,7 @@ class Topology():
 
         first_x = (self.n_servers_per_leaf - 1) * self.style.server_xpadding / 2
         x = first_x
-        for leaf in range(self.n_leaf):
+        for leaf in range(self.n_leafs):
             leaf_id = self.n_spines + leaf
             sw.append({
                 "id": leaf_id,
@@ -112,16 +115,9 @@ class Topology():
         return sw, links
 
     def _make_groups(self) -> dict:
-        """
-        We just need a single multicast group that all servers belong to.
-        """
-        group = {
-           "id": 1,
-           "nodes": "*"
-        }
-        return [group]
+        return []
       
-    def to_json(self):
+    def to_json(self) -> dict:
         sw, links = self._make_switches()
         servers = self._make_servers()
         groups = self._make_groups()
@@ -132,3 +128,18 @@ class Topology():
             "groups": groups,
             "links": links
         }
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        prog="spineleaf",
+        description="Generate 2-levels fat tree topology JSON.")
+    parser.add_argument("-s", "--spines", default=2)
+    parser.add_argument("-l", "--leafs", default=4)
+    parser.add_argument("-n", "--servers_per_leaf", default=4)
+    args = parser.parse_args()
+
+    topology = Topology()
+    topology.n_servers_per_leaf = args.servers_per_leaf
+    topology.n_leafs = args.leafs
+    topology.n_spines = args.spines
+    print(pyu.dump_json(topology.to_json()))

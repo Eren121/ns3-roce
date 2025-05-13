@@ -1,15 +1,12 @@
+# Rdma core implementation
+
 find_package(reflectcpp REQUIRED)
 find_library(libavrocpp avrocpp REQUIRED)
 
 if(reflectcpp_FOUND)
   build_lib(
-    LIBNAME rdma
+    LIBNAME rdma-core
     SOURCE_FILES
-      ag/ag-app.cc
-      ag/ag-app-helper.cc
-      ag/ag-config.cc
-      ag/ag-runtime.cc
-      ag/ag-shared.cc
       app/rdma-flow.cc
       app/rdma-flow-scheduler.cc
       app/rdma-network.cc
@@ -17,6 +14,8 @@ if(reflectcpp_FOUND)
       app/rdma-pfc-monitor.cc
       app/rdma-tx-monitor.cc
       app/flows/rdma-flow-unicast.cc
+      app/flows/rdma-flow-multicast.cc
+      app/flows/rdma-flow-bisection.cc
       helper/filesystem.cc
       helper/rdma-helper.cc
       helper/rdma-reflection-helper.cc
@@ -41,11 +40,6 @@ if(reflectcpp_FOUND)
       model/rdma-unreliable-qp.cc
       model/switch-mmu.cc
       model/switch-node.cc
-      ag/ag-app.cc
-      ag/ag-app-helper.cc
-      ag/ag-config.cc
-      ag/ag-runtime.cc
-      ag/ag-shared.cc
       app/rdma-config.cc
       app/rdma-config-module.cc
       app/rdma-flow.cc
@@ -76,17 +70,16 @@ if(reflectcpp_FOUND)
       model/switch-mmu.cc
       model/switch-node.cc   
       app/modules/rdma-mod-stats.cc     
+      app/modules/rdma-mod-anim.cc     
     HEADER_FILES
+      ## TODO refactor mvoe ag-* records in rdma-ag module. 
       serdes/generated/ag-recv-chunk-record.h
+      serdes/generated/ag-bitmaps.h
+      ##
       serdes/generated/pfc-record.h
       serdes/generated/tx-record.h
       serdes/generated/sw-mem-record.h
       serdes/generated/qp-record.h
-      ag/ag-app.h
-      ag/ag-app-helper.h
-      ag/ag-config.h
-      ag/ag-runtime.h
-      ag/ag-shared.h
       app/rdma-config.h
       app/rdma-config-module.h
       app/rdma-flow.h
@@ -97,6 +90,8 @@ if(reflectcpp_FOUND)
       app/rdma-pfc-monitor.h
       app/rdma-qp-monitor.h
       app/flows/rdma-flow-unicast.h
+      app/flows/rdma-flow-multicast.h
+      app/flows/rdma-flow-bisection.h
       helper/filesystem.h
       helper/json.h
       helper/rdma-helper.h
@@ -126,6 +121,7 @@ if(reflectcpp_FOUND)
       model/switch-node.h
       model/trace-format.h
       app/modules/rdma-mod-stats.h
+      app/modules/rdma-mod-anim.h
     LIBRARIES_TO_LINK
       reflectcpp
       ${libavrocpp}
@@ -133,5 +129,6 @@ if(reflectcpp_FOUND)
       ${libnetwork}
       ${libpoint-to-point}
       ${libapplications}
+      ${libnetanim}
   )
 endif()
