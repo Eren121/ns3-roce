@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ns3/rdma-flow.h"
+#include "ns3/node.h"
 
 namespace ns3 {
 
@@ -22,8 +23,12 @@ namespace ns3 {
 class RdmaFlowBisection : public RdmaFlow
 {
 public:
+    using RdmaFlow::OnComplete;
+
     static TypeId GetTypeId();
-    void StartFlow(RdmaNetwork& network, OnComplete on_complete) override;
+
+protected:
+    void OnFlowStarted(RdmaNetwork& network) override;
 
 private:
     void StartWrite(Ptr<Node> initiator, Ptr<Node> target, OnComplete on_complete) const;

@@ -19,13 +19,16 @@ class AgFlowMcastPhase : public RdmaFlow
 {
 private:
     // Defines the order of the multicast.
-    // - First index indicates the multicasts should run in order.
-    // - Second index indicates the multicasts should run concurrently.
+    // If chains is of type `McastChains`.
+    // - `chains[0]` is the first chain, `chains[1]` the second, etc...
+    // - `chains[0][1]` should be executed when `chains[0][0]` has completed, etc...
     using McastChains = std::vector<std::vector<Ptr<Node>>>;
 
 public:
     static TypeId GetTypeId();
-    void StartFlow(RdmaNetwork& network, OnComplete on_complete) override;
+
+protected:
+    void OnFlowStarted(RdmaNetwork& network) override;
 
 private:
     McastChains BuildMulticastChains(RdmaNetwork& network) const;
@@ -43,8 +46,6 @@ private:
     group_id_t m_mcast_group{};
     //! PFC priority to use for all multicasts. Fixed.
     priority_t m_priority{3};
-    //! To avoid memory leaks and flows to be destroyed.
-    std::vector<Ptr<RdmaFlow>> m_flows;
     //! Divide the bandwidth of each multicast by the count of multicast root to not overflow receivers.
     //! This should be set to true, but maybe CC can manage this under some conditions?
     bool m_optimize_throughput{true};

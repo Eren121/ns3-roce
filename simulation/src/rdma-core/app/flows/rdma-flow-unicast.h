@@ -12,8 +12,12 @@ namespace ns3 {
 class RdmaFlowUnicast : public RdmaFlow
 {
 public:
+    using RdmaFlow::OnComplete;
+
     static TypeId GetTypeId();
-    void StartFlow(RdmaNetwork& network, OnComplete on_complete) override;
+
+protected:
+    void OnFlowStarted(RdmaNetwork& network) override;
 
 private:
     //! Source node ID.

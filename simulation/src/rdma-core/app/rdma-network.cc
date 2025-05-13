@@ -42,8 +42,8 @@ void RdmaNetwork::Initialize(const fs::path& config_path)
   instance.InitModules();
 
   // Load flows.
-	FlowScheduler flow_scheduler{instance, config->FindFile(config->flows_file)};
-	flow_scheduler.SetOnAllFlowsCompleted([]() {
+	instance.m_flow_scheduler = std::make_unique<FlowScheduler>(instance, config->FindFile(config->flows_file));
+	instance.m_flow_scheduler->SetOnAllFlowsCompleted([]() {
 		NS_LOG_INFO("Simulation stopped at " << Simulator::Now().GetSeconds() << "s.");
 		Simulator::Stop();
 	});
@@ -472,8 +472,8 @@ void RdmaNetwork::ConfigureSwitches()
       mmu.ConfigEcn(j, ecn.min_buf_bytes, ecn.max_buf_bytes, ecn.max_probability);
 
       // Init PFC.
-      const uint64_t delay{DynamicCast<QbbChannel>(dev->GetChannel())->GetDelay().GetTimeStep()};
-      const uint32_t headroom{rate * delay / 8 / 1e9 * 3};
+      const uint64_t delay{static_cast<uint64_t>(DynamicCast<QbbChannel>(dev->GetChannel())->GetDelay().GetTimeStep())};
+      const uint32_t headroom{static_cast<uint32_t>(rate * delay / 8 / 1e9 * 3)};
       mmu.ConfigHdrm(j, headroom);
       
       // Init PFC alpha, proportional to link bandwidth.

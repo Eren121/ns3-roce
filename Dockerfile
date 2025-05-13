@@ -7,7 +7,8 @@ RUN apt update \
  && apt install -y gcc g++ gdb cmake python3 valgrind
 
 # Download necessary stuff to build netanim
-RUN apt install -y git qtbase5-dev qt5-qmake make
+# clang: Nice autocomplete on vscode.
+RUN apt install -y git qtbase5-dev qt5-qmake make clang
 
 # Necessary stuff for analysis
 RUN apt install -y \

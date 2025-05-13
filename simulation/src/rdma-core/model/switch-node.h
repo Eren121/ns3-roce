@@ -50,7 +50,7 @@ private:
 	 * For each interface, stores whether the link points towards an uplink switch in the topology.
 	 * Used for ECMP.
 	 */
-	std::vector<iface_id_t> m_uplink;
+	std::vector<bool> m_uplink;
 	
 	/**
 	 * Distance from root in the fat tree (root switches have depth zero).

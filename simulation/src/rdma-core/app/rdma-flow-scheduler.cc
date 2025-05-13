@@ -12,9 +12,9 @@ NS_LOG_COMPONENT_DEFINE("FlowScheduler");
 FlowScheduler::FlowScheduler(RdmaNetwork& network, const fs::path& json_flows)
   : m_network{network}
 {
-  SerializedFlowList flow_list{rfl::json::read<SerializedFlowList>(read_all_file(json_flows)).value()};
-  for(SerializedFlow& flow : flow_list.flows) {
-    AddFlow(std::move(flow));
+  SerializedFlowList info_list{rfl::json::read<SerializedFlowList>(read_all_file(json_flows)).value()};
+  for(SerializedFlow& info : info_list.flows) {
+    AddSerializedFlow(info);
   }
 
   // If there is no foreground flow loaded, stop immediately!
@@ -31,37 +31,51 @@ void FlowScheduler::SetOnAllFlowsCompleted(OnAllFlowsCompleted on_all_completed)
   m_on_all_completed = std::move(on_all_completed);
 }
 
-void FlowScheduler::AddFlow(SerializedFlow serialized_flow_arg)
+void FlowScheduler::AddSerializedFlow(SerializedFlow info)
 {
-  NS_LOG_FUNCTION(this);
-
-  if(!serialized_flow_arg.enable) {
+  if(!info.enable) {
     return;
   }
-  
-  const int flow_id{m_flows.size()};
-  m_flows.push_back(std::move(serialized_flow_arg));
-  SerializedFlow& serialized_flow{m_flows.back()};
 
-  if(serialized_flow.in_background) {
+  ObjectFactory factory{info.path};
+  PopulateAttributes(factory, info.attributes);
+  Ptr<RdmaFlow> flow = factory.Create<RdmaFlow>();
+  flow->Init(info);
+
+  AddFlow(flow);
+}
+
+void FlowScheduler::AddFlow(Ptr<RdmaFlow> flow)
+{
+  NS_LOG_FUNCTION(this);
+  
+  m_flows[flow->GetId()] = flow;
+
+  if(flow->InBackground()) {
     m_bg_running++;
   }
   else {
     m_fg_running++;
   }
 
-  ScheduleAbs(serialized_flow.start_time, MakeBoundCallback(&FlowScheduler::RunFlow, this, flow_id));
+  // Run the flow only if all dependencies have completed.
+  // Otherwise, we will try when each of the dependency completes.
+  if(m_rem_dependencies[flow] == 0) {
+    ScheduleAbs(flow->GetStartTime(), MakeLambdaCallback([this, flow]() {
+      // Check again because in the current event, dependencies may have been added.
+      // If the user adds dependencies after adding the flow.
+      if(m_rem_dependencies[flow] == 0) {
+          RunFlow(flow);
+      }
+    }));
+  }
 }
 
-void FlowScheduler::OnFlowFinish(int flow_id)
+void FlowScheduler::OnFlowFinish(Ptr<RdmaFlow> flow)
 {
-  NS_LOG_FUNCTION(this << flow_id);
-  
-  const SerializedFlow& flow{m_flows.at(flow_id)};
-	
-  NS_LOG_INFO("Flow " << flow_id << " completed");
+  NS_LOG_INFO("Flow " << flow->GetId() << " completed");
 
-  if(flow.in_background) {
+  if(flow->InBackground()) {
     m_bg_running--;
   }
   else {
@@ -75,25 +89,41 @@ void FlowScheduler::OnFlowFinish(int flow_id)
   else {
     NS_LOG_INFO("Remains " << m_fg_running << " flows");
   }
+
+  // Check if any dependency is resolved.
+  for(Ptr<RdmaFlow> target : m_dependencies[flow]) {
+    NS_ABORT_IF(m_rem_dependencies[target] == 0);
+    m_rem_dependencies[target]--;
+    
+    if(m_rem_dependencies[target] == 0 && Simulator::Now() >= target->GetStartTime()) {
+      // All dependencies have completed, run the flow.
+      // If the start time is not yet reached, the flow will be scheduled normally later.
+      RunFlow(target);
+    }
+  }
 }
 
-void FlowScheduler::RunFlow(int flow_id)
+void FlowScheduler::RunFlow(Ptr<RdmaFlow> flow)
 {
-  NS_LOG_FUNCTION(this << flow_id);
-  
-  NS_LOG_INFO("Running flow " << flow_id);
-  const SerializedFlow& flow{m_flows.at(flow_id)};
+  NS_LOG_INFO("Running flow " << flow->GetId());
 
-
-  ObjectFactory factory{flow.path};
-  PopulateAttributes(factory, flow.attributes);
-
-  Ptr<RdmaFlow> flow_instance = factory.Create<RdmaFlow>();
-  flow_instance->StartFlow(m_network, [this, flow_id]() {
-    OnFlowFinish(flow_id);
+  // Mark the flow finished when the flow completes.
+  flow->AddOnCompleteCallback([this, flow]() {
+    OnFlowFinish(flow);
   });
-  
-  m_running_flows.push_back(flow_instance);
+
+  // Finally, start the flow.
+  flow->StartFlow(m_network);
+}
+
+void FlowScheduler::AddDependency(Ptr<RdmaFlow> target, Ptr<RdmaFlow> dependency)
+{
+  m_dependencies[dependency].push_back(target);
+
+  // Only increase the counter for running dependencies.
+  if(!dependency->HasCompleted()) {
+    m_rem_dependencies[target]++;
+  }
 }
 
 } // namespace ns3

@@ -21,7 +21,7 @@
     "ns3::SwitchNode::CcMode": 1,
     "ns3::RdmaHw::RateDecreaseInterval": 4,
     "ns3::RdmaHw::MinRate": "100Mb/s",
-    "ns3::RdmaHw::Mtu": 1500,
+    "ns3::RdmaHw::Mtu": 4096,
     "ns3::RdmaHw::VarWin": true,
     "ns3::RdmaHw::FastReact": true,
     "ns3::RdmaHw::RateBound": true,

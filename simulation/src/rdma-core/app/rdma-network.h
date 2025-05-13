@@ -8,6 +8,7 @@
 #include "ns3/filesystem.h"
 #include "ns3/animation-interface.h"
 #include "ns3/rdma-reflection-helper.h"
+#include "ns3/rdma-flow-scheduler.h"
 #include "ns3/filesystem.h"
 #include "ns3/rdma-config.h"
 #include "ns3/data-rate.h"
@@ -112,6 +113,11 @@ public:
   {
     return *m_topology;
   }
+
+  FlowScheduler& GetFlowScheduler()
+  {
+    return *m_flow_scheduler;
+  }
   
 private:
   bool HaveAllServersSameBandwidth() const;
@@ -170,6 +176,8 @@ private:
   //! Aggregate any object.
   //! Useful for extensibility.
   std::vector<Ptr<RdmaConfigModule>> m_modules;
+
+  std::unique_ptr<FlowScheduler> m_flow_scheduler;
 };
 
 } // namespace ns3

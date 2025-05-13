@@ -16,6 +16,7 @@ if(reflectcpp_FOUND)
       app/flows/rdma-flow-unicast.cc
       app/flows/rdma-flow-multicast.cc
       app/flows/rdma-flow-bisection.cc
+      app/flows/rdma-flow-wait.cc
       helper/filesystem.cc
       helper/rdma-helper.cc
       helper/rdma-reflection-helper.cc
@@ -92,6 +93,7 @@ if(reflectcpp_FOUND)
       app/flows/rdma-flow-unicast.h
       app/flows/rdma-flow-multicast.h
       app/flows/rdma-flow-bisection.h
+      app/flows/rdma-flow-wait.h
       helper/filesystem.h
       helper/json.h
       helper/rdma-helper.h

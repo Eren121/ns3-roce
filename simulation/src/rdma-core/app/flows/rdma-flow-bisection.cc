@@ -37,7 +37,7 @@ TypeId RdmaFlowBisection::GetTypeId()
   return tid;
 }
 
-void RdmaFlowBisection::StartFlow(RdmaNetwork& network, OnComplete on_complete)
+void RdmaFlowBisection::OnFlowStarted(RdmaNetwork& network)
 {
     using std::swap;
 
@@ -54,10 +54,10 @@ void RdmaFlowBisection::StartFlow(RdmaNetwork& network, OnComplete on_complete)
     const size_t n_servers_per_half = n_servers / 2;
 
     // Stops when all bisection RDMA Write have completed.
-    auto on_single_write_complete = [on_complete, n_servers_per_half, n_write_complete=0]() mutable {
+    auto on_single_write_complete = [this, n_servers_per_half, n_write_complete=0]() mutable {
         n_write_complete++;
         if(n_write_complete == n_servers_per_half) {
-            on_complete();
+            NotifyComplete();
         }
     };
 

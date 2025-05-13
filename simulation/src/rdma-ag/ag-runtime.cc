@@ -150,7 +150,7 @@ void AgRuntime::NotifyRecvRecoveryRequest()
   NS_ASSERT(GetRightRuntime().m_state == AgState::Recovery);
 
   // We magically fetch the blocks that the right nodes has missed, simpler
-  const uint32_t missed{GetRightRuntime().m_torecover.size()};
+  const uint32_t missed = GetRightRuntime().m_torecover.size();
   NS_LOG_LOGIC("Right node has partially missed " << missed << " blocks");
   m_has_recv_recover_req = true;
 
@@ -254,7 +254,7 @@ void AgRuntime::TryUpdateState()
   }
   
   const auto& right_torecover{GetRightRuntime().m_torecover};
-  const uint32_t right_missed_blocks{right_torecover.size()};
+  const uint32_t right_missed_blocks = right_torecover.size();
 
   NS_LOG_LOGIC("{"
     << "has_recovered_all=" << m_has_recovered_all << ","

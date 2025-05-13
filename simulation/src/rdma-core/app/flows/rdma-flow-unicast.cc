@@ -47,7 +47,7 @@ TypeId RdmaFlowUnicast::GetTypeId()
   return tid;
 }
 
-void RdmaFlowUnicast::StartFlow(RdmaNetwork& network, OnComplete on_complete)
+void RdmaFlowUnicast::OnFlowStarted(RdmaNetwork& network)
 {
     const Ptr<Node> snode = network.FindServer(m_snode);
     const Ptr<Node> dnode = network.FindServer(m_dnode);
@@ -65,7 +65,9 @@ void RdmaFlowUnicast::StartFlow(RdmaNetwork& network, OnComplete on_complete)
     sr.multicast = false;
     sr.dip = dst_ip;          // Only useful for UD QP.
     sr.dport = dst_port;      // Only useful for UD QP.
-    sr.on_send = on_complete; // Notify completion.
+    sr.on_send = [this]() {
+      NotifyComplete();
+    };
 
     // Create the queues on the source.
     {

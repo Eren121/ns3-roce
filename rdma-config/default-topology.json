@@ -182,56 +182,56 @@
         {
             "src": 2,
             "dst": 0,
-            "bandwidth": 100000000000.0,
+            "bandwidth": 400000000000.0,
             "latency": 1e-06,
             "error_rate": 0.0
         },
         {
             "src": 2,
             "dst": 1,
-            "bandwidth": 100000000000.0,
+            "bandwidth": 400000000000.0,
             "latency": 1e-06,
             "error_rate": 0.0
         },
         {
             "src": 3,
             "dst": 0,
-            "bandwidth": 100000000000.0,
+            "bandwidth": 400000000000.0,
             "latency": 1e-06,
             "error_rate": 0.0
         },
         {
             "src": 3,
             "dst": 1,
-            "bandwidth": 100000000000.0,
+            "bandwidth": 400000000000.0,
             "latency": 1e-06,
             "error_rate": 0.0
         },
         {
             "src": 4,
             "dst": 0,
-            "bandwidth": 100000000000.0,
+            "bandwidth": 400000000000.0,
             "latency": 1e-06,
             "error_rate": 0.0
         },
         {
             "src": 4,
             "dst": 1,
-            "bandwidth": 100000000000.0,
+            "bandwidth": 400000000000.0,
             "latency": 1e-06,
             "error_rate": 0.0
         },
         {
             "src": 5,
             "dst": 0,
-            "bandwidth": 100000000000.0,
+            "bandwidth": 400000000000.0,
             "latency": 1e-06,
             "error_rate": 0.0
         },
         {
             "src": 5,
             "dst": 1,
-            "bandwidth": 100000000000.0,
+            "bandwidth": 400000000000.0,
             "latency": 1e-06,
             "error_rate": 0.0
         },

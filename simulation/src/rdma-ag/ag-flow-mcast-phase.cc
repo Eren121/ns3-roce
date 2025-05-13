@@ -1,5 +1,6 @@
 #include "ns3/ag-flow-mcast-phase.h"
 #include "ns3/rdma-flow-multicast.h"
+#include "ns3/rdma-flow-wait.h"
 #include "ns3/rdma-network.h"
 #include "ns3/rdma-hw.h"
 #include "ns3/qbb-net-device.h"
@@ -53,22 +54,20 @@ TypeId AgFlowMcastPhase::GetTypeId()
   return tid;
 }
 
-void AgFlowMcastPhase::StartFlow(RdmaNetwork& network, OnComplete on_complete)
+void AgFlowMcastPhase::OnFlowStarted(RdmaNetwork& network)
 {
   const DataRate bandwidth = network.GetAnyServerDataRate();
   const McastChains chains = BuildMulticastChains(network);
 
   const uint32_t num_pkts_per_mcast = m_num_chunks_per_node * m_num_pkts_per_chunk;
 
-  const uint64_t reduction_bytes = static_cast<uint64_t>(num_pkts_per_mcast) * network.GetMtuBytes();
+  for(const auto& chain : chains) {
+    
+    // Previous flow of this chain, to build dependencies.
+    Ptr<RdmaFlow> previous;
 
-  // Next multicast happens at this time.
-  const uint64_t num_bytes_mcast = static_cast<uint64_t>(num_pkts_per_mcast) * network.GetMtuBytes();
-  const Time mcast_duration = network.GetAnyServerDataRate().CalculateBytesTxTime(num_bytes_mcast);
-  Time next_start{};
-
-  for(const auto& simultaneous_mcast : chains) {
-    for(Ptr<Node> mcast_src : simultaneous_mcast) {
+    // Build the multicasts of each chain, each one dependening on the previous
+    for(Ptr<Node> mcast_src : chain) {
       const int mcast_src_id = mcast_src->GetId();
 
       // Called when any packet is received on any receiver for this multicast.
@@ -77,7 +76,13 @@ void AgFlowMcastPhase::StartFlow(RdmaNetwork& network, OnComplete on_complete)
           << mcast_src_id << ", " << info.receiver << ", " << info.pkt_id);
       };
       
-      auto multicast = CreateObject<RdmaFlowMulticast>();
+      Ptr<RdmaFlowMulticast> multicast = CreateObject<RdmaFlowMulticast>();
+      network.GetFlowScheduler().AddFlow(multicast);
+
+      if(previous) {
+        network.GetFlowScheduler().AddDependency(multicast, previous);
+      }
+      
       multicast->SetAttribute("MulticastSource", UintegerValue(mcast_src_id));
       multicast->SetAttribute("MulticastGroup", UintegerValue(m_mcast_group));
       multicast->SetAttribute("NumPackets", UintegerValue(num_pkts_per_mcast));
@@ -88,23 +93,27 @@ void AgFlowMcastPhase::StartFlow(RdmaNetwork& network, OnComplete on_complete)
         multicast->SetThroughput(bandwidth * (1.0 / m_num_mcast_roots));
       }
 
-      const Time completion_time = bandwidth.CalculateBytesTxTime(reduction_bytes);
-      Simulator::Schedule(next_start, MakeLambdaCallback([multicast, &network]() {
-        multicast->StartFlow(network, {});
-      }));
+      // Add a delay to take into account the delay for the last packet to arrive at the furthest servers.
+      Ptr<RdmaFlowWait> wait = CreateObject<RdmaFlowWait>();
+      wait->SetAttribute("Time", TimeValue(network.GetMaxDelay()));
+      network.GetFlowScheduler().AddFlow(wait);
+      network.GetFlowScheduler().AddDependency(wait, multicast);
 
-      m_flows.push_back(multicast);
+      previous = wait;
     }
 
-    next_start += mcast_duration;
+    // Aggregate all completed chains to notify the multicast phase is complete.
+    auto on_chain_complete = [this, num_chains=chains.size(), completed_chains=0]() mutable {
+      completed_chains++;
+      NS_ABORT_IF(completed_chains > num_chains);
 
-    // Let time for the packets to arrive.
-    next_start += network.GetMaxDelay();
+      if(completed_chains == num_chains) {
+        NotifyComplete();
+      }
+    };
+
+    previous->AddOnCompleteCallback(on_chain_complete);
   }
-
-  // We can estimate the completion time.
-  // This will not take into account the few packets at the end that will be maybe be missed, but how cares.
-  Simulator::Schedule(next_start, MakeLambdaCallback(std::move(on_complete)));
 }
 
 auto AgFlowMcastPhase::BuildMulticastChains(RdmaNetwork& network) const -> McastChains
@@ -115,17 +124,19 @@ auto AgFlowMcastPhase::BuildMulticastChains(RdmaNetwork& network) const -> Mcast
   NS_ABORT_MSG_IF(servers.size() % m_num_mcast_roots != 0,
     "Count of servers should be a multiple of the count of multicast roots.");
   
-  const int num_mcast_chains = servers.size() / m_num_mcast_roots;
-  
-  for(int chain = 0; chain < num_mcast_chains; chain++) {
-    // All multicast that happens at the same time in this timestep.
-    std::vector<Ptr<Node>> mcast_at_same_time;
-    for(int i = 0; i < m_num_mcast_roots; i++) {
-      const uint32_t mcast_src = i * num_mcast_chains + chain;
-      mcast_at_same_time.push_back(servers[mcast_src]);
+  const int chain_length = servers.size() / m_num_mcast_roots;
+
+  // All chains execute in parallel.
+  for(int chain = 0; chain < m_num_mcast_roots; chain++) {
+    const int first_of_chain = chain_length * chain;
+    std::vector<Ptr<Node>> chain_order;
+
+    for(int i = 0; i < chain_length; i++) {
+      const uint32_t mcast_src = first_of_chain + i;
+      chain_order.push_back(servers[mcast_src]);
     }
 
-    res.push_back(mcast_at_same_time);
+    res.push_back(chain_order);
   }
 
   return res;

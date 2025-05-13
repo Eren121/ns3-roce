@@ -48,7 +48,7 @@ void RdmaFlowMulticast::SetOnRecvPktCallback(OnRecvPktCallback on_recv_pkt)
     m_on_recv_pkt = std::move(on_recv_pkt);
 }
 
-void RdmaFlowMulticast::StartFlow(RdmaNetwork& network, OnComplete on_complete)
+void RdmaFlowMulticast::OnFlowStarted(RdmaNetwork& network)
 {
     const Ptr<Node> snode = network.FindServer(m_mcast_src);
     const Ipv4Address src_ip = GetServerAddress(snode);
@@ -64,7 +64,9 @@ void RdmaFlowMulticast::StartFlow(RdmaNetwork& network, OnComplete on_complete)
     sr.multicast = true;
     sr.dip = Ipv4Address{m_group};
     sr.dport = port;
-    sr.on_send = on_complete; // Notify completion.
+    sr.on_send = [this]() {
+        NotifyComplete();
+    };
 
     // Create the queues on the source.
     {

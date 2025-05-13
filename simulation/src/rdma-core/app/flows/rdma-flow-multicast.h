@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ns3/rdma-flow.h"
+#include "ns3/data-rate.h"
 
 namespace ns3 {
 
@@ -11,6 +12,8 @@ namespace ns3 {
 class RdmaFlowMulticast : public RdmaFlow
 {
 public:
+    using RdmaFlow::OnComplete;
+
     struct OnRecvPktInfo
     {
         node_id_t mcast_src;
@@ -30,10 +33,11 @@ public:
     static TypeId GetTypeId();
 
 public:
-    void StartFlow(RdmaNetwork& network, OnComplete on_complete) override;
-
     //! This is only accessible in C++, not in JSON, for more configurability if needed.
     void SetOnRecvPktCallback(OnRecvPktCallback on_recv_pkt);
+
+protected:
+    void OnFlowStarted(RdmaNetwork& network) override;
 
 private:
     //! Node of the multicast source.

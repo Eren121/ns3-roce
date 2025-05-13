@@ -2,8 +2,8 @@
 
 #include "ns3/callback.h"
 #include "ns3/rdma-reflection-helper.h"
+#include "ns3/rdma-helper.h"
 #include "ns3/filesystem.h"
-#include "ns3/rdma-network.h"
 #include <memory>
 #include <cstdint>
 #include <variant>
@@ -38,12 +38,45 @@ class RdmaFlow : public Object
 {
 public:
     using OnComplete = std::function<void()>;
+
+public:
+    RdmaFlow();
     
 public:
     static TypeId GetTypeId();
 
-public:
-    virtual void StartFlow(RdmaNetwork&, OnComplete on_complete) = 0;
+    int GetId() const;
+    void SetInfo(SerializedFlow info);
+    bool HasCompleted() const;
+    
+    void StartFlow(RdmaNetwork& network);
+
+    void Init(const SerializedFlow& info)
+    {
+        m_info = info;
+    }
+
+    Time GetStartTime() const
+    {
+        return m_info.start_time;
+    }
+
+    bool InBackground() const
+    {
+        return m_info.in_background;
+    }
+
+    void AddOnCompleteCallback(OnComplete);
+
+protected:
+    virtual void OnFlowStarted(RdmaNetwork&) = 0;
+    void NotifyComplete();
+
+private:
+    int m_id{};
+    SerializedFlow m_info;
+    bool m_completed{};
+    std::vector<OnComplete> m_on_complete;
 };
 
 } // namespace ns3
