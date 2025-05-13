@@ -1,13 +1,19 @@
 #!/bin/bash
 
-cd $(dirname "$0") || exit 1
+# Exit on error.
+set -e
 
+# cd to this bash script directory.
+cd $(dirname "$0")
+
+# Clone netanim repo.
 if [[ ! -d "netanim" ]]; then
-    hg clone http://code.nsnam.org/netanim || exit 1
+    git clone https://gitlab.com/nsnam/netanim.git
 else
     echo "netanim folder already existing, skipping clone"
 fi
 
+# Build netanim.
 cd netanim
-hg up netanim-3.108
+git checkout netanim-3.108
 qmake NetAnim.pro && make clean && make
