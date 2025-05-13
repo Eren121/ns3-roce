@@ -199,7 +199,12 @@ void RdmaHw::RegisterQP(Ptr<RdmaTxQueuePair> sq, Ptr<RdmaRxQueuePair> rq)
 	// set init variables
 	NS_ASSERT(m_cc_mode == 1);
 	DataRate m_bps = sq->GetDevice()->GetDataRate();
-	sq->SetMaxRate(m_bps);
+
+	// Do not override if the user already set the desired rate.
+	if(sq->GetMaxRate() == 0) {
+		sq->SetMaxRate(m_bps);
+	}
+
 	sq->SetMTU(m_mtu);
 
 	// Notify Nic
