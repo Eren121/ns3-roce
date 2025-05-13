@@ -16,7 +16,8 @@ class Style:
 
 class Config:
     def __init__(self):
-        self.link_bw = 100e9 # In bps
+        self.spine_bw = 400e9 # In bps
+        self.server_bw = 100e9 # In bps
         self.link_latency = 1e-6 # In seconds
 
 
@@ -44,12 +45,20 @@ class Topology():
     def servers(self) -> np.ndarray:
         i = self.first_server()
         return np.arange(i, i + self.n_servers()) 
-      
+    
+    def is_server(self, id) -> bool:
+        return id >= self.first_server()
+    
     def _make_link(self, src: int, dst: int) -> dict:
+        if self.is_server(src) or self.is_server(dst):
+            bandwidth = self.config.server_bw
+        else:
+            bandwidth = self.config.spine_bw
+        
         return {
          "src": src,
          "dst": dst,
-         "bandwidth": self.config.link_bw,
+         "bandwidth": bandwidth,
          "latency": self.config.link_latency,
          "error_rate": 0.0
         }
