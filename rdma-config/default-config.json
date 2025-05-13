@@ -81,7 +81,7 @@
     },
     {
       "path": "ns3::RdmaModAnim",
-      "enable": true,
+      "enable": false,
       "attributes": {
         "XmlOutputFile": "out/anim.xml"
       }

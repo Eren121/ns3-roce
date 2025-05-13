@@ -32,6 +32,7 @@ protected:
 
 private:
     McastChains BuildMulticastChains(RdmaNetwork& network) const;
+    void OnChainComplete();
 
 private:
     //! Where to store the bitmaps of the received chunks.
@@ -49,6 +50,9 @@ private:
     //! Divide the bandwidth of each multicast by the count of multicast root to not overflow receivers.
     //! This should be set to true, but maybe CC can manage this under some conditions?
     bool m_optimize_throughput{true};
+    //! Keep track of chain progress
+    int m_completed_chains{};
+    int m_num_chains{};
 };
 
 } // namespace ns3

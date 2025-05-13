@@ -18,10 +18,10 @@
       "in_background": false,
       "attributes": {
         "BitmapsAvroOut": "out_recv_chunks.avro",
-        "MulticastRootCount": 4,
-        "PerNodeChunkCount": 4,
+        "MulticastRootCount": 2,
+        "PerNodeChunkCount": 1024,
         "PerChunkPacketCount": 2,
-        "OptimizeThroughput": true
+        "OptimizeThroughput": false
       }
     }
   ]

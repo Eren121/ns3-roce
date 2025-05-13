@@ -54,12 +54,25 @@ TypeId AgFlowMcastPhase::GetTypeId()
   return tid;
 }
 
+void AgFlowMcastPhase::OnChainComplete()
+{
+  m_completed_chains++;
+  NS_ABORT_IF(m_completed_chains > m_num_chains);
+
+  // Aggregate all completed chains to notify when the multicast phase is complete
+  if(m_completed_chains == m_num_chains) {
+    NotifyComplete();
+  }
+}
+
 void AgFlowMcastPhase::OnFlowStarted(RdmaNetwork& network)
 {
   const DataRate bandwidth = network.GetAnyServerDataRate();
   const McastChains chains = BuildMulticastChains(network);
+  m_num_chains = chains.size();
 
   const uint32_t num_pkts_per_mcast = m_num_chunks_per_node * m_num_pkts_per_chunk;
+  
 
   for(const auto& chain : chains) {
     
@@ -93,6 +106,8 @@ void AgFlowMcastPhase::OnFlowStarted(RdmaNetwork& network)
         multicast->SetThroughput(bandwidth * (1.0 / m_num_mcast_roots));
       }
 
+      previous = multicast;
+      /*
       // Add a delay to take into account the delay for the last packet to arrive at the furthest servers.
       Ptr<RdmaFlowWait> wait = CreateObject<RdmaFlowWait>();
       wait->SetAttribute("Time", TimeValue(network.GetMaxDelay()));
@@ -100,19 +115,12 @@ void AgFlowMcastPhase::OnFlowStarted(RdmaNetwork& network)
       network.GetFlowScheduler().AddDependency(wait, multicast);
 
       previous = wait;
+      */
     }
 
-    // Aggregate all completed chains to notify the multicast phase is complete.
-    auto on_chain_complete = [this, num_chains=chains.size(), completed_chains=0]() mutable {
-      completed_chains++;
-      NS_ABORT_IF(completed_chains > num_chains);
-
-      if(completed_chains == num_chains) {
-        NotifyComplete();
-      }
-    };
-
-    previous->AddOnCompleteCallback(on_chain_complete);
+    previous->AddOnCompleteCallback([this]() {
+      OnChainComplete();
+    });
   }
 }
 

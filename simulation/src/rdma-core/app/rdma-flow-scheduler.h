@@ -41,6 +41,8 @@ private:
 private:
   RdmaNetwork& m_network;
   std::unordered_map<int, Ptr<RdmaFlow>> m_flows;
+  //! Keep running flows for debugging.
+  std::unordered_set<Ptr<RdmaFlow>> m_running_flows;
   //! Foreground flows count.
   int m_fg_running{};
   //! Background flows count.

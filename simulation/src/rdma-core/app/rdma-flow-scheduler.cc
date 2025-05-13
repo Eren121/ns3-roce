@@ -73,14 +73,18 @@ void FlowScheduler::AddFlow(Ptr<RdmaFlow> flow)
 
 void FlowScheduler::OnFlowFinish(Ptr<RdmaFlow> flow)
 {
-  NS_LOG_INFO("Flow " << flow->GetId() << " completed");
-
+  NS_LOG_INFO("Flow " << flow->GetId() << " completed at " << Simulator::Now().GetSeconds() << "s");
+  
   if(flow->InBackground()) {
+    NS_ABORT_IF(m_bg_running == 0);
     m_bg_running--;
   }
   else {
+    NS_ABORT_IF(m_fg_running == 0);
     m_fg_running--;
   }
+
+  m_running_flows.erase(flow);
   
   if(m_fg_running == 0) {
     NS_LOG_INFO("All foreground flows completed.");
@@ -111,6 +115,8 @@ void FlowScheduler::RunFlow(Ptr<RdmaFlow> flow)
   flow->AddOnCompleteCallback([this, flow]() {
     OnFlowFinish(flow);
   });
+
+  m_running_flows.insert(flow);
 
   // Finally, start the flow.
   flow->StartFlow(m_network);
