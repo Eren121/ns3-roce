@@ -559,9 +559,9 @@ void RdmaNetwork::BuildRoute(Ptr<Node> host)
 			// If `next` has not been visited.
 			if (dis.find(next) == dis.end()) {
 				dis[next] = d + 1;
-				delay[next] = delay[now] + p2p.delay;
-				tx_delay[next] = tx_delay[now] + GetMtuBytes() * 1e9 * 8 / p2p.bw;
-				bw[next] = std::min(bw[now], p2p.bw);
+				delay[next] = delay[now] + p2p.iface.delay.GetNanoSeconds();
+				tx_delay[next] = tx_delay[now] + GetMtuBytes() * 1e9 * 8 / p2p.iface.bw.GetBitRate();
+				bw[next] = std::min(bw[now], p2p.iface.bw.GetBitRate());
 				
         // We only enqueue switch, because we do not want packets to go through host as middle point.
 				if (IsSwitchNode(next)) { q.push_back(next); }
