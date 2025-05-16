@@ -1,0 +1,4 @@
+# Just ensure folder exists but ignore all.
+
+*
+!.gitignore
