@@ -33,7 +33,7 @@ def mkdir_p(path: pathlib.Path):
     """
     Creates a folder and all parents if the folder does not exist.
     """
-    path.mkdir(parents=True)
+    path.mkdir(parents=True, exist_ok=True)
     return path
 
 
@@ -163,7 +163,7 @@ class Input:
             return self._def_val
     
     @current_value.setter
-    def set_current_value(self, cur_val) -> None:
+    def current_value(self, cur_val):
         """
         Sets the current value of this input.
         """
@@ -271,7 +271,7 @@ class Model:
         # No type hint for `sim` because `Simulation` is defined after.
 
         # Set the default config parameters.
-        self._config.update(sim.load_def_config())
+        self._config.update(load_def_config())
 
         # Configure the model defined by the user.
         self._configure()
@@ -286,7 +286,8 @@ class Model:
         sim.add_config(ConfigFile(self._config["flows_file"], flows))
 
         # Not used by C++, but to keep informative.
-        sim.add_config(ConfigFile(self.model_file, self.__inputs))
+        input_values = {input.name:[input.current_value] for name, input in self.__inputs.items()}
+        sim.add_config(ConfigFile(self.model_file, input_values))
 
 
 class Simulation:
@@ -370,7 +371,7 @@ class Simulation:
         # Run the ns3 process in the container.
         argv=[
             "make", "-C", makefile_dir_host,
-            "run", f"app_config={app_config_path_container}",
+            "run_release", f"app_config={app_config_path_container}",
             "docker_interactive="]
         pyu.run_process(argv=argv, each_line=self._on_each_line)
         self.stdout_file.close()
@@ -407,7 +408,7 @@ class Batch:
         self.scenarios = scenarios
         """All the possible inputs. Each combination will form a single run of the simulation."""
 
-    def run(self, jobs=0) -> List[Simulation]:
+    def run(self, parallel_sims: int = None) -> List[Simulation]:
         """
         Runs the model for each value of the cartesian product.
         Returns all the simulations.
@@ -427,7 +428,7 @@ class Batch:
             for i, scenario in enumerate(self.scenarios):
                 model = self.model_class()
                 sim_dir = str(i).zfill(zfill)
-                sim = Simulation(self.runs_dir / sim_dir)
+                sim = Simulation(model, self.runs_dir / sim_dir)
                 inputs = scenario.items()
 
                 for input_name, input_val in inputs:
@@ -442,8 +443,8 @@ class Batch:
             def in_parallel(sim: Simulation):
                 sim.run()
                 progress.update(task, advance=1)
-
-            pyu.parallel_for(data=simulations, func=in_parallel, jobs=jobs)
+                
+            pyu.parallel_for(simulations, in_parallel, jobs=parallel_sims)
         
         return simulations
     

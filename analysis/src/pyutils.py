@@ -18,16 +18,21 @@ class NpEncoder(json.JSONEncoder):
     Used internally by this module to (de)serialize Python objects containing numpy objects transparently.
     By default, some types are not supported.
     See https://stackoverflow.com/questions/50916422/python-typeerror-object-of-type-int64-is-not-json-serializable.
+
+    Also convert paths to string.
     """
     def default(self, obj):
         if isinstance(obj, np.integer):
             return int(obj)
-        if isinstance(obj, np.floating):
+        elif isinstance(obj, np.floating):
             return float(obj)
-        if isinstance(obj, np.bool_):
+        elif isinstance(obj, np.bool_):
             return bool(obj)
-        if isinstance(obj, np.ndarray):
+        elif isinstance(obj, np.ndarray):
             return obj.tolist()
+        elif isinstance(obj, pathlib.Path):
+            return obj.as_posix()
+        
         return super().default(obj)
     
 
@@ -144,20 +149,25 @@ def run_process(argv: list, each_line=None) -> None:
         raise Exception(f"Error: process exited with return code {proc.returncode}")
 
 
-def parallel_for(data: list, func, jobs: int = 0):
+def parallel_for(func_args: list, func, jobs: int = None):
     """
     Runs a function in parallel.
-    `func(data[0])`, `func(data[1])`, etc... are run in parallel.
+    `func(func_args[0])`, `func(func_args[1])`, etc... are run in parallel.
 
     Parameters:
-        data: Each element is fed as the argument of `func`, for each execution.
+        func_args: Each element is fed as the argument of `func`, for each execution.
         func: The function to execute.
-        jobs: Maximum count of parallel jobs. If zero or negative, then choose automatically.
+        jobs: Maximum count of parallel jobs. If none, then choose automatically.
+    
+    Returns:
+        The array of result of each function.
     """
     # Some bugs with loky backend and rich.progress.
     # We actually don't need parallel python code,
     # because we spawn a new Process for each task.
-    results = joblib.Parallel(backend="threading", n_jobs=(-1 if jobs <= 0 else jobs))(joblib.delayed(func)(i) for i in data)
+    n_jobs = (-1 if jobs is None else jobs)
+    results = joblib.Parallel(backend="threading", n_jobs=n_jobs)(
+        joblib.delayed(func)(func_arg) for func_arg in func_args)
     return results
 
 
