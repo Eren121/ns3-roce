@@ -1,7 +1,7 @@
 # Rdma core implementation
 
 find_package(reflectcpp REQUIRED)
-find_library(libavrocpp avrocpp REQUIRED)
+find_library(var_libavrocpp avrocpp REQUIRED)
 
 if(reflectcpp_FOUND)
   build_lib(
@@ -126,7 +126,7 @@ if(reflectcpp_FOUND)
       app/modules/rdma-mod-anim.h
     LIBRARIES_TO_LINK
       reflectcpp
-      ${libavrocpp}
+      ${var_libavrocpp} # If library starts with `lib`, ns3 searches for a module, so avoid it.
       ${libinternet}
       ${libnetwork}
       ${libpoint-to-point}

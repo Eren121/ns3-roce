@@ -106,7 +106,7 @@ def build_template_file(in_path: str, vars: dict, out_dir: str = None) -> tempfi
     return out_file
 
 
-def print(line: str) -> None:
+def print_line(line: str) -> None:
     """
     Just prints `line` to the standard output.
 

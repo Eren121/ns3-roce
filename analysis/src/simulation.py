@@ -11,9 +11,17 @@ import pyutils as pyu
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
+from topology import spineleaf
+
+
+default_pfc_priority = 3
+"""Default Priority-Flow Contol priority for all flows."""
 
 
 def ensure_built() -> None:
+    """
+    Ensures the C++ ns3 binary is built, or build it if it's not the case.
+    """
     argv=[
         "make", "-C",
         project.root_path().as_posix(),
@@ -22,16 +30,19 @@ def ensure_built() -> None:
 
 
 def mkdir_p(path: pathlib.Path):
+    """
+    Creates a folder and all parents if the folder does not exist.
+    """
     path.mkdir(parents=True)
     return path
 
 
 def make_timestamp_dir(parent: pathlib.Path):
     """
-    Generate a directory based on timestamp.
-    In the case the directory already exist,
-    if two runs in the same seconds, then wait 1 second
-    so that the name is unique.
+    Generates a directory based on the current timestamp.
+
+    It's impossible to have a collision,
+    since this script will try forever until the directory based on the current time is not taken.
     """
     while True:
         format = "%Y%m%d-%Hh%M-%S.%f"
@@ -43,17 +54,18 @@ def make_timestamp_dir(parent: pathlib.Path):
 
 
 def load_def_config() -> dict:
+    """
+    Loads the default configuration for the simulation into a dictionary.
+    """
     config_dir = project.analysis_path() / "config"
     return pyu.load_json(config_dir / "default_config.json")
 
-def load_topo(name: str) -> dict:
-    config_dir = project.analysis_path() / "config"
-    topo_dir = config_dir / "topologies"
-    return pyu.load_json(topo_dir / f"{name}.json")
-    
+
 class CartesianProduct:
     """
     Permits to run the cartesian product of all the parameters.
+
+    Example:
     ```
     c = CartesianProduct()
     c.add("x", [1, 2, 3])
@@ -62,9 +74,10 @@ class CartesianProduct:
         print(p["x"])
         print(p["y"])
     ```
-    Will iterate the cartesian product of `x` and `y`.
-    """
 
+    Will iterate the 9 iterations of the cartesian product of `x` and `y`.
+    The iterated order is unspecified.
+    """
     def __init__(self):
         self.vars = {}
     
@@ -104,185 +117,335 @@ class CartesianProduct:
         return iter(ret)
 
 
+ConfigFile = namedtuple("ConfigFile", "name data")
 """
-The simulation needs configuration file next
-to the main configuration file.
+The simulation needs JSON configuration files next to the main JSON configuration file.
+Like the flows, the topology...
+
+Fields:
+    name: Name of the file to generate (should end in `.json`).
+    data: The dictionary representing the content of this file to serialize into JSON.
 """
-SimulationConfigFile = namedtuple(
-    "SimulationConfigFile", "name data")
 
 
-class Simulation:
-    def __init__(self, sim_dir: pathlib.Path, keep_dir: bool):
-        # `templates`: Defined by child class, extend the basic configuration of the simulation.
-        self.templates = {}
-        # `sim_dir`: Each simulation has a dedicated folder
-        self.sim_dir = mkdir_p(sim_dir)
-        # `config_dir`: Where all config-related files of the simulation are.
-        self.config_dir = mkdir_p(self.sim_dir / "config")
-        # `out_dir`: Where all the output statistic datasets of the simulation are.
-        self.out_dir = mkdir_p(self.sim_dir / "out")
-        # `img_dir`: Where all output images should be written.
-        self.img_dir = mkdir_p(self.sim_dir / "img")
-        # `stdout_path`: Where the stdout of the simulation program is stored.
-        self.stdout_path = self.out_dir / "stdout.txt"
-        # `stdout_file`: A python file to write to `stdout_path`.
-        self.stdout_file = open(self.stdout_path, "w")
+class Input:
+    """
+    Represents a parameter to a model, with a name and a value.
+    """
+    def __init__(self, name: str, desc: str, def_val=None):
+        self._name = name # Name of the input.
+        self._desc = desc # Description of the input.
+        self._def_val = def_val
+        self._cur_val = None
     
-    def add_config(self, file: SimulationConfigFile) -> None:
-        self.templates[file.name] = file
-    
-    def _generate_config_files(self) -> None:
-        for template in self.templates.values():
-            template_path = self.config_dir / template.name
-            pyu.write_to_file(template_path, pyu.dump_json(template.data))
-
-    def _on_each_line(self, line: str) -> None:
-        self.stdout_file.write(line)
-    
-    def run(self) -> None:
+    @property
+    def name(self) -> str:
         """
-        Working directory of ns-3 process in container is host path `project.simulation_path()`.
+        Gets the input name.
         """
-        main_config = "config.json"
-        if main_config not in self.templates:
-            raise Exception(f"Should have at least a '{main_config}' file in the config files")
-        self._generate_config_files()
-        config_path = self.config_dir / main_config
-        argv=[
-            "make", "-C",
-            project.root_path().as_posix(),
-            "run",
-            f"app_config={project.get_path_rel_to_container(config_path)}",
-            "docker_interactive="]
-        pyu.run_process(argv=argv, each_line=self._on_each_line)
-        self.stdout_file.close()
-        return self
+        return self._name
+
+    @property
+    def desc(self) -> str:
+        """
+        Gets the input description.
+        """
+        return self._desc
+
+    @property
+    def current_value(self):
+        """
+        Gets the input current value, or default value if the current value is not set.
+        """
+        if self._cur_val is not None:
+            return self._cur_val
+        else:
+            return self._def_val
+    
+    @current_value.setter
+    def set_current_value(self, cur_val) -> None:
+        """
+        Sets the current value of this input.
+        """
+        self._cur_val = cur_val
+
+
+class Output:
+    """
+    Output file generated by the simulation.
+    """
+    def __init__(self, name: str, desc: str):
+        self._name = name # Name of the file.
+        self._desc = desc # Description of the file.
+
+    @property
+    def name(self) -> str:
+        """
+        Gets the name of the file.
+        """
+        return self._name
+
+    @property
+    def desc(self):
+        """
+        Gets the description of the file.
+        """
+        return self._desc
 
 
 class Model:
     """
     Inherit this class to define your own model.
-    
-    A model runs the simulation based on
-    user-defined high-level input parameters.
 
-    Call `_add_input()` for each input in the constructor,
-    and modify the configuration accordingly by overriding
-    `_configure()`.
-    Users set inputs by calling `set()`.
+    The steps to do to do your own model are:
+    - Registers inputs in the constructor with `_add_input()`.
+    - Build your model based on the inputs in `_configure()`, function to override.
+
+    Inputs are useful later to run multiple simulations in parallel and compare the results with `Batch`.
+
+    How to customize the configuration in `_configure()`:
+    - Override the global configuration stored in `self._config`.
+        Loaded with default values.
+        Some parameters are not necessary to modify, like the flow file or the topology file, which are built automatically.
+        (dictionary, same structure as the `config.json`).
+    - Override your topology stored in `self._topo`.
+        Empty by default.
+        (dictionary, same structure as the config's content of `topology_file`).
+    - Override your flows stored in `self._flows`.
+        Empty by default.
+        (array, same structure as the config's content of the field `flows` of `flows_file`).
     """
 
-    # Will write all the parameters of the model
-    # in this file located in the config.json dir
-    model_file = "model.json"
-
-    class Input:
-        def __init__(self, name, desc, def_val=None):
-            self.name = name
-            self.desc = desc
-            self.def_val = def_val
+    main_config_name = "config.json"
+    """Where to store the main configuration file. Should not be set."""
 
     def __init__(self):
-        self._flows = []
-        self._topo = {}
-        self._config = {}
-        self.__inputs_info = {}
-        self.__inputs = {}
-    
-    def _add_flow(self, flow):
-        self._flows.append(flow)
+        self.model_file = "model.json"
+        """Will write all the inputs of the model in this file located in the `config.json` parent directory."""
+
+        self._flows = [] # Stores JSON flows.
+        self._topo = {} # Stores JSON topology.
+        self._config = {} # Stores JSON config.
+        self.__inputs = {} # Stores inputs, keyed by their name.
+        self.__outputs = {} # Store all output files, keyed by their name.
 
     def _add_input(self, input: Input) -> None:
-        self.__inputs_info[input.name] = input
-        self.set(input.name, input.def_val)
+        """
+        Registers an input.
+        Call it from the child constructor for each input.
+        """
+        self.__inputs[input.name] = input
     
-    def set(self, input: str, val) -> None:
-        if input not in self.__inputs_info:
+    def set_input(self, input: str, val) -> None:
+        """
+        Sets an input value.
+        """
+        if input not in self.__inputs:
             raise Exception(f"Input '{input}' does not exist in model")
-        self.__inputs[input] = val
+        
+        input = self.__inputs[input]
+        input.current_value = val
     
-    def get(self, input: str):
-        return self.__inputs[input]
-
-    def inputs(self):
+    def get_input(self, input: str):
         """
-        Iterate all input values of the current instance of the model.
+        Gets an input current value.
         """
-        return self.__inputs
+        input = self.__inputs[input]
+        return input.current_value
 
-    def _configure(self, sim: Simulation) -> None:
-        """Override in child"""
+    def get_output_path(self, name: str) -> pathlib.Path:
+        """
+        Gets the path of an output file relatively to the config's directory.
+        Uses it to define paths in the configuration for output files.
+        """
+        out_dir = mkdir_p(pathlib.Path("..") / "out")
+        return out_dir / name
+    
+    def _configure(self) -> None:
+        """
+        Override this function in child class.
+        """
         raise NotImplementedError()
 
-    def configure(self, sim: Simulation) -> None:
-        self._configure(sim)
-        sim.add_config(SimulationConfigFile("config.json", self._config))
-        sim.add_config(SimulationConfigFile("topology.json", self._topo))
-        sim.add_config(SimulationConfigFile("flows.json", {"flows": self._flows}))
+    def configure(self, sim) -> None:
+        # No type hint for `sim` because `Simulation` is defined after.
 
-        # Not used by C++, but to keep as informative
-        sim.add_config(SimulationConfigFile(Model.model_file, self.__inputs))
+        # Set the default config parameters.
+        self._config.update(sim.load_def_config())
+
+        # Configure the model defined by the user.
+        self._configure()
+
+        # Add configuration files.
+        flows = {
+            "flows": self._flows
+        }
+
+        sim.add_config(ConfigFile(self.main_config_name, self._config))
+        sim.add_config(ConfigFile(self._config["topology_file"], self._topo))
+        sim.add_config(ConfigFile(self._config["flows_file"], flows))
+
+        # Not used by C++, but to keep informative.
+        sim.add_config(ConfigFile(self.model_file, self.__inputs))
 
 
-class BatchResult:
-    def __init__(self, sim: Simulation, model):
-        self.sim = sim
+class Simulation:
+    """
+    Represents the run of a single simulation, based on a model.
+    Interfaces between Python and C++, by using files.
+    """
+    def __init__(self, model: Model, sim_dir: pathlib.Path):
+        """
+        Arguments:
+            model: Model of this simulation.
+            sim_dir: Directory owned by this simulation.
+        """
         self.model = model
+        """Model of this simulation."""
 
+        self.configs = {} 
+        """Stores all configuration files of the simulation.."""
+
+        self.sim_dir = mkdir_p(sim_dir)
+        """Simulation's dedicated folder."""
+        
+        self.config_dir = mkdir_p(self.sim_dir / "config")
+        """Where all configuration files are stored."""
+        
+        self.out_dir = mkdir_p(self.sim_dir / "out")
+        """Where all the output files are stored."""
+        
+        self.img_dir = mkdir_p(self.sim_dir / "img")
+        """Where all output images should be written."""
+        
+        self.stdout_path = self.out_dir / "stdout.txt"
+        """Where the stdout of the simulation program is stored."""
+        
+        self.stdout_file = open(self.stdout_path, "w")
+        """A file to write to `stdout_path`."""
     
+    def get_output_path(self, name: str) -> pathlib.Path:
+        """
+        Gets the path of an output file.
+        """
+        return self.out_dir / name
+    
+    def add_config(self, file: ConfigFile) -> None:
+        """
+        Adds a config file to store in the config directory.
+        """
+        self.configs[file.name] = file
+
+    def _generate_config_files(self) -> None:
+        """
+        Writes all configs to files to the config directory.
+        """
+        for config in self.configs.values():
+            config_path = self.config_dir / config.name
+            pyu.write_to_file(config_path, pyu.dump_json(config.data))
+
+    def _on_each_line(self, line: str) -> None:
+        """
+        Callback to run for each line printed by the simulation.
+        Just appends output text to the stdout file.
+        """
+        self.stdout_file.write(line)
+    
+    def run(self) -> None:
+        """
+        Runs the simulation in the container.
+        The working directory of the ns3 process is the git root path.
+        """
+        # Generate config files.
+        if self.configs[Model.main_config_name] is None:
+            raise Exception("Simulation should have a main configuration file!")
+        self._generate_config_files()
+        main_config_path = self.config_dir / Model.main_config_name
+
+        # Get makefile path and config path.
+        makefile_dir_host = project.root_path().as_posix()
+        app_config_path_container = project.get_path_rel_to_container(main_config_path)
+        print(f"Running {main_config_path}...")
+
+        # Run the ns3 process in the container.
+        argv=[
+            "make", "-C", makefile_dir_host,
+            "run", f"app_config={app_config_path_container}",
+            "docker_interactive="]
+        pyu.run_process(argv=argv, each_line=self._on_each_line)
+        self.stdout_file.close()
+
+
 class Batch:
     """
-    Run multiple time simulations by varying the desired parameters
-    via a cartesian product.
+    Convenient utility if you want to run the same model by varying some inputs value.
+    Runs multiple time simulations by varying the desired inputs with a cartesian product.
     """
-    
-    def __init__(self):
-        # Directory where to store all files generated by the simulation
-        # (graphs, data, and simulation output)
+    def __init__(self, model_class, scenarios: CartesianProduct):
         self.batch_dir = make_timestamp_dir(project.out_path())
+        """
+        Directory owned by the batch.
+        Stores all simulation runs.
+        """
         
-        # Each simulation runs in a dedicated dir. This is the parent of all of them.
         self.runs_dir = mkdir_p(self.batch_dir / "runs")
-        
-        # Store the aggregated plots
+        """
+        Each simulation run runs in a dedicated directory.
+        This is the parent, common to all of them.
+        """
+
         self.img_dir = mkdir_p(self.batch_dir / "img")
-        
-        # Will store all the results
-        self.res = None
-
-    def run(self, model_class, scenarios: CartesianProduct, jobs=0) -> List[BatchResult]:
         """
-        Run the model for each value of the cartesian product.
+        If any batch-level image should be generated, store it here.
+        Plots for a single simulation should be store in the simulation's dedicated folder,
+        but plots that concern the entire batch should be stored here.
         """
 
-        all_cases = []
+        self.model_class = model_class
+        """Python class of the model to instanciate for each simulation run."""
+
+        self.scenarios = scenarios
+        """All the possible inputs. Each combination will form a single run of the simulation."""
+
+    def run(self, jobs=0) -> List[Simulation]:
+        """
+        Runs the model for each value of the cartesian product.
+        Returns all the simulations.
+        You can get output data from these simulations.
+        """
         ensure_built()
+        simulations = []
+        num_scenarios = len(self.scenarios)
         progress = Progress(*Progress.get_default_columns(), MofNCompleteColumn())
 
         with progress:
-            task = progress.add_task("running all simulation cases...", total=len(scenarios))
+            task = progress.add_task("running all simulation cases...", total=num_scenarios)
             
-            all_cases = []
-            i = 0
-            zfill = len(str(len(scenarios))) # Max. character count
-            for scenario in scenarios:
-                model = model_class()
-                sim = Simulation(self.runs_dir / str(i).zfill(zfill) , keep_dir=True)
-                for key, val in scenario.items():
-                    model.set(key, val)
-                model.configure(sim)
-                all_cases.append(BatchResult(sim, model))
-                i += 1
+            # Max. character count to generate output folder.
+            zfill = len(str(num_scenarios))
 
-            def in_parallel(one_case: BatchResult):
-                one_case.sim.run()
+            for i, scenario in enumerate(self.scenarios):
+                model = self.model_class()
+                sim_dir = str(i).zfill(zfill)
+                sim = Simulation(self.runs_dir / sim_dir)
+                inputs = scenario.items()
+
+                for input_name, input_val in inputs:
+                    model.set_input(input_name, input_val)
+                
+                model.configure(sim)
+                simulations.append(sim)
+
+            # Runs all simulations in parallel.
+            # Note that in Python, this is still sequential,
+            # but because each simulation runs in a new ns3 process, this is effectively parallel.
+            def in_parallel(sim: Simulation):
+                sim.run()
                 progress.update(task, advance=1)
 
-            pyu.parallel_for(data=all_cases, func=in_parallel, jobs=jobs)
+            pyu.parallel_for(data=simulations, func=in_parallel, jobs=jobs)
         
-        self.res = all_cases
-        return all_cases
+        return simulations
     
 
 class PlotData:
@@ -327,3 +490,57 @@ def plot(res: pd.DataFrame, toplot, img_dir: pathlib.Path) -> None:
             fig.savefig(img_dir / e / f"{data.type}-{data.x}.{e}")
 
         fig.clf()
+
+
+def set_spineleaf_topology(model: Model, n_spines: int, n_leafs: int, n_servers_per_leaf: int) -> None:
+    """
+    Utility function to set the topology to a spineleaf topology.
+    """
+    topo = spineleaf.Topology()
+    topo.n_servers_per_leaf = n_servers_per_leaf
+    topo.n_leaf = n_leafs
+    topo.n_spines = n_spines
+    model._topo.update(topo.to_json())
+
+def make_bisection_flow(
+        bytes: int,
+        start_time: float = 0.0,
+        in_background: bool = False,
+        is_reliable: bool = False,
+        priority: int = default_pfc_priority):
+    return {
+        "path": "ns3::RdmaFlowBisection",
+        "enable": True,
+        "start_time": start_time,
+        "in_background": in_background,
+        "attributes": {
+            "IsReliable": is_reliable,
+            "PfcPriority": priority,
+            "WriteByteAmount": bytes
+        }
+    }
+
+def make_allgather_flow(
+        model: Model,
+        root_count: int,
+        per_node_chunk_count: int,
+        per_chunk_pkt_count: int,
+        optimize_throughput: bool,
+        bitmaps_avro_file: str = "",
+        stats_json_file: str = "",
+        start_time: float = 0.0,
+        in_background: bool = False):
+    return {
+      "path": "ns3::AgFlowMcastPhase",
+      "enable": True,
+      "start_time": start_time,
+      "in_background": in_background,
+      "attributes": {
+        "BitmapsAvroOut": model.get_output_path(bitmaps_avro_file),
+        "StatsJsonOut": model.get_output_path(stats_json_file),
+        "MulticastRootCount": root_count,
+        "PerNodeChunkCount": per_node_chunk_count,
+        "PerChunkPacketCount": per_chunk_pkt_count,
+        "OptimizeThroughput": optimize_throughput
+      }
+    }

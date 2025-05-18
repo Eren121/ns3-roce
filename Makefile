@@ -48,32 +48,72 @@ build_type ?= default
 build_image:
 	docker build -t $(docker_tag) .
 
-ns3_run = ./simulation/ns3 run 'rdma-ag ../$(app_config)'
+ns3_run = ./simulation/ns3 run 'scratch_rdma-ag ../$(app_config)'
+
+# `NS3_OUTPUT_DIRECTORY` should be child of `./simulation`.
+# Then, build directory should also be child of `./simulation` to not pollute too much.
+ns3_build_dir = cmake-build-$(cmake_build_name)
+cmake_vars = -DNS3_WARNINGS_AS_ERRORS=OFF \
+	-DCMAKE_BUILD_TYPE='$(cmake_build_type)' \
+	-DCMAKE_CXX_STANDARD=20 \
+	-DNS3_OUTPUT_DIRECTORY=$(ns3_build_dir)
+cmake_build_dir = simulation/$(ns3_build_dir)/cmake-cache
 
 .PHONY: configure_debug
-configure_debug: build_type = debug
+configure_debug: cmake_build_type = Debug
+configure_debug: cmake_build_name = debug
+configure_debug: cmake_vars += -DNS3_ASSERT=ON -DNS3_LOG=ON -DNS3_NATIVE_OPTIMIZATIONS=OFF
 configure_debug: configure
 
 .PHONY: configure_release
-configure_release: build_type = optimized
+configure_release: cmake_build_type = Release
+configure_release: cmake_build_name = release
+configure_release: cmake_vars += -DNS3_ASSERT=OFF -DNS3_LOG=OFF -DNS3_NATIVE_OPTIMIZATIONS=ON
 configure_release: configure
 
+# Define `NS3_OUTPUT_DIRECTORY` so can co-exist Debug and Release builds
+# instead of sharing `simulation/build` directory.
 .PHONY: configure
-configure:	
-	$(docker_run) ./simulation/ns3 configure -d $(build_type) --disable-werror --cxx-standard=20
+configure:
+	$(docker_run) cmake \
+		-S ./simulation \
+		-B '$(cmake_build_dir)' \
+		-G Ninja \
+		$(cmake_vars)
+
+.PHONY: build_debug
+build_debug: cmake_build_name = debug
+build_debug: build
+
+.PHONY: build_release
+build_release: cmake_build_name = release
+build_release: build
 
 .PHONY: build
 build:
-	$(docker_run) ./simulation/ns3 build rdma-ag
+	$(docker_run) cmake \
+		--build '$(cmake_build_dir)' \
+		--target scratch_rdma-ag
 
 # Clean all build files + generated binaries
 .PHONY: distclean
 distclean:
 	$(docker_run) ./simulation/ns3 clean
 
+.PHONY: run_debug
+run_debug: scratch_exe = ./simulation/$(ns3_build_dir)/scratch/ns3.36.1-scratch_rdma-ag-debug
+run_debug: cmake_build_name = debug
+run_debug: run
+
+.PHONY: run_release
+run_release: scratch_exe = ./simulation/$(ns3_build_dir)/scratch/ns3.36.1-rdma-ag-optimized
+run_release: cmake_build_name = release
+run_release: run
+
 .PHONY: run
 run:
-	$(docker_run) $(ns3_run)
+	$(docker_run) '$(scratch_exe)' '$(app_config)'
+
 
 .PHONY: run_gdb
 run_gdb:
