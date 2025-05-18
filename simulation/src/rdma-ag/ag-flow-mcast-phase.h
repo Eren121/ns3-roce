@@ -1,6 +1,8 @@
 #pragma once
 
 #include "ns3/rdma-flow.h"
+#include "ns3/ag-recv-chunk-record.h"
+#include "ns3/rdma-serdes.h"
 
 namespace ns3 {
 
@@ -33,10 +35,15 @@ protected:
 private:
     McastChains BuildMulticastChains(RdmaNetwork& network) const;
     void OnChainComplete();
+    void SaveStats() const;
 
 private:
     //! Where to store the bitmaps of the received chunks.
     std::string m_bitmaps_avro_out;
+    //! Where to store the configuration and some statistics.
+    std::string m_stats_json_out;
+    //! The Avro record writer.
+    RdmaSerializer<AgRecvChunkRecord> m_trace_writer;
     //! Count of multicast roots.
     uint32_t m_num_mcast_roots{};
     //! Count of MTU-sized packets per chunk.
@@ -53,6 +60,10 @@ private:
     //! Keep track of chain progress
     int m_completed_chains{};
     int m_num_chains{};
+    //! Just maps Node ID to rank in the allgather.
+    std::unordered_map<int, int> m_id_to_rank;
+    //! Keep trace.
+    uint64_t m_num_success_pkts{};
 };
 
 } // namespace ns3

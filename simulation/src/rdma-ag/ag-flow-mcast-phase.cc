@@ -24,6 +24,11 @@ TypeId AgFlowMcastPhase::GetTypeId()
       "File path where to write the Avro bitmaps of all nodes,"
       "for processing by the recovery phase or for later analysis.",
       &AgFlowMcastPhase::m_bitmaps_avro_out);
+
+    AddStringAttribute(tid,
+      "StatsJsonOut",
+      "File path where to write the statistics for use by the recovery phase and statistics for later analysis.",
+      &AgFlowMcastPhase::m_stats_json_out);
     
     AddUintegerAttribute(tid,
       "MulticastRootCount",
@@ -54,6 +59,21 @@ TypeId AgFlowMcastPhase::GetTypeId()
   return tid;
 }
 
+void AgFlowMcastPhase::SaveStats() const
+{
+  rfl::Generic::Object info;
+  info["num_mcast_roots"] = (int)m_num_mcast_roots;
+  info["num_pkts_per_chunk"] = (int)m_num_pkts_per_chunk;
+  info["num_chunks_per_rank"] = (int)m_num_chunks_per_node;
+  info["num_ranks"] = (int)m_id_to_rank.size();
+
+  const RdmaConfig& rdma_config{RdmaNetwork::GetInstance().GetConfig()};
+  const std::string& out_path{rdma_config.FindFile(m_stats_json_out)};
+  std::ofstream ofs{out_path.c_str()};
+
+  ofs << rfl::json::write(info);
+}
+
 void AgFlowMcastPhase::OnChainComplete()
 {
   m_completed_chains++;
@@ -61,6 +81,7 @@ void AgFlowMcastPhase::OnChainComplete()
 
   // Aggregate all completed chains to notify when the multicast phase is complete
   if(m_completed_chains == m_num_chains) {
+    SaveStats();
     NotifyComplete();
   }
 }
@@ -73,6 +94,12 @@ void AgFlowMcastPhase::OnFlowStarted(RdmaNetwork& network)
 
   const uint32_t num_pkts_per_mcast = m_num_chunks_per_node * m_num_pkts_per_chunk;
   
+  m_trace_writer = {network.GetConfig().FindFile(m_bitmaps_avro_out)};
+
+  // Build a map to convert from node ID to rank in the Allgather.
+  for(Ptr<Node> server : network.FindMcastGroup(m_mcast_group)) {
+    m_id_to_rank[server->GetId()] = m_id_to_rank.size();
+  }
 
   for(const auto& chain : chains) {
     
@@ -83,10 +110,18 @@ void AgFlowMcastPhase::OnFlowStarted(RdmaNetwork& network)
     for(Ptr<Node> mcast_src : chain) {
       const int mcast_src_id = mcast_src->GetId();
 
-      // Called when any packet is received on any receiver for this multicast.
-      auto on_recv_pkt = [mcast_src_id](const RdmaFlowMulticast::OnRecvPktInfo& info) {
-        NS_LOG_INFO("Allgather multicast: recv packet (tx, rx, pkt) = ("
-          << mcast_src_id << ", " << info.receiver << ", " << info.pkt_id);
+      // Called when any packet is received on any receiver for this multicast source.
+      auto on_recv_pkt = [this, mcast_src_id, num_pkts_per_mcast](const RdmaFlowMulticast::OnRecvPktInfo& info) {
+        AgRecvChunkRecord record;
+        record.dst_rank = m_id_to_rank.at(info.receiver);
+        record.src_rank = m_id_to_rank.at(mcast_src_id);
+
+        // Packet is the global index in the whole Allgather buffer.
+        record.packet = m_id_to_rank.at(mcast_src_id) * num_pkts_per_mcast + info.pkt_id;
+
+        record.time = Simulator::Now().GetSeconds();
+
+        m_trace_writer.write(record);
       };
       
       Ptr<RdmaFlowMulticast> multicast = CreateObject<RdmaFlowMulticast>();

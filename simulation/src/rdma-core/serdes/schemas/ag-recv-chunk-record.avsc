@@ -2,8 +2,9 @@
   "type": "record",
   "name": "AgRecvChunkRecord",
   "fields" : [
-      {"name": "node", "type": "int"},
-      {"name": "chunk", "type": "long"},
+      {"name": "dst_rank", "type": "int"},
+      {"name": "src_rank", "type": "int"},
+      {"name": "packet", "type": "long"},
       {"name": "time", "type" : "double"}
   ]
 }

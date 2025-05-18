@@ -154,13 +154,6 @@ void SwitchNode::SendMultiToDevs(Ptr<Packet> packet, CustomHeader& ch, int in_if
 		return;
 	}
 
-	if(!m_mmu->CheckIngressAdmission(inDev, qIndex, psize)) {
-		NS_LOG_LOGIC("Drop: Pause multicast " << qIndex);
-		return;
-	}
-
-	m_mmu->UpdateIngressAdmission(inDev, qIndex, psize);
-
 	// Keep only one uplink outport port
 	// Never send to uplink if the packet comes from uplink
 
@@ -195,8 +188,6 @@ void SwitchNode::SendMultiToDevs(Ptr<Packet> packet, CustomHeader& ch, int in_if
 	}
 
 	std::vector<std::pair<int, Ptr<Packet>>> tosend;
-	
-	auto x = std::make_shared<int>(0);
 
 	for(int idx : iface_it->second) {
 
@@ -213,8 +204,17 @@ void SwitchNode::SendMultiToDevs(Ptr<Packet> packet, CustomHeader& ch, int in_if
 		Ptr<Packet> p = packet->Copy();
 
 		// Admission control
+
 		if (qIndex != 0) {
-			++(*x);
+			if(!m_mmu->CheckIngressAdmission(inDev, qIndex, psize)) {
+				NS_LOG_LOGIC("Drop: Pause multicast " << qIndex);
+				continue;
+			}
+
+			m_mmu->UpdateIngressAdmission(inDev, qIndex, psize);
+			auto x = std::make_shared<int>(1);
+			
+			// ++(*x);
 			m_egress_lasts[p] = x;
 			m_mmu->UpdateEgressAdmission(idx, qIndex, psize);
 			m_bytes[inDev][idx][qIndex] += psize;

@@ -16,8 +16,11 @@ public:
 
     struct OnRecvPktInfo
     {
+        //! Node ID of the multicast source.
         node_id_t mcast_src;
+        //! Node ID of the receiver.
         node_id_t receiver;
+        //! Packet index.
         //! Varies between zero an the count of multicast packets to send.
         uint64_t pkt_id;
     };

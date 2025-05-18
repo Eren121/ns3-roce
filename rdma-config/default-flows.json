@@ -17,11 +17,12 @@
       "start_time": 0.0,
       "in_background": false,
       "attributes": {
-        "BitmapsAvroOut": "out_recv_chunks.avro",
-        "MulticastRootCount": 2,
+        "BitmapsAvroOut": "out/mcast_pkts.avro",
+        "StatsJsonOut": "out/mcast_pkts.json",
+        "MulticastRootCount": 4,
         "PerNodeChunkCount": 1024,
         "PerChunkPacketCount": 2,
-        "OptimizeThroughput": false
+        "OptimizeThroughput": true
       }
     }
   ]

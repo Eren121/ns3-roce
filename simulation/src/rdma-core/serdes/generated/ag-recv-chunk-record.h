@@ -30,12 +30,14 @@
 
 namespace ns3 {
 struct AgRecvChunkRecord {
-    int32_t node;
-    int64_t chunk;
+    int32_t dst_rank;
+    int32_t src_rank;
+    int64_t packet;
     double time;
     AgRecvChunkRecord() :
-        node(int32_t()),
-        chunk(int64_t()),
+        dst_rank(int32_t()),
+        src_rank(int32_t()),
+        packet(int64_t()),
         time(double())
         { }
 };
@@ -44,8 +46,9 @@ struct AgRecvChunkRecord {
 namespace avro {
 template<> struct codec_traits<ns3::AgRecvChunkRecord> {
     static void encode(Encoder& e, const ns3::AgRecvChunkRecord& v) {
-        avro::encode(e, v.node);
-        avro::encode(e, v.chunk);
+        avro::encode(e, v.dst_rank);
+        avro::encode(e, v.src_rank);
+        avro::encode(e, v.packet);
         avro::encode(e, v.time);
     }
     static void decode(Decoder& d, ns3::AgRecvChunkRecord& v) {
@@ -56,12 +59,15 @@ template<> struct codec_traits<ns3::AgRecvChunkRecord> {
                 it != fo.end(); ++it) {
                 switch (*it) {
                 case 0:
-                    avro::decode(d, v.node);
+                    avro::decode(d, v.dst_rank);
                     break;
                 case 1:
-                    avro::decode(d, v.chunk);
+                    avro::decode(d, v.src_rank);
                     break;
                 case 2:
+                    avro::decode(d, v.packet);
+                    break;
+                case 3:
                     avro::decode(d, v.time);
                     break;
                 default:
@@ -69,8 +75,9 @@ template<> struct codec_traits<ns3::AgRecvChunkRecord> {
                 }
             }
         } else {
-            avro::decode(d, v.node);
-            avro::decode(d, v.chunk);
+            avro::decode(d, v.dst_rank);
+            avro::decode(d, v.src_rank);
+            avro::decode(d, v.packet);
             avro::decode(d, v.time);
         }
     }
@@ -83,8 +90,9 @@ namespace ns3 {
   "type": "record",
   "name": "AgRecvChunkRecord",
   "fields" : [
-      {"name": "node", "type": "int"},
-      {"name": "chunk", "type": "long"},
+      {"name": "dst_rank", "type": "int"},
+      {"name": "src_rank", "type": "int"},
+      {"name": "packet", "type": "long"},
       {"name": "time", "type" : "double"}
   ]
 })JSON";

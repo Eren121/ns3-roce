@@ -80,7 +80,9 @@ void RdmaFlowMulticast::OnFlowStarted(RdmaNetwork& network)
         src_rdma->RegisterQP(src_tx_queue, src_rx_queue);
 
         // Post the send request on the source.
-        src_tx_queue->PostSend(sr);
+        // We want to send the fragment as the immediate data.
+        // So the user can identify individual packets in the whole payload.
+        src_tx_queue->PostSend(sr, SendFlags::FragmentAsImmediate);
     }
 
     // For each node in the destination multicast group.
@@ -96,6 +98,22 @@ void RdmaFlowMulticast::OnFlowStarted(RdmaNetwork& network)
         // The RX should never send data but for consistency we also set the throughput.
         if(m_throughput) {
             dst_tx_queue->SetMaxRate(*m_throughput);
+        }
+
+        const int snode_id = snode->GetId();
+        const int dnode_id = dnode->GetId();
+
+        if(m_on_recv_pkt) {
+            dst_rx_queue->SetOnRecv([dnode_id, snode_id, on_recv=m_on_recv_pkt](RdmaRxQueuePair::RecvNotif notif) {
+                OnRecvPktInfo info;
+                info.mcast_src = snode_id;
+                info.receiver = dnode_id;
+
+                NS_ASSERT(notif.has_imm);
+                info.pkt_id = notif.imm;
+
+                on_recv(info);
+            });
         }
 
         dst_rdma->RegisterQP(dst_tx_queue, dst_rx_queue);

@@ -5,11 +5,40 @@
 
 namespace ns3 {
 
+enum SendFlags {
+	None,
+
+	/**
+	 * When a RDMA Write is too big to fit a single packet, it is split in multiple packet.
+	 * With this flag, The immediate value is set to the index of the fragment (0, 1, 2... up to the count of fragments - 1).
+	 * And the receiver is notified for fragments (which is not the case normally).
+	 * And the immediate value set by the user is ignored.
+	 */
+	FragmentAsImmediate	
+};
+
 class RdmaUnreliableSQ : public RdmaTxQueuePair
-{ 
+{
+private:
+	struct WorkElement
+	{
+		// The original RDMA Write request.
+		SendRequest sr;
+
+		//! @see `SendFlags::FragmentAsImmediate`.
+		bool fragment_as_immediate{};
+
+		//! Count of fragments already sent
+		uint32_t sent_fragments{};
+
+		//! Count of bytes already sent.
+		uint32_t bytes_sent{};
+	};
+
 public:
 	using RdmaTxQueuePair::RdmaTxQueuePair;
 
+	void PostSend(SendRequest sr, SendFlags flags);
 	void PostSend(SendRequest sr) override;
 	bool IsReadyToSend() const override;
 	bool HasDataToSend() const override;
@@ -22,7 +51,7 @@ private:
 	//!< RDMA packet header byte offset, incremented by the size of the payload on each packet.
 	uint64_t m_snd_nxt{0};
 	//!< Pending send requests.
-	std::queue<SendRequest> m_to_send;
+	std::queue<WorkElement> m_to_send;
 	
 	struct AckCallback
 	{

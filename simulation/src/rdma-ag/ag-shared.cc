@@ -67,8 +67,8 @@ void AgShared::RegisterRecvChunk(block_id_t block, chunk_id_t chunk)
 {
   if(m_recv_chunks_writer) {
     AgRecvChunkRecord record;
-    record.node = block;
-    record.chunk = chunk;
+    record.dst_rank = block;
+    //record.chunk = chunk;
     record.time = Simulator::Now().GetSeconds();
     m_recv_chunks_writer->write(record);
   }

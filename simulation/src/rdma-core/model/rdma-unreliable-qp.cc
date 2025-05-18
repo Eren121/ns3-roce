@@ -15,12 +15,22 @@ namespace ns3 {
 
 NS_LOG_COMPONENT_DEFINE("RdmaUnreliableQP");
 
+void RdmaUnreliableSQ::PostSend(SendRequest sr, SendFlags flags)
+{
+	WorkElement work;
+	work.sr = sr;
+
+	if(flags | SendFlags::FragmentAsImmediate) {
+		work.fragment_as_immediate = true;
+	}
+
+	m_to_send.push(work);	
+	TriggerDevTransmit();
+}
+
 void RdmaUnreliableSQ::PostSend(RdmaTxQueuePair::SendRequest sr)
 {
-  	NS_LOG_FUNCTION(this);
-
-	m_to_send.push(std::move(sr));	
-	TriggerDevTransmit();
+	PostSend(sr, SendFlags::None);
 }
 
 bool RdmaUnreliableSQ::HasDataToSend() const
@@ -45,7 +55,8 @@ Ptr<Packet> RdmaUnreliableSQ::GetNextPacket()
   	NS_LOG_FUNCTION(this);
 	NS_ABORT_IF(m_to_send.empty());
 	
-	SendRequest sr = m_to_send.front();
+	WorkElement& work = m_to_send.front();
+	SendRequest sr = work.sr;
 
 	RdmaBTH bth;
 	bth.SetReliable(false);
@@ -53,15 +64,26 @@ Ptr<Packet> RdmaUnreliableSQ::GetNextPacket()
 	bth.SetMulticast(sr.multicast);
 	bth.SetDestQpKey(sr.dport);
 	bth.SetNotif(true);
-	bth.SetImm(sr.imm);
+
+	// Set immediate value.
+	if(work.fragment_as_immediate) {
+		bth.SetImm(work.sent_fragments);
+	}
+	else {
+		bth.SetImm(work.sr.imm);
+	}
 
 	// Split big RDMA Write in MTU-Sized packets.
-	if(sr.payload_size > m_mtu) {
+	const uint32_t rem_bytes = (sr.payload_size - work.bytes_sent);
+	if(rem_bytes > m_mtu) {
 		sr.payload_size = m_mtu;
-		m_to_send.front().payload_size -= m_mtu;
+		work.bytes_sent += m_mtu;
+		work.sent_fragments++;
 
 		// Do not notify, RDMA Write is fragmented in multiple packets.
-		bth.SetNotif(false);
+		if(!work.fragment_as_immediate) {
+			bth.SetNotif(false);
+		}
 	}
 	else {
 		// RDMA Write is complete.
