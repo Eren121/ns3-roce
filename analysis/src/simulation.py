@@ -15,7 +15,7 @@ from topology import spineleaf
 
 
 default_pfc_priority = 3
-"""Default Priority-Flow Contol priority for all flows."""
+"""Default Priority-Flow Control priority for all flows."""
 
 
 def ensure_built() -> None:
@@ -25,7 +25,7 @@ def ensure_built() -> None:
     argv=[
         "make", "-C",
         project.root_path().as_posix(),
-        "build", "docker_interactive="]
+        "build_release", "docker_interactive="]
     pyu.run_process(argv=argv)
 
 
