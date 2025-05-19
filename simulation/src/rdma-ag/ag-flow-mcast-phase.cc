@@ -106,7 +106,7 @@ void AgFlowMcastPhase::OnFlowStarted(RdmaNetwork& network)
     // Previous flow of this chain, to build dependencies.
     Ptr<RdmaFlow> previous;
 
-    // Build the multicasts of each chain, each one dependening on the previous
+    // Build the multicasts of each chain, each one depending on the previous
     for(Ptr<Node> mcast_src : chain) {
       const int mcast_src_id = mcast_src->GetId();
 
@@ -123,6 +123,15 @@ void AgFlowMcastPhase::OnFlowStarted(RdmaNetwork& network)
 
         m_trace_writer.write(record);
       };
+
+      // The source always receives successfully its own packets, at the start!
+      for(int i = 0; i < num_pkts_per_mcast; i++) {
+        RdmaFlowMulticast::OnRecvPktInfo info;
+        info.mcast_src = mcast_src_id;
+        info.receiver = mcast_src_id;
+        info.pkt_id = i;
+        on_recv_pkt(info);
+      }
       
       Ptr<RdmaFlowMulticast> multicast = CreateObject<RdmaFlowMulticast>();
       network.GetFlowScheduler().AddFlow(multicast);
@@ -142,15 +151,14 @@ void AgFlowMcastPhase::OnFlowStarted(RdmaNetwork& network)
       }
 
       previous = multicast;
-      /*
+      
       // Add a delay to take into account the delay for the last packet to arrive at the furthest servers.
       Ptr<RdmaFlowWait> wait = CreateObject<RdmaFlowWait>();
-      wait->SetAttribute("Time", TimeValue(network.GetMaxDelay()));
+      wait->SetAttribute("Time", TimeValue(network.GetMaxDelay() * 1.1));
       network.GetFlowScheduler().AddFlow(wait);
       network.GetFlowScheduler().AddDependency(wait, multicast);
 
       previous = wait;
-      */
     }
 
     previous->AddOnCompleteCallback([this]() {

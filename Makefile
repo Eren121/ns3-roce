@@ -142,9 +142,9 @@ gen_avro:
 
 .PHONY: analysis
 analysis: docker_wd = -w /app/analysis/src
-analysis: analysis_model ?= ft16
+analysis: analysis_model ?= bitmap-repartition
 analysis:
-	$(docker_run) python3 -m models.$(analysis_model)
+	$(docker_run) bash -c "cd analysis/src && python3 -m models.$(analysis_model)"
 
 .PHONY: plots
 plots: docker_wd = -w /app/analysis/src
