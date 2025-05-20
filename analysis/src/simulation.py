@@ -521,8 +521,9 @@ def make_bisection_flow(
         }
     }
 
-def make_allgather_flow(
+def make_allgather_mcast_flow(
         model: Model,
+        id: str,
         root_count: int,
         per_node_chunk_count: int,
         per_chunk_pkt_count: int,
@@ -530,18 +531,43 @@ def make_allgather_flow(
         bitmaps_avro_file: str = "",
         stats_json_file: str = "",
         start_time: float = 0.0,
-        in_background: bool = False):
+        in_background: bool = False,
+        deps: list = []):
     return {
-      "path": "ns3::AgFlowMcastPhase",
-      "enable": True,
-      "start_time": start_time,
-      "in_background": in_background,
-      "attributes": {
-        "BitmapsAvroOut": model.get_output_path(bitmaps_avro_file),
-        "StatsJsonOut": model.get_output_path(stats_json_file),
-        "MulticastRootCount": root_count,
-        "PerNodeChunkCount": per_node_chunk_count,
-        "PerChunkPacketCount": per_chunk_pkt_count,
-        "OptimizeThroughput": optimize_throughput
-      }
+        "id": id,
+        "path": "ns3::AgFlowMcastPhase",
+        "enable": True,
+        "start_time": start_time,
+        "dependencies": deps,
+        "in_background": in_background,
+        "attributes": {
+            "BitmapsAvroOut": model.get_output_path(bitmaps_avro_file),
+            "StatsJsonOut": model.get_output_path(stats_json_file),
+            "MulticastRootCount": root_count,
+            "PerNodeChunkCount": per_node_chunk_count,
+            "PerChunkPacketCount": per_chunk_pkt_count,
+            "OptimizeThroughput": optimize_throughput
+        }
+    }
+
+
+def make_allgather_recovery_flow(
+        model: Model,
+        id: str,
+        bitmaps_avro_file: str,
+        stats_json_file: str,
+        start_time: float = 0.0,
+        in_background: bool = False,
+        deps: list = []):
+    return {
+        "id": id,
+        "path": "ns3::AgFlowRecoveryPhase",
+        "enable": True,
+        "start_time": start_time,
+        "dependencies": deps,
+        "in_background": in_background,
+        "attributes": {
+            "BitmapsAvroIn": model.get_output_path(bitmaps_avro_file),
+            "StatsJsonIn": model.get_output_path(stats_json_file),
+        }
     }

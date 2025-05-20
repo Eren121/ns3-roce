@@ -141,7 +141,6 @@ gen_avro:
 #################
 
 .PHONY: analysis
-analysis: docker_wd = -w /app/analysis/src
 analysis: analysis_model ?= bitmap-repartition
 analysis:
 	$(docker_run) bash -c "cd analysis/src && python3 -m models.$(analysis_model)"

@@ -14,6 +14,7 @@ build_lib(
     ag-runtime.cc
     ag-shared.cc 
     ag-flow-mcast-phase.cc 
+    ag-flow-recovery-phase.cc 
   HEADER_FILES
     ag-app.h
     ag-app-helper.h
@@ -21,6 +22,7 @@ build_lib(
     ag-runtime.h
     ag-shared.h
     ag-flow-mcast-phase.h
+    ag-flow-recovery-phase.h
   LIBRARIES_TO_LINK
     ${librdma-core}
 )

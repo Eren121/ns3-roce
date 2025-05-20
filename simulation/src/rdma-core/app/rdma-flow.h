@@ -15,6 +15,10 @@ class RdmaNetwork;
 
 struct SerializedFlow
 {
+    //! Unique ID, useful for graph dependencies.
+    std::string id;
+    //! Stores the ID of dependencies, that is other flows that should complete before this one.
+    std::vector<std::string> dependencies;
     //! Whether to enable or disable this flow.
     bool enable{};
     //! Full path to the ns3 C++ class of the flow.

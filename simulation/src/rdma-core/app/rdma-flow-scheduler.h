@@ -31,8 +31,16 @@ public:
    */
   void AddDependency(Ptr<RdmaFlow> target, Ptr<RdmaFlow> dependency);
 
-  void AddSerializedFlow(SerializedFlow flow);
+  /**
+   * Note: We consider that at the end of the current event, all dependencies of the flow should have 
+   * been registered, otherwise it will be not taken into account.
+   */
   void AddFlow(Ptr<RdmaFlow> flow);
+
+  const auto& GetAllCompletionTimes() const
+  {
+    return m_completion_times;
+  }
 
 private:
   void RunFlow(Ptr<RdmaFlow> flow);
@@ -40,21 +48,20 @@ private:
 
 private:
   RdmaNetwork& m_network;
-  std::unordered_map<int, Ptr<RdmaFlow>> m_flows;
-  //! Keep running flows for debugging.
-  std::unordered_set<Ptr<RdmaFlow>> m_running_flows;
   //! Foreground flows count.
   int m_fg_running{};
-  //! Background flows count.
-  int m_bg_running{};
   //! To call when all flows have completed.
   OnAllFlowsCompleted m_on_all_completed;
 
   //! All flow dependencies.
   //! m_dependencies[i][j] indicates that `j` depends on `i`.
-  std::unordered_map<Ptr<RdmaFlow>, std::vector<Ptr<RdmaFlow>>> m_dependencies;
+  std::unordered_map<Ptr<RdmaFlow>, std::unordered_set<Ptr<RdmaFlow>>> m_dependencies;
   //! Store, for each flow, the count of uncompleted dependencies.
   std::unordered_map<Ptr<RdmaFlow>, int> m_rem_dependencies;
+  //! Stores the completion time of each flow.
+  std::unordered_map<std::string, Time> m_completion_times;
+  //! Stores the name of each flow.
+  std::unordered_map<Ptr<RdmaFlow>, std::string> m_names;
 };
 
 } // namespace ns3

@@ -55,7 +55,6 @@ public:
     m_writer->write(record);
   }
 
-private:
   static avro::ValidSchema LoadSchema()
   {
     const char* const schema_json = GetAvroSchema(static_cast<T*>(nullptr));
@@ -73,5 +72,23 @@ private:
   //! Unique pointer to allow default constructor.
   std::unique_ptr<avro::DataFileWriter<T>> m_writer;
 };
+
+/**
+ * Reads all into an array.
+ */
+template<typename T>
+std::vector<T> DeserializeAvro(const fs::path& input_path)
+{
+  avro::ValidSchema schema = RdmaSerializer<T>::LoadSchema();
+  avro::DataFileReader<T> reader(input_path.c_str(), schema);
+  std::vector<T> res;
+
+  T datum;
+  while(reader.read(datum)) {
+    res.push_back(datum);
+  }
+
+  return res;
+}
 
 } // namespace ns3

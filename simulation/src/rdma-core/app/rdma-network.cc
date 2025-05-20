@@ -420,6 +420,8 @@ DataRate RdmaNetwork::GetAnyServerDataRate() const
       return link.bandwidth;
     }
   }
+
+  NS_ABORT_MSG("No server found!");
 }
 
 bool RdmaNetwork::HaveAllServersSameBandwidth() const

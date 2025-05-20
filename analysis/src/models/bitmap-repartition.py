@@ -39,14 +39,22 @@ class Model(simulation.Model):
         if self.background_bisection_flow_input.current_value:
             self._flows.append(simulation.make_bisection_flow(bytes=1e9, in_background=True))
 
-        self._flows.append(simulation.make_allgather_flow(
+        self._flows.append(simulation.make_allgather_mcast_flow(
             self,
+            "ag-mcast",
             root_count=2,
             per_node_chunk_count=self.per_node_chunk_count_input.current_value,
             per_chunk_pkt_count=16, # To have 64KiB per chunk.
             optimize_throughput=True,
             bitmaps_avro_file=self.bitmaps_avro_file,
             stats_json_file=self.stats_json_file,
+        ))
+        self._flows.append(simulation.make_allgather_recovery_flow(
+            self,
+            "ag-recovery",
+            bitmaps_avro_file=self.bitmaps_avro_file,
+            stats_json_file=self.stats_json_file,
+            deps=["ag-mcast"]
         ))
 
 
