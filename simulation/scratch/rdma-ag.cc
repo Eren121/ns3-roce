@@ -63,7 +63,7 @@ int main(int argc, char *argv[])
 	LogComponentEnable("AgFlowMcastPhase", LOG_LEVEL_INFO);
 	
 	if(argc < 2) {
-		std::cout << "Error: require a config file a unique program argument." << std::endl;
+		std::cout << "Error: require a config file or a unique program argument." << std::endl;
 		return EXIT_FAILURE;
 	}
 	
