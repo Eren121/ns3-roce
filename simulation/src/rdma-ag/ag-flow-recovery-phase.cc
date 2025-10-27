@@ -75,7 +75,7 @@ void AgFlowRecoveryPhase::OnFlowStarted(RdmaNetwork& network)
   for(int i = 0; i < num_ranks; i++) {
     for(int j = 0; j < bitmap_length; j++) {
       if(!bitmaps[i][j]) {
-        missed_pkts[i].insert(j);
+        m_missed_pkts[i].insert(j);
       }
     }
   }
@@ -85,11 +85,11 @@ void AgFlowRecoveryPhase::OnFlowStarted(RdmaNetwork& network)
   // and the current node has locally.
   // The immediate data is the packet index in the allgather buffer.
   for(int i = 0; i < num_ranks; i++) {
-    ScheduleRank(i);
+    ScheduleRank(network, i);
   }
 }
 
-void AgFlowRecoveryPhase::ScheduleRank(int rank)
+void AgFlowRecoveryPhase::ScheduleRank(RdmaNetwork& network, int rank)
 {
     const Ptr<Node> snode = network.FindServer(m_snode);
     const Ptr<Node> dnode = network.FindServer(m_dnode);
