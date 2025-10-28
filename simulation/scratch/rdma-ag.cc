@@ -51,6 +51,7 @@ NS_LOG_COMPONENT_DEFINE("main");
 
 int main(int argc, char *argv[])
 {
+	NS_LOG_UNCOND("=== Program started ===");
 	// Fix that forces global variables in the `rdma-ag` module to be initialized,
 	// by calling any function of this module.
 	// This will ensure `rdma-ag` ns3 objects are registered.
@@ -61,6 +62,8 @@ int main(int argc, char *argv[])
 	LogComponentEnable("RdmaNetwork", LOG_LEVEL_INFO);
 	LogComponentEnable("FlowScheduler", LOG_LEVEL_INFO);
 	LogComponentEnable("AgFlowMcastPhase", LOG_LEVEL_INFO);
+
+	NS_LOG_INFO("=== Logging is enabled ===");
 	
 	if(argc < 2) {
 		std::cout << "Error: require a config file or a unique program argument." << std::endl;

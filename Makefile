@@ -101,7 +101,7 @@ distclean:
 	$(docker_run) ./simulation/ns3 clean
 
 .PHONY: run_debug
-run_debug: scratch_exe = ./simulation/$(ns3_build_dir)/scratch/ns3.36.1-scratch_rdma-ag-debug
+run_debug: scratch_exe = ./simulation/$(ns3_build_dir)/scratch/ns3.36.1-rdma-ag-debug
 run_debug: cmake_build_name = debug
 run_debug: run
 
