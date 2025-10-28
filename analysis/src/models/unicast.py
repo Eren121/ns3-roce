@@ -42,10 +42,12 @@ class Model(simulation.Model):
         })
         
         self._flows.append({
+            "id": "0",
             "path": "ns3::RdmaFlowUnicast",
             "enable": True,
             "start_time": 0.0,
             "in_background": False,
+            "dependencies": [],
             "attributes": {
                 "SourceNode": 7,
                 "DestinationNode": 15,
@@ -61,14 +63,14 @@ class Model(simulation.Model):
 def main():
     scenarios = simulation.CartesianProduct()
     scenarios.add("mtu", 4096)
-    scenarios.add("bytes_to_write", np.linspace(1e6, 100e6))
+    scenarios.add("bytes_to_write", [1e6])
     
     batch = simulation.Batch(Model, scenarios)
-    batch.run()
+    results = batch.run()
 
     rows = []
-    for res in batch.res:
-        sim = res.sim
+    for res in results:
+        sim = res
         model = res.model
         sim_stats = pyu.load_json(model.out_sim_stats_path)
 
