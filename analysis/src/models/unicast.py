@@ -23,8 +23,8 @@ class Model(simulation.Model):
         super().__init__()
 
         # Add custom inputs.
-        self._add_input(simulation.Model.Input("mtu", "MTU."))
-        self._add_input(simulation.Model.Input("bytes_to_write", "Amount of bytes to write."))
+        self._add_input(simulation.Input("mtu", "MTU."))
+        self._add_input(simulation.Input("bytes_to_write", "Amount of bytes to write."))
 
         # Load default config.
         self._config.update(simulation.load_def_config())
@@ -38,10 +38,10 @@ class Model(simulation.Model):
     
     def _configure(self, sim: simulation.Simulation) -> None:
         self._config.update({
-            "ns3::RdmaHw::Mtu": self.get("mtu")
+            "ns3::RdmaHw::Mtu": self.get_input("mtu")
         })
         
-        self._add_flow({
+        self._flows.append({
             "path": "ns3::RdmaFlowUnicast",
             "enable": True,
             "start_time": 0.0,
@@ -51,7 +51,7 @@ class Model(simulation.Model):
                 "DestinationNode": 15,
                 "IsReliable": True,
                 "PfcPriority": 3,
-                "WriteByteAmount": self.get("bytes_to_write")
+                "WriteByteAmount": self.get_input("bytes_to_write")
             }
         })
 
@@ -63,8 +63,8 @@ def main():
     scenarios.add("mtu", 4096)
     scenarios.add("bytes_to_write", np.linspace(1e6, 100e6))
     
-    batch = simulation.Batch()
-    batch.run(Model, scenarios)
+    batch = simulation.Batch(Model, scenarios)
+    batch.run()
 
     rows = []
     for res in batch.res:
@@ -73,7 +73,7 @@ def main():
         sim_stats = pyu.load_json(model.out_sim_stats_path)
 
         row = {}
-        row["bytes_to_write"] = model.get("bytes_to_write")
+        row["bytes_to_write"] = model.get_input("bytes_to_write")
         row["completion_time"] = sim_stats["stop_time"]
         rows.append(row)
     
