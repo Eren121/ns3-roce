@@ -63,7 +63,7 @@ class Model(simulation.Model):
 def main():
     scenarios = simulation.CartesianProduct()
     scenarios.add("mtu", 4096)
-    scenarios.add("bytes_to_write", [1e6])
+    scenarios.add("bytes_to_write", np.linspace(1e6, 100e6))
     
     batch = simulation.Batch(Model, scenarios)
     results = batch.run()

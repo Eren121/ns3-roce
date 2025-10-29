@@ -10,9 +10,9 @@ Take inspiration from them to create your own models.
 
 ## Run a model
 
-To run the model located in `src/models/example.py`:
+To run the model located in `src/models/`:
 - Set working directory to `src`.
-- Run the model with `python3 -m models.example`.
+- Run the model with `python3 -m models.<model>`, such as `python3 -m models.unicast`.
 
 ## Get the results
 

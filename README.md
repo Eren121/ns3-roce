@@ -11,7 +11,7 @@ New features:
 
 Refer to the `Makefile` for building the project.
 1. Build docker image: `make build_image`
-1. Run example: `make configure_release && make build && make run`
+1. Run example: `make configure_release && make build_release && make run_release`
 3. Build netanim: `make build_netanim`. Output is `netanim/NetAnim`.
 
 ## Changes
