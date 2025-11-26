@@ -25,7 +25,7 @@ def ensure_built() -> None:
     argv=[
         "make", "-C",
         project.root_path().as_posix(),
-        "build_release", "docker_interactive="]
+        "build_debug", "docker_interactive="]
     pyu.run_process(argv=argv)
 
 
@@ -274,7 +274,7 @@ class Model:
         self._config.update(load_def_config())
 
         # Configure the model defined by the user.
-        self._configure()
+        self._configure(sim)
 
         # Add configuration files.
         flows = {
@@ -371,7 +371,7 @@ class Simulation:
         # Run the ns3 process in the container.
         argv=[
             "make", "-C", makefile_dir_host,
-            "run_release", f"app_config={app_config_path_container}",
+            "run_debug", f"app_config={app_config_path_container}",
             "docker_interactive="]
         pyu.run_process(argv=argv, each_line=self._on_each_line)
         self.stdout_file.close()

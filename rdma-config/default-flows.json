@@ -1,10 +1,12 @@
 {
   "flows": [
     {
+      "id": "0",
       "path": "ns3::RdmaFlowBisection",
       "enable": false,
       "start_time": 0.0,
       "in_background": true,
+      "dependencies": [],
       "attributes": {
         "IsReliable": false,
         "PfcPriority": 3,
@@ -12,10 +14,12 @@
       }
     },
     {
+      "id": "1",
       "path": "ns3::AgFlowMcastPhase",
       "enable": true,
       "start_time": 0.0,
       "in_background": false,
+      "dependencies": [],
       "attributes": {
         "BitmapsAvroOut": "out/mcast_pkts.avro",
         "StatsJsonOut": "out/mcast_pkts.json",
@@ -27,3 +31,4 @@
     }
   ]
 }
+

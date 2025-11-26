@@ -25,7 +25,7 @@ protected:
     void OnFlowStarted(RdmaNetwork& network) override;
 
 private:
-    void ScheduleRank(int rank);
+    void ScheduleRank(RdmaNetwork& network, int rank);  // <-- pass network reference
 
 private:
     //! From where to load the bitmaps of the received chunks.
@@ -42,6 +42,17 @@ private:
     std::unordered_map<int, int> m_id_to_rank;
     //! Each rank's missed packets.
     std::vector<std::unordered_set<int>> m_missed_pkts;
+
+    //! Source and destination node IDs for the flow.
+    int m_snode{};
+    int m_dnode{};
+
+    //! Bytes to write in this recovery phase.
+    uint32_t m_bytes_to_write{0};
+
+    //! Whether to use reliable transmission.
+    bool m_reliable{true};
 };
 
 } // namespace ns3
+
